@@ -23,6 +23,5 @@ export default async function handler(req, res) {
 
   // redirect back to frontend with token (simple version)
   res.redirect(
-    `/?access_token=${data.access_token}`
-  );
-}
+  `/?access_token=${encodeURIComponent(data.access_token)}`
+);
