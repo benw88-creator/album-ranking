@@ -1182,5 +1182,54 @@ applySize();
 
 render();
 </script>
+  <script>
+const params = new URLSearchParams(window.location.search);
+const token = params.get("access_token");
+
+if (token) {
+  localStorage.setItem("spotify_token", token);
+  window.history.replaceState({}, document.title, "/");
+}
+
+async function searchAlbums() {
+  const q = document.getElementById("search").value;
+  const token = localStorage.getItem("spotify_token");
+
+  const res = await fetch(
+    `https://api.spotify.com/v1/search?type=album&q=${encodeURIComponent(q)}`,
+    {
+      headers: {
+        Authorization: "Bearer " + token
+      }
+    }
+  );
+
+  const data = await res.json();
+
+  document.getElementById("results").innerHTML =
+    data.albums.items.map(album => `
+      <div>
+        <img src="${album.images[0]?.url}" width="100" />
+        <p>${album.name}</p>
+        <p>${album.artists[0].name}</p>
+      </div>
+    `).join("");
+}
+</script>
 </body>
+  <h1>Album Ranking</h1>
+
+<input id="search" placeholder="Search albums..." />
+<button onclick="searchAlbums()">Search</button>
+
+<div id="results"></div>
+  <script>
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("access_token");
+
+  if (token) {
+    localStorage.setItem("spotify_token", token);
+    window.history.replaceState({}, document.title, "/");
+  }
+</script>
 </html>
