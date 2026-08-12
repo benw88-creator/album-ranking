@@ -9,7 +9,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9IiMwYTA5MDgiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMzMzMzNkIiBzdHJva2Utd2lkdGg9IjEuMiIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMyNjI2MmUiIHN0cm9rZS13aWR0aD0iMSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE5IiBmaWxsPSJub25lIiBzdHJva2U9IiMyNjI2MmUiIHN0cm9rZS13aWR0aD0iMSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjEwIiBmaWxsPSIjRjVDODQyIi8+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMi4yIiBmaWxsPSIjMGEwOTA4Ii8+PC9zdmc+Cg==">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
    VINAL — REDESIGNED UI  (vinal-28)
@@ -34,11 +34,62 @@
   --red:          #e24b4a;
   --yellow:       #efb927;
   --green:        #4fb477;
-  --font-display: 'Space Grotesk', sans-serif;
-  --font-body:    'Inter', sans-serif;
+  --font-display: 'Instrument Sans', sans-serif;
+  --font-body:    'IBM Plex Sans', sans-serif;
+  --font-mono:    'IBM Plex Mono', ui-monospace, Consolas, monospace;
   --radius:       18px;
   --radius-sm:    10px;
   --radius-xs:    7px;
+}
+
+/* ---- COSMETIC THEMES (Shop-unlockable — see Wallet module near the end
+   of this file) ---- everything below only ever repaints the tokens above,
+   so every existing component reskins for free. Semantic score colours
+   (--red/--yellow/--green) intentionally stay constant across themes. ---- */
+[data-theme="sundown"] {
+  --bg:            #150907;
+  --surface:       #1f100c;
+  --surface-2:     #2a1712;
+  --surface-3:     #351e17;
+  --surface-4:     #40251c;
+  --text:          #f5ece4;
+  --text-dim:      #baa08f;
+  --text-faint:    #6b5147;
+  --border:        rgba(255,235,220,0.07);
+  --border-strong: rgba(255,235,220,0.14);
+  --gold:          #e8763f;
+  --gold-glow:     rgba(232,118,63,0.18);
+  --gold-dim:      rgba(232,118,63,0.10);
+}
+[data-theme="cassette"] {
+  --bg:            #0b0d10;
+  --surface:       #14171b;
+  --surface-2:     #1b1f24;
+  --surface-3:     #23282f;
+  --surface-4:     #2b3138;
+  --text:          #eef1f5;
+  --text-dim:      #8791a0;
+  --text-faint:    #4f5866;
+  --border:        rgba(220,235,255,0.06);
+  --border-strong: rgba(220,235,255,0.13);
+  --gold:          #5eb8ff;
+  --gold-glow:     rgba(94,184,255,0.18);
+  --gold-dim:      rgba(94,184,255,0.10);
+}
+[data-theme="blanc"] {
+  --bg:            #f3efe6;
+  --surface:       #ffffff;
+  --surface-2:     #ece6d8;
+  --surface-3:     #e2dac8;
+  --surface-4:     #d8ceb8;
+  --text:          #1c1712;
+  --text-dim:      #6b6154;
+  --text-faint:    #a89b87;
+  --border:        rgba(28,23,18,0.08);
+  --border-strong: rgba(28,23,18,0.16);
+  --gold:          #b8860b;
+  --gold-glow:     rgba(184,134,11,0.18);
+  --gold-dim:      rgba(184,134,11,0.10);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -255,6 +306,8 @@ nav.modes button.active::after {
   background: var(--gold);
 }
 nav.modes button:hover:not(.active) { color: var(--text); background: var(--surface-2); }
+.nav-icon-btn { display: inline-flex; align-items: center; gap: 7px; }
+.nav-icon { width: 15px; height: 15px; flex-shrink: 0; }
 
 /* ---- SEARCH ---- */
 .search-block { padding: 28px 0 24px; position: relative; z-index: 30; }
@@ -387,6 +440,29 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
   letter-spacing: -0.03em;
   line-height: 1;
 }
+.stat.stat-wallet { cursor: pointer; }
+.stat.stat-wallet .s-val { font-family: var(--font-mono); font-size: 30px; }
+
+/* ---- SHOP ---- */
+.shop-balance {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-bottom: 18px; padding: 14px 18px;
+  background: var(--surface-2); border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+.shop-balance-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); }
+.shop-balance-val { font-family: var(--font-mono); font-weight: 600; font-size: 22px; color: var(--gold); }
+.shop-list { display: flex; flex-direction: column; gap: 10px; }
+.shop-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+}
+.shop-swatch { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; border: 1px solid var(--border-strong); }
+.shop-item-info { flex: 1; min-width: 0; }
+.shop-item-name { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
+.shop-item-desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.shop-item-cost { font-family: var(--font-mono); font-size: 12px; color: var(--text-faint); margin-top: 4px; }
+.shop-item button { flex-shrink: 0; }
 
 /* ---- ALBUM GRID + CARDS ---- */
 .grid {
@@ -1918,13 +1994,13 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   <!-- ============================ MODE NAV ============================ -->
   <nav class="modes" id="modes">
     <button data-mode="home" class="active">Home</button>
-    <button data-mode="crate">🎵 The Crate</button>
+    <button data-mode="crate" class="nav-icon-btn"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>The Crate</button>
     <button data-mode="albums">Albums</button>
     <button data-mode="songs">Songs</button>
     <button data-mode="games">Games</button>
-    <button data-mode="achievements">&#127942;</button>
-    <button class="activity-toggle" id="notif-toggle" title="Notifications">&#128276;<span class="dot" id="notif-dot" style="display:none;"></span></button>
-    <button class="activity-toggle" id="activity-toggle" title="Recent activity">&#128220;<span class="dot"></span></button>
+    <button data-mode="achievements" class="nav-icon-btn" aria-label="Achievements" title="Achievements"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="6.5" r="4"/><path d="M5.2 9.8 4 14l4-1.6 4 1.6-1.2-4.2"/></svg></button>
+    <button class="activity-toggle nav-icon-btn" id="notif-toggle" title="Notifications" aria-label="Notifications"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 2.2c-1.8 0-3.1 1.4-3.1 3.4v2c0 .8-.3 1.6-.9 2.3l-.5.6h9l-.5-.6c-.6-.7-.9-1.5-.9-2.3v-2c0-2-1.3-3.4-3.1-3.4Z"/><path d="M6.3 11.8a1.8 1.8 0 0 0 3.4 0"/></svg><span class="dot" id="notif-dot" style="display:none;"></span></button>
+    <button class="activity-toggle nav-icon-btn" id="activity-toggle" title="Recent activity" aria-label="Recent activity"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.6 1.5"/></svg><span class="dot"></span></button>
   </nav>
 
   <!-- connect gate -->
@@ -2239,6 +2315,20 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
       <button class="btn-ghost g-btn-full" id="g-change-btn">Change artist</button>
       <button class="btn-ghost g-btn-full" id="g-menu-btn">Back to menu</button>
     </div>
+  </div>
+</div>
+
+<!-- ============================ SHOP MODAL ============================ -->
+<div class="modal" id="shop-modal">
+  <div class="modal-panel" style="max-width:520px;">
+    <button class="modal-close" id="shop-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji">&#128191;</span>
+      <div><h2>Disc Shop</h2><p>Cosmetic only &mdash; never touches rankings or leaderboards.</p></div></div>
+    <div class="shop-balance">
+      <span class="shop-balance-label">Your balance</span>
+      <span class="shop-balance-val" id="shop-balance-val">0</span>
+    </div>
+    <div class="shop-list" id="shop-list"></div>
   </div>
 </div>
 
@@ -2985,6 +3075,7 @@ function saveAlbum(meta, score) {
   persist(ALBUMS_KEY, albums);
   if (window.Cloud) Cloud.syncRating('album', meta.id, albums[meta.id]);
   if (window.Cloud) Cloud.postToFeed(meta, score, albums[meta.id].note);
+  if (window.Wallet) Wallet.recordRating();
   _recsDirty = true;
   renderAlbums();
 }
@@ -3004,6 +3095,7 @@ function saveSong(track, score, albumMeta) {
       date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     };
     if (window.Cloud) Cloud.syncRating('song', track.id, songs[track.id]);
+    if (window.Wallet) Wallet.recordRating();
   }
   persist(SONGS_KEY, songs);
   _recsDirty = true;
@@ -3459,12 +3551,22 @@ function renderStats(){
   if(!albums.length&&!songs.length){wrap.innerHTML='';return;}
   const aAvg=albums.length?Math.round(albums.reduce(function(s,a){return s+a.score;},0)/albums.length):0;
   const sAvg=songs.length?(songs.reduce(function(s,x){return s+x.score;},0)/songs.length).toFixed(1):0;
+  let walletTiles='';
+  if(window.Wallet&&window.Cloud&&Cloud.isOn&&Cloud.isOn()){
+    const w=Wallet.get();
+    walletTiles=
+      '<div class="stat stat-wallet" id="stat-streak"><div class="s-label">\u{1F525} Streak</div><div class="s-val">'+(w.streak_current||0)+'</div></div>'+
+      '<div class="stat stat-wallet" id="stat-discs" title="Open the Disc Shop"><div class="s-label">◉ Discs</div><div class="s-val">'+(w.discs||0)+'</div></div>';
+  }
   wrap.innerHTML='<div class="stats">'+
     '<div class="stat"><div class="s-label">\u{1F4BF} Albums ranked</div><div class="s-val">'+albums.length+'</div></div>'+
     '<div class="stat"><div class="s-label">\u{1F3B5} Songs ranked</div><div class="s-val">'+songs.length+'</div></div>'+
     '<div class="stat"><div class="s-label">\u{1F4CA} Avg album</div><div class="s-val" style="color:'+albumColor(aAvg)+'">'+aAvg+'</div></div>'+
     '<div class="stat"><div class="s-label">\u{1F3B7} Avg song</div><div class="s-val" style="color:'+songColor(Math.round(sAvg))+'">'+sAvg+'</div></div>'+
+    walletTiles+
   '</div>';
+  const discTile=document.getElementById('stat-discs');
+  if(discTile)discTile.addEventListener('click',function(){if(window.openShop)openShop();});
 }
 
 function esc(str){return String(str||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
@@ -3995,7 +4097,7 @@ function renderAchievements(){
       (reached&&!done?'<button class="ach-claim" data-claim="'+key+'" data-label="'+milestoneLabel(m)+'">Claim achievement</button>':'')+
       '</div>';
   }).join('');
-  mEl.querySelectorAll('[data-claim]').forEach(function(b){b.addEventListener('click',function(){setClaimed(b.dataset.claim);logActivity('\u{1F3C6}','Unlocked',b.dataset.label);celebrate('Achievement Unlocked!',b.dataset.label);renderAchievements();});});
+  mEl.querySelectorAll('[data-claim]').forEach(function(b){b.addEventListener('click',function(){setClaimed(b.dataset.claim);logActivity('\u{1F3C6}','Unlocked',b.dataset.label);celebrate('Achievement Unlocked!',b.dataset.label);if(window.Wallet){const m=parseInt(b.dataset.claim.split(':')[1],10)||1;Wallet.awardDiscs(Math.min(50,m*2),{reason:b.dataset.label});}renderAchievements();});});
   const doneCount=MILESTONES.filter(function(m){return claimed['albums:'+m];}).length;
   document.getElementById('ach-summary').textContent=count+' albums rated \u00b7 '+doneCount+' milestones claimed';
   renderCompletionistAchievements();
@@ -4040,7 +4142,7 @@ function drawCompCard(a,claimed){
     '<div class="ach-prog"><span>'+have+' / '+Y+'</span><span>'+pct+'%</span></div>'+
     (complete&&!done?'<button class="ach-claim" data-claim="'+key+'" data-label="'+esc(a.name)+' Completionist">Claim achievement</button>':'');
   const btn=card.querySelector('[data-claim]');
-  if(btn)btn.addEventListener('click',function(){setClaimed(key);logActivity('\u{1F3C6}','Unlocked',a.name+' Completionist');celebrate('\u{1F3C6} '+a.name+' Completionist','You\u2019ve rated every studio album.');drawCompCard(a,loadClaimed());});
+  if(btn)btn.addEventListener('click',function(){setClaimed(key);logActivity('\u{1F3C6}','Unlocked',a.name+' Completionist');celebrate('\u{1F3C6} '+a.name+' Completionist','You\u2019ve rated every studio album.');if(window.Wallet)Wallet.awardDiscs(30,{reason:'Completionist'});drawCompCard(a,loadClaimed());});
 }
 
 let compUnratedOnly=false,_compState=null;
@@ -4382,6 +4484,7 @@ const Cloud=(function(){
   async function onAuthed(u){
     user=u;refreshUI();await pullAndMerge();
     backfillRatingsOnce();
+    if(window.Wallet)try{await Wallet.load();}catch(e){}
     try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderRecommendations();renderArtistHero();}if(currentMode==='profile'&&window.renderProfile)renderProfile();}catch(e){}
     flashSaved();
   }
@@ -5246,7 +5349,7 @@ window.handleGrooveLink=handleGrooveLink;
   document.getElementById('t-pick-b').addEventListener('click',function(){choose('b');});
 
   let championAlbum=null;
-  function champion(al){championAlbum=al;showV('win');document.getElementById('t-win-img').src=al.art||'';document.getElementById('t-win-name').textContent=al.name;document.getElementById('t-win-artist').textContent=al.artist||'';if(typeof celebrate==='function')celebrate('\u{1F3C6} Tournament winner',al.name);if(typeof logActivity==='function')logActivity('\u{1F3C6}','Crowned champion',al.name);}
+  function champion(al){championAlbum=al;showV('win');document.getElementById('t-win-img').src=al.art||'';document.getElementById('t-win-name').textContent=al.name;document.getElementById('t-win-artist').textContent=al.artist||'';if(typeof celebrate==='function')celebrate('\u{1F3C6} Tournament winner',al.name);if(typeof logActivity==='function')logActivity('\u{1F3C6}','Crowned champion',al.name);if(window.Wallet)Wallet.awardDiscs(10,{reason:'Tournament win'});}
   document.getElementById('tourney-again').addEventListener('click',function(){showV('setup');});
   document.getElementById('tourney-rate').addEventListener('click',function(){if(championAlbum){close();openAlbum(championAlbum);}});
 })();
@@ -5936,6 +6039,224 @@ window.handleGrooveLink=handleGrooveLink;
   }
 
   window.VinalDither = { playAuth: playAuth, pauseAuth: pauseAuth, mountArtistHero: mountArtistHero };
+})();
+</script>
+
+<!-- ================================================================
+     WALLET — Discs currency + daily rating streak + cosmetic themes.
+     Requires new columns on the `profiles` table in Supabase (run once,
+     see the migration given alongside this change):
+       discs int, streak_current int, streak_best int, streak_last_date date,
+       streak_freezes int, owned_themes text[], active_theme text,
+       owned_banners text[], active_banner text
+     Everything here reads/writes those columns via the existing generic
+     Cloud.fetchProfile / Cloud.saveProfile upsert — no new backend needed.
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  const THEMES = {
+    classic:  { name: 'Crate',    cost: 0,   desc: 'The original — near-black and gold.' },
+    sundown:  { name: 'Sundown',  cost: 150, desc: 'Oxblood and amber, warm and low-lit.' },
+    cassette: { name: 'Cassette', cost: 150, desc: 'Cool graphite with an electric-blue accent.' },
+    blanc:    { name: 'Blanc',    cost: 400, desc: 'A rare light mode — same gold, paper-bright.' },
+  };
+  const SWATCH = {
+    classic:  'linear-gradient(135deg,#0a0908,#F5C842)',
+    sundown:  'linear-gradient(135deg,#150907,#e8763f)',
+    cassette: 'linear-gradient(135deg,#0b0d10,#5eb8ff)',
+    blanc:    'linear-gradient(135deg,#f3efe6,#b8860b)',
+  };
+  const STREAK_MILESTONES = [7, 30, 100, 365];
+  const DAILY_RATING_CAP = 5;
+  const DISCS_PER_RATING = 3;
+
+  let state = {
+    discs: 0, streak_current: 0, streak_best: 0, streak_last_date: null,
+    streak_freezes: 1, owned_themes: ['classic'], active_theme: 'classic',
+    owned_banners: [], active_banner: null,
+  };
+  let loaded = false;
+  let ratingsToday = 0, ratingsTodayDate = null;
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function daysBetween(a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
+
+  function applyTheme() {
+    document.documentElement.dataset.theme = (state.active_theme && state.active_theme !== 'classic') ? state.active_theme : '';
+  }
+
+  function toast(msg) {
+    let t = document.getElementById('disc-flash');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'disc-flash';
+      t.className = 'save-flash';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast._tm);
+    toast._tm = setTimeout(function () { t.classList.remove('show'); }, 1600);
+  }
+
+  async function persist(fields) {
+    Object.assign(state, fields);
+    if (window.Cloud && Cloud.isOn && Cloud.isOn()) { try { await Cloud.saveProfile(fields); } catch (e) {} }
+  }
+
+  async function load() {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { loaded = false; return state; }
+    try {
+      const me = Cloud.getUser();
+      const prof = me && await Cloud.fetchProfile(me.id);
+      if (prof) {
+        state = {
+          discs: prof.discs || 0,
+          streak_current: prof.streak_current || 0,
+          streak_best: prof.streak_best || 0,
+          streak_last_date: prof.streak_last_date || null,
+          streak_freezes: (prof.streak_freezes != null) ? prof.streak_freezes : 1,
+          owned_themes: (prof.owned_themes && prof.owned_themes.length) ? prof.owned_themes : ['classic'],
+          active_theme: prof.active_theme || 'classic',
+          owned_banners: prof.owned_banners || [],
+          active_banner: prof.active_banner || null,
+        };
+      }
+    } catch (e) { console.warn('Wallet: failed to load profile fields — have the new columns been added in Supabase?', e); }
+    loaded = true;
+    applyTheme();
+    return state;
+  }
+
+  async function recordRating() {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
+    if (!loaded) await load();
+    const today = todayStr();
+    if (ratingsTodayDate !== today) { ratingsToday = 0; ratingsTodayDate = today; }
+
+    let discsEarned = 0;
+    if (ratingsToday < DAILY_RATING_CAP) { discsEarned = DISCS_PER_RATING; ratingsToday++; }
+
+    let streakChanged = false, milestoneHit = null;
+    if (state.streak_last_date !== today) {
+      const gap = state.streak_last_date ? daysBetween(state.streak_last_date, today) : null;
+      if (gap === 1) { state.streak_current += 1; }
+      else if (gap === null) { state.streak_current = 1; }
+      else if (gap > 1) {
+        if (state.streak_freezes > 0) { state.streak_freezes -= 1; state.streak_current += 1; }
+        else { state.streak_current = 1; }
+      }
+      state.streak_best = Math.max(state.streak_best, state.streak_current);
+      state.streak_last_date = today;
+      streakChanged = true;
+      if (STREAK_MILESTONES.indexOf(state.streak_current) !== -1) milestoneHit = state.streak_current;
+    }
+
+    if (discsEarned > 0) state.discs += discsEarned;
+    if (discsEarned > 0 || streakChanged) {
+      await persist({
+        discs: state.discs, streak_current: state.streak_current, streak_best: state.streak_best,
+        streak_last_date: state.streak_last_date, streak_freezes: state.streak_freezes,
+      });
+    }
+    if (discsEarned > 0) toast('+' + discsEarned + ' Discs');
+    if (milestoneHit && typeof window.celebrate === 'function') {
+      window.celebrate('🔥 ' + milestoneHit + '-day streak!', 'Keep it going — rate something tomorrow.');
+    }
+    if (typeof window.renderStats === 'function') window.renderStats();
+  }
+
+  async function awardDiscs(amount, opts) {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
+    if (!loaded) await load();
+    state.discs += amount;
+    await persist({ discs: state.discs });
+    toast('+' + amount + ' Discs' + (opts && opts.reason ? (' — ' + opts.reason) : ''));
+    if (typeof window.renderStats === 'function') window.renderStats();
+  }
+
+  async function buyTheme(key) {
+    if (!loaded) await load();
+    const t = THEMES[key];
+    if (!t) return { error: 'Unknown theme' };
+    if (state.owned_themes.indexOf(key) !== -1) return { error: 'Already owned' };
+    if (state.discs < t.cost) return { error: 'Not enough Discs' };
+    state.discs -= t.cost;
+    state.owned_themes = state.owned_themes.concat([key]);
+    await persist({ discs: state.discs, owned_themes: state.owned_themes });
+    return { ok: true };
+  }
+
+  async function equipTheme(key) {
+    if (!loaded) await load();
+    if (state.owned_themes.indexOf(key) === -1) return { error: 'Not owned' };
+    state.active_theme = key;
+    applyTheme();
+    await persist({ active_theme: key });
+    return { ok: true };
+  }
+
+  function get() { return state; }
+
+  window.Wallet = { load: load, get: get, recordRating: recordRating, awardDiscs: awardDiscs, buyTheme: buyTheme, equipTheme: equipTheme, applyTheme: applyTheme, THEMES: THEMES };
+
+  // ---- Shop UI ------------------------------------------------------------
+  function renderShop() {
+    const w = get();
+    document.getElementById('shop-balance-val').textContent = w.discs;
+    const list = document.getElementById('shop-list');
+    list.innerHTML = Object.keys(THEMES).map(function (key) {
+      const t = THEMES[key];
+      const owned = w.owned_themes.indexOf(key) !== -1;
+      const active = w.active_theme === key;
+      let action;
+      if (active) action = '<button class="btn-mini" disabled>Equipped</button>';
+      else if (owned) action = '<button class="btn-mini" data-equip="' + key + '">Equip</button>';
+      else action = '<button class="btn-primary" style="padding:9px 16px;font-size:13px;" data-buy="' + key + '" ' + (w.discs < t.cost ? 'disabled' : '') + '>Buy</button>';
+      return '<div class="shop-item">' +
+        '<div class="shop-swatch" style="background:' + SWATCH[key] + '"></div>' +
+        '<div class="shop-item-info">' +
+          '<div class="shop-item-name">' + t.name + (active ? ' ✓' : '') + '</div>' +
+          '<div class="shop-item-desc">' + t.desc + '</div>' +
+          '<div class="shop-item-cost">' + (t.cost === 0 ? 'Free' : t.cost + ' Discs') + '</div>' +
+        '</div>' + action + '</div>';
+    }).join('');
+    list.querySelectorAll('[data-buy]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        b.disabled = true;
+        const res = await buyTheme(b.dataset.buy);
+        if (res.error) { toast(res.error); b.disabled = false; return; }
+        await equipTheme(b.dataset.buy);
+        renderShop();
+        if (typeof window.renderStats === 'function') window.renderStats();
+      });
+    });
+    list.querySelectorAll('[data-equip]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        await equipTheme(b.dataset.equip);
+        renderShop();
+      });
+    });
+  }
+
+  window.openShop = function () {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { if (window.Cloud) Cloud.openAuth(); return; }
+    renderShop();
+    document.getElementById('shop-modal').classList.add('open');
+  };
+  // This script sits at the very end of <body>, so every element above it
+  // (including the shop modal) is already in the DOM — wire directly.
+  (function wireShopModal() {
+    const closeBtn = document.getElementById('shop-close');
+    const modal = document.getElementById('shop-modal');
+    if (closeBtn) closeBtn.addEventListener('click', function () { modal.classList.remove('open'); });
+    if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('open'); });
+  })();
 })();
 </script>
 </body>
