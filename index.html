@@ -766,6 +766,13 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   max-height: 92vh; overflow-y: auto;
   box-shadow: 0 48px 96px rgba(0,0,0,0.8);
 }
+/* #auth-modal only — a dithered vinyl backdrop behind the login card.
+   pointer-events:none so the existing click-outside-to-close handler on
+   #auth-modal keeps working; the card itself paints over it and stays opaque. */
+.auth-dither-canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none;
+}
 .modal-close {
   position: absolute; top: 18px; right: 18px;
   width: 32px; height: 32px; border-radius: 8px;
@@ -1870,7 +1877,8 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   <div class="activity-list" id="notif-list"></div>
 </aside>
 <div id="artist-hero" class="artist-hero artist-hero-expanded" style="display:none;">
-  <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer">
+  <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer" crossorigin="anonymous">
+  <canvas class="artist-hero-bg" id="artist-hero-canvas" aria-hidden="true" style="display:none;"></canvas>
   <div class="artist-hero-fade"></div>
   <button class="artist-hero-toggle" id="artist-hero-toggle" title="Collapse">&#8593;</button>
   <div class="artist-hero-content wrap">
@@ -2236,6 +2244,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 
 <!-- ============================ AUTH MODAL ============================ -->
 <div class="modal" id="auth-modal">
+  <canvas class="auth-dither-canvas" id="auth-dither-canvas" aria-hidden="true"></canvas>
   <div class="modal-panel" style="max-width:400px;">
     <button class="modal-close" id="auth-close" aria-label="Close">&times;</button>
 
@@ -3199,6 +3208,7 @@ async function renderArtistHero() {
   _heroArtistKey = fav.id;
   hero.style.display = 'block';
   _heroBuilt = true;
+  if(window.VinalDither)window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
 }
 (function wireHeroToggle(){
   const btn = document.getElementById('artist-hero-toggle');
@@ -4410,9 +4420,13 @@ const Cloud=(function(){
     document.getElementById('auth-reset-error').textContent='';
     showAuthView('main');
     document.getElementById('auth-modal').classList.add('open');
+    if(window.VinalDither)window.VinalDither.playAuth();
     setTimeout(function(){document.getElementById('auth-email').focus();},60);
   }
-  function closeAuth(){document.getElementById('auth-modal').classList.remove('open');}
+  function closeAuth(){
+    document.getElementById('auth-modal').classList.remove('open');
+    if(window.VinalDither)window.VinalDither.pauseAuth();
+  }
   function setMode(m){
     mode=m;
     document.getElementById('auth-title').textContent=m==='login'?'Log in to Vinal':'Create your account';
@@ -5558,6 +5572,23 @@ window.handleGrooveLink=handleGrooveLink;
   console.log('%cVinal build: vinal-28 \u2014 v3.0 visual redesign','color:#F5C842;font-weight:700;font-size:14px;');
   applyAlbumSize();
   renderStats();
+  // Dev-only: preview the dithered artist hero without needing a real Cloud
+  // login + saved favourite artist. e.g. index.html?debugArtist=<image
+  // url>&debugArtistName=Radiohead \u2014 see VinalDither section near the
+  // bottom of this file for details. Runs after Cloud.init() (below) has
+  // had a chance to settle, since a real (absent) session would otherwise
+  // hide the hero again right after this sets it.
+  setTimeout(function debugArtistHero(){
+    const qp=new URLSearchParams(location.search);
+    const img=qp.get('debugArtist');
+    if(!img)return;
+    const hero=document.getElementById('artist-hero');
+    document.getElementById('artist-hero-bg').src=img;
+    document.getElementById('artist-hero-name').textContent=qp.get('debugArtistName')||'Test Artist';
+    document.getElementById('artist-hero-meta').innerHTML='Your favourite artist';
+    hero.style.display='block';
+    if(window.VinalDither)window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
+  }, 1000);
   if(new URLSearchParams(location.search).get('groove')){}
   else if(new URLSearchParams(location.search).get('u')){setMode('profile');}
   else{setMode('home');}
@@ -5572,6 +5603,340 @@ window.handleGrooveLink=handleGrooveLink;
   setInterval(function(){if(_token&&Date.now()>=_tokenExp-5000){_token=null;_tokenExp=0;_tokClear();getAppToken().then(function(){renderAuthArea(false);});}},30000);
 })();
 
+</script>
+
+<!-- ================================================================
+     VINAL DITHER — halftone/Bayer-dot treatment used in two spots:
+       1. #auth-dither-canvas — animated backdrop behind the login card,
+          built from ./dither-frames/001.jpg..044.jpg (a rotating-vinyl
+          clip), loaded lazily on first login-modal open so a visitor who
+          never logs in never pays for it.
+       2. #artist-hero-canvas — the user's favourite-artist photo (from
+          #artist-hero-bg, same <img>, no extra network request) redrawn
+          live in Vinal's own gold-on-black palette instead of shown as a
+          plain photo.
+     Both reuse the same DitherField class; only the config differs.
+     Preview the artist-hero treatment without a real login by opening
+     this file with ?debugArtist=<image-url>&debugArtistName=Some+Name
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  // ---- Bayer matrix -------------------------------------------------------
+  function buildBayer8x8() {
+    const b2 = [[0, 2], [3, 1]];
+    function expand(m) {
+      const n = m.length;
+      const out = Array.from({ length: n * 2 }, () => new Array(n * 2).fill(0));
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const v = m[y][x] * 4;
+        out[y][x] = v; out[y][x + n] = v + 2; out[y + n][x] = v + 3; out[y + n][x + n] = v + 1;
+      }
+      return out;
+    }
+    return expand(expand(b2)).map((row) => row.map((v) => v / 64));
+  }
+  const BAYER8 = buildBayer8x8();
+
+  function percentile(sorted, p) {
+    return sorted[Math.min(sorted.length - 1, Math.max(0, Math.floor(p * (sorted.length - 1))))];
+  }
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function easeOutQuad(t) { return 1 - (1 - t) * (1 - t); }
+  function hexToRgb(hex) {
+    const h = hex.replace('#', '');
+    const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+  // object-fit:cover crop math, with a vertical bias (focusY) so faces
+  // near the top of a portrait aren't cropped out — mirrors the
+  // object-position:center 25% already used on .artist-hero-bg.
+  function coverRect(srcW, srcH, dstW, dstH, focusY) {
+    const srcRatio = srcW / srcH, dstRatio = dstW / dstH;
+    let sw, sh;
+    if (srcRatio > dstRatio) { sh = srcH; sw = srcH * dstRatio; } else { sw = srcW; sh = srcW / dstRatio; }
+    const sx = (srcW - sw) / 2;
+    const sy = clamp((srcH - sh) * focusY, 0, srcH - sh);
+    return { sx, sy, sw, sh };
+  }
+
+  class DitherField {
+    constructor(canvas, images, config) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.images = images;
+      this.cfg = Object.assign({
+        pixelSize: 12, spacing: 0.38, dotScale: 0.6, levels: 5,
+        contrast: 32, brightness: 6, invert: true, floor: 0.03,
+        levelLoPct: 0.02, levelHiPct: 0.98, fps: 11, crossfadeFrames: 8,
+        colorMode: 'duotone', inkColor: '#F5C842', colorMix: 0.2,
+        background: '#0a0908', pointerMode: 'rotate',
+        pointerRadiusFrac: 0.6, pointerStrength: 0.16,
+        fit: 'stretch', focusY: 0.5, // 'cover' + focusY used for photo sources
+      }, config || {});
+      this.bufW = 0; this.bufH = 0;
+      this.lumaFrames = []; this.colorFrames = [];
+      this.levelLo = 0; this.levelHi = 1;
+      this.pointer = { x: -9999, y: -9999, active: false };
+      this._raf = null; this._startTime = null;
+      this._bound = { move: this._onPointerMove.bind(this), leave: this._onPointerLeave.bind(this) };
+    }
+
+    async init() {
+      const { pixelSize, fit, focusY } = this.cfg;
+      const w = this.canvas.width, h = this.canvas.height;
+      this.bufW = Math.max(1, Math.floor(w / pixelSize));
+      this.bufH = Math.max(1, Math.floor(h / pixelSize));
+      const off = document.createElement('canvas');
+      off.width = this.bufW; off.height = this.bufH;
+      const octx = off.getContext('2d', { willReadFrequently: true });
+
+      this.lumaFrames = []; this.colorFrames = [];
+      let allLuma = [];
+      for (const img of this.images) {
+        octx.clearRect(0, 0, this.bufW, this.bufH);
+        if (fit === 'cover') {
+          const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+          const r = coverRect(iw, ih, this.bufW, this.bufH, focusY);
+          octx.drawImage(img, r.sx, r.sy, r.sw, r.sh, 0, 0, this.bufW, this.bufH);
+        } else {
+          octx.drawImage(img, 0, 0, this.bufW, this.bufH);
+        }
+        const data = octx.getImageData(0, 0, this.bufW, this.bufH).data;
+        const luma = new Float32Array(this.bufW * this.bufH);
+        for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+          luma[p] = (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
+        }
+        this.lumaFrames.push(luma);
+        if (this.cfg.colorMode !== 'duotone') this.colorFrames.push(new Uint8ClampedArray(data));
+        for (let i = 0; i < luma.length; i += 3) allLuma.push(luma[i]);
+      }
+      allLuma.sort((a, b) => a - b);
+      this.levelLo = percentile(allLuma, this.cfg.levelLoPct);
+      this.levelHi = Math.max(this.levelLo + 1e-3, percentile(allLuma, this.cfg.levelHiPct));
+      this._buildBuckets();
+    }
+
+    _buildBuckets() {
+      const { pixelSize, spacing, dotScale, levels } = this.cfg;
+      const maxR = (pixelSize * (1 - spacing)) / 2 * dotScale;
+      this.radiusForLevel = new Array(levels + 1);
+      for (let l = 0; l <= levels; l++) this.radiusForLevel[l] = maxR * (l / levels);
+    }
+
+    attachPointer(el) {
+      (el || this.canvas).addEventListener('pointermove', this._bound.move);
+      (el || this.canvas).addEventListener('pointerleave', this._bound.leave);
+    }
+    detachPointer(el) {
+      (el || this.canvas).removeEventListener('pointermove', this._bound.move);
+      (el || this.canvas).removeEventListener('pointerleave', this._bound.leave);
+    }
+    _onPointerMove(e) {
+      const rect = this.canvas.getBoundingClientRect();
+      this.pointer.x = ((e.clientX - rect.left) / rect.width) * this.canvas.width;
+      this.pointer.y = ((e.clientY - rect.top) / rect.height) * this.canvas.height;
+      this.pointer.active = true;
+    }
+    _onPointerLeave() { this.pointer.active = false; }
+
+    start() {
+      this._startTime = null;
+      const loop = (ts) => {
+        if (this._startTime === null) this._startTime = ts;
+        this._renderAtTime((ts - this._startTime) / 1000);
+        this._raf = requestAnimationFrame(loop);
+      };
+      this._raf = requestAnimationFrame(loop);
+    }
+    stop() { if (this._raf) cancelAnimationFrame(this._raf); this._raf = null; }
+
+    _renderAtTime(elapsed) {
+      const n = this.lumaFrames.length;
+      const fpos = (elapsed * this.cfg.fps) % n;
+      const i0 = Math.floor(fpos), i1 = (i0 + 1) % n, frac = fpos - i0;
+      const cf = Math.min(this.cfg.crossfadeFrames, Math.floor(n / 2));
+      let blendWithStart = 0;
+      if (cf > 0 && i0 >= n - cf) blendWithStart = ((i0 - (n - cf)) + frac) / cf;
+      this._renderFrame(i0, i1, frac, blendWithStart);
+    }
+
+    _renderFrame(i0, i1, frac, blendWithStart) {
+      const { ctx, bufW, bufH, cfg } = this;
+      const n = this.lumaFrames.length;
+      const cell = cfg.pixelSize;
+      const contrastFactor = (259 * (cfg.contrast + 255)) / (255 * (259 - cfg.contrast));
+      ctx.fillStyle = cfg.background;
+      ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+      const pointerActive = cfg.pointerMode !== 'none' && this.pointer.active;
+      const px = this.pointer.x, py = this.pointer.y;
+      const radius = cfg.pointerRadiusFrac * Math.min(this.canvas.width, this.canvas.height);
+      const buckets = new Map();
+
+      for (let by = 0; by < bufH; by++) {
+        for (let bx = 0; bx < bufW; bx++) {
+          let sx = bx, sy = by;
+          if (pointerActive) {
+            const cx = (bx + 0.5) * cell, cy = (by + 0.5) * cell;
+            const dx = cx - px, dy = cy - py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < radius) {
+              const strength = cfg.pointerStrength * easeOutQuad(1 - dist / radius);
+              if (cfg.pointerMode === 'rotate') {
+                const ang = Math.atan2(dy, dx) + strength * 1.4;
+                const d = Math.max(1, dist);
+                sx = bx + (Math.cos(ang) * d - dx) / cell;
+                sy = by + (Math.sin(ang) * d - dy) / cell;
+              } else if (cfg.pointerMode === 'lean') {
+                sx = bx - strength * (dx / cell) * 1.5;
+                sy = by - strength * (dy / cell) * 0.4;
+              } else if (cfg.pointerMode === 'scatter') {
+                const hh = Math.sin(bx * 12.9898 + by * 78.233) * 43758.5453;
+                const rnd = hh - Math.floor(hh);
+                sx = bx + (rnd - 0.5) * strength * 3;
+                sy = by + ((rnd * 1.7) % 1 - 0.5) * strength * 3;
+              }
+            }
+          }
+          sx = clamp(Math.round(sx), 0, bufW - 1);
+          sy = clamp(Math.round(sy), 0, bufH - 1);
+          const p = sy * bufW + sx;
+
+          let luma = this.lumaFrames[i0][p] * (1 - frac) + this.lumaFrames[i1][p] * frac;
+          if (blendWithStart > 0) {
+            const lumaStart = this.lumaFrames[0][p] * (1 - frac) + this.lumaFrames[Math.min(1, n - 1)][p] * frac;
+            luma = luma * (1 - blendWithStart) + lumaStart * blendWithStart;
+          }
+          let v = clamp((luma - this.levelLo) / (this.levelHi - this.levelLo), 0, 1);
+          v = clamp(contrastFactor * (v - 0.5) + 0.5 + cfg.brightness / 255, 0, 1);
+          if (cfg.invert) v = 1 - v;
+          if (v < cfg.floor) v = 0;
+
+          const threshold = BAYER8[by & 7][bx & 7];
+          const level = clamp(Math.floor(v * cfg.levels + (threshold - 0.5)), 0, cfg.levels);
+          if (level === 0) continue;
+
+          let key, color;
+          if (cfg.colorMode !== 'duotone') {
+            const cdata = this.colorFrames[i0];
+            const ci = p * 4;
+            let r = cdata[ci], g = cdata[ci + 1], b = cdata[ci + 2];
+            if (cfg.colorMode === 'blended') {
+              const ink = hexToRgb(cfg.inkColor), mix = cfg.colorMix;
+              r = r * mix + ink.r * (1 - mix); g = g * mix + ink.g * (1 - mix); b = b * mix + ink.b * (1 - mix);
+            }
+            color = `rgb(${r | 0},${g | 0},${b | 0})`;
+            key = `${level}:${r | 0}-${g | 0}-${b | 0}`;
+          } else {
+            color = cfg.inkColor; key = `${level}:ink`;
+          }
+          if (!buckets.has(key)) buckets.set(key, { color, cells: [] });
+          buckets.get(key).cells.push([bx, by, level]);
+        }
+      }
+      for (const { color, cells } of buckets.values()) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        for (const [bx, by, level] of cells) {
+          const r = this.radiusForLevel[level];
+          if (r <= 0) continue;
+          const cx = (bx + 0.5) * cell, cy = (by + 0.5) * cell;
+          ctx.moveTo(cx + r, cy);
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        }
+        ctx.fill();
+      }
+    }
+  }
+
+  function sizeCanvasTo(canvas, el) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const rect = el.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.round(rect.width * dpr));
+    canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  }
+
+  // ---- Auth modal backdrop ------------------------------------------------
+  let authField = null, authFramesPromise = null;
+  function loadAuthFrames() {
+    if (authFramesPromise) return authFramesPromise;
+    const paths = Array.from({ length: 44 }, (_, i) => 'dither-frames/' + String(i + 1).padStart(3, '0') + '.jpg');
+    authFramesPromise = Promise.all(paths.map((src) => new Promise((res, rej) => {
+      const img = new Image();
+      img.onload = () => res(img);
+      img.onerror = rej;
+      img.src = src;
+    })));
+    return authFramesPromise;
+  }
+  async function playAuth() {
+    const canvas = document.getElementById('auth-dither-canvas');
+    const modal = document.getElementById('auth-modal');
+    if (!canvas || !modal) return;
+    if (!authField) {
+      let images;
+      try { images = await loadAuthFrames(); } catch (e) { console.warn('Vinal dither: frame load failed', e); return; }
+      sizeCanvasTo(canvas, modal);
+      authField = new DitherField(canvas, images, {
+        pixelSize: 11, dotScale: 0.55, spacing: 0.4, levels: 4,
+        contrast: 34, brightness: 4, invert: true, floor: 0.035,
+        colorMode: 'duotone', inkColor: '#F5C842', background: '#0a0908',
+        pointerMode: 'rotate', fps: 11, crossfadeFrames: 8,
+      });
+      await authField.init();
+      authField.attachPointer(modal);
+      window.addEventListener('resize', function () {
+        if (!authField || !modal.classList.contains('open')) return;
+        authField.stop();
+        sizeCanvasTo(canvas, modal);
+        authField.init().then(function () { authField.start(); });
+      });
+    } else {
+      sizeCanvasTo(canvas, modal);
+    }
+    authField.start();
+  }
+  function pauseAuth() { if (authField) authField.stop(); }
+
+  // ---- Artist hero ----------------------------------------------------
+  let heroField = null;
+  async function mountArtistHero(imgEl, canvasEl) {
+    if (!imgEl || !canvasEl) return;
+    try {
+      if (imgEl.decode) await imgEl.decode();
+    } catch (e) {
+      await new Promise((res) => { imgEl.onload = res; if (imgEl.complete) res(); });
+    }
+    const host = imgEl.closest('.artist-hero') || imgEl.parentElement;
+    sizeCanvasTo(canvasEl, host);
+    if (heroField) heroField.stop();
+    heroField = new DitherField(canvasEl, [imgEl], {
+      pixelSize: 7, dotScale: 0.72, spacing: 0.32, levels: 6,
+      contrast: 22, brightness: 4, invert: true, floor: 0.02,
+      colorMode: 'blended', inkColor: '#F5C842', colorMix: 0.35,
+      background: '#0a0908', pointerMode: 'rotate',
+      pointerRadiusFrac: 0.7, pointerStrength: 0.1,
+      fit: 'cover', focusY: 0.25, // matches the img's object-position:center 25%
+    });
+    try {
+      await heroField.init();
+    } catch (e) {
+      // Cross-origin image without CORS clearance (shouldn't happen — Spotify's
+      // CDN sends Access-Control-Allow-Origin:* — but fail safe: leave the
+      // plain photo visible instead of a broken canvas).
+      console.warn('Vinal dither: artist hero init failed, showing plain photo', e);
+      return;
+    }
+    heroField.attachPointer(host);
+    heroField.start();
+    canvasEl.style.display = 'block';
+    imgEl.style.visibility = 'hidden';
+  }
+
+  window.VinalDither = { playAuth: playAuth, pauseAuth: pauseAuth, mountArtistHero: mountArtistHero };
+})();
 </script>
 </body>
 </html>
