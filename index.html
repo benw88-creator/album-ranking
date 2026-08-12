@@ -104,6 +104,19 @@ body {
   /* subtle warm noise texture feel */
   background-image: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(245,200,66,0.04) 0%, transparent 70%);
   background-attachment: fixed;
+  transition: background-color 0.6s ease, color 0.4s ease;
+}
+/* Equipping a Shop theme swaps CSS variables instantly by default — these
+   make that swap read as a considered fade across the whole page instead
+   of a jarring snap. Scoped to container-level surfaces, not everything,
+   so it doesn't fight the existing hover/press transitions on cards etc. */
+header, nav.modes, .stats, .stat, .modal-panel, .gate, .game-card, .shop-item,
+.search-field, select.ctrl-select, .seg {
+  transition: background-color 0.5s ease, border-color 0.5s ease, color 0.4s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  body, header, nav.modes, .stats, .stat, .modal-panel, .gate, .game-card, .shop-item,
+  .search-field, select.ctrl-select, .seg { transition: none; }
 }
 a { color: inherit; text-decoration: none; }
 .wrap { max-width: 1140px; margin: 0 auto; padding: 0 28px; }
@@ -218,6 +231,8 @@ header {
 
 /* ---- BUTTONS ---- */
 button { font-family: var(--font-body); cursor: pointer; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; transition: all 0.15s; }
+button:active { transform: scale(0.96); }
+@media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
 
 .btn-primary {
   background: var(--gold);
@@ -308,6 +323,39 @@ nav.modes button.active::after {
 nav.modes button:hover:not(.active) { color: var(--text); background: var(--surface-2); }
 .nav-icon-btn { display: inline-flex; align-items: center; gap: 7px; }
 .nav-icon { width: 15px; height: 15px; flex-shrink: 0; }
+
+/* ---- SHOP ENTRY POINT — always visible, whether logged in or not ---- */
+.shop-open-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--gold-dim); border: 1px solid var(--gold);
+  color: var(--gold); font-family: var(--font-mono); font-weight: 600; font-size: 13px;
+  padding: 9px 16px; border-radius: 999px; cursor: pointer;
+  position: relative; overflow: visible;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 0 0 0 rgba(245,200,66,0.5);
+  animation: shopPulse 2.6s ease-in-out infinite;
+}
+.shop-open-btn:hover { background: var(--gold); color: var(--bg); transform: translateY(-1px) scale(1.03); }
+.shop-open-btn svg { flex-shrink: 0; }
+@keyframes shopPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,200,66,0.45); }
+  50%      { box-shadow: 0 0 0 6px rgba(245,200,66,0); }
+}
+@media (prefers-reduced-motion: reduce) { .shop-open-btn { animation: none; } }
+
+.disc-particle {
+  position: fixed; z-index: 500; pointer-events: none;
+  font-family: var(--font-mono); font-weight: 700; font-size: 15px; color: var(--gold);
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  transform: translate(-50%, 0);
+  animation: discFloat 1.1s cubic-bezier(0.2,0.8,0.2,1) forwards;
+}
+@keyframes discFloat {
+  0%   { opacity: 0; transform: translate(-50%, 4px) scale(0.7); }
+  18%  { opacity: 1; transform: translate(-50%, -8px) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -52px) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .disc-particle { animation: none; display: none; } }
 
 /* ---- SEARCH ---- */
 .search-block { padding: 28px 0 24px; position: relative; z-index: 30; }
@@ -456,7 +504,11 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
 .shop-item {
   display: flex; align-items: center; gap: 14px;
   padding: 14px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  transition: transform 0.18s cubic-bezier(0.2,0.8,0.2,1), border-color 0.18s, box-shadow 0.18s;
 }
+.shop-item:hover { transform: translateY(-2px); border-color: var(--gold); box-shadow: 0 10px 28px rgba(0,0,0,0.35); }
+.shop-swatch { transition: transform 0.18s ease; }
+.shop-item:hover .shop-swatch { transform: scale(1.08) rotate(-4deg); }
 .shop-swatch { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; border: 1px solid var(--border-strong); }
 .shop-item-info { flex: 1; min-width: 0; }
 .shop-item-name { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
@@ -486,7 +538,28 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
   will-change: transform;
   transform: translateZ(0);
   backface-visibility: hidden;
+  animation: cardIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
 }
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(16px) translateZ(0) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) translateZ(0) scale(1); }
+}
+/* Staggered entrance for the first screenful of cards in any grid — every
+   re-render (switching tabs, re-sorting) replays it, which is the point:
+   it should feel alive every time, not just on first load. */
+.grid .card:nth-child(1)  { animation-delay: 0.00s; }
+.grid .card:nth-child(2)  { animation-delay: 0.03s; }
+.grid .card:nth-child(3)  { animation-delay: 0.06s; }
+.grid .card:nth-child(4)  { animation-delay: 0.09s; }
+.grid .card:nth-child(5)  { animation-delay: 0.12s; }
+.grid .card:nth-child(6)  { animation-delay: 0.15s; }
+.grid .card:nth-child(7)  { animation-delay: 0.18s; }
+.grid .card:nth-child(8)  { animation-delay: 0.21s; }
+.grid .card:nth-child(9)  { animation-delay: 0.24s; }
+.grid .card:nth-child(10) { animation-delay: 0.27s; }
+.grid .card:nth-child(11) { animation-delay: 0.30s; }
+.grid .card:nth-child(12) { animation-delay: 0.33s; }
+@media (prefers-reduced-motion: reduce) { .card { animation: none; } }
 .card:hover {
   transform: translateY(-6px) translateZ(0);
   box-shadow:
@@ -1978,7 +2051,13 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
         <span></span><span></span><span></span><span></span><span></span>
       </div>
     </div>
-    <div id="auth-area"></div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button id="shop-open-btn" class="shop-open-btn" title="Disc Shop">
+        <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>
+        <span id="shop-open-discs">Shop</span>
+      </button>
+      <div id="auth-area"></div>
+    </div>
   </header>
 
   <!-- ============================ SEARCH ============================ -->
@@ -3548,23 +3627,29 @@ function renderStats(){
   const albums=Object.values(loadAlbums());
   const songs=Object.values(loadSongs());
   const wrap=document.getElementById('stats-wrap');
-  if(!albums.length&&!songs.length){wrap.innerHTML='';return;}
+  const loggedIn=!!(window.Cloud&&Cloud.isOn&&Cloud.isOn());
+  // Used to bail out to an empty strip whenever there was nothing to show —
+  // but that also hid the Discs/Streak tiles for anyone logged in with zero
+  // ratings so far, which is exactly a brand-new user's first impression.
+  if(!albums.length&&!songs.length&&!loggedIn){wrap.innerHTML='';return;}
   const aAvg=albums.length?Math.round(albums.reduce(function(s,a){return s+a.score;},0)/albums.length):0;
   const sAvg=songs.length?(songs.reduce(function(s,x){return s+x.score;},0)/songs.length).toFixed(1):0;
+  let coreTiles='';
+  if(albums.length||songs.length){
+    coreTiles=
+      '<div class="stat"><div class="s-label">\u{1F4BF} Albums ranked</div><div class="s-val">'+albums.length+'</div></div>'+
+      '<div class="stat"><div class="s-label">\u{1F3B5} Songs ranked</div><div class="s-val">'+songs.length+'</div></div>'+
+      '<div class="stat"><div class="s-label">\u{1F4CA} Avg album</div><div class="s-val" style="color:'+albumColor(aAvg)+'">'+aAvg+'</div></div>'+
+      '<div class="stat"><div class="s-label">\u{1F3B7} Avg song</div><div class="s-val" style="color:'+songColor(Math.round(sAvg))+'">'+sAvg+'</div></div>';
+  }
   let walletTiles='';
-  if(window.Wallet&&window.Cloud&&Cloud.isOn&&Cloud.isOn()){
+  if(window.Wallet&&loggedIn){
     const w=Wallet.get();
     walletTiles=
       '<div class="stat stat-wallet" id="stat-streak"><div class="s-label">\u{1F525} Streak</div><div class="s-val">'+(w.streak_current||0)+'</div></div>'+
       '<div class="stat stat-wallet" id="stat-discs" title="Open the Disc Shop"><div class="s-label">◉ Discs</div><div class="s-val">'+(w.discs||0)+'</div></div>';
   }
-  wrap.innerHTML='<div class="stats">'+
-    '<div class="stat"><div class="s-label">\u{1F4BF} Albums ranked</div><div class="s-val">'+albums.length+'</div></div>'+
-    '<div class="stat"><div class="s-label">\u{1F3B5} Songs ranked</div><div class="s-val">'+songs.length+'</div></div>'+
-    '<div class="stat"><div class="s-label">\u{1F4CA} Avg album</div><div class="s-val" style="color:'+albumColor(aAvg)+'">'+aAvg+'</div></div>'+
-    '<div class="stat"><div class="s-label">\u{1F3B7} Avg song</div><div class="s-val" style="color:'+songColor(Math.round(sAvg))+'">'+sAvg+'</div></div>'+
-    walletTiles+
-  '</div>';
+  wrap.innerHTML='<div class="stats">'+coreTiles+walletTiles+'</div>';
   const discTile=document.getElementById('stat-discs');
   if(discTile)discTile.addEventListener('click',function(){if(window.openShop)openShop();});
 }
@@ -6104,9 +6189,55 @@ window.handleGrooveLink=handleGrooveLink;
     toast._tm = setTimeout(function () { t.classList.remove('show'); }, 1600);
   }
 
+  function spawnDiscParticle(amount) {
+    const anchor = document.getElementById('shop-open-btn');
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const p = document.createElement('div');
+    p.className = 'disc-particle';
+    p.textContent = '+' + amount;
+    p.style.left = (rect.left + rect.width / 2) + 'px';
+    p.style.top = rect.top + 'px';
+    document.body.appendChild(p);
+    setTimeout(function () { p.remove(); }, 1200);
+  }
+
   async function persist(fields) {
     Object.assign(state, fields);
     if (window.Cloud && Cloud.isOn && Cloud.isOn()) { try { await Cloud.saveProfile(fields); } catch (e) {} }
+    updateShopButton();
+  }
+
+  // Count the visible number up rather than snapping — small detail, feels
+  // a lot more like a game currency ticking up than a static label swap.
+  function countUp(el, from, to, ms) {
+    if (from === to) { el.textContent = to; return; }
+    const start = performance.now();
+    let landed = false;
+    function land() { if (landed) return; landed = true; el.textContent = to; }
+    function step(now) {
+      if (landed) return;
+      const t = Math.min(1, (now - start) / ms);
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = Math.round(from + (to - from) * eased);
+      if (t < 1) requestAnimationFrame(step);
+      else land();
+    }
+    requestAnimationFrame(step);
+    // Correctness fallback: rAF is throttled to near-never on a backgrounded/
+    // hidden tab, which would otherwise leave the old number showing
+    // indefinitely instead of just skipping the animation. This guarantees
+    // the real value lands either way.
+    setTimeout(land, ms + 120);
+  }
+
+  function updateShopButton() {
+    const label = document.getElementById('shop-open-discs');
+    if (!label) return;
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { label.textContent = 'Shop'; return; }
+    const prev = parseInt(label.dataset.val || '0', 10);
+    countUp(label, prev, state.discs, 500);
+    label.dataset.val = state.discs;
   }
 
   async function load() {
@@ -6130,6 +6261,7 @@ window.handleGrooveLink=handleGrooveLink;
     } catch (e) { console.warn('Wallet: failed to load profile fields — have the new columns been added in Supabase?', e); }
     loaded = true;
     applyTheme();
+    updateShopButton();
     return state;
   }
 
@@ -6164,7 +6296,7 @@ window.handleGrooveLink=handleGrooveLink;
         streak_last_date: state.streak_last_date, streak_freezes: state.streak_freezes,
       });
     }
-    if (discsEarned > 0) toast('+' + discsEarned + ' Discs');
+    if (discsEarned > 0) { toast('+' + discsEarned + ' Discs'); spawnDiscParticle(discsEarned); }
     if (milestoneHit && typeof window.celebrate === 'function') {
       window.celebrate('🔥 ' + milestoneHit + '-day streak!', 'Keep it going — rate something tomorrow.');
     }
@@ -6177,6 +6309,7 @@ window.handleGrooveLink=handleGrooveLink;
     state.discs += amount;
     await persist({ discs: state.discs });
     toast('+' + amount + ' Discs' + (opts && opts.reason ? (' — ' + opts.reason) : ''));
+    spawnDiscParticle(amount);
     if (typeof window.renderStats === 'function') window.renderStats();
   }
 
@@ -6254,8 +6387,10 @@ window.handleGrooveLink=handleGrooveLink;
   (function wireShopModal() {
     const closeBtn = document.getElementById('shop-close');
     const modal = document.getElementById('shop-modal');
+    const openBtn = document.getElementById('shop-open-btn');
     if (closeBtn) closeBtn.addEventListener('click', function () { modal.classList.remove('open'); });
     if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('open'); });
+    if (openBtn) openBtn.addEventListener('click', function () { window.openShop(); });
   })();
 })();
 </script>
