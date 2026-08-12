@@ -13,4 +13,16 @@ alter table profiles
   add column if not exists owned_themes text[] not null default '{classic}',
   add column if not exists active_theme text not null default 'classic',
   add column if not exists owned_banners text[] not null default '{}',
-  add column if not exists active_banner text;
+  add column if not exists active_banner text,
+  add column if not exists is_admin boolean not null default false;
+
+-- To give an account unlimited Discs and every cosmetic for free (e.g. your
+-- own dev/owner account), run this separately, once, with your own login
+-- email for Vinal:
+--
+--   update profiles set is_admin = true
+--   where id = (select id from auth.users where email = 'you@example.com');
+--
+-- This is a self-serve flag on your own database — nothing in the app code
+-- hardcodes any specific account. Set it back to false the same way to
+-- remove it.

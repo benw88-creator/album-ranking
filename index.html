@@ -295,7 +295,16 @@ nav.modes {
   padding: 5px;
   gap: 2px;
   margin: 8px 0 0;
+  position: relative;
 }
+.nav-indicator {
+  position: absolute; top: 5px; bottom: 5px; left: 0;
+  width: 0; border-radius: 10px;
+  background: var(--surface-3);
+  transition: transform 0.3s cubic-bezier(0.2,0.8,0.2,1), width 0.3s cubic-bezier(0.2,0.8,0.2,1);
+  z-index: 0; pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) { .nav-indicator { transition: none; } }
 nav.modes button {
   background: transparent;
   border: none;
@@ -305,10 +314,13 @@ nav.modes button {
   font-size: 14px;
   font-weight: 500;
   position: relative;
+  z-index: 1;
   transition: color 0.15s, background 0.15s;
 }
 nav.modes button.active {
-  background: var(--surface-3);
+  /* Background now comes from the sliding .nav-indicator behind it, not a
+     static per-button fill — that's what makes tab switches slide instead
+     of just popping between buttons. */
   color: var(--text);
 }
 nav.modes button.active::after {
@@ -501,6 +513,11 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
 .shop-balance-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); }
 .shop-balance-val { font-family: var(--font-mono); font-weight: 600; font-size: 22px; color: var(--gold); }
 .shop-list { display: flex; flex-direction: column; gap: 10px; }
+.shop-section-title {
+  font: 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--text-faint); margin: 18px 0 2px;
+}
+.shop-section-title:first-child { margin-top: 0; }
 .shop-item {
   display: flex; align-items: center; gap: 14px;
   padding: 14px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
@@ -2072,6 +2089,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 
   <!-- ============================ MODE NAV ============================ -->
   <nav class="modes" id="modes">
+    <span class="nav-indicator" id="nav-indicator"></span>
     <button data-mode="home" class="active">Home</button>
     <button data-mode="crate" class="nav-icon-btn"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>The Crate</button>
     <button data-mode="albums">Albums</button>
@@ -3456,6 +3474,7 @@ function setMode(mode, fromCode) {
   currentMode = mode;
   Object.keys(views).forEach(function (k) { views[k].style.display = (k === mode) ? 'block' : 'none'; });
   document.querySelectorAll('#modes button').forEach(function (b) { b.classList.toggle('active', b.dataset.mode === mode); });
+  if (window.positionNavIndicator) window.positionNavIndicator();
   if (mode === 'home' || mode === 'albums' || mode === 'songs') lastListMode = mode;
   if (mode === 'home') { renderRecommendations(); renderNewReleases(); renderArtistHero(); }
   else { const h = document.getElementById('artist-hero'); if (h) h.style.display = 'none'; }
@@ -3469,6 +3488,25 @@ function setMode(mode, fromCode) {
   if (mode === 'grooves' && window.renderGrooves) window.renderGrooves();
 }
 window.goToView = setMode;
+
+function positionNavIndicator() {
+  const nav = document.getElementById('modes');
+  const indicator = document.getElementById('nav-indicator');
+  const active = nav && nav.querySelector('button.active[data-mode]');
+  if (!nav || !indicator || !active) { if (indicator) indicator.style.width = '0'; return; }
+  const navRect = nav.getBoundingClientRect();
+  const btnRect = active.getBoundingClientRect();
+  indicator.style.width = btnRect.width + 'px';
+  indicator.style.transform = 'translateX(' + (btnRect.left - navRect.left - 5) + 'px)';
+}
+window.positionNavIndicator = positionNavIndicator;
+window.addEventListener('resize', positionNavIndicator);
+window.addEventListener('load', positionNavIndicator);
+positionNavIndicator();
+// Button widths can shift slightly once the webfont swaps in over the
+// fallback font (font-display:swap) — reposition once that settles so the
+// indicator doesn't sit a few px off on first paint.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(positionNavIndicator);
 
 document.getElementById('modes').addEventListener('click', function (e) {
   const b = e.target.closest('button'); if (!b) return;
@@ -3647,7 +3685,7 @@ function renderStats(){
     const w=Wallet.get();
     walletTiles=
       '<div class="stat stat-wallet" id="stat-streak"><div class="s-label">\u{1F525} Streak</div><div class="s-val">'+(w.streak_current||0)+'</div></div>'+
-      '<div class="stat stat-wallet" id="stat-discs" title="Open the Disc Shop"><div class="s-label">◉ Discs</div><div class="s-val">'+(w.discs||0)+'</div></div>';
+      '<div class="stat stat-wallet" id="stat-discs" title="Open the Disc Shop"><div class="s-label">◉ Discs</div><div class="s-val">'+(w.is_admin?'∞':(w.discs||0))+'</div></div>';
   }
   wrap.innerHTML='<div class="stats">'+coreTiles+walletTiles+'</div>';
   const discTile=document.getElementById('stat-discs');
@@ -4990,9 +5028,11 @@ async function drawProfile(host,prof,isOwner){
   }
 
 
+  const bannerDef=window.Wallet&&prof.active_banner&&Wallet.BANNERS[prof.active_banner];
+  const bannerStyle=bannerDef?' style="background:'+bannerDef.gradient+'; border-radius:var(--radius); padding:20px;"':'';
   host.innerHTML=
     favBannerHtml+
-    '<div class="prof-head">'+
+    '<div class="prof-head"'+bannerStyle+'>'+
       '<img class="prof-avatar" src="'+esc(avatarSrc(av))+'" alt="">'+
       '<div style="flex:1;min-width:200px;">'+
         '<div class="prof-name">'+esc(prof.username||'user')+badgeHtml(badges)+'</div>'+
@@ -6153,6 +6193,12 @@ window.handleGrooveLink=handleGrooveLink;
     cassette: 'linear-gradient(135deg,#0b0d10,#5eb8ff)',
     blanc:    'linear-gradient(135deg,#f3efe6,#b8860b)',
   };
+  const BANNERS = {
+    none:   { name: 'None',      cost: 0,   desc: 'No banner — the plain profile header.', gradient: 'transparent' },
+    aurora: { name: 'Aurora',    cost: 100, desc: 'A cool blue-to-gold wash behind your header.', gradient: 'linear-gradient(120deg, rgba(94,184,255,0.28), rgba(245,200,66,0.16))' },
+    ember:  { name: 'Ember',     cost: 100, desc: 'Warm orange-red, low and moody.', gradient: 'linear-gradient(120deg, rgba(232,118,63,0.30), rgba(226,75,74,0.16))' },
+    mono:   { name: 'Mono Fade', cost: 80,  desc: 'A quiet fade to nothing — subtle depth.', gradient: 'linear-gradient(120deg, rgba(255,255,255,0.10), transparent)' },
+  };
   const STREAK_MILESTONES = [7, 30, 100, 365];
   const DAILY_RATING_CAP = 5;
   const DISCS_PER_RATING = 3;
@@ -6160,7 +6206,7 @@ window.handleGrooveLink=handleGrooveLink;
   let state = {
     discs: 0, streak_current: 0, streak_best: 0, streak_last_date: null,
     streak_freezes: 1, owned_themes: ['classic'], active_theme: 'classic',
-    owned_banners: [], active_banner: null,
+    owned_banners: [], active_banner: null, is_admin: false,
   };
   let loaded = false;
   let ratingsToday = 0, ratingsTodayDate = null;
@@ -6235,6 +6281,7 @@ window.handleGrooveLink=handleGrooveLink;
     const label = document.getElementById('shop-open-discs');
     if (!label) return;
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { label.textContent = 'Shop'; return; }
+    if (state.is_admin) { label.textContent = '∞'; label.dataset.val = state.discs; return; }
     const prev = parseInt(label.dataset.val || '0', 10);
     countUp(label, prev, state.discs, 500);
     label.dataset.val = state.discs;
@@ -6256,6 +6303,7 @@ window.handleGrooveLink=handleGrooveLink;
           active_theme: prof.active_theme || 'classic',
           owned_banners: prof.owned_banners || [],
           active_banner: prof.active_banner || null,
+          is_admin: !!prof.is_admin,
         };
       }
     } catch (e) { console.warn('Wallet: failed to load profile fields — have the new columns been added in Supabase?', e); }
@@ -6318,8 +6366,10 @@ window.handleGrooveLink=handleGrooveLink;
     const t = THEMES[key];
     if (!t) return { error: 'Unknown theme' };
     if (state.owned_themes.indexOf(key) !== -1) return { error: 'Already owned' };
-    if (state.discs < t.cost) return { error: 'Not enough Discs' };
-    state.discs -= t.cost;
+    if (!state.is_admin) {
+      if (state.discs < t.cost) return { error: 'Not enough Discs' };
+      state.discs -= t.cost;
+    }
     state.owned_themes = state.owned_themes.concat([key]);
     await persist({ discs: state.discs, owned_themes: state.owned_themes });
     return { ok: true };
@@ -6327,53 +6377,103 @@ window.handleGrooveLink=handleGrooveLink;
 
   async function equipTheme(key) {
     if (!loaded) await load();
-    if (state.owned_themes.indexOf(key) === -1) return { error: 'Not owned' };
+    if (!state.is_admin && state.owned_themes.indexOf(key) === -1) return { error: 'Not owned' };
     state.active_theme = key;
     applyTheme();
     await persist({ active_theme: key });
     return { ok: true };
   }
 
+  async function buyBanner(key) {
+    if (!loaded) await load();
+    const b = BANNERS[key];
+    if (!b) return { error: 'Unknown banner' };
+    if (state.owned_banners.indexOf(key) !== -1) return { error: 'Already owned' };
+    if (!state.is_admin) {
+      if (state.discs < b.cost) return { error: 'Not enough Discs' };
+      state.discs -= b.cost;
+    }
+    state.owned_banners = state.owned_banners.concat([key]);
+    await persist({ discs: state.discs, owned_banners: state.owned_banners });
+    return { ok: true };
+  }
+
+  async function equipBanner(key) {
+    if (!loaded) await load();
+    if (!state.is_admin && key !== 'none' && state.owned_banners.indexOf(key) === -1) return { error: 'Not owned' };
+    state.active_banner = key === 'none' ? null : key;
+    await persist({ active_banner: state.active_banner });
+    if (typeof window.renderProfile === 'function') window.renderProfile();
+    return { ok: true };
+  }
+
   function get() { return state; }
 
-  window.Wallet = { load: load, get: get, recordRating: recordRating, awardDiscs: awardDiscs, buyTheme: buyTheme, equipTheme: equipTheme, applyTheme: applyTheme, THEMES: THEMES };
+  window.Wallet = {
+    load: load, get: get, recordRating: recordRating, awardDiscs: awardDiscs,
+    buyTheme: buyTheme, equipTheme: equipTheme, buyBanner: buyBanner, equipBanner: equipBanner,
+    applyTheme: applyTheme, THEMES: THEMES, BANNERS: BANNERS,
+  };
 
   // ---- Shop UI ------------------------------------------------------------
+  function shopItemRow(kind, key, item, swatchBg, owned, active) {
+    let action;
+    if (active) action = '<button class="btn-mini" disabled>Equipped</button>';
+    else if (owned) action = '<button class="btn-mini" data-equip-' + kind + '="' + key + '">Equip</button>';
+    else action = '<button class="btn-primary" style="padding:9px 16px;font-size:13px;" data-buy-' + kind + '="' + key + '" ' + ((get().discs < item.cost && !get().is_admin) ? 'disabled' : '') + '>Buy</button>';
+    return '<div class="shop-item">' +
+      '<div class="shop-swatch" style="background:' + swatchBg + '"></div>' +
+      '<div class="shop-item-info">' +
+        '<div class="shop-item-name">' + item.name + (active ? ' ✓' : '') + '</div>' +
+        '<div class="shop-item-desc">' + item.desc + '</div>' +
+        '<div class="shop-item-cost">' + (get().is_admin ? 'Free (Admin)' : (item.cost === 0 ? 'Free' : item.cost + ' Discs')) + '</div>' +
+      '</div>' + action + '</div>';
+  }
+
   function renderShop() {
     const w = get();
-    document.getElementById('shop-balance-val').textContent = w.discs;
+    document.getElementById('shop-balance-val').textContent = w.is_admin ? '∞' : w.discs;
     const list = document.getElementById('shop-list');
-    list.innerHTML = Object.keys(THEMES).map(function (key) {
-      const t = THEMES[key];
-      const owned = w.owned_themes.indexOf(key) !== -1;
-      const active = w.active_theme === key;
-      let action;
-      if (active) action = '<button class="btn-mini" disabled>Equipped</button>';
-      else if (owned) action = '<button class="btn-mini" data-equip="' + key + '">Equip</button>';
-      else action = '<button class="btn-primary" style="padding:9px 16px;font-size:13px;" data-buy="' + key + '" ' + (w.discs < t.cost ? 'disabled' : '') + '>Buy</button>';
-      return '<div class="shop-item">' +
-        '<div class="shop-swatch" style="background:' + SWATCH[key] + '"></div>' +
-        '<div class="shop-item-info">' +
-          '<div class="shop-item-name">' + t.name + (active ? ' ✓' : '') + '</div>' +
-          '<div class="shop-item-desc">' + t.desc + '</div>' +
-          '<div class="shop-item-cost">' + (t.cost === 0 ? 'Free' : t.cost + ' Discs') + '</div>' +
-        '</div>' + action + '</div>';
+
+    const themeRows = Object.keys(THEMES).map(function (key) {
+      return shopItemRow('theme', key, THEMES[key], SWATCH[key], w.is_admin || w.owned_themes.indexOf(key) !== -1, w.active_theme === key);
     }).join('');
-    list.querySelectorAll('[data-buy]').forEach(function (b) {
+    const bannerRows = Object.keys(BANNERS).map(function (key) {
+      const owned = w.is_admin || key === 'none' || w.owned_banners.indexOf(key) !== -1;
+      const active = (w.active_banner || 'none') === key;
+      const swatchBg = 'linear-gradient(135deg, var(--surface-3), var(--surface-3)), ' + BANNERS[key].gradient;
+      return shopItemRow('banner', key, BANNERS[key], swatchBg, owned, active);
+    }).join('');
+
+    list.innerHTML =
+      '<div class="shop-section-title">Themes</div>' + themeRows +
+      '<div class="shop-section-title">Profile banners</div>' + bannerRows;
+
+    list.querySelectorAll('[data-buy-theme]').forEach(function (b) {
       b.addEventListener('click', async function () {
         b.disabled = true;
-        const res = await buyTheme(b.dataset.buy);
+        const res = await buyTheme(b.dataset.buyTheme);
         if (res.error) { toast(res.error); b.disabled = false; return; }
-        await equipTheme(b.dataset.buy);
+        await equipTheme(b.dataset.buyTheme);
         renderShop();
         if (typeof window.renderStats === 'function') window.renderStats();
       });
     });
-    list.querySelectorAll('[data-equip]').forEach(function (b) {
+    list.querySelectorAll('[data-equip-theme]').forEach(function (b) {
+      b.addEventListener('click', async function () { await equipTheme(b.dataset.equipTheme); renderShop(); });
+    });
+    list.querySelectorAll('[data-buy-banner]').forEach(function (b) {
       b.addEventListener('click', async function () {
-        await equipTheme(b.dataset.equip);
+        b.disabled = true;
+        const res = await buyBanner(b.dataset.buyBanner);
+        if (res.error) { toast(res.error); b.disabled = false; return; }
+        await equipBanner(b.dataset.buyBanner);
         renderShop();
+        if (typeof window.renderStats === 'function') window.renderStats();
       });
+    });
+    list.querySelectorAll('[data-equip-banner]').forEach(function (b) {
+      b.addEventListener('click', async function () { await equipBanner(b.dataset.equipBanner); renderShop(); });
     });
   }
 
