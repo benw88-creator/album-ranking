@@ -6199,6 +6199,16 @@ window.handleGrooveLink=handleGrooveLink;
     ember:  { name: 'Ember',     cost: 100, desc: 'Warm orange-red, low and moody.', gradient: 'linear-gradient(120deg, rgba(232,118,63,0.30), rgba(226,75,74,0.16))' },
     mono:   { name: 'Mono Fade', cost: 80,  desc: 'A quiet fade to nothing — subtle depth.', gradient: 'linear-gradient(120deg, rgba(255,255,255,0.10), transparent)' },
   };
+  // The real banner gradients above are deliberately subtle overlays meant to
+  // sit on top of a full profile page. At 44px swatch-chip size with nothing
+  // behind them, that subtlety just reads as a near-black square — so the
+  // Shop preview uses fully-opaque, saturated stand-ins instead.
+  const BANNER_SWATCH = {
+    none:   'linear-gradient(135deg, var(--surface-2), var(--surface-4))',
+    aurora: 'linear-gradient(135deg, #5eb8ff, #F5C842)',
+    ember:  'linear-gradient(135deg, #e8763f, #e24b4a)',
+    mono:   'linear-gradient(135deg, #6b6154, #d9cdbe)',
+  };
   const STREAK_MILESTONES = [7, 30, 100, 365];
   const DAILY_RATING_CAP = 5;
   const DISCS_PER_RATING = 3;
@@ -6441,8 +6451,7 @@ window.handleGrooveLink=handleGrooveLink;
     const bannerRows = Object.keys(BANNERS).map(function (key) {
       const owned = w.is_admin || key === 'none' || w.owned_banners.indexOf(key) !== -1;
       const active = (w.active_banner || 'none') === key;
-      const swatchBg = 'linear-gradient(135deg, var(--surface-3), var(--surface-3)), ' + BANNERS[key].gradient;
-      return shopItemRow('banner', key, BANNERS[key], swatchBg, owned, active);
+      return shopItemRow('banner', key, BANNERS[key], BANNER_SWATCH[key], owned, active);
     }).join('');
 
     list.innerHTML =
