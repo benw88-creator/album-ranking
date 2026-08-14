@@ -40,6 +40,11 @@
   --radius:       18px;
   --radius-sm:    10px;
   --radius-xs:    7px;
+  /* One shared motion curve for the whole app — a confident settle with a
+     touch of overshoot. Every animation/transition added from here on uses
+     this instead of picking its own easing, so motion reads as one system
+     rather than a pile of unrelated effects. */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ---- COSMETIC THEMES (Shop-unlockable — see Wallet module near the end
@@ -301,7 +306,7 @@ nav.modes {
   position: absolute; top: 5px; bottom: 5px; left: 0;
   width: 0; border-radius: 10px;
   background: var(--surface-3);
-  transition: transform 0.3s cubic-bezier(0.2,0.8,0.2,1), width 0.3s cubic-bezier(0.2,0.8,0.2,1);
+  transition: transform 0.3s var(--ease), width 0.3s var(--ease);
   z-index: 0; pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) { .nav-indicator { transition: none; } }
@@ -336,6 +341,13 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
 .nav-icon-btn { display: inline-flex; align-items: center; gap: 7px; }
 .nav-icon { width: 15px; height: 15px; flex-shrink: 0; }
 
+/* Shared stroke-icon language (see window.ICONS) — default size fits inline
+   with text; .ui-icon-lg is for modal-head-scale replacements of what used
+   to be a big 28px emoji, .ui-icon-md for mid-size standalone spots. */
+.ui-icon { width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.15em; }
+.ui-icon-md { width: 22px; height: 22px; }
+.ui-icon-lg { width: 30px; height: 30px; }
+
 /* ---- SHOP ENTRY POINT — always visible, whether logged in or not ---- */
 .shop-open-btn {
   display: inline-flex; align-items: center; gap: 7px;
@@ -360,7 +372,7 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
   font-family: var(--font-mono); font-weight: 700; font-size: 15px; color: var(--gold);
   text-shadow: 0 2px 10px rgba(0,0,0,0.5);
   transform: translate(-50%, 0);
-  animation: discFloat 1.1s cubic-bezier(0.2,0.8,0.2,1) forwards;
+  animation: discFloat 1.1s var(--ease) forwards;
 }
 @keyframes discFloat {
   0%   { opacity: 0; transform: translate(-50%, 4px) scale(0.7); }
@@ -521,7 +533,7 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
 .shop-item {
   display: flex; align-items: center; gap: 14px;
   padding: 14px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
-  transition: transform 0.18s cubic-bezier(0.2,0.8,0.2,1), border-color 0.18s, box-shadow 0.18s;
+  transition: transform 0.18s var(--ease), border-color 0.18s, box-shadow 0.18s;
 }
 .shop-item:hover { transform: translateY(-2px); border-color: var(--gold); box-shadow: 0 10px 28px rgba(0,0,0,0.35); }
 .shop-swatch { transition: transform 0.18s ease; }
@@ -548,14 +560,14 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
   overflow: hidden;
   position: relative;
   cursor: pointer;
-  transition: transform 0.22s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.22s;
+  transition: transform 0.22s var(--ease), box-shadow 0.22s;
   /* Score-coloured top border  */
   border-top: 3px solid var(--score, var(--border-strong));
   /* Promote to its own layer so the spotlight repaint never triggers a reflow of siblings */
   will-change: transform;
   transform: translateZ(0);
   backface-visibility: hidden;
-  animation: cardIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
+  animation: cardIn 0.5s var(--ease) both;
 }
 @keyframes cardIn {
   from { opacity: 0; transform: translateY(16px) translateZ(0) scale(0.97); }
@@ -597,7 +609,7 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
   z-index: 2;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.4s cubic-bezier(0.2,0.8,0.2,1);
+  transition: opacity 0.4s var(--ease);
   will-change: opacity;
   transform: translateZ(0);
   background: radial-gradient(
@@ -621,7 +633,7 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
   object-fit: cover;
   display: block;
   background: var(--surface-3);
-  transition: transform 0.4s cubic-bezier(0.2,0.8,0.2,1);
+  transition: transform 0.4s var(--ease);
   will-change: transform;
   backface-visibility: hidden;
 }
@@ -1015,7 +1027,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 }
 .g-cover-wrap.correct { box-shadow: 0 0 0 3px var(--green); }
 .g-cover-wrap.wrong { box-shadow: 0 0 0 3px var(--red); animation: shakeX 0.4s; }
-.g-cover { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.6s cubic-bezier(0.2,0.8,0.2,1); }
+.g-cover { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.6s var(--ease); }
 .g-cover.zoomed { transform: scale(7.5); }
 
 .g-tracklist {
@@ -1178,7 +1190,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   animation: none;
 }
 .celebrate.show::before {
-  animation: celebRingIn 1.2s cubic-bezier(0.2,0.8,0.2,1) 0.15s both;
+  animation: celebRingIn 1.2s var(--ease) 0.15s both;
 }
 @keyframes celebRingIn {
   0% { transform: scale(0.4) rotate(-90deg); opacity: 0; }
@@ -1197,7 +1209,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   animation: none;
 }
 .celebrate.show::after {
-  animation: celebRingIn2 1.4s cubic-bezier(0.2,0.8,0.2,1) 0.3s both;
+  animation: celebRingIn2 1.4s var(--ease) 0.3s both;
 }
 @keyframes celebRingIn2 {
   0% { transform: scale(0.3) rotate(45deg); opacity: 0; }
@@ -1213,7 +1225,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   animation: none;
 }
 .celebrate.show .celebrate-inner {
-  animation: celebContentIn 0.7s cubic-bezier(0.2,0.8,0.2,1) 0.2s both;
+  animation: celebContentIn 0.7s var(--ease) 0.2s both;
 }
 @keyframes celebContentIn {
   from { opacity: 0; transform: translateY(24px) scale(0.9); }
@@ -1230,7 +1242,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   animation: none;
 }
 .celebrate.show .celebrate-trophy {
-  animation: celebTrophy 1.8s cubic-bezier(0.2,0.8,0.2,1) 0.1s both;
+  animation: celebTrophy 1.8s var(--ease) 0.1s both;
 }
 @keyframes celebTrophy {
   0%   { transform: scale(0.2) rotate(-40deg); opacity: 0; filter: drop-shadow(0 0 0 rgba(245,200,66,0)); }
@@ -1546,9 +1558,9 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   aspect-ratio: 1;
   cursor: pointer;
   background: var(--surface-3);
-  animation: cfCardIn 0.4s cubic-bezier(0.2,0.8,0.2,1) both;
+  animation: cfCardIn 0.4s var(--ease) both;
   /* glow pulse on hover using score colour */
-  transition: transform 0.25s cubic-bezier(0.2,0.8,0.2,1),
+  transition: transform 0.25s var(--ease),
               box-shadow 0.25s;
 }
 .cf-card:hover {
@@ -1567,7 +1579,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
-  transition: transform 0.5s cubic-bezier(0.2,0.8,0.2,1),
+  transition: transform 0.5s var(--ease),
               filter 0.3s;
   filter: brightness(0.75) saturate(1.2);
 }
@@ -1849,6 +1861,62 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 }
 
 /* ============================================================
+   SPLASH GATE — first-open moment, once per session (sessionStorage).
+   Click the header logo any time afterwards to see it again.
+   ============================================================ */
+.splash-gate {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  transition: opacity 0.65s var(--ease);
+}
+.splash-gate.is-hiding { opacity: 0; pointer-events: none; }
+.splash-video {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; background: var(--bg);
+}
+.splash-scrim {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(to top, var(--bg) 0%, rgba(10,9,8,0.6) 38%, rgba(10,9,8,0.28) 62%, rgba(10,9,8,0.6) 100%);
+}
+.splash-content {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+  padding: 24px; text-align: center;
+  animation: splashIn 0.9s var(--ease) both;
+}
+@keyframes splashIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+.splash-word {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(56px, 13vw, 148px); letter-spacing: -0.03em; line-height: 0.88;
+  color: var(--text);
+  text-shadow: 0 10px 50px rgba(0,0,0,0.55);
+}
+.splash-tag {
+  font-size: clamp(14px, 2vw, 18px); color: var(--text-dim); max-width: 38ch;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+}
+.splash-cta {
+  margin-top: 8px;
+  background: var(--gold); color: var(--bg);
+  border: none; padding: 16px 32px; border-radius: 999px;
+  font-family: var(--font-display); font-weight: 700; font-size: 17px;
+  display: inline-flex; align-items: center; gap: 10px;
+  box-shadow: 0 0 40px rgba(245,200,66,0.35);
+  transition: background 0.2s var(--ease), box-shadow 0.2s var(--ease), transform 0.2s var(--ease);
+}
+.splash-cta:hover { background: #ffd84a; box-shadow: 0 0 56px rgba(245,200,66,0.5); transform: translateY(-2px); }
+.splash-cta .arrow { display: inline-block; transition: transform 0.2s var(--ease); }
+.splash-cta:hover .arrow { transform: translateX(4px); }
+@media (prefers-reduced-motion: reduce) {
+  .splash-gate { transition: none; }
+  .splash-content { animation: none; }
+  .splash-cta, .splash-cta .arrow { transition: none; }
+}
+
+/* ============================================================
    ARTIST HERO — top-rated artist as full-bleed background
    ============================================================ */
 .artist-hero {
@@ -1858,7 +1926,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   margin-bottom: -64px;
   overflow: hidden;
   animation: heroFadeIn 0.6s ease both;
-  transition: height 0.4s cubic-bezier(0.2,0.8,0.2,1);
+  transition: height 0.4s var(--ease);
 }
 .artist-hero.artist-hero-collapsed { height: 160px; }
 @keyframes heroFadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -1874,12 +1942,19 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
      artist promo photos have the face there. */
   object-fit: cover;
   object-position: center 25%;
-  filter: saturate(1.08);
-  transform: scale(1.04);
-  transition: transform 18s ease-in-out, object-position 0.4s ease;
+  /* Grayscale here, colour comes from .artist-hero-duotone blending on top —
+     this is a portrait of a specific person, so unlike the login screen it
+     stays static: no pointer warp, no slow zoom. Recognisability over mood. */
+  filter: grayscale(1) contrast(1.12) brightness(0.95);
 }
-.artist-hero.artist-hero-expanded .artist-hero-bg { transform: scale(1.1); }
 @media (prefers-reduced-motion: reduce) { .artist-hero-bg { transition: none; } }
+.artist-hero-duotone {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--bg), var(--gold));
+  mix-blend-mode: color;
+  pointer-events: none;
+}
 .artist-hero-fade {
   position: absolute;
   inset: 0;
@@ -2032,6 +2107,60 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 </head>
 <body>
 
+<!-- ================================================================
+     ICON SET — defined first, before anything else, because some
+     top-level code later in this document (BADGES) reads ICONS.xxx
+     immediately rather than inside a function, so it must already exist.
+     Replaces emoji-as-UI (nav icons, modal headers, empty states, badges,
+     medals) with one consistent stroke-based SVG language: 16x16 viewbox,
+     1.3 stroke, currentColor. Used two ways:
+       - JS template strings embed ICONS.name directly.
+       - Static HTML uses <span data-icon="name"></span>, filled in by a
+         separate small script near the end of body (after that HTML has
+         actually been parsed into the DOM).
+     ================================================================ -->
+<script>
+window.ICONS = {
+  trophy: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M5 2.5h6v3.2a3 3 0 0 1-6 0V2.5Z"/><path d="M5 3.3H3.2a1.6 1.6 0 0 0 0 3.2c.4 0 .8-.1 1.1-.4M11 3.3h1.8a1.6 1.6 0 0 1 0 3.2c-.4 0-.8-.1-1.1-.4"/><path d="M8 8.7v2.1M5.6 13.5h4.8M6.4 11v1.3a1.6 1.6 0 0 0 0 1.2M9.6 11v1.3a1.6 1.6 0 0 1 0 1.2"/></svg>',
+  disc: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>',
+  fire: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 1.8c.6 1.7-.3 2.6-1 3.4-1 1.1-1.7 2-1.7 3.4a2.7 2.7 0 0 0 5.4 0c0-.7-.2-1.2-.5-1.7.9.5 1.5 1.4 1.5 2.6a4 4 0 1 1-8 0c0-3 2.3-4 2.6-6.4.4.4.7 1 .7 1.7 0-1.3.5-2.3 1-3Z"/></svg>',
+  person: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="5.2" r="2.6"/><path d="M2.8 14c.6-2.8 2.6-4.3 5.2-4.3S13.6 11.2 14.2 14"/></svg>',
+  people: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="5.8" cy="5" r="2.1"/><circle cx="11.2" cy="6" r="1.7"/><path d="M1.6 13.6c.5-2.4 2-3.6 4.2-3.6s3.7 1.2 4.2 3.6M10 10.4c1.7.1 2.9 1.2 3.3 3.2"/></svg>',
+  trash: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M3 4.4h10M6.2 4.4V3a1 1 0 0 1 1-1h1.6a1 1 0 0 1 1 1v1.4M4.4 4.4l.5 8.6a1.4 1.4 0 0 0 1.4 1.3h3.4a1.4 1.4 0 0 0 1.4-1.3l.5-8.6"/></svg>',
+  medal: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="9.4" r="4"/><path d="M6 5.8 4.4 1.6M10 5.8l1.6-4.2M8 7.5v3.6"/></svg>',
+  bell: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 2.2c-1.8 0-3.1 1.4-3.1 3.4v2c0 .8-.3 1.6-.9 2.3l-.5.6h9l-.5-.6c-.6-.7-.9-1.5-.9-2.3v-2c0-2-1.3-3.4-3.1-3.4Z"/><path d="M6.3 11.8a1.8 1.8 0 0 0 3.4 0"/></svg>',
+  camera: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M2 5.4a1 1 0 0 1 1-1h1.4l.7-1.2h5.8l.7 1.2H13a1 1 0 0 1 1 1v7.2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5.4Z"/><circle cx="8" cy="9" r="2.4"/></svg>',
+  mailbox: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M2 12.5V6.8A2.8 2.8 0 0 1 7 5l.7 1.4M2 12.5h12M2 12.5V9M14 12.5V9M2 9h4l1-1.6h2L10 9h4"/></svg>',
+  chart: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M2.5 13.5v-4M6.3 13.5V6M10.1 13.5V8.5M13.9 13.5V3"/></svg>',
+  calendar: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="2.2" y="3.2" width="11.6" height="10.6" rx="1.6"/><path d="M2.2 6.4h11.6M5.3 1.8v2.6M10.7 1.8v2.6"/></svg>',
+  crown: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 12.4 1.6 5l3.2 2.2L8 3l3.2 4.2L14.4 5l-.8 7.4Z"/><path d="M2.4 12.4h11.2"/></svg>',
+  note: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M6 12.4a1.8 1.8 0 1 1-1.2-1.7M6 12.4V3.4l6-1.2v7.4"/><path d="M12 9.6a1.8 1.8 0 1 1-1.2-1.7"/></svg>',
+  search: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.3"/><path d="M13.4 13.4 10 10"/></svg>',
+  share: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M2 13V7.6L8 2l6 5.6V13a1 1 0 0 1-1 1h-3v-4.4H6V14H3a1 1 0 0 1-1-1Z"/></svg>',
+  list: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M5.4 4h7.4M5.4 8h7.4M5.4 12h7.4"/><circle cx="2.6" cy="4" r=".9" fill="currentColor" stroke="none"/><circle cx="2.6" cy="8" r=".9" fill="currentColor" stroke="none"/><circle cx="2.6" cy="12" r=".9" fill="currentColor" stroke="none"/></svg>',
+  sparkle: '<svg class="ui-icon" viewBox="0 0 16 16" fill="currentColor" stroke="none" aria-hidden="true"><path d="M8 1.4c.3 2.4 1 3.9 3.4 4.6-2.4.7-3.1 2.2-3.4 4.6-.3-2.4-1-3.9-3.4-4.6C7 5.3 7.7 3.8 8 1.4Z"/><path d="M12.6 9.6c.2 1.3.6 2 1.9 2.4-1.3.4-1.7 1.1-1.9 2.4-.2-1.3-.6-2-1.9-2.4 1.3-.4 1.7-1.1 1.9-2.4Z"/></svg>',
+  lock: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="3.4" y="7.2" width="9.2" height="7" rx="1.4"/><path d="M5.4 7.2V5a2.6 2.6 0 0 1 5.2 0v2.2"/></svg>',
+  key: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="5" cy="8" r="3"/><path d="M7.6 8h6.4M11.4 8v2.4M13 8v1.6"/></svg>',
+  edit: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M10.6 2.4 13.6 5.4 5.6 13.4 2 14l.6-3.6Z"/><path d="M9.2 3.8 12.2 6.8"/></svg>',
+  groove: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="4"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>',
+  mic: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="5.8" y="1.6" width="4.4" height="7.4" rx="2.2"/><path d="M3.6 7.6a4.4 4.4 0 0 0 8.8 0M8 12v2.4M6 14.4h4"/></svg>',
+  star: '<svg class="ui-icon" viewBox="0 0 16 16" fill="currentColor" stroke="none" aria-hidden="true"><path d="M8 1.4l1.9 4.3 4.7.5-3.5 3.2.9 4.6L8 11.7 3.9 14l.9-4.6-3.5-3.2 4.7-.5Z"/></svg>',
+  beaker: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M6.2 1.8h3.6M6.8 1.8v4.3L3.4 12a1.4 1.4 0 0 0 1.2 2.2h6.8a1.4 1.4 0 0 0 1.2-2.2L9.2 6.1V1.8"/><path d="M5 10.4h6"/></svg>',
+  check: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 8.4 6.3 11.6 13 4.4"/></svg>',
+  stopwatch: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="9" r="5.4"/><path d="M8 9V6.2M6 1.6h4M12.2 3.4l1 1"/></svg>',
+};
+</script>
+
+<div class="splash-gate" id="splash-gate">
+  <video class="splash-video" id="splash-video" poster="assets/splash-poster.jpg" muted loop playsinline preload="auto" aria-hidden="true"></video>
+  <div class="splash-scrim"></div>
+  <div class="splash-content">
+    <div class="splash-word">VINAL</div>
+    <p class="splash-tag">Rate albums. Build your taste. Find your people.</p>
+    <button class="splash-cta" id="splash-cta">Let&rsquo;s go <span class="arrow" aria-hidden="true">&rarr;</span></button>
+  </div>
+</div>
+
 <div class="activity-backdrop" id="activity-backdrop"></div>
 <aside class="activity" id="activity">
   <div class="activity-head"><h3>Recent Activity</h3><button class="activity-close" id="activity-close" aria-label="Close">&times;</button></div>
@@ -2043,8 +2172,8 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   <div class="activity-list" id="notif-list"></div>
 </aside>
 <div id="artist-hero" class="artist-hero artist-hero-expanded" style="display:none;">
-  <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer" crossorigin="anonymous">
-  <canvas class="artist-hero-bg" id="artist-hero-canvas" aria-hidden="true" style="display:none;"></canvas>
+  <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer">
+  <div class="artist-hero-duotone" aria-hidden="true"></div>
   <div class="artist-hero-fade"></div>
   <button class="artist-hero-toggle" id="artist-hero-toggle" title="Collapse">&#8593;</button>
   <div class="artist-hero-content wrap">
@@ -2080,7 +2209,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   <!-- ============================ SEARCH ============================ -->
   <div class="search-block">
     <div class="search-field">
-      <span class="search-icon">&#128269;</span>
+      <span class="search-icon" data-icon="search"></span>
       <input type="text" id="search-input" placeholder="Search albums or artists&hellip;" autocomplete="off" disabled>
       <div class="spinner" id="spinner"></div>
       <div class="suggestions" id="suggestions"></div>
@@ -2118,7 +2247,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
     <p class="reco-note">Based on your highest-rated artists. Rate a few albums to improve these.</p>
     <div class="grid" id="reco-grid"></div>
     <div class="empty" id="reco-empty">
-      <span class="emoji">&#10024;</span>
+      <span class="emoji" data-icon="sparkle"></span>
       <h3>No recommendations yet</h3>
       <p>Rate a few albums and we&rsquo;ll suggest more from artists you love.</p>
     </div>
@@ -2168,7 +2297,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
     <div class="controls-row">
       <div class="ctrl" style="flex:1; min-width:200px;">
         <div class="filter-field" style="position:relative; width:100%;">
-          <i style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:15px; pointer-events:none;">&#128269;</i>
+          <i data-icon="search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:15px; pointer-events:none;"></i>
           <input type="text" id="albums-search" placeholder="Filter albums&hellip;" autocomplete="off"
             style="width:100%; height:40px; background:var(--surface-2); border:1px solid var(--border-strong); border-radius:10px; color:var(--text); font-family:var(--font-body); font-size:14px; padding:0 34px 0 34px;">
           <button id="albums-search-clear" title="Clear" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:22px; height:22px; border-radius:6px; background:transparent; border:none; color:var(--text-faint); display:none; font-size:16px; line-height:1; padding:0;">&times;</button>
@@ -2194,7 +2323,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
     </div>
     <div class="grid" id="albums-grid"></div>
     <div class="empty" id="albums-empty">
-      <span class="emoji">&#128191;</span>
+      <span class="emoji" data-icon="disc"></span>
       <h3>No albums ranked yet</h3>
       <p>Search for an album, open it, and give it a score.</p>
     </div>
@@ -2206,7 +2335,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
     <div class="controls-row">
       <div class="ctrl" style="flex:1; min-width:200px;">
         <div class="filter-field" style="position:relative; width:100%;">
-          <i style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:15px; pointer-events:none;">&#128269;</i>
+          <i data-icon="search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:15px; pointer-events:none;"></i>
           <input type="text" id="songs-search" placeholder="Filter songs&hellip;" autocomplete="off"
             style="width:100%; height:40px; background:var(--surface-2); border:1px solid var(--border-strong); border-radius:10px; color:var(--text); font-family:var(--font-body); font-size:14px; padding:0 34px 0 34px;">
           <button id="songs-search-clear" title="Clear" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:22px; height:22px; border-radius:6px; background:transparent; border:none; color:var(--text-faint); display:none; font-size:16px; line-height:1; padding:0;">&times;</button>
@@ -2225,7 +2354,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
     </div>
     <div id="songs-list"></div>
     <div class="empty" id="songs-empty">
-      <span class="emoji">&#127925;</span>
+      <span class="emoji" data-icon="note"></span>
       <h3>No songs ranked yet</h3>
       <p>Open an album and rate individual tracks with the 0&ndash;10 sliders.</p>
     </div>
@@ -2236,41 +2365,41 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
     <div class="section-head"><h2>Minigames</h2><span class="muted">Test yourself on any artist, genre or era</span></div>
     <div class="games-grid" id="games-grid">
       <div class="game-card" data-game="cover">
-        <div class="gc-emoji">&#128247;</div>
+        <div class="gc-emoji" data-icon="camera"></div>
         <h3>Guess the Cover</h3>
         <p>See an album cover &mdash; name the album. 5 rounds.</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="cover"></div>
       </div>
       <div class="game-card" data-game="coverx">
-        <div class="gc-emoji">&#128293;</div>
+        <div class="gc-emoji" data-icon="fire"></div>
         <h3>Cover EXTREME</h3>
         <p>You only get the middle square. Brutal.</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="coverx"></div>
       </div>
       <div class="game-card" data-game="tracklist">
-        <div class="gc-emoji">&#127925;</div>
+        <div class="gc-emoji" data-icon="note"></div>
         <h3>Guess from Tracklist</h3>
         <p>A handful of tracks &mdash; which album are they from?</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="tracklist"></div>
       </div>
       <div class="game-card" data-game="year">
-        <div class="gc-emoji">&#128197;</div>
+        <div class="gc-emoji" data-icon="calendar"></div>
         <h3>Guess the Year</h3>
         <p>Album cover shown &mdash; guess its release year (&plusmn;1).</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="year"></div>
       </div>
       <div class="game-card" id="tourney-card">
-        <div class="gc-emoji">&#127942;</div>
+        <div class="gc-emoji"><svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M5 2.5h6v3.2a3 3 0 0 1-6 0V2.5Z"/><path d="M5 3.3H3.2a1.6 1.6 0 0 0 0 3.2c.4 0 .8-.1 1.1-.4M11 3.3h1.8a1.6 1.6 0 0 1 0 3.2c-.4 0-.8-.1-1.1-.4"/><path d="M8 8.7v2.1M5.6 13.5h4.8M6.4 11v1.3a1.6 1.6 0 0 0 0 1.2M9.6 11v1.3a1.6 1.6 0 0 1 0 1.2"/></svg></div>
         <h3>Album Tournament</h3>
         <p>Bracket battle &mdash; pick your favourite until one album wins it all.</p>
         <div class="gc-go">Start &rarr;</div>
       </div>
       <div class="game-card" id="leaderboard-card">
-        <div class="gc-emoji">&#9201;&#65039;</div>
+        <div class="gc-emoji" data-icon="stopwatch"></div>
         <h3>Speed Leaderboard</h3>
         <p>Fastest perfect (5/5) runs across every minigame &mdash; global rankings.</p>
         <div class="gc-go">View &rarr;</div>
@@ -2280,7 +2409,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 
   <!-- ============================ ACHIEVEMENTS ============================ -->
   <section id="view-achievements" style="display:none; margin-top:32px;">
-    <div class="section-head"><h2>&#127942; Achievements</h2><span class="muted" id="ach-summary"></span></div>
+    <div class="section-head"><h2><span data-icon="trophy"></span> Achievements</h2><span class="muted" id="ach-summary"></span></div>
     <h3 class="ach-group-title">Album milestones</h3>
     <div class="ach-grid" id="ach-milestones"></div>
     <h3 class="ach-group-title">Artist completionist</h3>
@@ -2295,7 +2424,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 
   <!-- ============================ PEOPLE ============================ -->
   <section id="view-people" style="display:none; margin-top:32px;">
-    <div class="section-head"><h2>&#128101; People</h2></div>
+    <div class="section-head"><h2><span data-icon="people"></span> People</h2></div>
     <div class="g-field" style="max-width:420px; margin-bottom:8px;">
       <input id="people-search" class="g-input" type="text" placeholder="Find someone by exact username&hellip;" autocomplete="off">
     </div>
@@ -2306,7 +2435,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 
   <!-- ============================ GROOVES ============================ -->
   <section id="view-grooves" style="display:none; margin-top:32px;">
-    <div class="section-head"><h2>&#128191; Grooves</h2><button class="btn-primary" id="groove-create-btn" style="margin-left:auto;">+ New Groove</button></div>
+    <div class="section-head"><h2><span data-icon="groove"></span> Grooves</h2><button class="btn-primary" id="groove-create-btn" style="margin-left:auto;">+ New Groove</button></div>
     <p class="reco-note">Groups for you and your mates. Create one, invite people, see everyone&rsquo;s taste.</p>
     <div id="groove-invites"></div>
     <div id="groove-list"></div>
@@ -2322,7 +2451,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
         <div class="d-artist" id="detail-artist"></div>
         <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
           <button class="btn-primary" id="rate-album-btn" style="padding:12px 24px;">&#9733; Rate Album</button>
-          <button class="btn-mini" id="suggest-album-btn">&#128228; Recommend</button>
+          <button class="btn-mini" id="suggest-album-btn"><span data-icon="share"></span> Recommend</button>
           <div id="detail-current-score" class="detail-album-score" style="display:none;"></div>
         </div>
         <div id="detail-note"></div>
@@ -2419,7 +2548,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 <div class="modal" id="shop-modal">
   <div class="modal-panel" style="max-width:520px;">
     <button class="modal-close" id="shop-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji">&#128191;</span>
+    <div class="modal-head"><span class="mh-emoji" data-icon="disc"></span>
       <div><h2>Disc Shop</h2><p>Cosmetic only &mdash; never touches rankings or leaderboards.</p></div></div>
     <div class="shop-balance">
       <span class="shop-balance-label">Your balance</span>
@@ -2437,7 +2566,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 
     <!-- Login / Signup view -->
     <div id="auth-view-main">
-      <div class="modal-head"><span class="mh-emoji">&#128100;</span>
+      <div class="modal-head"><span class="mh-emoji" data-icon="person"></span>
         <div><h2 id="auth-title">Log in to Vinal</h2><p id="auth-sub">Save your rankings &amp; sync across devices.</p></div></div>
       <label class="g-label" style="text-align:left;" for="auth-email">Email</label>
       <input id="auth-email" class="g-input" type="email" placeholder="you@example.com" autocomplete="email" style="margin-bottom:12px;">
@@ -2456,7 +2585,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 
     <!-- Forgot password view -->
     <div id="auth-view-forgot" style="display:none;">
-      <div class="modal-head"><span class="mh-emoji">&#128274;</span>
+      <div class="modal-head"><span class="mh-emoji" data-icon="lock"></span>
         <div><h2>Reset password</h2><p>We&rsquo;ll send you a link to set a new one.</p></div></div>
       <label class="g-label" style="text-align:left;" for="auth-reset-email">Email</label>
       <input id="auth-reset-email" class="g-input" type="email" placeholder="you@example.com" autocomplete="email">
@@ -2469,7 +2598,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 
     <!-- shown when user lands back from the reset email link -->
     <div id="auth-view-recovery" style="display:none;">
-      <div class="modal-head"><span class="mh-emoji">&#128273;</span>
+      <div class="modal-head"><span class="mh-emoji" data-icon="key"></span>
         <div><h2>Choose a new password</h2><p>You&rsquo;re almost in.</p></div></div>
       <label class="g-label" style="text-align:left;" for="auth-newpass">New password</label>
       <input id="auth-newpass" class="g-input" type="password" placeholder="At least 6 characters" autocomplete="new-password">
@@ -2483,7 +2612,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 <div class="modal" id="pedit-modal">
   <div class="modal-panel">
     <button class="modal-close" id="pedit-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji">&#9999;&#65039;</span><div><h2>Edit profile</h2><p>This is public to anyone with your link.</p></div></div>
+    <div class="modal-head"><span class="mh-emoji" data-icon="edit"></span><div><h2>Edit profile</h2><p>This is public to anyone with your link.</p></div></div>
     <div style="display:flex; align-items:center; gap:16px; margin-bottom:18px;">
       <img id="pedit-avatar" alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover;background:var(--surface-3);">
       <div>
@@ -2521,7 +2650,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 <div class="modal" id="ptop-modal">
   <div class="modal-panel">
     <button class="modal-close" id="ptop-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji">&#127921;</span><div><h2 id="ptop-title">Search</h2><p>Type to search Spotify.</p></div></div>
+    <div class="modal-head"><span class="mh-emoji" data-icon="search"></span><div><h2 id="ptop-title">Search</h2><p>Type to search Spotify.</p></div></div>
     <input id="ptop-search" class="g-input" type="text" placeholder="Search&hellip;" autocomplete="off" style="margin-bottom:12px;">
     <div id="ptop-list" style="max-height:50vh; overflow-y:auto;"></div>
   </div>
@@ -2531,7 +2660,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 <div class="modal" id="list-modal">
   <div class="modal-panel">
     <button class="modal-close" id="list-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji">&#128221;</span><div><h2>Your list</h2><p>Build a list to show on your profile.</p></div></div>
+    <div class="modal-head"><span class="mh-emoji" data-icon="list"></span><div><h2>Your list</h2><p>Build a list to show on your profile.</p></div></div>
     <label class="g-label" for="list-title-input">Title</label>
     <input id="list-title-input" class="g-input" type="text" maxlength="60" placeholder="e.g. Best Drake albums" autocomplete="off" style="margin-bottom:14px;">
     <label class="g-label">Type</label>
@@ -2550,10 +2679,10 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 <div class="modal" id="listview-modal">
   <div class="modal-panel">
     <button class="modal-close" id="listview-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji">&#128221;</span><div><h2 id="listview-title">List</h2><p id="listview-meta"></p></div></div>
+    <div class="modal-head"><span class="mh-emoji" data-icon="list"></span><div><h2 id="listview-title">List</h2><p id="listview-meta"></p></div></div>
     <div id="listview-items" style="max-height:56vh; overflow-y:auto;"></div>
     <button class="btn-mini" id="listview-edit-btn" style="margin-top:14px; display:none;">Edit list</button>
-    <button class="btn-mini" id="listview-suggest-btn" style="margin-top:14px;">&#128228; Recommend</button>
+    <button class="btn-mini" id="listview-suggest-btn" style="margin-top:14px;"><span data-icon="share"></span> Recommend</button>
   </div>
 </div>
 
@@ -2616,7 +2745,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 <div class="modal" id="follow-modal">
   <div class="modal-panel">
     <button class="modal-close" id="follow-modal-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji">&#128101;</span><div><h2 id="follow-modal-title">People</h2></div></div>
+    <div class="modal-head"><span class="mh-emoji" data-icon="people"></span><div><h2 id="follow-modal-title">People</h2></div></div>
     <div id="follow-modal-list" style="max-height:56vh; overflow-y:auto;"></div>
   </div>
 </div>
@@ -2625,7 +2754,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 <div class="modal" id="suggest-modal">
   <div class="modal-panel">
     <button class="modal-close" id="suggest-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji">&#128228;</span><div><h2>Recommend to friends</h2><p>Send this to people you follow.</p></div></div>
+    <div class="modal-head"><span class="mh-emoji" data-icon="share"></span><div><h2>Recommend to friends</h2><p>Send this to people you follow.</p></div></div>
     <div class="suggest-item">
       <img id="suggest-item-img" alt="" onerror="this.style.visibility='hidden'">
       <div><div class="nm" id="suggest-item-name"></div><div class="ar" id="suggest-item-sub"></div></div>
@@ -2639,9 +2768,9 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 <div class="modal" id="groove-modal">
   <div class="modal-panel">
     <button class="modal-close" id="groove-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji">&#128191;</span><div><h2 id="groove-name"></h2><p id="groove-sub"></p></div></div>
+    <div class="modal-head"><span class="mh-emoji" data-icon="groove"></span><div><h2 id="groove-name"></h2><p id="groove-sub"></p></div></div>
     <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
-      <button class="btn-mini" id="groove-invite-btn">&#128101; Invite</button>
+      <button class="btn-mini" id="groove-invite-btn"><span data-icon="people"></span> Invite</button>
       <button class="btn-mini" id="groove-copy-btn">Copy join link</button>
       <button class="btn-mini" id="groove-leave-btn" style="color:var(--red);">Leave</button>
     </div>
@@ -2658,7 +2787,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 <div class="modal" id="leaderboard-modal">
   <div class="modal-panel" style="max-width:520px;">
     <button class="modal-close" id="leaderboard-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji">&#9201;&#65039;</span><div><h2>Speed Leaderboard</h2><p>Fastest perfect (5/5) runs, globally.</p></div></div>
+    <div class="modal-head"><span class="mh-emoji" data-icon="stopwatch"></span><div><h2>Speed Leaderboard</h2><p>Fastest perfect (5/5) runs, globally.</p></div></div>
     <div class="seg" id="lb-game-seg" style="width:100%; display:flex; margin-bottom:14px; flex-wrap:wrap;">
       <button data-game="cover" class="active" style="flex:1;">Cover</button>
       <button data-game="coverx" style="flex:1;">EXTREME</button>
@@ -2674,7 +2803,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   <div class="modal-panel" style="max-width:560px;">
     <button class="modal-close" id="tourney-close" aria-label="Close">&times;</button>
     <div id="tourney-setup">
-      <div class="modal-head"><span class="mh-emoji">&#127942;</span><div><h2>Album Tournament</h2><p>Pick your favourite each round until one album wins.</p></div></div>
+      <div class="modal-head"><span class="mh-emoji" data-icon="trophy"></span><div><h2>Album Tournament</h2><p>Pick your favourite each round until one album wins.</p></div></div>
       <label class="g-label">Bracket size</label>
       <div class="seg" id="tourney-size" style="width:100%; display:flex; margin-bottom:14px;">
         <button data-size="8" class="active" style="flex:1;">8 albums</button>
@@ -2748,7 +2877,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 <div class="celebrate" id="celebrate">
   <div class="celebrate-shine"></div>
   <div class="celebrate-inner">
-    <div class="celebrate-trophy" id="celebrate-trophy">&#127942;</div>
+    <div class="celebrate-trophy" id="celebrate-trophy"><svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="var(--gold)" stroke-width="1" aria-hidden="true"><path d="M5 2.5h6v3.2a3 3 0 0 1-6 0V2.5Z"/><path d="M5 3.3H3.2a1.6 1.6 0 0 0 0 3.2c.4 0 .8-.1 1.1-.4M11 3.3h1.8a1.6 1.6 0 0 1 0 3.2c-.4 0-.8-.1-1.1-.4"/><path d="M8 8.7v2.1M5.6 13.5h4.8M6.4 11v1.3a1.6 1.6 0 0 0 0 1.2M9.6 11v1.3a1.6 1.6 0 0 1 0 1.2"/></svg></div>
     <div class="celebrate-eyebrow">Achievement Unlocked</div>
     <div class="celebrate-title" id="celebrate-title"></div>
     <div class="celebrate-sub" id="celebrate-sub"></div>
@@ -3101,7 +3230,7 @@ document.getElementById('rate-save-btn').addEventListener('click', function () {
   saveAlbum(currentAlbum, v);
   updateDetailScore(v);
   showDetailNote(note);
-  logActivity('⭐', 'Rated', currentAlbum.name, v);
+  logActivity(ICONS.star, 'Rated', currentAlbum.name, v);
   closeRateView();
   playAlbumReveal(currentAlbum, v);
   setTimeout(function () {
@@ -3397,7 +3526,11 @@ async function renderArtistHero() {
   _heroArtistKey = fav.id;
   hero.style.display = 'block';
   _heroBuilt = true;
-  if(window.VinalDither)window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
+  // No dither treatment here on purpose — a specific person's face needs to
+  // stay recognisable and still. Colour comes from .artist-hero-duotone
+  // (a CSS mix-blend-mode overlay) instead. See VinalDither section near
+  // the end of this file for the (still available, just unused-here)
+  // dither engine.
 }
 (function wireHeroToggle(){
   const btn = document.getElementById('artist-hero-toggle');
@@ -3596,7 +3729,7 @@ function renderAlbums(){
       '<div class="card-body"><div class="card-name">'+esc(a.name)+'</div>'+
       '<div class="card-artist">'+esc(a.artist)+(a.genre?' \u00b7 '+esc(a.genre):'')+' </div>'+
       '<div class="card-row">'+
-      '<button class="del-btn" data-del="'+a.id+'" aria-label="Remove">\u{1F5D1}</button></div>'+
+      '<button class="del-btn" data-del="'+a.id+'" aria-label="Remove">'+ICONS.trash+'</button></div>'+
       '</div></div>';
   }).join('');
   grid.querySelectorAll('.card').forEach(function(el){
@@ -3628,7 +3761,7 @@ function renderSongs(){
       '<div class="song-rate">'+
         '<input type="range" class="song-slider" min="0" max="10" step="1" value="'+s.score+'" data-song="'+s.id+'">'+
         '<div class="song-score">'+s.score+'</div>'+
-        '<button class="del-btn" data-delsong="'+s.id+'" aria-label="Remove">\u{1F5D1}</button>'+
+        '<button class="del-btn" data-delsong="'+s.id+'" aria-label="Remove">'+ICONS.trash+'</button>'+
       '</div></div>';
   }).join('');
   host.querySelectorAll('.song-slider').forEach(function(sl){
@@ -3675,10 +3808,10 @@ function renderStats(){
   let coreTiles='';
   if(albums.length||songs.length){
     coreTiles=
-      '<div class="stat"><div class="s-label">\u{1F4BF} Albums ranked</div><div class="s-val">'+albums.length+'</div></div>'+
-      '<div class="stat"><div class="s-label">\u{1F3B5} Songs ranked</div><div class="s-val">'+songs.length+'</div></div>'+
-      '<div class="stat"><div class="s-label">\u{1F4CA} Avg album</div><div class="s-val" style="color:'+albumColor(aAvg)+'">'+aAvg+'</div></div>'+
-      '<div class="stat"><div class="s-label">\u{1F3B7} Avg song</div><div class="s-val" style="color:'+songColor(Math.round(sAvg))+'">'+sAvg+'</div></div>';
+      '<div class="stat"><div class="s-label">'+ICONS.disc+' Albums ranked</div><div class="s-val">'+albums.length+'</div></div>'+
+      '<div class="stat"><div class="s-label">'+ICONS.note+' Songs ranked</div><div class="s-val">'+songs.length+'</div></div>'+
+      '<div class="stat"><div class="s-label">'+ICONS.chart+' Avg album</div><div class="s-val" style="color:'+albumColor(aAvg)+'">'+aAvg+'</div></div>'+
+      '<div class="stat"><div class="s-label">'+ICONS.chart+' Avg song</div><div class="s-val" style="color:'+songColor(Math.round(sAvg))+'">'+sAvg+'</div></div>';
   }
   let walletTiles='';
   if(window.Wallet&&loggedIn){
@@ -4143,7 +4276,7 @@ function renderAuthArea(connected){
     const me=Cloud.getUser&&Cloud.getUser();
     listHost.innerHTML=rows.map(function(r,i){
       const mine=me&&r.user_id===me.id;
-      const medal=i===0?'\u{1F947}':i===1?'\u{1F948}':i===2?'\u{1F949}':('#'+(i+1));
+      const medal=i<3?ICONS.medal:('#'+(i+1));
       return '<div class="ptop-row" style="cursor:default;'+(mine?'background:rgba(245,200,66,0.07);border-radius:8px;':'')+'">'+
         '<span style="width:34px; text-align:center; font-family:var(--font-display); font-weight:700; font-size:'+(i<3?'18px':'14px')+';">'+medal+'</span>'+
         '<div style="flex:1;"><div class="nm">'+esc(r.username||'user')+(mine?' <span style="color:var(--gold);font-size:11px;">(you)</span>':'')+'</div>'+
@@ -4212,7 +4345,7 @@ function renderAchievements(){
     const reached=count>=m;const key='albums:'+m;const done=!!claimed[key];const pct=Math.min(100,Math.round(count/m*100));
     return '<div class="ach '+(done?'done':(reached?'claimable':''))+'">'+
       (done?'<div class="ach-check">\u2713</div>':'')+
-      '<div class="ach-top"><div class="ach-medal">'+(done?'\u{1F3C5}':'\u{1F4BF}')+'</div>'+
+      '<div class="ach-top"><div class="ach-medal">'+(done?ICONS.medal:ICONS.disc)+'</div>'+
       '<div><div class="ach-name">'+milestoneLabel(m)+'</div>'+
       '<div class="ach-sub">'+(m===1?'Rate your first album':'Rate '+m+' albums total')+'</div></div></div>'+
       '<div class="ach-bar"><div class="ach-bar-fill" style="width:'+pct+'%"></div></div>'+
@@ -4220,7 +4353,7 @@ function renderAchievements(){
       (reached&&!done?'<button class="ach-claim" data-claim="'+key+'" data-label="'+milestoneLabel(m)+'">Claim achievement</button>':'')+
       '</div>';
   }).join('');
-  mEl.querySelectorAll('[data-claim]').forEach(function(b){b.addEventListener('click',function(){setClaimed(b.dataset.claim);logActivity('\u{1F3C6}','Unlocked',b.dataset.label);celebrate('Achievement Unlocked!',b.dataset.label);if(window.Wallet){const m=parseInt(b.dataset.claim.split(':')[1],10)||1;Wallet.awardDiscs(Math.min(50,m*2),{reason:b.dataset.label});}renderAchievements();});});
+  mEl.querySelectorAll('[data-claim]').forEach(function(b){b.addEventListener('click',function(){setClaimed(b.dataset.claim);logActivity(ICONS.trophy,'Unlocked',b.dataset.label);celebrate('Achievement Unlocked!',b.dataset.label);if(window.Wallet){const m=parseInt(b.dataset.claim.split(':')[1],10)||1;Wallet.awardDiscs(Math.min(50,m*2),{reason:b.dataset.label});}renderAchievements();});});
   const doneCount=MILESTONES.filter(function(m){return claimed['albums:'+m];}).length;
   document.getElementById('ach-summary').textContent=count+' albums rated \u00b7 '+doneCount+' milestones claimed';
   renderCompletionistAchievements();
@@ -4244,7 +4377,7 @@ function drawCompCard(a,claimed){
   const studioList=_studioMem[a.id]||_spCacheRead('studio:'+a.id);
   if(!studioList){
     card.className='ach';
-    card.innerHTML='<div class="ach-top"><div class="ach-medal">\u{1F3A4}</div>'+
+    card.innerHTML='<div class="ach-top"><div class="ach-medal">'+ICONS.mic+'</div>'+
       '<div><div class="ach-name">'+esc(a.name)+' Completionist</div><div class="ach-sub">Rate every studio album</div></div></div>'+
       '<button class="ach-claim" style="background:var(--surface-3);color:var(--text);" data-load="'+a.id+'">Check progress</button>';
     const lb=card.querySelector('[data-load]');
@@ -4252,20 +4385,20 @@ function drawCompCard(a,claimed){
     return;
   }
   const studio=studioList.map(function(s){return baseAlbumTitle(s.name);}).filter(Boolean);
-  if(!studio.length){card.className='ach';card.innerHTML='<div class="ach-top"><div class="ach-medal">\u{1F3A4}</div><div><div class="ach-name">'+esc(a.name)+' Completionist</div><div class="ach-sub">No studio albums found</div></div></div>';return;}
+  if(!studio.length){card.className='ach';card.innerHTML='<div class="ach-top"><div class="ach-medal">'+ICONS.mic+'</div><div><div class="ach-name">'+esc(a.name)+' Completionist</div><div class="ach-sub">No studio albums found</div></div></div>';return;}
   const ratedBases={};a.rated.forEach(function(r){ratedBases[baseAlbumTitle(r.name)]=true;});
   const have=studio.filter(function(b){return ratedBases[b];}).length;
   const Y=studio.length,pct=Math.round(have/Y*100),complete=have>=Y;
   const key='comp:'+a.id,done=!!claimed[key];
   card.className='ach '+(done?'done':(complete?'claimable':''));
   card.innerHTML=(done?'<div class="ach-check">\u2713</div>':'')+
-    '<div class="ach-top"><div class="ach-medal">'+(done?'\u{1F3C6}':'\u{1F3A4}')+'</div>'+
+    '<div class="ach-top"><div class="ach-medal">'+(done?ICONS.trophy:ICONS.mic)+'</div>'+
     '<div><div class="ach-name">'+esc(a.name)+' Completionist</div><div class="ach-sub">Rate every studio album</div></div></div>'+
     '<div class="ach-bar"><div class="ach-bar-fill" style="width:'+pct+'%"></div></div>'+
     '<div class="ach-prog"><span>'+have+' / '+Y+'</span><span>'+pct+'%</span></div>'+
     (complete&&!done?'<button class="ach-claim" data-claim="'+key+'" data-label="'+esc(a.name)+' Completionist">Claim achievement</button>':'');
   const btn=card.querySelector('[data-claim]');
-  if(btn)btn.addEventListener('click',function(){setClaimed(key);logActivity('\u{1F3C6}','Unlocked',a.name+' Completionist');celebrate('\u{1F3C6} '+a.name+' Completionist','You\u2019ve rated every studio album.');if(window.Wallet)Wallet.awardDiscs(30,{reason:'Completionist'});drawCompCard(a,loadClaimed());});
+  if(btn)btn.addEventListener('click',function(){setClaimed(key);logActivity(ICONS.trophy,'Unlocked',a.name+' Completionist');celebrate('\u{1F3C6} '+a.name+' Completionist','You\u2019ve rated every studio album.');if(window.Wallet)Wallet.awardDiscs(30,{reason:'Completionist'});drawCompCard(a,loadClaimed());});
 }
 
 let compUnratedOnly=false,_compState=null;
@@ -4295,7 +4428,7 @@ async function renderCompletion(meta){
   const have=studio.filter(function(s){return ratedBases[baseAlbumTitle(s.name)];}).length;
   const complete=have>=studio.length;
   const celebKey='comp:'+meta.artistId;
-  if(complete&&!isClaimed(celebKey)){setClaimed(celebKey);logActivity('\u{1F3C6}','Unlocked',meta.artist+' Completionist');celebrate('\u{1F3C6} '+meta.artist+' Completionist','You\u2019ve rated every studio album.');}
+  if(complete&&!isClaimed(celebKey)){setClaimed(celebKey);logActivity(ICONS.trophy,'Unlocked',meta.artist+' Completionist');celebrate('\u{1F3C6} '+meta.artist+' Completionist','You\u2019ve rated every studio album.');}
   drawCompletion();
 }
 
@@ -4349,7 +4482,7 @@ function renderActivity(){
     let textHtml;
     if(a.t2&&a.verb){textHtml=esc(a.verb)+' <b>'+esc(a.name||'')+'</b>'+(a.score!=null?' <span class="act-score">'+esc(String(a.score))+'</span>':'');}
     else{textHtml=esc(String(a.h||'').replace(/<[^>]*>/g,''));}
-    return'<div class="act-item"><span class="act-emoji">'+esc(a.e||'')+'</span>'+
+    return'<div class="act-item"><span class="act-emoji">'+(a.e||'')+'</span>'+
       '<div><div class="act-text">'+textHtml+'</div><div class="act-time">'+esc(timeAgo(a.t))+'</div></div></div>';
   }).join('');
 }
@@ -4504,7 +4637,7 @@ async function pickNewrelArtist(artist) {
     if (!upcoming.length) {
       newrelResult.innerHTML =
         '<div class="empty" style="padding:40px 24px;">' +
-          '<span class="emoji">\u{1F4ED}</span>' +
+          '<span class="emoji">'+ICONS.mailbox+'</span>' +
           '<h3>No upcoming albums</h3>' +
           '<p>' + esc(artist.name) + ' doesn\u2019t have anything announced on Spotify right now.</p>' +
         '</div>' +
@@ -4589,12 +4722,12 @@ const Cloud=(function(){
       acct.innerHTML='<button id="acct-avatar-btn" class="acct-avatar" aria-label="Account menu">'+(avatarUrl?'<img src="'+esc(avatarUrl)+'" alt="" onerror="this.style.display=\'none\';this.parentNode.textContent=\''+initial+'\'">':initial)+'</button>'+
         '<div class="acct-menu" id="acct-menu">'+
           '<div class="acct-menu-head">'+esc((user.email||'account').split('@')[0])+'</div>'+
-          '<button class="acct-menu-item" data-go="profile">\u{1F464} My profile</button>'+
-          '<button class="acct-menu-item" data-go="people">\u{1F465} People</button>'+
-          '<button class="acct-menu-item" data-go="grooves">\u{1F4BF} Grooves</button>'+
+          '<button class="acct-menu-item" data-go="profile">'+ICONS.person+' My profile</button>'+
+          '<button class="acct-menu-item" data-go="people">'+ICONS.people+' People</button>'+
+          '<button class="acct-menu-item" data-go="grooves">'+ICONS.groove+' Grooves</button>'+
           '<button class="acct-menu-item" id="acct-logout">\u21B3 Log out</button>'+
         '</div>';
-    }else{acct.innerHTML='<button id="login-open" class="btn-mini">\u{1F464} Log in</button>';}
+    }else{acct.innerHTML='<button id="login-open" class="btn-mini">'+ICONS.person+' Log in</button>';}
     el.insertBefore(acct,el.firstChild);
     const lo=document.getElementById('login-open');if(lo)lo.addEventListener('click',openAuth);
     const avb=document.getElementById('acct-avatar-btn');
@@ -4942,7 +5075,7 @@ const DEFAULT_AVATAR="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 function avatarSrc(url){return url&&String(url).trim()?url:DEFAULT_AVATAR;}
 window.avatarSrc=avatarSrc;
 
-const BADGES={ceo:{label:'CEO',emoji:'\u{1F451}',cls:'badge-ceo'},og:{label:'OG',emoji:'\u{1F3C6}',cls:'badge-og'},beta:{label:'Beta Tester',emoji:'\u{1F9EA}',cls:'badge-beta'},critic:{label:'Top Critic',emoji:'\u270D\uFE0F',cls:'badge-critic'},verified:{label:'Verified',emoji:'\u2705',cls:'badge-verified'}};
+const BADGES={ceo:{label:'CEO',emoji:ICONS.crown,cls:'badge-ceo'},og:{label:'OG',emoji:ICONS.trophy,cls:'badge-og'},beta:{label:'Beta Tester',emoji:ICONS.beaker,cls:'badge-beta'},critic:{label:'Top Critic',emoji:ICONS.edit,cls:'badge-critic'},verified:{label:'Verified',emoji:ICONS.check,cls:'badge-verified'}};
 const CEO_USER_ID='d8efaf23-c9fb-40d4-8c73-4dca30245398';
 function computeBadges(profile,ratedAlbumCount,isOwner){const out=[];const stored=(profile&&profile.badges)||[];if(CEO_USER_ID&&profile&&profile.id===CEO_USER_ID)out.push('ceo');stored.forEach(function(b){if(BADGES[b]&&out.indexOf(b)===-1)out.push(b);});if(ratedAlbumCount>=50&&out.indexOf('critic')===-1)out.push('critic');return out;}
 function badgeHtml(keys){if(!keys||!keys.length)return'';return'<span class="badges">'+keys.map(function(k){const b=BADGES[k];if(!b)return'';return'<span class="badge '+b.cls+'" title="'+esc(b.label)+'">'+b.emoji+' '+esc(b.label)+'</span>';}).join('')+'</span>';}
@@ -4970,11 +5103,11 @@ async function renderProfile(){
   if(publicId&&(!me||me.id!==publicId)){
     host.innerHTML='<p class="reco-note">Loading profile\u2026</p>';
     const prof=await Cloud.fetchProfile(publicId);
-    if(!prof){host.innerHTML='<div class="empty"><span class="emoji">\u{1F464}</span><h3>Profile not found</h3><p>This user doesn\u2019t exist or hasn\u2019t set up a profile.</p></div>';return;}
+    if(!prof){host.innerHTML='<div class="empty"><span class="emoji">'+ICONS.person+'</span><h3>Profile not found</h3><p>This user doesn\u2019t exist or hasn\u2019t set up a profile.</p></div>';return;}
     await drawProfile(host,prof,false);return;
   }
   if(!me){
-    host.innerHTML='<div class="empty"><span class="emoji">\u{1F464}</span><h3>Your profile</h3><p>Log in to create a public profile.</p><button class="btn-primary" id="prof-login" style="margin-top:8px;">Log in / Sign up</button></div>';
+    host.innerHTML='<div class="empty"><span class="emoji">'+ICONS.person+'</span><h3>Your profile</h3><p>Log in to create a public profile.</p><button class="btn-primary" id="prof-login" style="margin-top:8px;">Log in / Sign up</button></div>';
     const b=document.getElementById('prof-login');if(b)b.addEventListener('click',function(){Cloud.openAuth();});return;
   }
   host.innerHTML='<p class="reco-note">Loading your profile\u2026</p>';
@@ -5311,7 +5444,7 @@ window.renderProfile=renderProfile;
    13. NOTIFICATIONS + SUGGESTIONS
    ================================================================ */
 function notifText(n){const who=esc((n.data&&n.data.username)||'Someone');if(n.type==='follow')return who+' followed you';if(n.type==='suggestion'){const it=(n.data&&n.data.item)||{};const kind=(n.data&&n.data.kind)||'album';const label=kind==='list'?'the list':(kind==='song'?'the song':'the album');return who+' recommended '+label+' <b>'+esc(it.name||'')+'</b>'+(it.artist?' by '+esc(it.artist):'');}if(n.type==='groove_invite')return who+' invited you to a Groove';return who+' did something';}
-function notifEmoji(t){return t==='follow'?'\u{1F465}':t==='suggestion'?'\u{1F3B5}':t==='groove_invite'?'\u{1F4BF}':'\u{1F514}';}
+function notifEmoji(t){return t==='follow'?ICONS.people:t==='suggestion'?ICONS.note:t==='groove_invite'?ICONS.groove:ICONS.bell;}
 
 async function renderNotifications(){
   const host=document.getElementById('notif-list');if(!host)return;
@@ -5368,12 +5501,12 @@ let _currentGroove=null,_grooveInviteTimer=null;
 
 async function renderGrooves(){
   const listHost=document.getElementById('groove-list');const invHost=document.getElementById('groove-invites');if(!listHost)return;
-  if(!Cloud.isOn()){invHost.innerHTML='';listHost.innerHTML='<div class="empty"><span class="emoji">\u{1F4BF}</span><h3>Grooves</h3><p>Log in to create groups with your mates.</p><button class="btn-primary" id="groove-login" style="margin-top:8px;">Log in</button></div>';const b=document.getElementById('groove-login');if(b)b.addEventListener('click',function(){Cloud.openAuth();});return;}
+  if(!Cloud.isOn()){invHost.innerHTML='';listHost.innerHTML='<div class="empty"><span class="emoji">'+ICONS.groove+'</span><h3>Grooves</h3><p>Log in to create groups with your mates.</p><button class="btn-primary" id="groove-login" style="margin-top:8px;">Log in</button></div>';const b=document.getElementById('groove-login');if(b)b.addEventListener('click',function(){Cloud.openAuth();});return;}
   listHost.innerHTML='<p class="reco-note">Loading\u2026</p>';invHost.innerHTML='';
   const{member,invites}=await Cloud.myGrooves();
-  if(invites.length){invHost.innerHTML='<h3 class="prof-section-title" style="margin-top:8px;">Invites</h3>'+invites.map(function(g){return'<div class="groove-card invite" data-ginvite="'+esc(g.id)+'"><div class="groove-ic">\u{1F4BF}</div><div style="flex:1;"><div class="groove-nm">'+esc(g.name)+'</div><div class="groove-meta">You\u2019ve been invited</div></div><button class="btn-mini groove-accept" data-acc="'+esc(g.id)+'">Accept</button><button class="btn-mini groove-decline" data-dec="'+esc(g.id)+'">Decline</button></div>';}).join('');invHost.querySelectorAll('.groove-accept').forEach(function(b){b.addEventListener('click',async function(){b.textContent='\u2026';await Cloud.acceptGrooveInvite(b.dataset.acc);renderGrooves();});});invHost.querySelectorAll('.groove-decline').forEach(function(b){b.addEventListener('click',async function(){b.textContent='\u2026';await Cloud.leaveGroove(b.dataset.dec);renderGrooves();});});}
-  if(!member.length){listHost.innerHTML='<div class="empty"><span class="emoji">\u{1F4BF}</span><h3>No Grooves yet</h3><p>Create one and invite your mates.</p></div>';return;}
-  listHost.innerHTML='<h3 class="prof-section-title">Your Grooves</h3><div class="groove-grid">'+member.map(function(g){return'<div class="groove-card" data-groove="'+esc(g.id)+'"><div class="groove-ic">\u{1F4BF}</div><div style="flex:1;"><div class="groove-nm">'+esc(g.name)+'</div><div class="groove-meta">Tap to open</div></div></div>';}).join('')+'</div>';
+  if(invites.length){invHost.innerHTML='<h3 class="prof-section-title" style="margin-top:8px;">Invites</h3>'+invites.map(function(g){return'<div class="groove-card invite" data-ginvite="'+esc(g.id)+'"><div class="groove-ic">'+ICONS.groove+'</div><div style="flex:1;"><div class="groove-nm">'+esc(g.name)+'</div><div class="groove-meta">You\u2019ve been invited</div></div><button class="btn-mini groove-accept" data-acc="'+esc(g.id)+'">Accept</button><button class="btn-mini groove-decline" data-dec="'+esc(g.id)+'">Decline</button></div>';}).join('');invHost.querySelectorAll('.groove-accept').forEach(function(b){b.addEventListener('click',async function(){b.textContent='\u2026';await Cloud.acceptGrooveInvite(b.dataset.acc);renderGrooves();});});invHost.querySelectorAll('.groove-decline').forEach(function(b){b.addEventListener('click',async function(){b.textContent='\u2026';await Cloud.leaveGroove(b.dataset.dec);renderGrooves();});});}
+  if(!member.length){listHost.innerHTML='<div class="empty"><span class="emoji">'+ICONS.groove+'</span><h3>No Grooves yet</h3><p>Create one and invite your mates.</p></div>';return;}
+  listHost.innerHTML='<h3 class="prof-section-title">Your Grooves</h3><div class="groove-grid">'+member.map(function(g){return'<div class="groove-card" data-groove="'+esc(g.id)+'"><div class="groove-ic">'+ICONS.groove+'</div><div style="flex:1;"><div class="groove-nm">'+esc(g.name)+'</div><div class="groove-meta">Tap to open</div></div></div>';}).join('')+'</div>';
   listHost.querySelectorAll('[data-groove]').forEach(function(el){el.addEventListener('click',function(){openGroove(el.dataset.groove);});});
 }
 
@@ -5474,7 +5607,7 @@ window.handleGrooveLink=handleGrooveLink;
   document.getElementById('t-pick-b').addEventListener('click',function(){choose('b');});
 
   let championAlbum=null;
-  function champion(al){championAlbum=al;showV('win');document.getElementById('t-win-img').src=al.art||'';document.getElementById('t-win-name').textContent=al.name;document.getElementById('t-win-artist').textContent=al.artist||'';if(typeof celebrate==='function')celebrate('\u{1F3C6} Tournament winner',al.name);if(typeof logActivity==='function')logActivity('\u{1F3C6}','Crowned champion',al.name);if(window.Wallet)Wallet.awardDiscs(10,{reason:'Tournament win'});}
+  function champion(al){championAlbum=al;showV('win');document.getElementById('t-win-img').src=al.art||'';document.getElementById('t-win-name').textContent=al.name;document.getElementById('t-win-artist').textContent=al.artist||'';if(typeof celebrate==='function')celebrate('\u{1F3C6} Tournament winner',al.name);if(typeof logActivity==='function')logActivity(ICONS.crown,'Crowned champion',al.name);if(window.Wallet)Wallet.awardDiscs(10,{reason:'Tournament win'});}
   document.getElementById('tourney-again').addEventListener('click',function(){showV('setup');});
   document.getElementById('tourney-rate').addEventListener('click',function(){if(championAlbum){close();openAlbum(championAlbum);}});
 })();
@@ -5815,7 +5948,6 @@ window.handleGrooveLink=handleGrooveLink;
     document.getElementById('artist-hero-name').textContent=qp.get('debugArtistName')||'Test Artist';
     document.getElementById('artist-hero-meta').innerHTML='Your favourite artist';
     hero.style.display='block';
-    if(window.VinalDither)window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
   }, 1000);
   if(new URLSearchParams(location.search).get('groove')){}
   else if(new URLSearchParams(location.search).get('u')){setMode('profile');}
@@ -6168,6 +6300,19 @@ window.handleGrooveLink=handleGrooveLink;
 </script>
 
 <!-- ================================================================
+     Fill in the <span data-icon="name"> placeholders now that all of that
+     static HTML above has been parsed into the DOM. window.ICONS itself is
+     defined much earlier (right after <body> opens) — it has to be, since
+     some top-level code further down (BADGES) reads ICONS.xxx immediately
+     rather than inside a function, so it needs to already exist by then.
+     ================================================================ -->
+<script>
+document.querySelectorAll('[data-icon]').forEach(function (el) {
+  if (window.ICONS[el.dataset.icon]) el.innerHTML = window.ICONS[el.dataset.icon];
+});
+</script>
+
+<!-- ================================================================
      WALLET — Discs currency + daily rating streak + cosmetic themes.
      Requires new columns on the `profiles` table in Supabase (run once,
      see the migration given alongside this change):
@@ -6501,6 +6646,52 @@ window.handleGrooveLink=handleGrooveLink;
     if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('open'); });
     if (openBtn) openBtn.addEventListener('click', function () { window.openShop(); });
   })();
+})();
+</script>
+
+<!-- ================================================================
+     SPLASH GATE boot logic. Shows once per browser session; click the
+     header logo any time afterwards to see it again (reloads the page).
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+  var SEEN_KEY = 'vinal_splash_seen';
+  var gate = document.getElementById('splash-gate');
+  var alreadySeen = !!sessionStorage.getItem(SEEN_KEY);
+
+  // Wire the logo's "replay intro" click UNCONDITIONALLY, regardless of
+  // whether the gate is showing this load — this used to sit after an
+  // early return for the already-seen case, which meant replay only ever
+  // worked on someone's very first visit and silently did nothing ever
+  // again after that.
+  var brand = document.querySelector('.brand-mark');
+  if (brand) {
+    brand.style.cursor = 'pointer';
+    brand.title = 'Replay intro';
+    brand.addEventListener('click', function () {
+      try { sessionStorage.removeItem(SEEN_KEY); } catch (e) {}
+      location.reload();
+    });
+  }
+
+  if (!gate) return;
+  if (alreadySeen) { gate.remove(); return; }
+
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var video = document.getElementById('splash-video');
+  if (!reduced && video) {
+    video.src = 'assets/splash-vinyl.mp4';
+    video.play().catch(function () {}); // autoplay can still be blocked — poster covers that case
+  }
+
+  function dismiss() {
+    try { sessionStorage.setItem(SEEN_KEY, '1'); } catch (e) {}
+    gate.classList.add('is-hiding');
+    setTimeout(function () { gate.remove(); }, 700);
+  }
+  var cta = document.getElementById('splash-cta');
+  if (cta) cta.addEventListener('click', dismiss);
 })();
 </script>
 </body>
