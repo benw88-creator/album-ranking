@@ -9,7 +9,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9IiMwYTA5MDgiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMzMzMzNkIiBzdHJva2Utd2lkdGg9IjEuMiIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMyNjI2MmUiIHN0cm9rZS13aWR0aD0iMSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE5IiBmaWxsPSJub25lIiBzdHJva2U9IiMyNjI2MmUiIHN0cm9rZS13aWR0aD0iMSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjEwIiBmaWxsPSIjRjVDODQyIi8+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMi4yIiBmaWxsPSIjMGEwOTA4Ii8+PC9zdmc+Cg==">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
    VINAL — REDESIGNED UI  (vinal-28)
@@ -51,6 +51,9 @@
    of this file) ---- everything below only ever repaints the tokens above,
    so every existing component reskins for free. Semantic score colours
    (--red/--yellow/--green) intentionally stay constant across themes. ---- */
+/* Each theme now changes more than colour — display typeface, corner
+   radius, and a background texture layer — so switching actually changes
+   the feel of the app, not just a colour swap. */
 [data-theme="sundown"] {
   --bg:            #150907;
   --surface:       #1f100c;
@@ -65,6 +68,7 @@
   --gold:          #e8763f;
   --gold-glow:     rgba(232,118,63,0.18);
   --gold-dim:      rgba(232,118,63,0.10);
+  --font-display:  'Instrument Serif', serif;
 }
 [data-theme="cassette"] {
   --bg:            #0b0d10;
@@ -80,6 +84,10 @@
   --gold:          #5eb8ff;
   --gold-glow:     rgba(94,184,255,0.18);
   --gold-dim:      rgba(94,184,255,0.10);
+  --font-display:  'IBM Plex Mono', monospace;
+  --radius:        8px;
+  --radius-sm:     5px;
+  --radius-xs:     3px;
 }
 [data-theme="blanc"] {
   --bg:            #f3efe6;
@@ -95,6 +103,29 @@
   --gold:          #b8860b;
   --gold-glow:     rgba(184,134,11,0.18);
   --gold-dim:      rgba(184,134,11,0.10);
+  --radius:        22px;
+  --radius-sm:     13px;
+  --radius-xs:     9px;
+}
+
+/* Background texture per theme — layered behind the existing radial
+   glow on body, scoped with html[data-theme=...] so it's more specific
+   than the base `body` rule and doesn't need !important. */
+html[data-theme="sundown"] body {
+  background-image:
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(232,118,63,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(232,118,63,0.05) 0%, transparent 70%);
+}
+html[data-theme="cassette"] body {
+  background-image:
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(94,184,255,0.05) 0%, transparent 70%),
+    repeating-linear-gradient(0deg, rgba(94,184,255,0.03) 0px, rgba(94,184,255,0.03) 1px, transparent 1px, transparent 3px);
+}
+html[data-theme="blanc"] body {
+  background-image:
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(184,134,11,0.05) 0%, transparent 70%),
+    radial-gradient(circle, rgba(28,23,18,0.05) 1px, transparent 1px);
+  background-size: auto, 16px 16px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1916,6 +1947,23 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   .splash-cta, .splash-cta .arrow { transition: none; }
 }
 
+/* "Let's go" dismiss — the record dissolves into its own dot-matrix and
+   scatters outward, revealing the app underneath. Reuses the dither
+   engine's gold-dust visual language rather than a generic
+   confetti/fade, so the transition actually feels like it belongs to
+   this specific product. See playDismissAnimation() near the boot script. */
+.splash-content.is-leaving {
+  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
+  opacity: 0; transform: scale(0.96);
+}
+.splash-burst { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.splash-flash {
+  position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  background: radial-gradient(circle at 50% 68%, rgba(255,255,255,0.95), rgba(245,200,66,0.4) 35%, transparent 65%);
+  animation: splashFlash 0.5s ease-out forwards;
+}
+@keyframes splashFlash { from { opacity: 0.95; } to { opacity: 0; } }
+
 /* ============================================================
    ARTIST HERO — top-rated artist as full-bleed background
    ============================================================ */
@@ -2172,8 +2220,9 @@ window.ICONS = {
   <div class="activity-list" id="notif-list"></div>
 </aside>
 <div id="artist-hero" class="artist-hero artist-hero-expanded" style="display:none;">
-  <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer">
+  <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer" crossorigin="anonymous">
   <div class="artist-hero-duotone" aria-hidden="true"></div>
+  <canvas class="artist-hero-bg" id="artist-hero-canvas" aria-hidden="true" style="display:none;"></canvas>
   <div class="artist-hero-fade"></div>
   <button class="artist-hero-toggle" id="artist-hero-toggle" title="Collapse">&#8593;</button>
   <div class="artist-hero-content wrap">
@@ -3526,11 +3575,12 @@ async function renderArtistHero() {
   _heroArtistKey = fav.id;
   hero.style.display = 'block';
   _heroBuilt = true;
-  // No dither treatment here on purpose — a specific person's face needs to
-  // stay recognisable and still. Colour comes from .artist-hero-duotone
-  // (a CSS mix-blend-mode overlay) instead. See VinalDither section near
-  // the end of this file for the (still available, just unused-here)
-  // dither engine.
+  // Static dithered portrait — one render, no animation loop, no pointer
+  // interaction (see mountArtistHero: a face needs to stay recognisable
+  // and still, unlike the ambient login-screen use of this same engine).
+  // Falls back to the plain photo + CSS duotone filter if this fails for
+  // any reason (see the catch inside mountArtistHero itself).
+  if (window.VinalDither) window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
 }
 (function wireHeroToggle(){
   const btn = document.getElementById('artist-hero-toggle');
@@ -5948,6 +5998,7 @@ window.handleGrooveLink=handleGrooveLink;
     document.getElementById('artist-hero-name').textContent=qp.get('debugArtistName')||'Test Artist';
     document.getElementById('artist-hero-meta').innerHTML='Your favourite artist';
     hero.style.display='block';
+    if(window.VinalDither)window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
   }, 1000);
   if(new URLSearchParams(location.search).get('groove')){}
   else if(new URLSearchParams(location.search).get('u')){setMode('profile');}
@@ -6218,6 +6269,16 @@ window.handleGrooveLink=handleGrooveLink;
     canvas.height = Math.max(1, Math.round(rect.height * dpr));
   }
 
+  // Reads a theme token straight from the cascade instead of a hardcoded
+  // hex, so the login backdrop and artist hero dither in whatever colour
+  // the active Shop theme actually is (Cassette's blue, Sundown's amber,
+  // etc.) instead of always rendering in the default gold regardless of
+  // what theme is equipped.
+  function themeColor(varName, fallback) {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    return v || fallback;
+  }
+
   // ---- Auth modal backdrop ------------------------------------------------
   let authField = null, authFramesPromise = null;
   function loadAuthFrames() {
@@ -6242,7 +6303,7 @@ window.handleGrooveLink=handleGrooveLink;
       authField = new DitherField(canvas, images, {
         pixelSize: 11, dotScale: 0.55, spacing: 0.4, levels: 4,
         contrast: 34, brightness: 4, invert: true, floor: 0.035,
-        colorMode: 'duotone', inkColor: '#F5C842', background: '#0a0908',
+        colorMode: 'duotone', inkColor: themeColor('--gold', '#F5C842'), background: themeColor('--bg', '#0a0908'),
         pointerMode: 'rotate', fps: 11, crossfadeFrames: 8,
       });
       await authField.init();
@@ -6273,11 +6334,22 @@ window.handleGrooveLink=handleGrooveLink;
     sizeCanvasTo(canvasEl, host);
     if (heroField) heroField.stop();
     heroField = new DitherField(canvasEl, [imgEl], {
-      pixelSize: 7, dotScale: 0.72, spacing: 0.32, levels: 6,
-      contrast: 22, brightness: 4, invert: true, floor: 0.02,
-      colorMode: 'blended', inkColor: '#F5C842', colorMix: 0.35,
-      background: '#0a0908', pointerMode: 'rotate',
-      pointerRadiusFrac: 0.7, pointerStrength: 0.1,
+      // Static portrait, not the ambient/mood use this engine was built
+      // for — no pointer warp, no animation loop (rendered once below,
+      // not started). Tuned by eye (screenshot-verified, two failed
+      // passes first): pixelSize 5 with a high dotScale packed into a
+      // solid grey mass; pixelSize 8 with a low dotScale lost facial
+      // detail entirely and read as generic texture. What actually works
+      // is closer to real halftone-print proportions — small cells with
+      // *high* ink coverage (low spacing, high dotScale) and more tone
+      // levels for smooth gradation, low contrast so midtones survive
+      // instead of crushing to near-binary. The auto-level percentile
+      // step (see DitherField.init) is what keeps this robust across
+      // wildly different photos, not per-photo tuning.
+      pixelSize: 6, dotScale: 0.9, spacing: 0.15, levels: 8,
+      contrast: 14, brightness: 2, invert: true, floor: 0.01,
+      colorMode: 'blended', inkColor: themeColor('--gold', '#F5C842'), colorMix: 0.4,
+      background: themeColor('--bg', '#0a0908'), pointerMode: 'none',
       fit: 'cover', focusY: 0.25, // matches the img's object-position:center 25%
     });
     try {
@@ -6285,17 +6357,17 @@ window.handleGrooveLink=handleGrooveLink;
     } catch (e) {
       // Cross-origin image without CORS clearance (shouldn't happen — Spotify's
       // CDN sends Access-Control-Allow-Origin:* — but fail safe: leave the
-      // plain photo visible instead of a broken canvas).
+      // plain photo (with its own CSS duotone filter) visible instead of a
+      // broken canvas).
       console.warn('Vinal dither: artist hero init failed, showing plain photo', e);
       return;
     }
-    heroField.attachPointer(host);
-    heroField.start();
+    heroField._renderAtTime(0); // one render, no start() — this is a still image, not a loop
     canvasEl.style.display = 'block';
     imgEl.style.visibility = 'hidden';
   }
 
-  window.VinalDither = { playAuth: playAuth, pauseAuth: pauseAuth, mountArtistHero: mountArtistHero };
+  window.VinalDither = { playAuth: playAuth, pauseAuth: pauseAuth, mountArtistHero: mountArtistHero, DitherField: DitherField };
 })();
 </script>
 
@@ -6650,33 +6722,114 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 </script>
 
 <!-- ================================================================
-     SPLASH GATE boot logic. Shows once per browser session; click the
-     header logo any time afterwards to see it again (reloads the page).
+     "Let's go" dismiss animation — the record's current video frame gets
+     sampled into a coarse dot grid (same math as the dither engine, just
+     a one-shot burst instead of a continuous render) and scattered
+     outward from the record's centre, revealing the app underneath.
+     ================================================================ -->
+<script>
+function playDismissAnimation(gateEl, callback) {
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var video = document.getElementById('splash-video');
+  var content = gateEl.querySelector('.splash-content');
+  if (content) content.classList.add('is-leaving');
+
+  if (reduced || !video || video.readyState < 2) { callback(); return; }
+
+  var w = gateEl.clientWidth, h = gateEl.clientHeight;
+  var cell = 13;
+  var cols = Math.max(1, Math.ceil(w / cell)), rows = Math.max(1, Math.ceil(h / cell));
+
+  var off = document.createElement('canvas');
+  off.width = cols; off.height = rows;
+  var octx = off.getContext('2d', { willReadFrequently: true });
+  var data;
+  try {
+    octx.drawImage(video, 0, 0, cols, rows);
+    data = octx.getImageData(0, 0, cols, rows).data;
+  } catch (e) { callback(); return; } // e.g. a cross-origin video source — fail safe to the plain fade
+
+  var canvas = document.createElement('canvas');
+  canvas.className = 'splash-burst';
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  gateEl.appendChild(canvas);
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  var cx = w / 2, cy = h / 2;
+  var dots = [];
+  for (var ry = 0; ry < rows; ry++) {
+    for (var rx = 0; rx < cols; rx++) {
+      var i = (ry * cols + rx) * 4;
+      var luma = (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
+      if (luma < 0.1) continue; // skip near-black cells — the burst is made of the record's highlights, not the void around it
+      var px = (rx + 0.5) * cell, py = (ry + 0.5) * cell;
+      var dx = px - cx, dy = py - cy;
+      var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      var seed = Math.sin(rx * 127.1 + ry * 311.7) * 43758.5453; seed -= Math.floor(seed);
+      dots.push({
+        x: px, y: py, vx: dx / dist, vy: dy / dist,
+        r: 1.4 + luma * 3.2,
+        delay: (dist / Math.max(w, h)) * 200 + seed * 130, // outer dots go a beat later — reads as a wave off the centre
+        color: luma > 0.6 ? '#fff3c4' : '#F5C842',
+      });
+    }
+  }
+
+  var flash = document.createElement('div');
+  flash.className = 'splash-flash';
+  gateEl.appendChild(flash);
+
+  var DURATION = 820;
+  var start = null;
+  function frame(ts) {
+    if (start === null) start = ts;
+    var t = ts - start;
+    ctx.clearRect(0, 0, w, h);
+    var stillGoing = false;
+    for (var i = 0; i < dots.length; i++) {
+      var d = dots[i];
+      var lt = t - d.delay;
+      if (lt < 0) { stillGoing = true; continue; }
+      var p = Math.min(1, lt / 420);
+      if (p < 1) stillGoing = true;
+      var eased = 1 - Math.pow(1 - p, 3);
+      var x = d.x + d.vx * eased * 100, y = d.y + d.vy * eased * 100;
+      var alpha = 1 - eased;
+      if (alpha <= 0.02) continue;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = d.color;
+      ctx.beginPath(); ctx.arc(x, y, d.r * (1 + eased * 1.3), 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (t < DURATION || stillGoing) requestAnimationFrame(frame);
+    else { canvas.remove(); flash.remove(); callback(); }
+  }
+  requestAnimationFrame(frame);
+}
+</script>
+
+<!-- ================================================================
+     SPLASH GATE boot logic. Shows on every fresh load — no
+     "only once" memory, on purpose: this is the intended first-open
+     moment every time you actually open Vinal, logged in or not. Click
+     the header logo any time to see it again without a fresh navigation.
      ================================================================ -->
 <script>
 (function () {
   'use strict';
-  var SEEN_KEY = 'vinal_splash_seen';
   var gate = document.getElementById('splash-gate');
-  var alreadySeen = !!sessionStorage.getItem(SEEN_KEY);
 
-  // Wire the logo's "replay intro" click UNCONDITIONALLY, regardless of
-  // whether the gate is showing this load — this used to sit after an
-  // early return for the already-seen case, which meant replay only ever
-  // worked on someone's very first visit and silently did nothing ever
-  // again after that.
   var brand = document.querySelector('.brand-mark');
   if (brand) {
     brand.style.cursor = 'pointer';
     brand.title = 'Replay intro';
-    brand.addEventListener('click', function () {
-      try { sessionStorage.removeItem(SEEN_KEY); } catch (e) {}
-      location.reload();
-    });
+    brand.addEventListener('click', function () { location.reload(); });
   }
 
   if (!gate) return;
-  if (alreadySeen) { gate.remove(); return; }
 
   var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var video = document.getElementById('splash-video');
@@ -6685,10 +6838,22 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     video.play().catch(function () {}); // autoplay can still be blocked — poster covers that case
   }
 
+  // bfcache restore (browser back/forward within the tab) reuses the exact
+  // DOM state from unload rather than re-running this script — if the gate
+  // was already dismissed and removed, a restore should stay on the app,
+  // not resurrect a half-dismissed splash. If it somehow comes back still
+  // present, just make sure the video is actually playing again.
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted && document.getElementById('splash-gate') && video && !reduced) {
+      video.play().catch(function () {});
+    }
+  });
+
   function dismiss() {
-    try { sessionStorage.setItem(SEEN_KEY, '1'); } catch (e) {}
-    gate.classList.add('is-hiding');
-    setTimeout(function () { gate.remove(); }, 700);
+    playDismissAnimation(gate, function () {
+      gate.classList.add('is-hiding');
+      setTimeout(function () { gate.remove(); }, 700);
+    });
   }
   var cta = document.getElementById('splash-cta');
   if (cta) cta.addEventListener('click', dismiss);
