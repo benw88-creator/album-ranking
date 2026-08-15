@@ -2200,7 +2200,7 @@ window.ICONS = {
 </script>
 
 <div class="splash-gate" id="splash-gate">
-  <video class="splash-video" id="splash-video" poster="assets/splash-poster.jpg" muted loop playsinline preload="auto" aria-hidden="true"></video>
+  <video class="splash-video" id="splash-video" poster="assets/splash-poster.jpg" muted autoplay loop playsinline preload="auto" aria-hidden="true"></video>
   <div class="splash-scrim"></div>
   <div class="splash-content">
     <div class="splash-word">VINAL</div>
@@ -6831,11 +6831,32 @@ function playDismissAnimation(gateEl, callback) {
 
   if (!gate) return;
 
-  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Deliberately NOT gated behind prefers-reduced-motion — this loop is the
+  // splash's actual content (like a hero video), not a decorative UI
+  // effect, and a static poster instead reads as "broken" rather than
+  // "accessible". The genuinely disorienting stuff (the dot-burst dismiss,
+  // card entrances, etc.) still respects reduced-motion elsewhere.
   var video = document.getElementById('splash-video');
-  if (!reduced && video) {
+  if (video) {
+    // Belt and suspenders against browser autoplay quirks: set both the
+    // muted PROPERTY (not just the HTML attribute — some browsers only
+    // honour autoplay-without-gesture if this is set before src/load) and
+    // the native autoplay property, then still call .play() ourselves
+    // since some browsers only actually start on that explicit call. If
+    // it's blocked anyway, don't silently leave a frozen poster forever —
+    // retry on the very first interaction with the gate, which will
+    // happen regardless since dismissing it requires a click anyway.
+    video.muted = true;
+    video.autoplay = true;
     video.src = 'assets/splash-vinyl.mp4';
-    video.play().catch(function () {}); // autoplay can still be blocked — poster covers that case
+    video.load();
+    var tryPlay = function () {
+      var p = video.play();
+      if (p && p.catch) p.catch(function (err) { console.warn('Vinal splash: autoplay blocked, will retry on interaction', err); });
+    };
+    tryPlay();
+    gate.addEventListener('pointerdown', tryPlay);
+    video.addEventListener('canplay', tryPlay);
   }
 
   // bfcache restore (browser back/forward within the tab) reuses the exact
