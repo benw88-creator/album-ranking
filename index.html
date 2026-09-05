@@ -197,10 +197,17 @@ header, nav.modes, .stats, .stat, .modal-panel, .gate, .game-card, .shop-item,
 .search-field, select.ctrl-select, .seg {
   transition: background-color 0.5s ease, border-color 0.5s ease, color 0.4s ease;
 }
-@media (prefers-reduced-motion: reduce) {
-  body, header, nav.modes, .stats, .stat, .modal-panel, .gate, .game-card, .shop-item,
-  .search-field, select.ctrl-select, .seg { transition: none; }
-}
+/* NOTE ON prefers-reduced-motion (deliberate policy, don't "restore" these):
+   That setting exists to prevent vestibular-trigger motion — large-area
+   movement, parallax, zoom, flying particles. It is NOT a request for a
+   dead UI. Small ambient brand motion (the 52px spinning logo, 3px
+   waveform bars, colour cross-fades, a sliding tab indicator, button
+   press feedback) stays on for everyone, because switching it off made
+   the site read as broken rather than as considerate — a lot of Windows
+   users have "animation effects" off by default and were getting a
+   completely inert page.
+   Still gated below: the splash morph's blur/scale, card-grid entrance
+   stagger, and the Discs particle burst. */
 a { color: inherit; text-decoration: none; }
 .wrap { max-width: 1140px; margin: 0 auto; padding: 0 28px; }
 
@@ -263,7 +270,6 @@ header {
   box-shadow: 0 0 10px var(--gold-glow);
 }
 @keyframes vinylSpin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .brand-mark { animation: none; } }
 
 .brand-text {}
 .brand-text h1 {
@@ -313,12 +319,10 @@ header {
   0%   { transform: scaleY(0.4); }
   100% { transform: scaleY(1); }
 }
-@media (prefers-reduced-motion: reduce) { .waveform span { animation: none; } }
 
 /* ---- BUTTONS ---- */
 button { font-family: var(--font-body); cursor: pointer; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; transition: all 0.15s; }
 button:active { transform: scale(0.96); }
-@media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
 
 .btn-primary {
   background: linear-gradient(135deg, var(--gold), var(--accent-2));
@@ -390,7 +394,6 @@ nav.modes {
   transition: transform 0.3s var(--ease), width 0.3s var(--ease);
   z-index: 0; pointer-events: none;
 }
-@media (prefers-reduced-motion: reduce) { .nav-indicator { transition: none; } }
 nav.modes button {
   background: transparent;
   border: none;
@@ -446,7 +449,6 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
   0%, 100% { box-shadow: 0 0 0 0 rgba(245,200,66,0.45); }
   50%      { box-shadow: 0 0 0 6px rgba(245,200,66,0); }
 }
-@media (prefers-reduced-motion: reduce) { .shop-open-btn { animation: none; } }
 
 .disc-particle {
   position: fixed; z-index: 500; pointer-events: none;
@@ -2078,9 +2080,19 @@ body.entering-done #artist-hero {
   margin-bottom: -64px;
   overflow: hidden;
   animation: heroFadeIn 0.6s ease both;
-  transition: height 0.4s var(--ease);
+  transition: height 0.55s var(--ease), margin-bottom 0.55s var(--ease), opacity 0.45s var(--ease);
 }
 .artist-hero.artist-hero-collapsed { height: 160px; }
+/* Shown by expanding from zero height rather than flipping display:none
+   -> block. The flip was the "glitch" when a favourite artist loaded: the
+   whole page below it jumped down 460px in a single frame. Expanding lets
+   the existing height transition carry it smoothly instead. */
+.artist-hero.artist-hero-hidden {
+  height: 0 !important;
+  margin-bottom: 0 !important;
+  opacity: 0;
+  animation: none;
+}
 @keyframes heroFadeIn { from { opacity: 0; } to { opacity: 1; } }
 .artist-hero-bg {
   position: absolute;
@@ -2099,7 +2111,6 @@ body.entering-done #artist-hero {
      stays static: no pointer warp, no slow zoom. Recognisability over mood. */
   filter: grayscale(1) contrast(1.12) brightness(0.95);
 }
-@media (prefers-reduced-motion: reduce) { .artist-hero-bg { transition: none; } }
 .artist-hero-duotone {
   position: absolute;
   inset: 0;
@@ -2215,7 +2226,6 @@ body.entering-done #artist-hero {
   0%, 100% { background-position: 0% center; }
   50% { background-position: 100% center; }
 }
-@media (prefers-reduced-motion: reduce) { .fal-name { animation: none; } }
 .fal-edit-btn {
   margin-left: auto;
   flex-shrink: 0;
@@ -3658,32 +3668,43 @@ async function fetchArtistImage(artistId) {
 
 let _heroBuilt = false;
 let _heroArtistKey = null;
+/* Show/hide the artist hero by animating its height rather than toggling
+   display, so the page below eases into place instead of jumping. */
+function showArtistHero(hero) {
+  hero.style.display = 'block';
+  hero.classList.add('artist-hero-hidden');
+  void hero.offsetWidth;               // commit the zero-height state first
+  hero.classList.remove('artist-hero-hidden');
+}
+function hideArtistHero(hero) {
+  hero.classList.add('artist-hero-hidden');
+}
 async function renderArtistHero() {
   const hero = document.getElementById('artist-hero');
   if (!hero) return;
 
   if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) {
-    hero.style.display = 'none'; _heroBuilt = false; _heroArtistKey = null; return;
+    hideArtistHero(hero); _heroBuilt = false; _heroArtistKey = null; return;
   }
   const me = Cloud.getUser();
   let prof = null;
   try { prof = await Cloud.fetchProfile(me.id); } catch (e) {}
   const fav = prof && prof.fav_artist;
 
-  if (!fav || !fav.id) { hero.style.display = 'none'; _heroBuilt = false; _heroArtistKey = null; return; }
-  if (_heroBuilt && _heroArtistKey === fav.id) { hero.style.display = 'block'; return; }
+  if (!fav || !fav.id) { hideArtistHero(hero); _heroBuilt = false; _heroArtistKey = null; return; }
+  if (_heroBuilt && _heroArtistKey === fav.id) { showArtistHero(hero); return; }
 
   // Prefer the image already saved on the profile (avoids an extra API call);
   // only hit Spotify if we don't have one cached on the favourite itself.
   const img = fav.image || await fetchArtistImage(fav.id);
-  if (!img) { hero.style.display = 'none'; return; }
+  if (!img) { hideArtistHero(hero); return; }
 
   document.getElementById('artist-hero-bg').src = img;
   document.getElementById('artist-hero-name').textContent = fav.name;
   document.getElementById('artist-hero-meta').innerHTML = 'Your favourite artist';
   hero.dataset.artistId = fav.id;
   _heroArtistKey = fav.id;
-  hero.style.display = 'block';
+  showArtistHero(hero);
   _heroBuilt = true;
   // Static dithered portrait — one render, no animation loop, no pointer
   // interaction (see mountArtistHero: a face needs to stay recognisable
@@ -6107,7 +6128,7 @@ window.handleGrooveLink=handleGrooveLink;
     document.getElementById('artist-hero-bg').src=img;
     document.getElementById('artist-hero-name').textContent=qp.get('debugArtistName')||'Test Artist';
     document.getElementById('artist-hero-meta').innerHTML='Your favourite artist';
-    hero.style.display='block';
+    showArtistHero(hero);
     if(window.VinalDither)window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
   }, 1000);
   if(new URLSearchParams(location.search).get('groove')){}
@@ -6456,9 +6477,14 @@ window.handleGrooveLink=handleGrooveLink;
       // instead of crushing to near-binary. The auto-level percentile
       // step (see DitherField.init) is what keeps this robust across
       // wildly different photos, not per-photo tuning.
-      pixelSize: 6, dotScale: 0.9, spacing: 0.15, levels: 8,
-      contrast: 14, brightness: 2, invert: true, floor: 0.01,
-      colorMode: 'blended', inkColor: themeColor('--gold', '#F5C842'), colorMix: 0.4,
+      // pixelSize is in DEVICE pixels, so a fixed number rendered visibly
+      // chunkier on a 1x display than a 2x one. Scale it with DPR to hold
+      // a constant ~3.5 CSS px per dot everywhere — fine enough to read as
+      // a photographic halftone rather than blocky pixel art.
+      pixelSize: Math.max(3, Math.round(3.5 * Math.min(2, window.devicePixelRatio || 1))),
+      dotScale: 0.92, spacing: 0.12, levels: 10,
+      contrast: 12, brightness: 2, invert: true, floor: 0.008,
+      colorMode: 'blended', inkColor: themeColor('--gold', '#F5C842'), colorMix: 0.45,
       background: themeColor('--bg', '#0a0908'), pointerMode: 'none',
       fit: 'cover', focusY: 0.25, // matches the img's object-position:center 25%
     });
@@ -6473,8 +6499,17 @@ window.handleGrooveLink=handleGrooveLink;
       return;
     }
     heroField._renderAtTime(0); // one render, no start() — this is a still image, not a loop
+    // Cross-fade the dither over the photo instead of hard-swapping them.
+    // The hard swap was the visible "glitch": a smooth photo would paint,
+    // then a frame later get replaced outright by the dot rendering. Now
+    // the two are stacked and it dissolves between them, and the photo is
+    // only hidden once the fade has finished.
+    canvasEl.style.opacity = '0';
     canvasEl.style.display = 'block';
-    imgEl.style.visibility = 'hidden';
+    void canvasEl.offsetWidth;
+    canvasEl.style.transition = 'opacity 0.6s var(--ease)';
+    canvasEl.style.opacity = '1';
+    setTimeout(function () { imgEl.style.visibility = 'hidden'; }, 650);
   }
 
   window.VinalDither = { playAuth: playAuth, pauseAuth: pauseAuth, mountArtistHero: mountArtistHero, DitherField: DitherField };
