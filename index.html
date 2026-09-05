@@ -31,6 +31,13 @@
   --gold:         #F5C842;
   --gold-glow:    rgba(245,200,66,0.18);
   --gold-dim:     rgba(245,200,66,0.10);
+  /* Secondary accent. Every theme sets its own; used wherever a single
+     flat accent was making things look monotone — the CTA gradient, the
+     logo's centre dot, the waveform, card hover glow. Keeps the palette
+     simple (still only two accents) while giving each theme actual
+     colour movement instead of one hue on grey. */
+  --accent-2:     #ff7a4d;
+  --accent-2-dim: rgba(255,122,77,0.12);
   --red:          #e24b4a;
   --yellow:       #efb927;
   --green:        #4fb477;
@@ -55,20 +62,56 @@
    radius, and a background texture layer — so switching actually changes
    the feel of the app, not just a colour swap. */
 [data-theme="sundown"] {
-  --bg:            #150907;
-  --surface:       #1f100c;
-  --surface-2:     #2a1712;
-  --surface-3:     #351e17;
-  --surface-4:     #40251c;
-  --text:          #f5ece4;
-  --text-dim:      #baa08f;
-  --text-faint:    #6b5147;
-  --border:        rgba(255,235,220,0.07);
-  --border-strong: rgba(255,235,220,0.14);
-  --gold:          #e8763f;
-  --gold-glow:     rgba(232,118,63,0.18);
-  --gold-dim:      rgba(232,118,63,0.10);
+  --bg:            #1a0a14;
+  --surface:       #26101d;
+  --surface-2:     #331726;
+  --surface-3:     #421e30;
+  --surface-4:     #52263b;
+  --text:          #ffeee6;
+  --text-dim:      #d3a08f;
+  --text-faint:    #8a5a4f;
+  --border:        rgba(255,225,215,0.09);
+  --border-strong: rgba(255,225,215,0.18);
+  --gold:          #ff8a3d;
+  --gold-glow:     rgba(255,138,61,0.26);
+  --gold-dim:      rgba(255,138,61,0.14);
+  --accent-2:      #ff3d7f;
+  --accent-2-dim:  rgba(255,61,127,0.16);
   --font-display:  'Instrument Serif', serif;
+}
+[data-theme="neon"] {
+  --bg:            #0a0616;
+  --surface:       #140c26;
+  --surface-2:     #1d1236;
+  --surface-3:     #281a47;
+  --surface-4:     #342259;
+  --text:          #f4eeff;
+  --text-dim:      #a596c9;
+  --text-faint:    #6b5c8f;
+  --border:        rgba(230,215,255,0.09);
+  --border-strong: rgba(230,215,255,0.2);
+  --gold:          #ff3d9a;
+  --gold-glow:     rgba(255,61,154,0.3);
+  --gold-dim:      rgba(255,61,154,0.14);
+  --accent-2:      #22e3ff;
+  --accent-2-dim:  rgba(34,227,255,0.16);
+}
+[data-theme="citrus"] {
+  --bg:            #12100a;
+  --surface:       #1d1a0f;
+  --surface-2:     #292415;
+  --surface-3:     #37301b;
+  --surface-4:     #453d22;
+  --text:          #fdf8e6;
+  --text-dim:      #c2b78a;
+  --text-faint:    #7d7350;
+  --border:        rgba(255,247,210,0.09);
+  --border-strong: rgba(255,247,210,0.2);
+  --gold:          #ff9f1c;
+  --gold-glow:     rgba(255,159,28,0.28);
+  --gold-dim:      rgba(255,159,28,0.14);
+  --accent-2:      #c6ff3d;
+  --accent-2-dim:  rgba(198,255,61,0.16);
 }
 [data-theme="cassette"] {
   --bg:            #0b0d10;
@@ -81,9 +124,11 @@
   --text-faint:    #4f5866;
   --border:        rgba(220,235,255,0.06);
   --border-strong: rgba(220,235,255,0.13);
-  --gold:          #5eb8ff;
-  --gold-glow:     rgba(94,184,255,0.18);
-  --gold-dim:      rgba(94,184,255,0.10);
+  --gold:          #12e0c8;
+  --gold-glow:     rgba(18,224,200,0.28);
+  --gold-dim:      rgba(18,224,200,0.14);
+  --accent-2:      #5eb8ff;
+  --accent-2-dim:  rgba(94,184,255,0.16);
   --font-display:  'IBM Plex Mono', monospace;
   --radius:        8px;
   --radius-sm:     5px;
@@ -100,9 +145,11 @@
   --text-faint:    #a89b87;
   --border:        rgba(28,23,18,0.08);
   --border-strong: rgba(28,23,18,0.16);
-  --gold:          #b8860b;
-  --gold-glow:     rgba(184,134,11,0.18);
-  --gold-dim:      rgba(184,134,11,0.10);
+  --gold:          #7c3aed;
+  --gold-glow:     rgba(124,58,237,0.2);
+  --gold-dim:      rgba(124,58,237,0.10);
+  --accent-2:      #ec4899;
+  --accent-2-dim:  rgba(236,72,153,0.12);
   --radius:        22px;
   --radius-sm:     13px;
   --radius-xs:     9px;
@@ -211,8 +258,9 @@ header {
   inset: 0; margin: auto;
   width: 12px; height: 12px;
   border-radius: 50%;
-  background: var(--gold);
-  box-shadow: 0 0 8px rgba(245,200,66,0.6);
+  /* Two-tone label so the mark itself carries the theme's colour pair */
+  background: radial-gradient(circle at 35% 35%, var(--accent-2), var(--gold) 70%);
+  box-shadow: 0 0 10px var(--gold-glow);
 }
 @keyframes vinylSpin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .brand-mark { animation: none; } }
@@ -254,6 +302,8 @@ header {
   animation: wave 1.2s ease-in-out infinite alternate;
   transform-origin: bottom;
 }
+/* Alternating accents so the bars read as a colour pair, not one flat hue */
+.waveform span:nth-child(even) { background: var(--accent-2); }
 .waveform span:nth-child(1) { height: 40%; animation-delay: 0s; }
 .waveform span:nth-child(2) { height: 80%; animation-delay: 0.15s; }
 .waveform span:nth-child(3) { height: 60%; animation-delay: 0.3s; }
@@ -271,7 +321,7 @@ button:active { transform: scale(0.96); }
 @media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
 
 .btn-primary {
-  background: var(--gold);
+  background: linear-gradient(135deg, var(--gold), var(--accent-2));
   color: #0a0908;
   border: none;
   padding: 11px 22px;
@@ -279,7 +329,7 @@ button:active { transform: scale(0.96); }
   font-family: var(--font-display);
   letter-spacing: -0.01em;
 }
-.btn-primary:hover { background: #ffd84a; box-shadow: 0 0 20px rgba(245,200,66,0.35); }
+.btn-primary:hover { filter: brightness(1.1); box-shadow: 0 0 24px var(--gold-glow); }
 
 .btn-spotify {
   background: var(--surface-3);
@@ -1573,13 +1623,16 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 }
 @media (max-width: 900px) { .crate-layout { grid-template-columns: 1fr; } }
 
-/* Square card grid — 2 columns, tight gap */
+/* Single-column scrolling feed — one post at a time, top to bottom.
+   Capped width so cards stay a comfortable size on wide screens instead
+   of becoming enormous squares. */
 .crate-feed {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 520px;
 }
-@media (max-width: 540px) { .crate-feed { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .crate-feed { max-width: none; } }
 
 /* The card itself — square, full art, everything overlaid */
 .cf-card {
@@ -1931,14 +1984,20 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 }
 .splash-cta {
   margin-top: 8px;
-  background: var(--gold); color: var(--bg);
+  background: linear-gradient(120deg, var(--gold), var(--accent-2));
+  background-size: 200% 100%;
+  color: var(--bg);
   border: none; padding: 16px 32px; border-radius: 999px;
   font-family: var(--font-display); font-weight: 700; font-size: 17px;
   display: inline-flex; align-items: center; gap: 10px;
-  box-shadow: 0 0 40px rgba(245,200,66,0.35);
-  transition: background 0.2s var(--ease), box-shadow 0.2s var(--ease), transform 0.2s var(--ease);
+  box-shadow: 0 0 48px var(--gold-glow), 0 0 90px var(--accent-2-dim);
+  transition: background-position 0.5s var(--ease), box-shadow 0.25s var(--ease), transform 0.2s var(--ease);
 }
-.splash-cta:hover { background: #ffd84a; box-shadow: 0 0 56px rgba(245,200,66,0.5); transform: translateY(-2px); }
+.splash-cta:hover {
+  background-position: 100% 0;
+  box-shadow: 0 0 64px var(--gold-glow), 0 0 120px var(--accent-2-dim);
+  transform: translateY(-2px) scale(1.02);
+}
 .splash-cta .arrow { display: inline-block; transition: transform 0.2s var(--ease); }
 .splash-cta:hover .arrow { transform: translateX(4px); }
 @media (prefers-reduced-motion: reduce) {
@@ -1947,22 +2006,67 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   .splash-cta, .splash-cta .arrow { transition: none; }
 }
 
-/* "Let's go" dismiss — the record dissolves into its own dot-matrix and
-   scatters outward, revealing the app underneath. Reuses the dither
-   engine's gold-dust visual language rather than a generic
-   confetti/fade, so the transition actually feels like it belongs to
-   this specific product. See playDismissAnimation() near the boot script. */
+/* ---- Dismiss: the splash physically BECOMES the dashboard ----
+   Not a fade and not a particle effect. The record shrinks and travels
+   into the exact position of the header's logo mark (morphing rectangle
+   -> circle on the way), the wordmark flies down into the header
+   wordmark's slot, and the dashboard rises out of a blur behind it. By
+   the time the gate is removed, the real header logo is already sitting
+   exactly where the video landed, so the handoff is invisible.
+   Geometry is measured at runtime — see playDismissAnimation(). */
+.splash-video-wrap {
+  position: absolute; inset: 0; overflow: hidden;
+  border-radius: 0;
+  will-change: top, left, width, height, border-radius, filter;
+}
+.splash-video-wrap.is-morphing {
+  /* Motion blur peaks mid-flight, which is what sells it as movement
+     rather than a resize. */
+  animation: splashMorphBlur 0.95s var(--ease) both;
+}
+@keyframes splashMorphBlur {
+  0%   { filter: blur(0px); }
+  45%  { filter: blur(5px) brightness(1.15); }
+  100% { filter: blur(0px); }
+}
 .splash-content.is-leaving {
-  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
-  opacity: 0; transform: scale(0.96);
+  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+  opacity: 0; transform: scale(0.97);
 }
-.splash-burst { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
-.splash-flash {
-  position: absolute; inset: 0; z-index: 4; pointer-events: none;
-  background: radial-gradient(circle at 50% 68%, rgba(255,255,255,0.95), rgba(245,200,66,0.4) 35%, transparent 65%);
-  animation: splashFlash 0.5s ease-out forwards;
+.splash-word.is-flying {
+  position: fixed; margin: 0; z-index: 6;
+  transform-origin: 50% 50%;
+  transition: transform 0.95s var(--ease), opacity 0.95s var(--ease), color 0.95s var(--ease);
 }
-@keyframes splashFlash { from { opacity: 0.95; } to { opacity: 0; } }
+.splash-scrim.is-clearing { transition: opacity 0.6s var(--ease); opacity: 0; }
+/* The gate's own backdrop has to clear too, otherwise the dashboard is
+   still hidden behind an opaque panel while the record flies. */
+.splash-gate.is-dismissing {
+  background: transparent;
+  transition: background 0.5s var(--ease);
+}
+
+/* The dashboard itself arrives — starts pushed down and out of focus,
+   settles into place as the record lands. */
+body.is-entering .wrap,
+body.is-entering #artist-hero {
+  opacity: 0;
+  transform: translateY(26px) scale(0.985);
+  filter: blur(12px);
+}
+body.entering-done .wrap,
+body.entering-done #artist-hero {
+  opacity: 1;
+  transform: none;
+  filter: blur(0px);
+  transition: opacity 0.75s var(--ease), transform 0.85s var(--ease), filter 0.7s var(--ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash-video-wrap.is-morphing { animation: none; }
+  .splash-word.is-flying { transition: opacity 0.3s linear; }
+  body.is-entering .wrap, body.is-entering #artist-hero { transform: none; filter: none; }
+  body.entering-done .wrap, body.entering-done #artist-hero { transition: opacity 0.3s linear; }
+}
 
 /* ============================================================
    ARTIST HERO — top-rated artist as full-bleed background
@@ -2200,12 +2304,18 @@ window.ICONS = {
 </script>
 
 <div class="splash-gate" id="splash-gate">
-  <video class="splash-video" id="splash-video" poster="assets/splash-poster.jpg" muted autoplay loop playsinline preload="auto" aria-hidden="true"></video>
-  <div class="splash-scrim"></div>
+  <!-- The video lives in its own wrapper so the dismiss can morph that
+       wrapper's geometry (full-bleed rectangle -> the header logo's small
+       circle) while object-fit:cover keeps the record correctly framed the
+       whole way. See playDismissAnimation(). -->
+  <div class="splash-video-wrap" id="splash-video-wrap">
+    <video class="splash-video" id="splash-video" poster="assets/splash-poster.jpg" muted autoplay loop playsinline preload="auto" aria-hidden="true"></video>
+  </div>
+  <div class="splash-scrim" id="splash-scrim"></div>
   <div class="splash-content">
-    <div class="splash-word">VINAL</div>
+    <div class="splash-word" id="splash-word">VINAL</div>
     <p class="splash-tag">Rate albums. Build your taste. Find your people.</p>
-    <button class="splash-cta" id="splash-cta">Let&rsquo;s go <span class="arrow" aria-hidden="true">&rarr;</span></button>
+    <button class="splash-cta" id="splash-cta">Drop the needle <span class="arrow" aria-hidden="true">&rarr;</span></button>
   </div>
 </div>
 
@@ -6399,16 +6509,20 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   'use strict';
 
   const THEMES = {
-    classic:  { name: 'Crate',    cost: 0,   desc: 'The original — near-black and gold.' },
-    sundown:  { name: 'Sundown',  cost: 150, desc: 'Oxblood and amber, warm and low-lit.' },
-    cassette: { name: 'Cassette', cost: 150, desc: 'Cool graphite with an electric-blue accent.' },
-    blanc:    { name: 'Blanc',    cost: 400, desc: 'A rare light mode — same gold, paper-bright.' },
+    classic:  { name: 'Crate',    cost: 0,   desc: 'The original — near-black, gold and ember.' },
+    sundown:  { name: 'Sundown',  cost: 150, desc: 'Plum dusk, hot orange, pink neon edge.' },
+    cassette: { name: 'Cassette', cost: 150, desc: 'Deep graphite with turquoise and blue.' },
+    citrus:   { name: 'Citrus',   cost: 250, desc: 'Espresso dark, blood orange and lime.' },
+    neon:     { name: 'Neon Vault', cost: 350, desc: 'Indigo black, magenta and cyan. Loud.' },
+    blanc:    { name: 'Blanc',    cost: 400, desc: 'A rare light mode — paper white, violet ink.' },
   };
   const SWATCH = {
-    classic:  'linear-gradient(135deg,#0a0908,#F5C842)',
-    sundown:  'linear-gradient(135deg,#150907,#e8763f)',
-    cassette: 'linear-gradient(135deg,#0b0d10,#5eb8ff)',
-    blanc:    'linear-gradient(135deg,#f3efe6,#b8860b)',
+    classic:  'linear-gradient(135deg,#0a0908 20%,#F5C842 60%,#ff7a4d)',
+    sundown:  'linear-gradient(135deg,#1a0a14 20%,#ff8a3d 60%,#ff3d7f)',
+    cassette: 'linear-gradient(135deg,#0b0d10 20%,#12e0c8 60%,#5eb8ff)',
+    citrus:   'linear-gradient(135deg,#12100a 20%,#ff9f1c 60%,#c6ff3d)',
+    neon:     'linear-gradient(135deg,#0a0616 20%,#ff3d9a 60%,#22e3ff)',
+    blanc:    'linear-gradient(135deg,#f3efe6 20%,#7c3aed 60%,#ec4899)',
   };
   const BANNERS = {
     none:   { name: 'None',      cost: 0,   desc: 'No banner — the plain profile header.', gradient: 'transparent' },
@@ -6722,92 +6836,109 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 </script>
 
 <!-- ================================================================
-     "Let's go" dismiss animation — the record's current video frame gets
-     sampled into a coarse dot grid (same math as the dither engine, just
-     a one-shot burst instead of a continuous render) and scattered
-     outward from the record's centre, revealing the app underneath.
+     Dismiss choreography — the splash transforms into the dashboard.
+
+     Rather than fading out and revealing a static page, the three things
+     on screen each travel to where they belong in the app:
+       - the record video shrinks + morphs into the header logo's circle
+       - the VINAL wordmark flies down into the header wordmark's slot
+       - the dashboard rises out of a blur behind them
+     All target geometry is measured from the real elements at runtime, so
+     the landing position is always exactly right regardless of viewport.
      ================================================================ -->
 <script>
 function playDismissAnimation(gateEl, callback) {
   var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var video = document.getElementById('splash-video');
+  var wrap = document.getElementById('splash-video-wrap');
+  var word = document.getElementById('splash-word');
+  var scrim = document.getElementById('splash-scrim');
   var content = gateEl.querySelector('.splash-content');
+  var markTarget = document.querySelector('.brand-mark');
+  var wordTarget = document.querySelector('.brand-text h1');
+
+  // Start the dashboard's own entrance immediately — it should already be
+  // rising into place while the record is still flying, not after.
+  document.body.classList.add('is-entering');
+  requestAnimationFrame(function () {
+    document.body.classList.add('entering-done');
+  });
+
   if (content) content.classList.add('is-leaving');
+  if (scrim) scrim.classList.add('is-clearing');
+  gateEl.classList.add('is-dismissing');
 
-  if (reduced || !video || video.readyState < 2) { callback(); return; }
+  // Only bail to a plain fade if the geometry genuinely isn't measurable.
+  // Reduced-motion users still get the morph — a single element travelling
+  // is not the disorienting kind of motion that setting is about, and
+  // skipping it entirely just reads as "the intro is broken". What they
+  // don't get is the motion blur, and it runs shorter.
+  if (!wrap || !markTarget) {
+    setTimeout(callback, 180);
+    return;
+  }
+  var DUR = reduced ? 0.45 : 0.95;
 
-  var w = gateEl.clientWidth, h = gateEl.clientHeight;
-  var cell = 13;
-  var cols = Math.max(1, Math.ceil(w / cell)), rows = Math.max(1, Math.ceil(h / cell));
+  var markRect = markTarget.getBoundingClientRect();
 
-  var off = document.createElement('canvas');
-  off.width = cols; off.height = rows;
-  var octx = off.getContext('2d', { willReadFrequently: true });
-  var data;
-  try {
-    octx.drawImage(video, 0, 0, cols, rows);
-    data = octx.getImageData(0, 0, cols, rows).data;
-  } catch (e) { callback(); return; } // e.g. a cross-origin video source — fail safe to the plain fade
+  // Freeze the wrapper at its current on-screen geometry first, so the
+  // browser has a concrete start value to animate FROM (animating from
+  // `inset:0` to explicit pixels doesn't interpolate).
+  var startRect = wrap.getBoundingClientRect();
+  wrap.style.position = 'fixed';
+  wrap.style.top = startRect.top + 'px';
+  wrap.style.left = startRect.left + 'px';
+  wrap.style.width = startRect.width + 'px';
+  wrap.style.height = startRect.height + 'px';
+  wrap.style.inset = 'auto';
 
-  var canvas = document.createElement('canvas');
-  canvas.className = 'splash-burst';
-  var dpr = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = w * dpr; canvas.height = h * dpr;
-  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
-  gateEl.appendChild(canvas);
-  var ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  var cx = w / 2, cy = h / 2;
-  var dots = [];
-  for (var ry = 0; ry < rows; ry++) {
-    for (var rx = 0; rx < cols; rx++) {
-      var i = (ry * cols + rx) * 4;
-      var luma = (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
-      if (luma < 0.1) continue; // skip near-black cells — the burst is made of the record's highlights, not the void around it
-      var px = (rx + 0.5) * cell, py = (ry + 0.5) * cell;
-      var dx = px - cx, dy = py - cy;
-      var dist = Math.sqrt(dx * dx + dy * dy) || 1;
-      var seed = Math.sin(rx * 127.1 + ry * 311.7) * 43758.5453; seed -= Math.floor(seed);
-      dots.push({
-        x: px, y: py, vx: dx / dist, vy: dy / dist,
-        r: 1.4 + luma * 3.2,
-        delay: (dist / Math.max(w, h)) * 200 + seed * 130, // outer dots go a beat later — reads as a wave off the centre
-        color: luma > 0.6 ? '#fff3c4' : '#F5C842',
-      });
-    }
+  // The wordmark likewise needs fixing in place before it can fly.
+  var wordStart = word ? word.getBoundingClientRect() : null;
+  if (word && wordTarget) {
+    var wordEnd = wordTarget.getBoundingClientRect();
+    var scale = wordEnd.height / wordStart.height;
+    word.classList.add('is-flying');
+    word.style.transitionDuration = DUR + 's';
+    word.style.top = wordStart.top + 'px';
+    word.style.left = wordStart.left + 'px';
+    word.style.width = wordStart.width + 'px';
+    word.style.height = wordStart.height + 'px';
+    word.style.lineHeight = wordStart.height + 'px';
+    // Force the styles above to land before the transform that animates.
+    void word.offsetWidth;
+    var dx = (wordEnd.left + wordEnd.width / 2) - (wordStart.left + wordStart.width / 2);
+    var dy = (wordEnd.top + wordEnd.height / 2) - (wordStart.top + wordStart.height / 2);
+    word.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + scale + ')';
+    word.style.opacity = '0';
   }
 
-  var flash = document.createElement('div');
-  flash.className = 'splash-flash';
-  gateEl.appendChild(flash);
+  void wrap.offsetWidth; // commit the start geometry before transitioning
 
-  var DURATION = 820;
-  var start = null;
-  function frame(ts) {
-    if (start === null) start = ts;
-    var t = ts - start;
-    ctx.clearRect(0, 0, w, h);
-    var stillGoing = false;
-    for (var i = 0; i < dots.length; i++) {
-      var d = dots[i];
-      var lt = t - d.delay;
-      if (lt < 0) { stillGoing = true; continue; }
-      var p = Math.min(1, lt / 420);
-      if (p < 1) stillGoing = true;
-      var eased = 1 - Math.pow(1 - p, 3);
-      var x = d.x + d.vx * eased * 100, y = d.y + d.vy * eased * 100;
-      var alpha = 1 - eased;
-      if (alpha <= 0.02) continue;
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = d.color;
-      ctx.beginPath(); ctx.arc(x, y, d.r * (1 + eased * 1.3), 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    if (t < DURATION || stillGoing) requestAnimationFrame(frame);
-    else { canvas.remove(); flash.remove(); callback(); }
+  if (!reduced) wrap.classList.add('is-morphing'); // the blur pass
+  var E = 'cubic-bezier(0.16, 1, 0.3, 1)'; // --ease, spelled out: var() in an
+                                           // inline shorthand is unreliable
+  wrap.style.transition =
+    'top ' + DUR + 's ' + E + ', left ' + DUR + 's ' + E + ', width ' + DUR + 's ' + E + ',' +
+    'height ' + DUR + 's ' + E + ', border-radius ' + DUR + 's ' + E + ',' +
+    'opacity 0.25s ease-in ' + (DUR - 0.2) + 's';
+  wrap.style.top = markRect.top + 'px';
+  wrap.style.left = markRect.left + 'px';
+  wrap.style.width = markRect.width + 'px';
+  wrap.style.height = markRect.height + 'px';
+  wrap.style.borderRadius = '50%';
+  // Fades out right at the end so the real (spinning) header logo takes
+  // over without a visible swap.
+  wrap.style.opacity = '0';
+
+  var done = false;
+  function finish() {
+    if (done) return;
+    done = true;
+    callback();
   }
-  requestAnimationFrame(frame);
+  wrap.addEventListener('transitionend', function (e) {
+    if (e.propertyName === 'opacity') finish();
+  });
+  setTimeout(finish, DUR * 1000 + 250); // guarantee completion even if transitionend never fires
 }
 </script>
 
@@ -6871,9 +7002,14 @@ function playDismissAnimation(gateEl, callback) {
   });
 
   function dismiss() {
+    if (gate.dataset.dismissing) return; // double-click shouldn't restart the choreography
+    gate.dataset.dismissing = '1';
     playDismissAnimation(gate, function () {
-      gate.classList.add('is-hiding');
-      setTimeout(function () { gate.remove(); }, 700);
+      gate.remove();
+      // The entrance classes put .wrap at opacity:0 — always clear them once
+      // the animation is over so no failure path can leave the dashboard
+      // stuck invisible.
+      document.body.classList.remove('is-entering', 'entering-done');
     });
   }
   var cta = document.getElementById('splash-cta');
