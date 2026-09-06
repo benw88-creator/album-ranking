@@ -7695,7 +7695,7 @@ function playDismissAnimation(gateEl, callback) {
     row.innerHTML =
       '<div class="drop-row-head">' +
         '<img class="drop-row-art" src="' + esc(guess.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
-        '<div><div class="drop-row-name">' + esc(guess.name) + '</div>' +
+        '<div><div class="drop-row-name">' + esc(baseName(guess.name)) + '</div>' +
         '<div class="drop-row-artist">' + esc(guess.artist) + '</div></div>' +
       '</div>' +
       '<div class="drop-tiles">' + cells.map(function (c) {
@@ -7725,10 +7725,10 @@ function playDismissAnimation(gateEl, callback) {
       elInput.disabled = true;
       showResult(won);
       if (won) {
-        if (typeof celebrate === 'function') celebrate('Daily Drop solved', guess.name + ' — in ' + st.guesses.length);
+        if (typeof celebrate === 'function') celebrate('Daily Drop solved', baseName(guess.name) + ' — in ' + st.guesses.length);
         /* Fewer guesses, bigger payout; six is still worth something. */
         if (window.Wallet) Wallet.awardDiscs(Math.max(10, 60 - (st.guesses.length - 1) * 8), { reason: 'Daily Drop' });
-        if (typeof logActivity === 'function' && window.ICONS) logActivity(ICONS.trophy, 'Solved the Daily Drop', guess.name);
+        if (typeof logActivity === 'function' && window.ICONS) logActivity(ICONS.trophy, 'Solved the Daily Drop', baseName(guess.name));
       }
     }
   }
@@ -7749,7 +7749,7 @@ function playDismissAnimation(gateEl, callback) {
     elResult.innerHTML =
       '<div class="drop-result">' +
         '<img class="drop-result-art" src="' + esc(target.art || '') + '" alt="" onerror="this.style.display=\'none\'">' +
-        '<h3>' + (won ? 'Got it — ' : 'It was ') + esc(target.name) + '</h3>' +
+        '<h3>' + (won ? 'Got it — ' : 'It was ') + esc(baseName(target.name)) + '</h3>' +
         '<p>' + esc(target.artist) + ' · ' + (target.year || '') +
           (target.genres && target.genres[0] ? ' · ' + esc(target.genres[0]) : '') + '</p>' +
         '<div class="drop-share">' + esc(shareGrid()) + '</div>' +
