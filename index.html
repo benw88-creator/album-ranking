@@ -598,6 +598,82 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
 .stat.stat-wallet { cursor: pointer; }
 .stat.stat-wallet .s-val { font-family: var(--font-mono); font-size: 30px; }
 
+
+/* ============================================================
+   DAILY DROP — one album and one song a day, six guesses each.
+   Wordle-style: every guess is scored against the answer across
+   five attributes, colour + arrow tell you how close you are.
+   ============================================================ */
+.drop-modal .modal-panel { max-width: 640px; }
+.drop-head-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.drop-mode {
+  display: inline-flex; background: var(--surface-2);
+  border: 1px solid var(--border-strong); border-radius: 999px; padding: 3px; gap: 2px;
+}
+.drop-mode button {
+  background: transparent; border: none; color: var(--text-dim);
+  padding: 7px 16px; border-radius: 999px; font-size: 13px; font-weight: 600;
+}
+.drop-mode button.active { background: var(--gold); color: var(--bg); }
+.drop-date {
+  margin-left: auto; font: 11px/1 var(--font-mono);
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint);
+}
+.drop-guesses-left { font-size: 13px; color: var(--text-dim); margin-bottom: 14px; }
+.drop-guesses-left b { color: var(--gold); font-family: var(--font-mono); }
+
+.drop-search { position: relative; margin-bottom: 16px; }
+.drop-rows { display: flex; flex-direction: column; gap: 8px; }
+
+.drop-row {
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  padding: 10px; background: var(--surface-2);
+  animation: dropRowIn 0.45s var(--ease) both;
+}
+@keyframes dropRowIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.drop-row-head { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.drop-row-art { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
+.drop-row-name { font-weight: 600; font-size: 14px; line-height: 1.2; }
+.drop-row-artist { font-size: 12px; color: var(--text-dim); }
+.drop-tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.drop-tile {
+  border-radius: 8px; padding: 7px 4px; text-align: center;
+  background: var(--surface-4); border: 1px solid transparent;
+  animation: dropTileIn 0.4s var(--ease) both;
+}
+/* Staggered flip so the row reveals left-to-right like a Wordle row */
+.drop-tile:nth-child(1) { animation-delay: 0.00s; }
+.drop-tile:nth-child(2) { animation-delay: 0.09s; }
+.drop-tile:nth-child(3) { animation-delay: 0.18s; }
+.drop-tile:nth-child(4) { animation-delay: 0.27s; }
+.drop-tile:nth-child(5) { animation-delay: 0.36s; }
+@keyframes dropTileIn {
+  0%   { opacity: 0; transform: rotateX(-90deg); }
+  100% { opacity: 1; transform: rotateX(0deg); }
+}
+.drop-tile.hit  { background: var(--green); color: #06210f; border-color: var(--green); }
+.drop-tile.near { background: var(--yellow); color: #241a00; border-color: var(--yellow); }
+.drop-tile.miss { background: var(--surface-4); color: var(--text-dim); }
+.drop-tile-label {
+  font: 9px/1 var(--font-mono); letter-spacing: 0.09em;
+  text-transform: uppercase; opacity: 0.75; margin-bottom: 3px;
+}
+.drop-tile-val { font-family: var(--font-mono); font-weight: 600; font-size: 13px; }
+
+.drop-result { text-align: center; padding: 18px 8px 4px; }
+.drop-result-art { width: 108px; height: 108px; border-radius: 12px; object-fit: cover; margin-bottom: 12px; box-shadow: 0 16px 40px rgba(0,0,0,0.5); }
+.drop-result h3 { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+.drop-result p { color: var(--text-dim); font-size: 14px; margin-top: 2px; }
+.drop-share {
+  margin-top: 14px; font: 12px/1.75 var(--font-mono);
+  background: var(--surface-2); border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); padding: 12px; white-space: pre; display: inline-block;
+}
+.drop-note { font-size: 12px; color: var(--text-faint); margin-top: 12px; }
+@media (max-width: 520px) {
+  .drop-tiles { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .drop-tile-val { font-size: 11px; }
+}
 /* ---- SHOP ---- */
 .shop-balance {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -2531,6 +2607,13 @@ window.ICONS = {
   <section id="view-games" style="display:none; margin-top:32px;">
     <div class="section-head"><h2>Minigames</h2><span class="muted">Test yourself on any artist, genre or era</span></div>
     <div class="games-grid" id="games-grid">
+      <div class="game-card" id="drop-card" style="border-color: var(--gold-dim); background: linear-gradient(150deg, var(--gold-dim), var(--surface) 60%);">
+        <div class="gc-emoji" data-icon="disc"></div>
+        <h3>Daily Drop</h3>
+        <p>One album and one song a day &mdash; guess each in six. Same for everyone.</p>
+        <div class="gc-go">Play today &rarr;</div>
+        <div class="gc-best" id="drop-card-status"></div>
+      </div>
       <div class="game-card" data-game="cover">
         <div class="gc-emoji" data-icon="camera"></div>
         <h3>Guess the Cover</h3>
@@ -2712,6 +2795,32 @@ window.ICONS = {
 </div>
 
 <!-- ============================ SHOP MODAL ============================ -->
+<!-- ============================ DAILY DROP ============================ -->
+<div class="modal drop-modal" id="drop-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="drop-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="disc"></span>
+      <div><h2>Daily Drop</h2><p>Guess today&rsquo;s record in six. Everyone gets the same one.</p></div></div>
+
+    <div class="drop-head-row">
+      <div class="drop-mode" id="drop-mode">
+        <button data-drop-mode="album" class="active">Album</button>
+        <button data-drop-mode="song">Song</button>
+      </div>
+      <span class="drop-date" id="drop-date"></span>
+    </div>
+    <div class="drop-guesses-left" id="drop-left"></div>
+
+    <div class="drop-search" id="drop-search">
+      <input id="drop-input" class="g-input" type="text" placeholder="Guess an album&hellip;" autocomplete="off">
+      <div class="g-sugg" id="drop-sugg"></div>
+    </div>
+
+    <div class="drop-rows" id="drop-rows"></div>
+    <div id="drop-result"></div>
+  </div>
+</div>
+
 <div class="modal" id="shop-modal">
   <div class="modal-panel" style="max-width:520px;">
     <button class="modal-close" id="shop-close" aria-label="Close">&times;</button>
@@ -7113,6 +7222,477 @@ function playDismissAnimation(gateEl, callback) {
   }
   var cta = document.getElementById('splash-cta');
   if (cta) cta.addEventListener('click', dismiss);
+})();
+</script>
+
+<!-- ================================================================
+     DAILY DROP — the daily guessing game.
+
+     One album puzzle and one song puzzle per day, six guesses each.
+     Every guess is scored against the answer on five attributes
+     (artist / year / genre / size / popularity); green means matched,
+     amber means close, and arrows say which way to move. The answer's
+     own values are never printed — only the guess's — so a row leaks
+     exactly as much as a Wordle row does.
+
+     No backend: the day's pick is a pure function of the date, so
+     everyone who opens it on the same day gets the same record, and
+     progress lives in localStorage.
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  var GUESS_LIMIT = 6;
+
+  /* Deliberately famous, widely-available records — the game is only fun if
+     you have a chance of naming the answer, and each has to resolve cleanly
+     through Spotify search. */
+  var ALBUM_POOL = [
+    'Rumours|Fleetwood Mac', 'Thriller|Michael Jackson', 'Back in Black|AC/DC',
+    'The Dark Side of the Moon|Pink Floyd', 'Abbey Road|The Beatles', 'Nevermind|Nirvana',
+    'OK Computer|Radiohead', 'Kind of Blue|Miles Davis', 'Purple Rain|Prince',
+    'Born to Run|Bruce Springsteen', 'Hotel California|Eagles', 'Led Zeppelin IV|Led Zeppelin',
+    'The Wall|Pink Floyd', 'Blonde|Frank Ocean', 'Channel Orange|Frank Ocean',
+    'To Pimp a Butterfly|Kendrick Lamar', 'good kid, m.A.A.d city|Kendrick Lamar',
+    'DAMN.|Kendrick Lamar', 'The Blueprint|JAY-Z', 'Illmatic|Nas',
+    'Ready to Die|The Notorious B.I.G.', 'The Chronic|Dr. Dre',
+    'My Beautiful Dark Twisted Fantasy|Kanye West', 'Graduation|Kanye West',
+    'The College Dropout|Kanye West', 'Take Care|Drake', 'ASTROWORLD|Travis Scott',
+    'IGOR|Tyler, The Creator', 'Flower Boy|Tyler, The Creator', 'Currents|Tame Impala',
+    'AM|Arctic Monkeys', 'In Rainbows|Radiohead', 'Kid A|Radiohead', 'The Bends|Radiohead',
+    'Is This It|The Strokes', 'Funeral|Arcade Fire', 'Sound of Silver|LCD Soundsystem',
+    'Random Access Memories|Daft Punk', 'Discovery|Daft Punk', 'Homework|Daft Punk',
+    'Blue|Joni Mitchell', 'Tapestry|Carole King', 'Songs in the Key of Life|Stevie Wonder',
+    'Innervisions|Stevie Wonder', 'Lemonade|Beyonce', 'RENAISSANCE|Beyonce',
+    'Fine Line|Harry Styles', "Harry's House|Harry Styles",
+    '1989|Taylor Swift', 'folklore|Taylor Swift', 'Red|Taylor Swift', 'reputation|Taylor Swift',
+    'Midnights|Taylor Swift', 'SOUR|Olivia Rodrigo', 'GUTS|Olivia Rodrigo',
+    'WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?|Billie Eilish', 'Happier Than Ever|Billie Eilish',
+    '25|Adele', '21|Adele', '30|Adele', 'Future Nostalgia|Dua Lipa',
+    'The Fame|Lady Gaga', 'Born This Way|Lady Gaga', 'Chromatica|Lady Gaga',
+    'Norman Fucking Rockwell!|Lana Del Rey', 'Born To Die|Lana Del Rey',
+    'The Miseducation of Lauryn Hill|Ms. Lauryn Hill', 'Voodoo|D’Angelo',
+    'Aquemini|OutKast', 'Stankonia|OutKast', 'Nothing Was the Same|Drake',
+    'Scorpion|Drake', 'Views|Drake', 'A Night at the Opera|Queen',
+    'News of the World|Queen', 'The Joshua Tree|U2', 'Achtung Baby|U2',
+    'Definitely Maybe|Oasis', 'Parachutes|Coldplay',
+    'A Rush of Blood to the Head|Coldplay', 'Blood Sugar Sex Magik|Red Hot Chili Peppers',
+    'Californication|Red Hot Chili Peppers', 'Ten|Pearl Jam', 'Superunknown|Soundgarden',
+    'Dirt|Alice In Chains', 'The Downward Spiral|Nine Inch Nails',
+    'Master of Puppets|Metallica', 'Metallica|Metallica', 'Paranoid|Black Sabbath',
+    'Appetite for Destruction|Guns N’ Roses', 'Hybrid Theory|Linkin Park',
+    'Meteora|Linkin Park', 'American Idiot|Green Day', 'Dookie|Green Day',
+    'Enema of the State|blink-182', 'The Marshall Mathers LP|Eminem',
+    'The Eminem Show|Eminem', 'The Slim Shady LP|Eminem', 'Blue Lines|Massive Attack',
+    'Dummy|Portishead', 'Loveless|My Bloody Valentine', 'Doolittle|Pixies',
+    'Remain in Light|Talking Heads', 'Unknown Pleasures|Joy Division',
+    'The Queen Is Dead|The Smiths', 'Disintegration|The Cure',
+    'Songs About Jane|Maroon 5', 'Back to Black|Amy Winehouse', 'Frank|Amy Winehouse',
+    'Melodrama|Lorde', 'Pure Heroine|Lorde', 'Solar Power|Lorde',
+    'Ctrl|SZA', 'SOS|SZA', 'An Awesome Wave|alt-J',
+    'Bon Iver, Bon Iver|Bon Iver', 'For Emma, Forever Ago|Bon Iver',
+    'In the Aeroplane Over the Sea|Neutral Milk Hotel', 'Yankee Hotel Foxtrot|Wilco',
+    'Carrie & Lowell|Sufjan Stevens', 'Illinois|Sufjan Stevens'
+  ];
+
+  var SONG_POOL = [
+    'Bohemian Rhapsody|Queen', 'Billie Jean|Michael Jackson', 'Smells Like Teen Spirit|Nirvana',
+    'Like a Rolling Stone|Bob Dylan', 'Imagine|John Lennon', 'Hey Jude|The Beatles',
+    'Come Together|The Beatles', 'Hotel California|Eagles', 'Stairway to Heaven|Led Zeppelin',
+    'Sweet Child O’ Mine|Guns N’ Roses', 'Wonderwall|Oasis', 'Creep|Radiohead',
+    'Karma Police|Radiohead', 'Losing My Religion|R.E.M.', 'Under the Bridge|Red Hot Chili Peppers',
+    'Enter Sandman|Metallica', 'Purple Rain|Prince', 'When Doves Cry|Prince',
+    'Superstition|Stevie Wonder', 'Respect|Aretha Franklin', "What's Going On|Marvin Gaye",
+    "Let's Stay Together|Al Green", 'I Will Survive|Gloria Gaynor', 'Dancing Queen|ABBA',
+    'Take On Me|a-ha', 'Sweet Dreams (Are Made of This)|Eurythmics', 'Blue Monday|New Order',
+    'Love Will Tear Us Apart|Joy Division', 'This Charming Man|The Smiths',
+    'Just Like Heaven|The Cure', 'Where Is My Mind?|Pixies', 'Loser|Beck',
+    'No Scrubs|TLC', 'Waterfalls|TLC', "Say My Name|Destiny's Child",
+    'Crazy In Love|Beyonce', 'Single Ladies (Put a Ring on It)|Beyonce',
+    'Umbrella|Rihanna', 'We Found Love|Rihanna', 'Rolling in the Deep|Adele',
+    'Someone Like You|Adele', 'Hello|Adele', 'Shape of You|Ed Sheeran',
+    'Blinding Lights|The Weeknd', 'Save Your Tears|The Weeknd', 'Starboy|The Weeknd',
+    'Uptown Funk|Mark Ronson', 'Get Lucky|Daft Punk', 'One More Time|Daft Punk',
+    'Levitating|Dua Lipa', "Don't Start Now|Dua Lipa", 'bad guy|Billie Eilish',
+    'Happier Than Ever|Billie Eilish', 'drivers license|Olivia Rodrigo', 'good 4 u|Olivia Rodrigo',
+    'Anti-Hero|Taylor Swift', 'Blank Space|Taylor Swift', 'Shake It Off|Taylor Swift',
+    'Cruel Summer|Taylor Swift', "God's Plan|Drake", 'Hotline Bling|Drake', 'One Dance|Drake',
+    'SICKO MODE|Travis Scott', 'HUMBLE.|Kendrick Lamar', 'Alright|Kendrick Lamar',
+    'Money Trees|Kendrick Lamar', 'Stronger|Kanye West', 'Gold Digger|Kanye West',
+    'Runaway|Kanye West', 'Lose Yourself|Eminem', 'Stan|Eminem', 'Without Me|Eminem',
+    'In Da Club|50 Cent', 'Juicy|The Notorious B.I.G.', 'California Love|2Pac',
+    'Ms. Jackson|OutKast', 'Hey Ya!|OutKast', 'Seven Nation Army|The White Stripes',
+    'Last Nite|The Strokes', 'Mr. Brightside|The Killers', 'Somebody Told Me|The Killers',
+    'Take Me Out|Franz Ferdinand', 'Do I Wanna Know?|Arctic Monkeys',
+    'R U Mine?|Arctic Monkeys', '505|Arctic Monkeys', 'The Less I Know The Better|Tame Impala',
+    'Feels Like We Only Go Backwards|Tame Impala', 'Redbone|Childish Gambino',
+    'Pyramids|Frank Ocean', 'Nikes|Frank Ocean', 'Nights|Frank Ocean',
+    'The Scientist|Coldplay', 'Yellow|Coldplay', 'Fix You|Coldplay', 'Viva La Vida|Coldplay',
+    'Clocks|Coldplay', 'Champagne Supernova|Oasis', "Don't Look Back in Anger|Oasis",
+    'Zombie|The Cranberries', 'Basket Case|Green Day', 'Boulevard of Broken Dreams|Green Day',
+    'In the End|Linkin Park', 'Numb|Linkin Park', 'Chop Suey!|System Of A Down',
+    'Toxic|Britney Spears', 'Since U Been Gone|Kelly Clarkson', 'Bad Romance|Lady Gaga',
+    'Poker Face|Lady Gaga', 'Rehab|Amy Winehouse', 'Valerie|Mark Ronson',
+    'Royals|Lorde', 'Green Light|Lorde', 'Kill Bill|SZA', 'Good Days|SZA',
+    'Heat Waves|Glass Animals', 'Electric Feel|MGMT', 'Kids|MGMT', 'Time to Pretend|MGMT'
+  ];
+
+  /* --- daily selection: a pure function of the calendar date --- */
+  function todayKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function hashStr(s) {
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return Math.abs(h);
+  }
+  function pickForToday(pool, salt) {
+    return pool[hashStr(todayKey() + salt) % pool.length];
+  }
+
+  /* --- Spotify resolution ------------------------------------------------ */
+  var detailCache = {};
+
+  /* Search happily returns deluxe/anniversary/remaster editions whose release
+     date is decades after the original — which would make the Year clue plain
+     wrong. Prefer an exact title match, then the earliest release. */
+  function normName(s) {
+    return String(s || '').toLowerCase()
+      .replace(/\(.*?\)|\[.*?\]/g, '')       // drop "(Deluxe Edition)" etc.
+      .replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function bestEdition(items, wanted) {
+    if (!items || !items.length) return null;
+    var want = normName(wanted);
+    var exact = items.filter(function (it) { return normName(it.name) === want; });
+    var pool = exact.length ? exact : items;
+    return pool.slice().sort(function (a, b) {
+      return String(a.release_date || '9999').localeCompare(String(b.release_date || '9999'));
+    })[0];
+  }
+
+  async function resolveAlbum(name, artist) {
+    var q = artist ? ('album:"' + name + '" artist:"' + artist + '"') : name;
+    var data = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: 'album', limit: '10' }).toString(), { priority: true });
+    var item = bestEdition(data && data.albums && data.albums.items, name);
+    return item ? albumDetails(item.id) : null;
+  }
+  async function albumDetails(id) {
+    if (detailCache['al' + id]) return detailCache['al' + id];
+    var full = await spotifyGet('/albums/' + id);
+    if (!full || !full.id) return null;
+    var genres = await artistGenres(full.artists && full.artists[0] && full.artists[0].id);
+    var out = {
+      kind: 'album', id: full.id, name: full.name,
+      artist: (full.artists && full.artists[0] && full.artists[0].name) || '',
+      artistId: (full.artists && full.artists[0] && full.artists[0].id) || '',
+      art: (full.images && full.images[0] && full.images[0].url) || '',
+      year: parseInt(String(full.release_date || '').slice(0, 4), 10) || 0,
+      size: full.total_tracks || 0,
+      pop: typeof full.popularity === 'number' ? full.popularity : 0,
+      genres: genres
+    };
+    detailCache['al' + id] = out;
+    return out;
+  }
+  async function resolveTrack(name, artist) {
+    var q = artist ? ('track:"' + name + '" artist:"' + artist + '"') : name;
+    var data = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: 'track', limit: '10' }).toString(), { priority: true });
+    var items = (data && data.tracks && data.tracks.items) || [];
+    // For tracks the canonical studio version is the popular one — a live or
+    // re-recorded cut would give misleading length/popularity clues.
+    var want = normName(name);
+    var exact = items.filter(function (it) { return normName(it.name) === want; });
+    var pool = exact.length ? exact : items;
+    var item = pool.slice().sort(function (a, b) { return (b.popularity || 0) - (a.popularity || 0); })[0];
+    return item ? trackFrom(item) : null;
+  }
+  async function trackFrom(t) {
+    if (detailCache['tr' + t.id]) return detailCache['tr' + t.id];
+    var genres = await artistGenres(t.artists && t.artists[0] && t.artists[0].id);
+    var out = {
+      kind: 'song', id: t.id, name: t.name,
+      artist: (t.artists && t.artists[0] && t.artists[0].name) || '',
+      artistId: (t.artists && t.artists[0] && t.artists[0].id) || '',
+      art: (t.album && t.album.images && t.album.images[0] && t.album.images[0].url) || '',
+      year: parseInt(String((t.album && t.album.release_date) || '').slice(0, 4), 10) || 0,
+      size: Math.round((t.duration_ms || 0) / 1000),
+      pop: typeof t.popularity === 'number' ? t.popularity : 0,
+      genres: genres
+    };
+    detailCache['tr' + t.id] = out;
+    return out;
+  }
+  async function artistGenres(id) {
+    if (!id) return [];
+    try { var a = await spotifyGet('/artists/' + id); return (a && a.genres) || []; } catch (e) { return []; }
+  }
+
+  /* --- scoring ----------------------------------------------------------- */
+  function numScore(g, t, hitWithin, nearWithin) {
+    var d = g - t, abs = Math.abs(d);
+    var state = abs <= hitWithin ? 'hit' : (abs <= nearWithin ? 'near' : 'miss');
+    return { state: state, dir: state === 'hit' ? '' : (d < 0 ? ' ↑' : ' ↓') };
+  }
+  function genreScore(g, t) {
+    if (!g.length || !t.length) return { state: 'miss', dir: '' };
+    var gs = g.map(function (x) { return x.toLowerCase(); });
+    var ts = t.map(function (x) { return x.toLowerCase(); });
+    if (gs.some(function (x) { return ts.indexOf(x) !== -1; })) return { state: 'hit', dir: '' };
+    /* Partial credit for a shared word: "indie rock" vs "alternative rock". */
+    var words = {};
+    ts.forEach(function (s) { s.split(/[\s-]+/).forEach(function (w) { if (w.length > 2) words[w] = 1; }); });
+    var shares = gs.some(function (s) { return s.split(/[\s-]+/).some(function (w) { return words[w]; }); });
+    return { state: shares ? 'near' : 'miss', dir: '' };
+  }
+  function mmss(sec) { return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
+
+  function scoreGuess(guess, target, mode) {
+    var sizeCmp = mode === 'song' ? numScore(guess.size, target.size, 10, 45) : numScore(guess.size, target.size, 0, 3);
+    var yearCmp = numScore(guess.year, target.year, 0, 3);
+    var popCmp = numScore(guess.pop, target.pop, 5, 15);
+    return [
+      { label: 'Artist', value: guess.artist, state: guess.artistId && guess.artistId === target.artistId ? 'hit' : 'miss', dir: '' },
+      { label: 'Year', value: String(guess.year || '?'), state: yearCmp.state, dir: yearCmp.dir },
+      { label: 'Genre', value: (guess.genres[0] || 'unknown'), state: genreScore(guess.genres, target.genres).state, dir: '' },
+      { label: mode === 'song' ? 'Length' : 'Tracks', value: mode === 'song' ? mmss(guess.size) : String(guess.size), state: sizeCmp.state, dir: sizeCmp.dir },
+      { label: 'Popularity', value: String(guess.pop), state: popCmp.state, dir: popCmp.dir }
+    ];
+  }
+
+  /* --- persistence ------------------------------------------------------- */
+  function stateKey(m) { return 'vinal_drop_' + m + '_' + todayKey(); }
+  function loadState(m) {
+    try { return JSON.parse(localStorage.getItem(stateKey(m))) || { guesses: [], done: false, won: false }; }
+    catch (e) { return { guesses: [], done: false, won: false }; }
+  }
+  function saveState(m, st) { try { localStorage.setItem(stateKey(m), JSON.stringify(st)); } catch (e) {} }
+
+  /* --- game -------------------------------------------------------------- */
+  var mode = 'album', target = null, rows = [], busy = false;
+  var elModal, elRows, elInput, elSugg, elLeft, elResult, elDate;
+
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll('#drop-mode button').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.dropMode === m);
+    });
+    elInput.placeholder = m === 'song' ? 'Guess a song…' : 'Guess an album…';
+    start();
+  }
+
+  async function start() {
+    target = null; rows = []; busy = true;
+    elRows.innerHTML = '';
+    elResult.innerHTML = '';
+    elDate.textContent = todayKey();
+    elLeft.textContent = 'Loading today’s ' + mode + '…';
+    elInput.disabled = true;
+
+    var parts = pickForToday(mode === 'album' ? ALBUM_POOL : SONG_POOL, mode).split('|');
+    try {
+      target = mode === 'album' ? await resolveAlbum(parts[0], parts[1]) : await resolveTrack(parts[0], parts[1]);
+    } catch (e) { target = null; }
+
+    if (!target) {
+      elLeft.innerHTML = '<span style="color:var(--red)">Couldn’t reach Spotify for today’s puzzle. Try again shortly.</span>';
+      busy = false;
+      return;
+    }
+
+    /* Replay whatever was already guessed today. */
+    var st = loadState(mode);
+    for (var i = 0; i < st.guesses.length; i++) {
+      var g = mode === 'album' ? await albumDetails(st.guesses[i]) : await replayTrack(st.guesses[i]);
+      if (g) addRow(g, true);
+    }
+    busy = false;
+    elInput.disabled = st.done;
+    refreshLeft();
+    if (st.done) showResult(st.won);
+    updateCardStatus();
+  }
+  async function replayTrack(id) {
+    if (detailCache['tr' + id]) return detailCache['tr' + id];
+    try { var t = await spotifyGet('/tracks/' + id); return t && t.id ? trackFrom(t) : null; } catch (e) { return null; }
+  }
+
+  function refreshLeft() {
+    var st = loadState(mode);
+    if (st.done) {
+      elLeft.innerHTML = st.won
+        ? 'Solved in <b>' + st.guesses.length + '</b>. Back tomorrow.'
+        : 'Out of guesses. Back tomorrow.';
+      return;
+    }
+    var left = GUESS_LIMIT - st.guesses.length;
+    elLeft.innerHTML = '<b>' + left + '</b> guess' + (left === 1 ? '' : 'es') + ' left';
+  }
+
+  function addRow(guess, silent) {
+    var cells = scoreGuess(guess, target, mode);
+    rows.push(cells);
+    var row = document.createElement('div');
+    row.className = 'drop-row';
+    if (silent) row.style.animation = 'none';
+    row.innerHTML =
+      '<div class="drop-row-head">' +
+        '<img class="drop-row-art" src="' + esc(guess.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+        '<div><div class="drop-row-name">' + esc(guess.name) + '</div>' +
+        '<div class="drop-row-artist">' + esc(guess.artist) + '</div></div>' +
+      '</div>' +
+      '<div class="drop-tiles">' + cells.map(function (c) {
+        return '<div class="drop-tile ' + c.state + '"' + (silent ? ' style="animation:none"' : '') + '>' +
+          '<div class="drop-tile-label">' + esc(c.label) + '</div>' +
+          '<div class="drop-tile-val">' + esc(String(c.value)) + c.dir + '</div></div>';
+      }).join('') + '</div>';
+    elRows.appendChild(row);
+  }
+
+  async function submitGuess(guess) {
+    var st = loadState(mode);
+    if (st.done || busy) return;
+    if (st.guesses.indexOf(guess.id) !== -1) { flashSaved(); return; }
+
+    addRow(guess, false);
+    st.guesses.push(guess.id);
+
+    var won = guess.id === target.id;
+    if (won || st.guesses.length >= GUESS_LIMIT) { st.done = true; st.won = won; }
+    saveState(mode, st);
+    refreshLeft();
+    updateCardStatus();
+
+    if (st.done) {
+      elInput.disabled = true;
+      showResult(won);
+      if (won) {
+        if (typeof celebrate === 'function') celebrate('Daily Drop solved', guess.name + ' — in ' + st.guesses.length);
+        /* Fewer guesses, bigger payout; six is still worth something. */
+        if (window.Wallet) Wallet.awardDiscs(Math.max(10, 60 - (st.guesses.length - 1) * 8), { reason: 'Daily Drop' });
+        if (typeof logActivity === 'function' && window.ICONS) logActivity(ICONS.trophy, 'Solved the Daily Drop', guess.name);
+      }
+    }
+  }
+
+  function shareGrid() {
+    var st = loadState(mode);
+    var head = 'Vinal Daily Drop — ' + (mode === 'album' ? 'Album' : 'Song') + ' — ' + todayKey() +
+      '\n' + (st.won ? st.guesses.length : 'X') + '/' + GUESS_LIMIT + '\n';
+    var body = rows.map(function (cells) {
+      return cells.map(function (c) {
+        return c.state === 'hit' ? '🟩' : (c.state === 'near' ? '🟨' : '⬛');
+      }).join('');
+    }).join('\n');
+    return head + body + '\nwildcrate.xyz';
+  }
+
+  function showResult(won) {
+    elResult.innerHTML =
+      '<div class="drop-result">' +
+        '<img class="drop-result-art" src="' + esc(target.art || '') + '" alt="" onerror="this.style.display=\'none\'">' +
+        '<h3>' + (won ? 'Got it — ' : 'It was ') + esc(target.name) + '</h3>' +
+        '<p>' + esc(target.artist) + ' · ' + (target.year || '') + '</p>' +
+        '<div class="drop-share">' + esc(shareGrid()) + '</div>' +
+        '<div><button class="btn-primary" id="drop-share-btn" style="margin-top:14px;">Copy result</button></div>' +
+        '<div class="drop-note">A new album and a new song every day at midnight.</div>' +
+      '</div>';
+    var btn = document.getElementById('drop-share-btn');
+    if (btn) btn.addEventListener('click', function () {
+      var txt = shareGrid();
+      if (navigator.clipboard) navigator.clipboard.writeText(txt);
+      btn.textContent = 'Copied ✓';
+      setTimeout(function () { btn.textContent = 'Copy result'; }, 1600);
+    });
+  }
+
+  function updateCardStatus() {
+    var el = document.getElementById('drop-card-status');
+    if (!el) return;
+    var a = loadState('album'), s = loadState('song'), bits = [];
+    if (a.done) bits.push('Album ' + (a.won ? a.guesses.length + '/6' : 'X'));
+    if (s.done) bits.push('Song ' + (s.won ? s.guesses.length + '/6' : 'X'));
+    el.textContent = bits.join(' · ');
+  }
+
+  /* --- guess autocomplete ------------------------------------------------ */
+  var suggestItems = [], suggestTimer = null;
+  function closeSugg() { elSugg.classList.remove('open'); elSugg.innerHTML = ''; suggestItems = []; }
+
+  async function runSuggest(q) {
+    if (!q) { closeSugg(); return; }
+    var type = mode === 'album' ? 'album' : 'track';
+    var data;
+    try {
+      data = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: type, limit: '6' }).toString(), {
+        priority: true, skip: function () { return elInput.value.trim() !== q; }
+      });
+    } catch (e) { return; }
+    if (!data || elInput.value.trim() !== q) return;
+    var items = (type === 'album' ? (data.albums && data.albums.items) : (data.tracks && data.tracks.items)) || [];
+    suggestItems = items;
+    if (!items.length) { closeSugg(); return; }
+    elSugg.innerHTML = items.map(function (it, i) {
+      var imgs = type === 'album' ? it.images : (it.album && it.album.images);
+      var art = (imgs && (imgs[2] || imgs[0]) && (imgs[2] || imgs[0]).url) || '';
+      return '<div class="g-sugg-item" data-i="' + i + '">' +
+        '<img src="' + esc(art) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+        '<div><div class="g-sugg-name">' + esc(it.name) + '</div>' +
+        '<div class="g-sugg-genre">' + esc((it.artists && it.artists[0] && it.artists[0].name) || '') + '</div></div></div>';
+    }).join('');
+    elSugg.classList.add('open');
+    elSugg.querySelectorAll('.g-sugg-item').forEach(function (el) {
+      el.addEventListener('click', async function () {
+        var it = suggestItems[+el.dataset.i];
+        closeSugg();
+        elInput.value = '';
+        if (!it) return;
+        elInput.disabled = true;
+        var full = mode === 'album' ? await albumDetails(it.id) : await trackFrom(it);
+        elInput.disabled = loadState(mode).done;
+        if (full) await submitGuess(full);
+      });
+    });
+  }
+
+  /* --- wiring ------------------------------------------------------------ */
+  function openDrop() {
+    elModal.classList.add('open');
+    if (!target) setMode(mode); else refreshLeft();
+  }
+
+  function init() {
+    elModal = document.getElementById('drop-modal');
+    if (!elModal) return;
+    elRows = document.getElementById('drop-rows');
+    elInput = document.getElementById('drop-input');
+    elSugg = document.getElementById('drop-sugg');
+    elLeft = document.getElementById('drop-left');
+    elResult = document.getElementById('drop-result');
+    elDate = document.getElementById('drop-date');
+
+    document.getElementById('drop-close').addEventListener('click', function () { elModal.classList.remove('open'); });
+    elModal.addEventListener('click', function (e) { if (e.target === elModal) elModal.classList.remove('open'); });
+    document.querySelectorAll('#drop-mode button').forEach(function (b) {
+      b.addEventListener('click', function () { if (b.dataset.dropMode !== mode) setMode(b.dataset.dropMode); });
+    });
+    elInput.addEventListener('input', function () {
+      clearTimeout(suggestTimer);
+      var q = elInput.value.trim();
+      suggestTimer = setTimeout(function () { runSuggest(q); }, 220);
+    });
+    document.addEventListener('click', function (e) {
+      if (!elSugg.contains(e.target) && e.target !== elInput) closeSugg();
+    });
+    var card = document.getElementById('drop-card');
+    if (card) card.addEventListener('click', openDrop);
+    updateCardStatus();
+    window.openDailyDrop = openDrop;
+  }
+
+  init();
 })();
 </script>
 </body>
