@@ -7745,9 +7745,14 @@ function playDismissAnimation(gateEl, callback) {
   // Start the dashboard's own entrance immediately — it should already be
   // rising into place while the record is still flying, not after.
   document.body.classList.add('is-entering');
-  requestAnimationFrame(function () {
-    document.body.classList.add('entering-done');
-  });
+  // is-entering starts the dashboard at opacity 0; entering-done is what
+  // brings it back. requestAnimationFrame stops firing in a tab that isn't
+  // being painted, so if someone switches away mid-intro the dashboard could
+  // sit invisible until the cleanup below rescues it. Back the frame up with
+  // a timer so the entrance always completes.
+  var enterDone = function () { document.body.classList.add('entering-done'); };
+  requestAnimationFrame(enterDone);
+  setTimeout(enterDone, 60);
 
   if (content) content.classList.add('is-leaving');
   if (scrim) scrim.classList.add('is-clearing');
