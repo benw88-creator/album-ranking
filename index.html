@@ -2125,6 +2125,41 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   border-radius: 0;
   will-change: top, left, width, height, border-radius, filter;
 }
+/* Why the record didn't look like it was turning on a desktop.
+   The clip is a tight close-up of the grooves — no disc edge in frame —
+   and a field of concentric grooves rotating about its own centre is
+   very nearly rotationally symmetric, so consecutive frames look almost
+   identical. On a phone the portrait crop keeps a narrow off-centre
+   slice where the grooves visibly sweep past; on a 16:9 desktop window
+   almost the whole frame survives, centred on the spindle, and the
+   motion cancels itself out. The video was playing perfectly the whole
+   time (verified: currentTime advancing, ~7/255 mean pixel change) —
+   there was just nothing in shot to read the rotation against.
+   A light sweep pinned to that same centre gives it one. It's a
+   transform-only animation, so it runs on the compositor and turns at a
+   steady rate whether or not the video itself ever starts. */
+.splash-video-wrap::after {
+  content: '';
+  position: absolute; inset: -30%;
+  pointer-events: none;
+  background: conic-gradient(from 0deg at 50% 50%,
+    transparent 0deg,
+    rgba(255,255,255,0.16) 22deg,
+    rgba(255,255,255,0.04) 52deg,
+    transparent 78deg,
+    transparent 168deg,
+    rgba(255,255,255,0.10) 196deg,
+    rgba(255,255,255,0.03) 224deg,
+    transparent 250deg,
+    transparent 360deg);
+  animation: vinylSpin 3.04s linear infinite;
+}
+/* Playback never got going (autoplay refused, codec unavailable, a
+   data-saver mode). The poster is a still of the same record, so turn
+   the whole thing instead of leaving a frozen photograph. */
+.splash-video-wrap.splash-still .splash-video {
+  animation: vinylSpin 3.04s linear infinite;
+}
 .splash-video-wrap.is-morphing {
   /* Motion blur peaks mid-flight, which is what sells it as movement
      rather than a resize. */
@@ -7610,12 +7645,19 @@ function playDismissAnimation(gateEl, callback) {
   // browser has a concrete start value to animate FROM (animating from
   // `inset:0` to explicit pixels doesn't interpolate).
   var startRect = wrap.getBoundingClientRect();
+  // Order matters here, and it was wrong: `inset` is the shorthand for
+  // top/right/bottom/left, so assigning it AFTER pinning top and left threw
+  // both away again. The record then had no start position to animate from
+  // and jumped straight to the header logo instead of flying there —
+  // measured mid-flight, it was already sitting at the logo's coordinates
+  // at full size. Clear the shorthand first, then pin.
+  wrap.style.inset = 'auto';
   wrap.style.position = 'fixed';
+  wrap.style.margin = '0';
   wrap.style.top = startRect.top + 'px';
   wrap.style.left = startRect.left + 'px';
   wrap.style.width = startRect.width + 'px';
   wrap.style.height = startRect.height + 'px';
-  wrap.style.inset = 'auto';
 
   // The wordmark likewise needs fixing in place before it can fly.
   var wordStart = word ? word.getBoundingClientRect() : null;
@@ -7714,6 +7756,16 @@ function playDismissAnimation(gateEl, callback) {
     tryPlay();
     gate.addEventListener('pointerdown', tryPlay);
     video.addEventListener('canplay', tryPlay);
+
+    // Don't take play()'s word for it — check the clock actually moved.
+    var seen = 0;
+    setTimeout(function () { seen = video.currentTime; }, 1200);
+    setTimeout(function () {
+      if (video.currentTime <= seen + 0.02) {
+        var w = document.getElementById('splash-video-wrap');
+        if (w) w.classList.add('splash-still');
+      }
+    }, 2100);
   }
 
   // bfcache restore (browser back/forward within the tab) reuses the exact
