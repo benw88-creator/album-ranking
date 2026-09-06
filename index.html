@@ -462,7 +462,10 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
   18%  { opacity: 1; transform: translate(-50%, -8px) scale(1.15); }
   100% { opacity: 0; transform: translate(-50%, -52px) scale(1); }
 }
-@media (prefers-reduced-motion: reduce) { .disc-particle { animation: none; display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .disc-particle { animation: none; display: none; }
+}
+html[data-motion="none"] .disc-particle { animation: none; display: none; }
 
 /* ---- SEARCH ---- */
 .search-block { padding: 28px 0 24px; position: relative; z-index: 30; }
@@ -712,6 +715,32 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
 .shop-balance-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); }
 .shop-balance-val { font-family: var(--font-mono); font-weight: 600; font-size: 22px; color: var(--gold); }
 .shop-list { display: flex; flex-direction: column; gap: 10px; }
+/* Windows turns "animation effects" off by default for a lot of people, and
+   the browser reports that as prefers-reduced-motion. Whole stretches of
+   this site then read as broken rather than as considerate — which is
+   exactly how it kept being reported. Honour the system setting by default,
+   but let anyone say otherwise for themselves. */
+.motion-setting {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 14px 16px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.motion-name { font-size: 14px; font-weight: 600; }
+.motion-note { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.motion-choice { display: flex; gap: 4px; flex-shrink: 0; }
+.motion-choice button {
+  font: 600 12px/1 var(--font-mono); letter-spacing: 0.03em;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  background: var(--surface-3); color: var(--text-dim);
+  border: 1px solid transparent; transition: background 0.18s, color 0.18s;
+}
+.motion-choice button:hover { color: var(--text); }
+.motion-choice button.active {
+  background: var(--gold); color: #16120a; border-color: var(--gold);
+}
+@media (max-width: 520px) {
+  .motion-setting { flex-direction: column; align-items: flex-start; }
+}
 .shop-section-title {
   font: 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--text-faint); margin: 18px 0 2px;
@@ -775,7 +804,10 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
 .grid .card:nth-child(10) { animation-delay: 0.27s; }
 .grid .card:nth-child(11) { animation-delay: 0.30s; }
 .grid .card:nth-child(12) { animation-delay: 0.33s; }
-@media (prefers-reduced-motion: reduce) { .card { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .card { animation: none; }
+}
+html[data-motion="none"] .card { animation: none; }
 .card:hover {
   transform: translateY(-6px) translateZ(0);
   box-shadow:
@@ -2107,9 +2139,10 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 .splash-cta .arrow { display: inline-block; transition: transform 0.2s var(--ease); }
 .splash-cta:hover .arrow { transform: translateX(4px); }
 @media (prefers-reduced-motion: reduce) {
-  .splash-gate { transition: none; }
-  .splash-content { animation: none; }
-  .splash-cta, .splash-cta .arrow { transition: none; }
+  html:not([data-motion="full"]) .splash-gate { transition: none; }
+  html:not([data-motion="full"]) .splash-content { animation: none; }
+  html:not([data-motion="full"]) .splash-cta,
+  html:not([data-motion="full"]) .splash-cta .arrow { transition: none; }
 }
 
 /* ---- Dismiss: the splash physically BECOMES the dashboard ----
@@ -2203,10 +2236,12 @@ body.entering-done #artist-hero {
   transition: opacity 0.75s var(--ease), transform 0.85s var(--ease), filter 0.7s var(--ease);
 }
 @media (prefers-reduced-motion: reduce) {
-  .splash-video-wrap.is-morphing { animation: none; }
-  .splash-word.is-flying { transition: opacity 0.3s linear; }
-  body.is-entering .wrap, body.is-entering #artist-hero { transform: none; filter: none; }
-  body.entering-done .wrap, body.entering-done #artist-hero { transition: opacity 0.3s linear; }
+  html:not([data-motion="full"]) .splash-video-wrap.is-morphing { animation: none; }
+  html:not([data-motion="full"]) .splash-word.is-flying { transition: opacity 0.3s linear; }
+  html:not([data-motion="full"]) body.is-entering .wrap,
+  html:not([data-motion="full"]) body.is-entering #artist-hero { transform: none; filter: none; }
+  html:not([data-motion="full"]) body.entering-done .wrap,
+  html:not([data-motion="full"]) body.entering-done #artist-hero { transition: opacity 0.3s linear; }
 }
 
 /* ============================================================
@@ -2448,6 +2483,32 @@ body.entering-done #artist-hero {
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* Motion preference, applied before the first paint so the splash and the
+   dashboard entrance both see it. Three states: follow the system (the
+   default), force full motion, force reduced. Kept as an attribute on <html>
+   so the CSS gates can key off it, and exposed as motionReduced() for the
+   handful of animations that are driven from script. */
+(function () {
+  var pref = null;
+  try { pref = localStorage.getItem('vinal_motion'); } catch (e) {}
+  if (pref === 'full' || pref === 'none') document.documentElement.setAttribute('data-motion', pref);
+  window.motionReduced = function () {
+    var p = document.documentElement.getAttribute('data-motion');
+    if (p === 'full') return false;
+    if (p === 'none') return true;
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  };
+  window.setMotionPreference = function (v) {
+    try {
+      if (v === 'auto') localStorage.removeItem('vinal_motion');
+      else localStorage.setItem('vinal_motion', v);
+    } catch (e) {}
+    if (v === 'auto') document.documentElement.removeAttribute('data-motion');
+    else document.documentElement.setAttribute('data-motion', v);
+  };
+})();
+</script>
 </head>
 <body>
 
@@ -2946,6 +3007,19 @@ window.ICONS = {
       <span class="shop-balance-val" id="shop-balance-val">0</span>
     </div>
     <div class="shop-list" id="shop-list"></div>
+
+    <div class="shop-section-title">Motion</div>
+    <div class="motion-setting">
+      <div class="motion-copy">
+        <div class="motion-name" id="motion-state">Following your system setting</div>
+        <div class="motion-note" id="motion-note"></div>
+      </div>
+      <div class="motion-choice" id="motion-choice">
+        <button data-motion-set="auto">Auto</button>
+        <button data-motion-set="full">Full</button>
+        <button data-motion-set="none">Reduced</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -7201,11 +7275,25 @@ window.handleGrooveLink=handleGrooveLink;
 
   async function mountArtistHero(imgEl, canvasEl) {
     if (!imgEl || !canvasEl) return;
+    // decode() can simply never settle in a tab that isn't being painted —
+    // observed here: a hero left unrendered indefinitely because the promise
+    // stayed pending. Race it, then fall back to the plain load state, and
+    // give up rather than hang if the photo never arrives at all.
     try {
-      if (imgEl.decode) await imgEl.decode();
-    } catch (e) {
-      await new Promise((res) => { imgEl.onload = res; if (imgEl.complete) res(); });
+      if (imgEl.decode) {
+        await Promise.race([imgEl.decode(), new Promise((res) => setTimeout(res, 1200))]);
+      }
+    } catch (e) { /* not fatal: complete + naturalWidth is enough to draw */ }
+    if (!imgEl.complete || !imgEl.naturalWidth) {
+      await new Promise((res) => {
+        let settled = false;
+        const done = function () { if (!settled) { settled = true; res(); } };
+        imgEl.addEventListener('load', done, { once: true });
+        imgEl.addEventListener('error', done, { once: true });
+        setTimeout(done, 3000);
+      });
     }
+    if (!imgEl.naturalWidth) return;
     const host = imgEl.closest('.artist-hero') || imgEl.parentElement;
     heroRevealed = false;
     // The hero animates its height open, so measuring it right now would
@@ -7579,8 +7667,17 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   }
 
   window.openShop = function () {
-    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { if (window.Cloud) Cloud.openAuth(); return; }
-    renderShop();
+    // Buying anything needs an account, but the Motion setting below the
+    // list does not — and someone whose page feels dead because of a system
+    // animation preference shouldn't have to sign up to fix it. Open either
+    // way; gate the items, not the modal.
+    const signedIn = !!(window.Cloud && Cloud.isOn && Cloud.isOn());
+    if (signedIn) renderShop();
+    else {
+      document.getElementById('shop-balance-val').textContent = '0';
+      document.getElementById('shop-list').innerHTML =
+        '<div class="reco-note" style="font-size:13px;">Log in to earn Discs and buy themes.</div>';
+    }
     document.getElementById('shop-modal').classList.add('open');
   };
   // This script sits at the very end of <body>, so every element above it
@@ -7592,6 +7689,34 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (closeBtn) closeBtn.addEventListener('click', function () { modal.classList.remove('open'); });
     if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('open'); });
     if (openBtn) openBtn.addEventListener('click', function () { window.openShop(); });
+
+    // ---- Motion setting -------------------------------------------------
+    const choice = document.getElementById('motion-choice');
+    if (choice) {
+      const stateEl = document.getElementById('motion-state');
+      const noteEl = document.getElementById('motion-note');
+      const paint = function () {
+        const pref = document.documentElement.getAttribute('data-motion') || 'auto';
+        choice.querySelectorAll('button').forEach(function (b) {
+          b.classList.toggle('active', b.dataset.motionSet === pref);
+        });
+        const systemReduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        stateEl.textContent =
+          pref === 'full' ? 'Full motion' :
+          pref === 'none' ? 'Reduced motion' :
+          (systemReduced ? 'Following your system: reduced' : 'Following your system: full');
+        noteEl.textContent = (pref === 'auto' && systemReduced)
+          ? 'Your device asks for reduced motion, so some animations are switched off. Choose Full to see them anyway.'
+          : 'Affects the intro, card entrances and the Discs burst.';
+      };
+      choice.addEventListener('click', function (e) {
+        const b = e.target.closest('[data-motion-set]');
+        if (!b) return;
+        window.setMotionPreference(b.dataset.motionSet);
+        paint();
+      });
+      paint();
+    }
   })();
 })();
 </script>
@@ -7609,7 +7734,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      ================================================================ -->
 <script>
 function playDismissAnimation(gateEl, callback) {
-  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var reduced = window.motionReduced ? window.motionReduced() : false;
   var wrap = document.getElementById('splash-video-wrap');
   var word = document.getElementById('splash-word');
   var scrim = document.getElementById('splash-scrim');
