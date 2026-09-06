@@ -2099,13 +2099,11 @@ body.entering-done #artist-hero {
   inset: 0;
   width: 100%;
   height: 100%;
-  /* Real <img> instead of a CSS background — object-fit centres on the image's
-     actual middle rather than a hard-coded percentage guess, and avoids the
-     soft/blurry look that came from background-size:cover cropping a fragment
-     and stretching it. object-position favours the upper-middle since most
-     artist promo photos have the face there. */
-  object-fit: cover;
-  object-position: center 25%;
+  /* contain + right anchor to match the canvas dither (see mountArtistHero).
+     Cover-cropping a square photo into this 2.48:1 banner showed only ~40%
+     of the image height, blown up — a zoomed strip, not a face. */
+  object-fit: contain;
+  object-position: 72% center;
   /* Grayscale here, colour comes from .artist-hero-duotone blending on top —
      this is a portrait of a specific person, so unlike the login screen it
      stays static: no pointer warp, no slow zoom. Recognisability over mood. */
@@ -6203,6 +6201,17 @@ window.handleGrooveLink=handleGrooveLink;
     return { sx, sy, sw, sh };
   }
 
+  // Fits the WHOLE image inside the destination without cropping, and returns
+  // where to draw it. Needed because artist photos are square (640x640) while
+  // the hero banner is ~2.48:1 — 'cover' there discards ~60% of the image
+  // height and magnifies the surviving strip, which is exactly why faces came
+  // out as a zoomed blur rather than a person.
+  function containRect(srcW, srcH, dstW, dstH, anchorX) {
+    const scale = Math.min(dstW / srcW, dstH / srcH);
+    const w = srcW * scale, h = srcH * scale;
+    return { dx: (dstW - w) * anchorX, dy: (dstH - h) / 2, dw: w, dh: h };
+  }
+
   class DitherField {
     constructor(canvas, images, config) {
       this.canvas = canvas;
@@ -6215,10 +6224,10 @@ window.handleGrooveLink=handleGrooveLink;
         colorMode: 'duotone', inkColor: '#F5C842', colorMix: 0.2,
         background: '#0a0908', pointerMode: 'rotate',
         pointerRadiusFrac: 0.6, pointerStrength: 0.16,
-        fit: 'stretch', focusY: 0.5, // 'cover' + focusY used for photo sources
+        fit: 'stretch', focusY: 0.5, anchorX: 0.5, // 'cover'/'contain' used for photo sources
       }, config || {});
       this.bufW = 0; this.bufH = 0;
-      this.lumaFrames = []; this.colorFrames = [];
+      this.lumaFrames = []; this.colorFrames = []; this.maskFrames = [];
       this.levelLo = 0; this.levelHi = 1;
       this.pointer = { x: -9999, y: -9999, active: false };
       this._raf = null; this._startTime = null;
@@ -6234,7 +6243,7 @@ window.handleGrooveLink=handleGrooveLink;
       off.width = this.bufW; off.height = this.bufH;
       const octx = off.getContext('2d', { willReadFrequently: true });
 
-      this.lumaFrames = []; this.colorFrames = [];
+      this.lumaFrames = []; this.colorFrames = []; this.maskFrames = [];
       let allLuma = [];
       for (const img of this.images) {
         octx.clearRect(0, 0, this.bufW, this.bufH);
@@ -6242,17 +6251,30 @@ window.handleGrooveLink=handleGrooveLink;
           const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
           const r = coverRect(iw, ih, this.bufW, this.bufH, focusY);
           octx.drawImage(img, r.sx, r.sy, r.sw, r.sh, 0, 0, this.bufW, this.bufH);
+        } else if (fit === 'contain') {
+          const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+          const r = containRect(iw, ih, this.bufW, this.bufH, this.cfg.anchorX);
+          octx.drawImage(img, r.dx, r.dy, r.dw, r.dh);
         } else {
           octx.drawImage(img, 0, 0, this.bufW, this.bufH);
         }
         const data = octx.getImageData(0, 0, this.bufW, this.bufH).data;
         const luma = new Float32Array(this.bufW * this.bufH);
+        // Cells the image doesn't cover (contain-fit leaves empty margins) are
+        // transparent. Without a mask those read as luma 0 which, with
+        // invert:true, would come out as MAXIMUM ink — the empty margin would
+        // render as a solid slab of dots. Track coverage explicitly instead,
+        // and keep uncovered cells out of the auto-level histogram so the
+        // levels are computed from the actual photo rather than from padding.
+        const mask = new Uint8Array(this.bufW * this.bufH);
         for (let i = 0, p = 0; i < data.length; i += 4, p++) {
           luma[p] = (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
+          mask[p] = data[i + 3] > 8 ? 1 : 0;
         }
         this.lumaFrames.push(luma);
+        this.maskFrames.push(mask);
         if (this.cfg.colorMode !== 'duotone') this.colorFrames.push(new Uint8ClampedArray(data));
-        for (let i = 0; i < luma.length; i += 3) allLuma.push(luma[i]);
+        for (let i = 0; i < luma.length; i += 3) if (mask[i]) allLuma.push(luma[i]);
       }
       allLuma.sort((a, b) => a - b);
       this.levelLo = percentile(allLuma, this.cfg.levelLoPct);
@@ -6345,6 +6367,7 @@ window.handleGrooveLink=handleGrooveLink;
           sx = clamp(Math.round(sx), 0, bufW - 1);
           sy = clamp(Math.round(sy), 0, bufH - 1);
           const p = sy * bufW + sx;
+          if (this.maskFrames[i0] && !this.maskFrames[i0][p]) continue; // outside the image — no ink
 
           let luma = this.lumaFrames[i0][p] * (1 - frac) + this.lumaFrames[i1][p] * frac;
           if (blendWithStart > 0) {
@@ -6405,6 +6428,20 @@ window.handleGrooveLink=handleGrooveLink;
   // the active Shop theme actually is (Cassette's blue, Sundown's amber,
   // etc.) instead of always rendering in the default gold regardless of
   // what theme is equipped.
+  // Ink polarity, derived rather than hardcoded. A halftone only reads as a
+  // POSITIVE image if bright parts of the photo get more ink when the ink is
+  // lighter than the ground, and less ink when it's darker. Gold-on-black
+  // must not invert; Blanc's dark violet ink on paper-white must. Getting
+  // this backwards renders a photographic negative — which is exactly why
+  // the artist hero looked like an unreadable blur rather than a person.
+  function relLuma(hex) {
+    const c = hexToRgb(hex);
+    return (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255;
+  }
+  function shouldInvert(inkHex, bgHex) {
+    return relLuma(inkHex) < relLuma(bgHex);
+  }
+
   function themeColor(varName, fallback) {
     const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
     return v || fallback;
@@ -6461,7 +6498,27 @@ window.handleGrooveLink=handleGrooveLink;
     } catch (e) {
       await new Promise((res) => { imgEl.onload = res; if (imgEl.complete) res(); });
     }
-    const host = imgEl.closest('.artist-hero') || imgEl.parentElement;
+    const host = imgEl.closest(".artist-hero") || imgEl.parentElement;
+    // The hero animates its height open, so measuring it right now would
+    // catch it mid-expand — that produced a 1px-tall canvas and a blank
+    // hero. Observe the host instead and (re)render whenever its size
+    // settles, which also keeps it correct across the collapse/expand
+    // toggle and window resizes.
+    if (heroResizeObs) { heroResizeObs.disconnect(); heroResizeObs = null; }
+    if (typeof ResizeObserver === "function") {
+      let t = null;
+      heroResizeObs = new ResizeObserver(function () {
+        clearTimeout(t);
+        t = setTimeout(function () { renderHeroAt(imgEl, canvasEl, host); }, 120);
+      });
+      heroResizeObs.observe(host);
+    }
+    await renderHeroAt(imgEl, canvasEl, host);
+  }
+
+  let heroResizeObs = null;
+  async function renderHeroAt(imgEl, canvasEl, host) {
+    if (!host.offsetHeight) return; // still collapsed — the observer will call back
     sizeCanvasTo(canvasEl, host);
     if (heroField) heroField.stop();
     heroField = new DitherField(canvasEl, [imgEl], {
@@ -6482,11 +6539,18 @@ window.handleGrooveLink=handleGrooveLink;
       // a constant ~3.5 CSS px per dot everywhere — fine enough to read as
       // a photographic halftone rather than blocky pixel art.
       pixelSize: Math.max(3, Math.round(3.5 * Math.min(2, window.devicePixelRatio || 1))),
-      dotScale: 0.92, spacing: 0.12, levels: 10,
-      contrast: 12, brightness: 2, invert: true, floor: 0.008,
-      colorMode: 'blended', inkColor: themeColor('--gold', '#F5C842'), colorMix: 0.45,
+      dotScale: 0.95, spacing: 0.1, levels: 12,
+      // brightness lifts the midtones so a normally-exposed face reads as a
+      // dense field of dots rather than a dim smudge on the dark ground;
+      // auto-levelling (DitherField.init) already normalises each photo's
+      // range first, so this generalises instead of being per-photo tuning.
+      contrast: 22, brightness: 42, floor: 0.02,
+      invert: shouldInvert(themeColor('--gold', '#F5C842'), themeColor('--bg', '#0a0908')),
+      colorMode: 'blended', inkColor: themeColor('--gold', '#F5C842'), colorMix: 0.55,
       background: themeColor('--bg', '#0a0908'), pointerMode: 'none',
-      fit: 'cover', focusY: 0.25, // matches the img's object-position:center 25%
+      // contain, not cover: show the WHOLE photo so it reads as a person.
+      // Anchored right so the artist name on the left keeps clear space.
+      fit: 'contain', anchorX: 0.72,
     });
     try {
       await heroField.init();
