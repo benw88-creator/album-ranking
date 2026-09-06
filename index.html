@@ -8300,21 +8300,26 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     var type = document.querySelector('#ln-kind button.active').dataset.lnKind;
     var data;
     try {
-      data = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: type, limit: '8' }).toString(), {
+      // Ten is Spotify's ceiling for a search limit; asking for more is a
+      // 400. Collapsing reissues out of ten still leaves a usable list.
+      data = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: type, limit: '10' }).toString(), {
         priority: true, skip: function () { return document.getElementById('ln-search').value.trim() !== q; }
       });
     } catch (e) { return; }
     if (!data) return;
     var items = (type === 'album' ? (data.albums && data.albums.items) : (data.tracks && data.tracks.items)) || [];
+    // One row per record, not one per pressing, and shown by its plain title.
+    if (window.VinalTitles) items = window.VinalTitles.collapse(items, type).slice(0, 6);
     lnItems = items;
     if (!items.length) { lnCloseSugg(); return; }
     var s = document.getElementById('ln-sugg');
     s.innerHTML = items.map(function (it, i) {
       var imgs = type === 'album' ? it.images : (it.album && it.album.images);
       var art = (imgs && (imgs[2] || imgs[0]) && (imgs[2] || imgs[0]).url) || '';
+      var title = window.VinalTitles ? window.VinalTitles.baseName(it.name) : it.name;
       return '<div class="g-sugg-item" data-i="' + i + '">' +
         '<img src="' + esc(art) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
-        '<div><div class="g-sugg-name">' + esc(it.name) + '</div>' +
+        '<div><div class="g-sugg-name">' + esc(title) + '</div>' +
         '<div class="g-sugg-genre">' + esc((it.artists && it.artists[0] && it.artists[0].name) || '') + '</div></div></div>';
     }).join('');
     s.classList.add('open');
@@ -8324,7 +8329,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         if (!it) return;
         var imgs = type === 'album' ? it.images : (it.album && it.album.images);
         draft.pick = {
-          id: it.id, kind: type === 'album' ? 'album' : 'song', name: it.name,
+          id: it.id, kind: type === 'album' ? 'album' : 'song',
+          name: window.VinalTitles ? window.VinalTitles.baseName(it.name) : it.name,
           artist: (it.artists && it.artists[0] && it.artists[0].name) || '',
           art: (imgs && imgs[0] && imgs[0].url) || ''
         };
@@ -9917,6 +9923,9 @@ function playDismissAnimation(gateEl, callback) {
     // Earworm shows the same genre label, so it uses the same lookup (and
     // therefore the same localStorage cache) rather than a second one.
     window.VinalGenre = artistGenre;
+    // Reissue handling is the same problem wherever a record is picked from
+    // a search box, so the diary borrows it instead of repeating it.
+    window.VinalTitles = { baseName: baseName, collapse: collapseEditions };
   }
 
   init();
