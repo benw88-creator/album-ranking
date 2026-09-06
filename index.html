@@ -2203,15 +2203,25 @@ body.entering-done #artist-hero {
   inset: 0;
   width: 100%;
   height: 100%;
-  /* contain + right anchor to match the canvas dither (see mountArtistHero).
-     Cover-cropping a square photo into this 2.48:1 banner showed only ~40%
-     of the image height, blown up — a zoomed strip, not a face. */
+  /* Only ever seen if the dither can't run (a photo served without CORS
+     clearance). Contain, not cover: cover-cropping a square photo into this
+     2.48:1 banner showed ~40% of the image height blown up — a zoomed
+     strip, not a face. */
   object-fit: contain;
   object-position: 72% center;
-  /* Grayscale here, colour comes from .artist-hero-duotone blending on top —
-     this is a portrait of a specific person, so unlike the login screen it
-     stays static: no pointer warp, no slow zoom. Recognisability over mood. */
   filter: grayscale(1) contrast(1.12) brightness(0.95);
+}
+/* The canvas shares the layout but NOT the photo treatment: the grayscale
+   filter above was silently draining the colour the dither picks out of
+   each artist's photo, and object-fit would letterbox a canvas that is
+   already sized to the host in device pixels. */
+.artist-hero-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: none;
+  object-fit: fill;
 }
 .artist-hero-duotone {
   position: absolute;
@@ -2220,12 +2230,19 @@ body.entering-done #artist-hero {
   mix-blend-mode: color;
   pointer-events: none;
 }
+/* Once the dots are printing, the duotone layer has nothing to tint but the
+   canvas — and tinting it would undo the per-artist ink colour. */
+.artist-hero.artist-hero-dithered .artist-hero-duotone { display: none; }
+/* Scrim, reshaped. The old rule darkened the TOP of the band as well, which
+   put a bar across the artist's face for no benefit. Now it only does the
+   two jobs it needs to: keep the name legible on the left, and hand the
+   band over to the page at the bottom. */
 .artist-hero-fade {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(to top, var(--bg) 0%, rgba(10,9,8,0.5) 32%, rgba(10,9,8,0.18) 55%, rgba(10,9,8,0.5) 100%),
-    linear-gradient(to right, rgba(10,9,8,0.7) 0%, transparent 50%);
+    linear-gradient(to top, var(--bg) 0%, rgba(10,9,8,0.72) 14%, rgba(10,9,8,0.22) 34%, transparent 62%),
+    linear-gradient(to right, rgba(10,9,8,0.82) 0%, rgba(10,9,8,0.45) 28%, transparent 58%);
 }
 .artist-hero-toggle {
   position: absolute;
@@ -2279,7 +2296,35 @@ body.entering-done #artist-hero {
 .artist-hero.artist-hero-collapsed .artist-hero-name { font-size: 30px; }
 .artist-hero.artist-hero-collapsed .artist-hero-content { padding-bottom: 28px; }
 .artist-hero.artist-hero-collapsed .artist-hero-eyebrow { margin-bottom: 4px; }
+/* The tab bar is wider than a phone screen — six labels plus three icon
+   buttons — and being a plain inline-flex it simply pushed the document
+   out instead of adapting. Measured at a 487px viewport it ran to 618px,
+   which is what gave every page on the site a horizontal scrollbar and let
+   the whole layout be pinched around on a phone. Let the bar scroll inside
+   itself instead, with no visible scrollbar of its own. The sliding
+   indicator is absolutely positioned within this element, so it scrolls
+   along with the tabs and keeps tracking the active one. */
+@media (max-width: 760px) {
+  nav.modes {
+    display: flex;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overscroll-behavior-x: contain;
+  }
+  nav.modes::-webkit-scrollbar { display: none; }
+  nav.modes button { flex: 0 0 auto; }
+}
+
 @media (max-width: 640px) {
+  /* The portrait sits above the name here rather than beside it, so the
+     scrim's job changes: carry the bottom half, not the left edge. */
+  .artist-hero-fade {
+    background:
+      linear-gradient(to top, var(--bg) 0%, rgba(10,9,8,0.86) 22%, rgba(10,9,8,0.4) 44%, transparent 72%);
+  }
   .artist-hero { height: 360px; margin-bottom: -48px; }
   .artist-hero.artist-hero-collapsed { height: 140px; }
   .artist-hero-name { font-size: 34px; }
@@ -2444,7 +2489,7 @@ window.ICONS = {
 <div id="artist-hero" class="artist-hero artist-hero-expanded" style="display:none;">
   <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer" crossorigin="anonymous">
   <div class="artist-hero-duotone" aria-hidden="true"></div>
-  <canvas class="artist-hero-bg" id="artist-hero-canvas" aria-hidden="true" style="display:none;"></canvas>
+  <canvas class="artist-hero-canvas" id="artist-hero-canvas" aria-hidden="true" style="display:none;"></canvas>
   <div class="artist-hero-fade"></div>
   <button class="artist-hero-toggle" id="artist-hero-toggle" title="Collapse">&#8593;</button>
   <div class="artist-hero-content wrap">
@@ -6634,7 +6679,491 @@ window.handleGrooveLink=handleGrooveLink;
   function pauseAuth() { if (authField) authField.stop(); }
 
   // ---- Artist hero ----------------------------------------------------
-  let heroField = null;
+  // ===== ARTIST HERO — one halftone field across the whole band ===========
+  //
+  // The previous version fitted the photo inside the band and masked every
+  // cell the photo didn't cover, which left the dots as a hard-edged
+  // rectangle sitting on flat background: it read as a pasted-in panel
+  // rather than part of the page. This builds a single ink-density field
+  // across the ENTIRE band instead — the portrait's own tones where the
+  // photo is, a faint ambient wash everywhere else, and a feathered
+  // handover between them so there is no edge to find. Density falls away
+  // toward the left (behind the artist's name) and toward the top and
+  // bottom, so the band dissolves into the page instead of stopping at a
+  // line.
+
+  // ---- masked separable box blur -----------------------------------------
+  // Normalised by the mask, so cells outside the photo don't drag the local
+  // average toward zero and ring the portrait with a dark halo.
+  function maskedBlur(src, mask, w, h, r) {
+    const num = new Float32Array(w * h), den = new Float32Array(w * h);
+    const tn = new Float32Array(w * h), td = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) {
+      let sn = 0, sd = 0;
+      for (let x = -r; x <= r; x++) {
+        const i = y * w + clamp(x, 0, w - 1);
+        sn += src[i] * mask[i]; sd += mask[i];
+      }
+      for (let x = 0; x < w; x++) {
+        tn[y * w + x] = sn; td[y * w + x] = sd;
+        const add = y * w + clamp(x + r + 1, 0, w - 1);
+        const sub = y * w + clamp(x - r, 0, w - 1);
+        sn += src[add] * mask[add] - src[sub] * mask[sub];
+        sd += mask[add] - mask[sub];
+      }
+    }
+    for (let x = 0; x < w; x++) {
+      let sn = 0, sd = 0;
+      for (let y = -r; y <= r; y++) {
+        const i = clamp(y, 0, h - 1) * w + x;
+        sn += tn[i]; sd += td[i];
+      }
+      for (let y = 0; y < h; y++) {
+        num[y * w + x] = sn; den[y * w + x] = sd;
+        const add = clamp(y + r + 1, 0, h - 1) * w + x;
+        const sub = clamp(y - r, 0, h - 1) * w + x;
+        sn += tn[add] - tn[sub];
+        sd += td[add] - td[sub];
+      }
+    }
+    const out = new Float32Array(w * h);
+    for (let i = 0; i < out.length; i++) out[i] = den[i] > 0 ? num[i] / den[i] : 0;
+    return out;
+  }
+
+  function smoothstep(a, b, x) {
+    const t = clamp((x - a) / (b - a || 1e-6), 0, 1);
+    return t * t * (3 - 2 * t);
+  }
+  // Cheap value noise: hashed lattice, bilinearly interpolated. Only used to
+  // stop the ambient wash reading as a perfectly mechanical gradient.
+  function hash2(x, y) {
+    const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+    return s - Math.floor(s);
+  }
+  function valueNoise(x, y) {
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const xf = x - xi, yf = y - yi;
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const a = hash2(xi, yi), b = hash2(xi + 1, yi);
+    const c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1);
+    return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+  }
+
+  // ---- 1. Where in the photo is the artist? ------------------------------
+  // Artist photos are framed wildly differently: one is a head filling the
+  // frame, the next is a whole figure standing in a wide, empty shot. Fit
+  // both into a 2.5:1 band untouched and the first reads as a portrait
+  // while the second shrinks to a thumbnail-sized silhouette — which is
+  // exactly what happened. Finding the subject and cropping to it brings
+  // every artist in at roughly the same size with no per-artist tuning.
+  //
+  // Not face detection: the platform's FaceDetector is Chrome-only and
+  // unreliable. Promo photos almost always place a busy subject against a
+  // calm background, so local gradient energy locates them well enough, and
+  // when it doesn't the fallback is simply "don't crop".
+  function subjectRect(img) {
+    const N = 72; // finer than this is just noise
+    const c = document.createElement('canvas');
+    c.width = N; c.height = N;
+    const cx = c.getContext('2d', { willReadFrequently: true });
+    cx.drawImage(img, 0, 0, N, N);
+    const d = cx.getImageData(0, 0, N, N).data;
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+    const whole = { sx: 0, sy: 0, sw: iw, sh: ih };
+
+    const g = new Float32Array(N * N);
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+      g[p] = (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255;
+    }
+    const energy = new Float32Array(N * N);
+    for (let y = 1; y < N - 1; y++) {
+      for (let x = 1; x < N - 1; x++) {
+        const p = y * N + x;
+        const gx = g[p + 1] - g[p - 1], gy = g[p + N] - g[p - N];
+        energy[p] = Math.sqrt(gx * gx + gy * gy);
+      }
+    }
+    const ones = new Float32Array(N * N).fill(1);
+    const soft = maskedBlur(energy, ones, N, N, 3);
+
+    // Trim the flat margins: walk in from whichever side carries less
+    // energy until only the busiest 88% of it is left. More robust than
+    // thresholding, which needs a threshold that works for every photo.
+    function window1d(sums) {
+      let total = 0;
+      for (let i = 0; i < sums.length; i++) total += sums[i];
+      if (total <= 0) return [0, sums.length - 1];
+      let lo = 0, hi = sums.length - 1, kept = total;
+      const floorSum = total * 0.88;
+      while (hi > lo) {
+        const take = sums[lo] <= sums[hi] ? 'lo' : 'hi';
+        const loss = take === 'lo' ? sums[lo] : sums[hi];
+        if (kept - loss < floorSum) break;
+        kept -= loss;
+        if (take === 'lo') lo++; else hi--;
+      }
+      return [lo, hi];
+    }
+    const cols = new Float32Array(N), rows = new Float32Array(N);
+    for (let y = 0; y < N; y++) {
+      for (let x = 0; x < N; x++) { const e = soft[y * N + x]; cols[x] += e; rows[y] += e; }
+    }
+    let [x0, x1] = window1d(cols);
+    let [y0, y1] = window1d(rows);
+
+    let bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+    if (bw < 8 || bh < 8) return whole; // detection collapsed — don't crop
+
+    // A standing figure comes back much taller than it is wide. Keep the
+    // upper part so we land on head-and-torso rather than a full-length
+    // shot with the face four pixels tall.
+    if (bw / bh < 0.72) {
+      bh = Math.round(bh * 0.62);
+      y1 = y0 + bh - 1;
+    }
+    // Breathing room, then bail out if the "crop" is basically the whole
+    // photo anyway — a well-framed close-up should pass through untouched.
+    const padX = Math.round(bw * 0.10), padY = Math.round(bh * 0.10);
+    x0 = clamp(x0 - padX, 0, N - 1); x1 = clamp(x1 + padX, 0, N - 1);
+    y0 = clamp(y0 - padY, 0, N - 1); y1 = clamp(y1 + padY, 0, N - 1);
+    bw = x1 - x0 + 1; bh = y1 - y0 + 1;
+    if (bw * bh > N * N * 0.82) return whole;
+
+    return {
+      sx: Math.round((x0 / N) * iw), sy: Math.round((y0 / N) * ih),
+      sw: Math.max(1, Math.round((bw / N) * iw)), sh: Math.max(1, Math.round((bh / N) * ih))
+    };
+  }
+
+  // ---- 2. What colour is this artist? ------------------------------------
+  // The ink used to be whatever the active theme was, so every artist came
+  // out the same colour. Sampling the photo instead means the dots belong
+  // to the person. Saturation-weighted so a coloured subject beats a grey
+  // wall, falling back to a neutral when the photo genuinely has no colour,
+  // and finally pushed away from the background's own lightness — ink the
+  // same brightness as the ground is invisible however nice the hue is.
+  function dominantInk(img, bgHex) {
+    const N = 28;
+    const c = document.createElement('canvas');
+    c.width = N; c.height = N;
+    const cx = c.getContext('2d', { willReadFrequently: true });
+    cx.drawImage(img, 0, 0, N, N);
+    const d = cx.getImageData(0, 0, N, N).data;
+    let wr = 0, wg = 0, wb = 0, wsum = 0, ar = 0, ag = 0, ab = 0, n = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      const sat = mx === 0 ? 0 : (mx - mn) / mx;
+      // Ignore near-black and near-white: they carry no usable hue and
+      // otherwise dominate the average on high-contrast photos.
+      const mid = 1 - Math.abs((mx / 255) - 0.55) / 0.55;
+      const wt = sat * clamp(mid, 0, 1);
+      wr += r * wt; wg += g * wt; wb += b * wt; wsum += wt;
+      ar += r; ag += g; ab += b; n++;
+    }
+    let r, g, b;
+    if (wsum > n * 0.02) { r = wr / wsum; g = wg / wsum; b = wb / wsum; }
+    else { r = ar / n; g = ag / n; b = ab / n; }
+
+    // Work in HSL from here. The first version corrected brightness by
+    // mixing toward white, which also mixes toward grey: measured across
+    // five artists, four came back as the identical #b8b8b8 because most
+    // promo photos are dark and needed a heavy lift. Setting lightness
+    // while holding hue and saturation keeps the artist's colour.
+    let [h, s, l] = rgbToHsl(r, g, b);
+    // Averaging always drifts toward grey, so push saturation into a range
+    // that actually reads as a colour — but leave a genuinely monochrome
+    // photo neutral rather than inventing a hue for it.
+    s = s < 0.06 ? s : clamp(s * 1.9, 0.22, 0.58);
+    l = relLuma(bgHex) < 0.5 ? 0.68 : 0.30;
+    const rgb = hslToRgb(h, s, l);
+    const hex = (v) => ('0' + Math.round(clamp(v, 0, 255)).toString(16)).slice(-2);
+    return '#' + hex(rgb[0]) + hex(rgb[1]) + hex(rgb[2]);
+  }
+
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    const l = (mx + mn) / 2;
+    if (mx === mn) return [0, 0, l];
+    const d = mx - mn;
+    const s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    let h;
+    if (mx === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (mx === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    return [h / 6, s, l];
+  }
+  function hslToRgb(h, s, l) {
+    if (s === 0) { const v = l * 255; return [v, v, v]; }
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    const f = (t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    return [f(h + 1 / 3) * 255, f(h) * 255, f(h - 1 / 3) * 255];
+  }
+
+  // ---- 3. Build the field and print it -----------------------------------
+  let heroResizeObs = null, heroRevealed = false, heroRaf = null;
+
+  function renderHeroAt(imgEl, canvasEl, host) {
+    if (!host.offsetHeight) return; // still collapsed — the observer calls back
+    if (heroRaf) { cancelAnimationFrame(heroRaf); heroRaf = null; }
+    const t0 = performance.now();
+    sizeCanvasTo(canvasEl, host);
+
+    const W = canvasEl.width, H = canvasEl.height;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    // ~3.5 CSS px per dot at any density: fine enough to read as a
+    // photographic halftone rather than blocky pixel art.
+    const cell = Math.max(3, Math.round(3.5 * dpr));
+    const bufW = Math.max(8, Math.floor(W / cell)), bufH = Math.max(8, Math.floor(H / cell));
+    const bg = themeColor('--bg', '#0a0908');
+
+    let ink, crop;
+    try {
+      crop = subjectRect(imgEl);
+      ink = dominantInk(imgEl, bg);
+    } catch (e) {
+      // Cross-origin photo without CORS clearance: nothing can be read out
+      // of it, so leave the plain <img> showing rather than a blank canvas.
+      console.warn('Vinal hero: cannot sample artist photo', e);
+      return false;
+    }
+
+    // Wide desktop band: portrait anchored right, name breathing on the
+    // left. Narrow/phone band: near-square, so centre it and let the CSS
+    // scrim carry text legibility instead of empty space.
+    const wide = bufW / bufH >= 1.7;
+    const off = document.createElement('canvas');
+    off.width = bufW; off.height = bufH;
+    const octx = off.getContext('2d', { willReadFrequently: true });
+    octx.clearRect(0, 0, bufW, bufH);
+
+    // Fill the band's height with the subject, then keep it from swamping
+    // the whole width on a very wide crop.
+    const ca = crop.sw / crop.sh;
+    // On a wide band the portrait sits to the right of the name. On a phone
+    // the band is nearly square and there is nowhere to put it beside the
+    // text, so it goes above instead: anchored to the top, leaving the
+    // lower part of the band for the name to sit in clear space rather
+    // than across the artist's face.
+    let dh = wide ? bufH : bufH * 0.88, dw = dh * ca;
+    const maxW = bufW * (wide ? 0.62 : 1.0);
+    if (dw > maxW) { dw = maxW; dh = dw / ca; }
+    const dx = wide ? (bufW * 0.99 - dw) : (bufW - dw) / 2;
+    const dy = wide ? (bufH - dh) / 2 : 0;
+    octx.drawImage(imgEl, crop.sx, crop.sy, crop.sw, crop.sh, dx, dy, dw, dh);
+
+    const data = octx.getImageData(0, 0, bufW, bufH).data;
+    const luma = new Float32Array(bufW * bufH);
+    const cover = new Float32Array(bufW * bufH);
+    for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+      luma[p] = (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
+      cover[p] = data[i + 3] > 8 ? 1 : 0;
+    }
+
+    // Adaptive exposure: a gamma lift to open up the shadows, then an
+    // unsharp mask to put local structure back on top of it.
+    //
+    // The first attempt normalised each region against its own local mean,
+    // which does pull a backlit face out of shadow — but it also drags
+    // every FLAT area to mid grey, so a photo's plain background filled
+    // with 50% ink and printed as a visible rectangle around the subject.
+    // Adding a high-pass on top of the true tone instead leaves flat areas
+    // at the brightness they actually are, so empty background stays empty.
+    const lifted = new Float32Array(luma.length);
+    for (let i = 0; i < luma.length; i++) lifted[i] = Math.pow(luma[i], 0.78);
+    const localMean = maskedBlur(lifted, cover, bufW, bufH, Math.max(3, Math.round(Math.min(bufW, bufH) / 7)));
+    const evened = new Float32Array(luma.length);
+    for (let i = 0; i < luma.length; i++) {
+      evened[i] = clamp(lifted[i] + (lifted[i] - localMean[i]) * 0.95, 0, 1);
+    }
+
+    // Auto-levels from the photo's own cells only, so the empty band
+    // doesn't skew the histogram.
+    const sample = [];
+    for (let i = 0; i < evened.length; i += 3) if (cover[i]) sample.push(evened[i]);
+    sample.sort((a, b) => a - b);
+    const lo = sample.length ? percentile(sample, 0.02) : 0;
+    const hi = Math.max(lo + 1e-3, sample.length ? percentile(sample, 0.98) : 1);
+
+    // Lower lift than before: the gamma above already opens the shadows,
+    // and stacking both floods plain backgrounds with ink.
+    const contrast = 20, brightness = 20;
+    const cf = (259 * (contrast + 255)) / (255 * (259 - contrast));
+    const invert = shouldInvert(ink, bg);
+
+    // Feather the photo's own rectangle away so its edges never show, and
+    // fade the whole band at top and bottom so it dissolves into the page.
+    // Feather relative to the PORTRAIT, not just the band: a band-relative
+    // feather ate 60% of a narrow portrait's width and washed the face out.
+    const fx = Math.max(3, Math.min(bufW * 0.05, dw * 0.20));
+    const fy = Math.max(3, Math.min(bufH * 0.10, dh * 0.14));
+    // Where the wash radiates from.
+    const pcx = (dx + dw / 2) / bufW, pcy = (dy + dh / 2) / bufH;
+    const bandAspect = bufW / bufH;
+    const cells = [];
+    const levels = 12;
+    const maxR = (cell * 0.9) / 2 * 0.95;
+
+    for (let by = 0; by < bufH; by++) {
+      const yn = by / (bufH - 1);
+      // Softer at the top (the portrait's head lives there), stronger at
+      // the bottom where the band hands over to the page content.
+      const edgeY = wide
+        ? smoothstep(0, 0.10, yn) * (1 - smoothstep(0.80, 1, yn) * 0.92)
+        : smoothstep(0, 0.06, yn) * (1 - smoothstep(0.52, 0.96, yn) * 0.97);
+      for (let bx = 0; bx < bufW; bx++) {
+        const p = by * bufW + bx;
+        const xn = bx / (bufW - 1);
+
+        let photo = 0;
+        if (cover[p]) {
+          let v = clamp((evened[p] - lo) / (hi - lo), 0, 1);
+          v = clamp(cf * (v - 0.5) + 0.5 + brightness / 255, 0, 1);
+          if (invert) v = 1 - v;
+          // An elliptical falloff rather than only a rectangular one: a
+          // rectangle's corners are what betray the photo as a pasted-in
+          // panel, and an oval hands the portrait over to the surrounding
+          // wash with no straight edge anywhere. Squashed vertically (0.8)
+          // so a head that reaches the top of the band isn't clipped.
+          const ex = (bx - (dx + dw / 2)) / (dw / 2);
+          const ey = (by - (dy + dh / 2)) / (dh / 2) * 0.8;
+          const oval = 1 - smoothstep(0.70, 1.06, Math.sqrt(ex * ex + ey * ey));
+          const din = Math.min(bx - dx, dx + dw - bx) / fx;
+          const dinY = Math.min(by - dy, dy + dh - by) / fy;
+          photo = v * oval * smoothstep(0, 1, din) * smoothstep(0, 1, dinY);
+        }
+
+        // Portrait ink is amplitude-modulated, the way a real halftone
+        // works: dot SIZE carries the tone.
+        let radius = 0;
+        if (photo > 0) {
+          const level = clamp(Math.floor(photo * edgeY * levels + (BAYER8[by & 7][bx & 7] - 0.5)), 0, levels);
+          radius = maxR * (level / levels);
+        }
+
+        // The ambient wash is frequency-modulated instead. Shrinking dots
+        // toward zero — the obvious approach, and the first thing I tried —
+        // just produces a field of quarter-pixel specks that don't render
+        // at all: measured, the left three quarters of the band came back
+        // literally empty. Thinning their NUMBER while keeping each dot a
+        // visible size is what actually reads as ink fading out across the
+        // page. The grain keeps it from looking mechanical.
+        if (radius < maxR * 0.22) {
+          const grain = 0.70 + 0.30 * valueNoise(bx / 9, by / 9);
+          // Radiating from the portrait rather than sweeping in from the
+          // edge: a plain horizontal gradient covered the whole top of the
+          // band evenly and read as television static, where a halo reads
+          // as ink belonging to the artist.
+          const ddx = (xn - pcx) * bandAspect * 0.5;
+          const ddy = (yn - pcy);
+          const spread = 1 - smoothstep(0.12, 1.0, Math.sqrt(ddx * ddx + ddy * ddy));
+          const wash = spread * edgeY * grain;
+          if (wash > 0.03 && hash2(bx * 1.7 + 0.3, by * 2.3 + 0.7) < 0.34 * wash) {
+            radius = Math.max(radius, maxR * (0.30 + 0.28 * wash));
+          }
+        }
+
+        // Sub-pixel dots still contribute through antialiasing, which is
+        // what keeps the portrait's faintest gradation smooth, so the cut
+        // is only there to skip work that paints nothing at all.
+        if (radius < 0.12) continue;
+        cells.push(bx, by, radius);
+      }
+    }
+
+    const ctx = canvasEl.getContext('2d');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = ink;
+
+    function drawSlice(from, to) {
+      ctx.beginPath();
+      for (let i = from; i < to; i += 3) {
+        const r = cells[i + 2];
+        const cx = (cells[i] + 0.5) * cell, cy = (cells[i + 1] + 0.5) * cell;
+        ctx.moveTo(cx + r, cy);
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    }
+
+    // Reveal: the dots arrive scattered and settle, once, then never move
+    // again. Drawn incrementally — each dot is painted exactly once and
+    // nothing is ever cleared — so the whole animation costs one render in
+    // total rather than one per frame, which keeps it smooth on a phone.
+    const order = shuffleTriples(cells);
+    if (!heroRevealed) {
+      heroRevealed = true;
+      const DUR = 850;
+      const t0 = performance.now();
+      let drawn = 0;
+      let frames = 0;
+      renderHeroAt.reveal = { drawn: 0, total: order.length, frames: 0, done: false };
+      const step = () => {
+        const t = clamp((performance.now() - t0) / DUR, 0, 1);
+        const target = Math.floor(easeOutQuad(t) * (order.length / 3)) * 3;
+        if (target > drawn) { drawSlice(drawn, target); drawn = target; }
+        frames++;
+        renderHeroAt.reveal.drawn = drawn;
+        renderHeroAt.reveal.frames = frames;
+        if (t < 1) heroRaf = requestAnimationFrame(step);
+        else finish();
+      };
+      // requestAnimationFrame stops being a clock the moment the page isn't
+      // being painted — throttled to about 1Hz in a background tab, and to
+      // nothing at all in some automation contexts. Without a backstop the
+      // field can be left permanently half-printed, which looks like a bug
+      // rather than an animation. Land it regardless.
+      function finish() {
+        if (renderHeroAt.reveal.done) return;
+        if (heroRaf) { cancelAnimationFrame(heroRaf); heroRaf = null; }
+        if (drawn < order.length) { drawSlice(drawn, order.length); drawn = order.length; }
+        renderHeroAt.reveal.drawn = drawn;
+        renderHeroAt.reveal.done = true;
+      }
+      heroRaf = requestAnimationFrame(step);
+      setTimeout(finish, DUR + 350);
+    } else {
+      drawSlice(0, order.length); // resize/theme change: no re-run of the reveal
+    }
+
+    renderHeroAt.size = W + 'x' + H;
+    renderHeroAt.last = {
+      ms: Math.round(performance.now() - t0),
+      ink: ink, wide: wide, cell: cell, buf: bufW + 'x' + bufH,
+      crop: crop, placed: { dx: Math.round(dx), dy: Math.round(dy), dw: Math.round(dw), dh: Math.round(dh) },
+      dots: cells.length / 3
+    };
+    host.classList.add('artist-hero-dithered');
+    canvasEl.style.display = 'block';
+    canvasEl.style.opacity = '1';
+    imgEl.style.visibility = 'hidden';
+    return true;
+  }
+
+  // Fisher-Yates over (bx, by, level) triples, in place. A hash-ordered
+  // scatter would band visibly; a true shuffle reads as a photograph
+  // developing.
+  function shuffleTriples(a) {
+    for (let i = a.length / 3 - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      for (let k = 0; k < 3; k++) {
+        const t = a[i * 3 + k]; a[i * 3 + k] = a[j * 3 + k]; a[j * 3 + k] = t;
+      }
+    }
+    return a;
+  }
+
   async function mountArtistHero(imgEl, canvasEl) {
     if (!imgEl || !canvasEl) return;
     try {
@@ -6642,85 +7171,39 @@ window.handleGrooveLink=handleGrooveLink;
     } catch (e) {
       await new Promise((res) => { imgEl.onload = res; if (imgEl.complete) res(); });
     }
-    const host = imgEl.closest(".artist-hero") || imgEl.parentElement;
+    const host = imgEl.closest('.artist-hero') || imgEl.parentElement;
+    heroRevealed = false;
     // The hero animates its height open, so measuring it right now would
     // catch it mid-expand — that produced a 1px-tall canvas and a blank
     // hero. Observe the host instead and (re)render whenever its size
     // settles, which also keeps it correct across the collapse/expand
     // toggle and window resizes.
     if (heroResizeObs) { heroResizeObs.disconnect(); heroResizeObs = null; }
-    if (typeof ResizeObserver === "function") {
+    if (typeof ResizeObserver === 'function') {
       let t = null;
       heroResizeObs = new ResizeObserver(function () {
         clearTimeout(t);
-        t = setTimeout(function () { renderHeroAt(imgEl, canvasEl, host); }, 120);
+        t = setTimeout(function () {
+          // ResizeObserver fires once as soon as it's attached. Re-rendering
+          // on that first callback repainted the whole field in one go and
+          // wiped out the reveal that had just started — measured, the dots
+          // reached full coverage in ~200ms instead of the intended 850.
+          // Only re-render when the band has genuinely changed size.
+          const dpr = Math.min(2, window.devicePixelRatio || 1);
+          const r = host.getBoundingClientRect();
+          const size = Math.round(r.width * dpr) + 'x' + Math.round(r.height * dpr);
+          if (size === renderHeroAt.size) return;
+          renderHeroAt(imgEl, canvasEl, host);
+        }, 120);
       });
       heroResizeObs.observe(host);
     }
-    await renderHeroAt(imgEl, canvasEl, host);
+    renderHeroAt(imgEl, canvasEl, host);
   }
 
-  let heroResizeObs = null;
-  async function renderHeroAt(imgEl, canvasEl, host) {
-    if (!host.offsetHeight) return; // still collapsed — the observer will call back
-    sizeCanvasTo(canvasEl, host);
-    if (heroField) heroField.stop();
-    heroField = new DitherField(canvasEl, [imgEl], {
-      // Static portrait, not the ambient/mood use this engine was built
-      // for — no pointer warp, no animation loop (rendered once below,
-      // not started). Tuned by eye (screenshot-verified, two failed
-      // passes first): pixelSize 5 with a high dotScale packed into a
-      // solid grey mass; pixelSize 8 with a low dotScale lost facial
-      // detail entirely and read as generic texture. What actually works
-      // is closer to real halftone-print proportions — small cells with
-      // *high* ink coverage (low spacing, high dotScale) and more tone
-      // levels for smooth gradation, low contrast so midtones survive
-      // instead of crushing to near-binary. The auto-level percentile
-      // step (see DitherField.init) is what keeps this robust across
-      // wildly different photos, not per-photo tuning.
-      // pixelSize is in DEVICE pixels, so a fixed number rendered visibly
-      // chunkier on a 1x display than a 2x one. Scale it with DPR to hold
-      // a constant ~3.5 CSS px per dot everywhere — fine enough to read as
-      // a photographic halftone rather than blocky pixel art.
-      pixelSize: Math.max(3, Math.round(3.5 * Math.min(2, window.devicePixelRatio || 1))),
-      dotScale: 0.95, spacing: 0.1, levels: 12,
-      // brightness lifts the midtones so a normally-exposed face reads as a
-      // dense field of dots rather than a dim smudge on the dark ground;
-      // auto-levelling (DitherField.init) already normalises each photo's
-      // range first, so this generalises instead of being per-photo tuning.
-      contrast: 22, brightness: 42, floor: 0.02,
-      invert: shouldInvert(themeColor('--gold', '#F5C842'), themeColor('--bg', '#0a0908')),
-      colorMode: 'blended', inkColor: themeColor('--gold', '#F5C842'), colorMix: 0.55,
-      background: themeColor('--bg', '#0a0908'), pointerMode: 'none',
-      // contain, not cover: show the WHOLE photo so it reads as a person.
-      // Anchored right so the artist name on the left keeps clear space.
-      fit: 'contain', anchorX: 0.72,
-    });
-    try {
-      await heroField.init();
-    } catch (e) {
-      // Cross-origin image without CORS clearance (shouldn't happen — Spotify's
-      // CDN sends Access-Control-Allow-Origin:* — but fail safe: leave the
-      // plain photo (with its own CSS duotone filter) visible instead of a
-      // broken canvas).
-      console.warn('Vinal dither: artist hero init failed, showing plain photo', e);
-      return;
-    }
-    heroField._renderAtTime(0); // one render, no start() — this is a still image, not a loop
-    // Cross-fade the dither over the photo instead of hard-swapping them.
-    // The hard swap was the visible "glitch": a smooth photo would paint,
-    // then a frame later get replaced outright by the dot rendering. Now
-    // the two are stacked and it dissolves between them, and the photo is
-    // only hidden once the fade has finished.
-    canvasEl.style.opacity = '0';
-    canvasEl.style.display = 'block';
-    void canvasEl.offsetWidth;
-    canvasEl.style.transition = 'opacity 0.6s var(--ease)';
-    canvasEl.style.opacity = '1';
-    setTimeout(function () { imgEl.style.visibility = 'hidden'; }, 650);
-  }
-
-  window.VinalDither = { playAuth: playAuth, pauseAuth: pauseAuth, mountArtistHero: mountArtistHero, DitherField: DitherField };
+  window.VinalDither = {
+    get lastHero() { return renderHeroAt.last || null; },
+    get heroReveal() { return renderHeroAt.reveal || null; }, playAuth: playAuth, pauseAuth: pauseAuth, mountArtistHero: mountArtistHero, DitherField: DitherField };
 })();
 </script>
 
