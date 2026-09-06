@@ -705,6 +705,248 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
   .drop-tile-val.sm { font-size: 9px; }
   .drop-legend { font-size: 10px; gap: 4px 10px; }
 }
+/* ---- LINER NOTES ----
+   The diary. Colour does the heavy lifting: one hue per mood, used
+   identically on the home card, the week strip, the year grid and the
+   timeline, so a colour learned in one place reads everywhere else. */
+.ln-card {
+  background: linear-gradient(150deg, var(--surface-2), var(--surface) 62%);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin-bottom: 30px;
+}
+.ln-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+.ln-card-eyebrow {
+  font: 11px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 7px;
+}
+.ln-card-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; }
+.ln-prompt { font-size: 15px; color: var(--text-dim); margin-bottom: 14px; font-style: italic; }
+.ln-today-done { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 12px; }
+.ln-today-art { width: 62px; height: 62px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+.ln-today-text { min-width: 0; }
+.ln-today-pick { font-weight: 600; font-size: 15px; margin-top: 6px; }
+.ln-today-pick span { color: var(--text-dim); font-weight: 400; }
+.ln-today-note { font-size: 14px; color: var(--text-dim); margin-top: 5px; line-height: 1.5; }
+.ln-chip {
+  display: inline-block; font: 700 10px/1 var(--font-mono); letter-spacing: 0.08em;
+  text-transform: uppercase; color: #12100c; padding: 5px 9px; border-radius: 999px;
+}
+
+/* --- composer --- */
+.ln-modal .modal-panel { max-width: 560px; }
+.ln-field { margin-bottom: 20px; }
+.ln-label {
+  display: block; font: 11px/1 var(--font-mono); letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text-faint); margin-bottom: 9px;
+}
+.ln-count { float: right; letter-spacing: 0; }
+.ln-kind { display: inline-flex; gap: 2px; padding: 3px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; margin-bottom: 9px; }
+.ln-kind button {
+  font: 600 11px/1 var(--font-mono); letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 7px 13px; border-radius: 999px; border: none; cursor: pointer;
+  background: transparent; color: var(--text-dim);
+}
+.ln-kind button.active { background: var(--gold); color: #16120a; }
+.ln-search { position: relative; }
+.ln-picked {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+}
+.ln-picked img { width: 46px; height: 46px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+.ln-picked-name { font-weight: 600; font-size: 14px; line-height: 1.25; }
+.ln-picked-artist { font-size: 12px; color: var(--text-dim); }
+.ln-clear { margin-left: auto; background: transparent; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; padding: 0 4px; }
+.ln-clear:hover { color: var(--text); }
+
+.ln-moods { display: flex; flex-wrap: wrap; gap: 7px; }
+.ln-mood {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 600; padding: 9px 13px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 999px; color: var(--text-dim); cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, transform 0.08s;
+}
+.ln-mood:hover { color: var(--text); }
+.ln-mood:active { transform: scale(0.96); }
+.ln-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.ln-mood.on .ln-dot { background: rgba(0,0,0,0.35) !important; }
+
+.ln-textarea {
+  width: 100%; resize: vertical; font: inherit; font-size: 14px; line-height: 1.55;
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.ln-textarea:focus { outline: none; border-color: var(--gold-dim); }
+.ln-question { font-size: 15px; font-style: italic; color: var(--text); margin-bottom: 9px; }
+.ln-actions { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+.ln-actions .btn-primary { margin-left: auto; }
+.ln-actions .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.ln-delete { background: transparent; border: none; color: var(--text-faint); font-size: 13px; cursor: pointer; }
+.ln-delete:hover { color: var(--red); }
+
+/* --- week strip --- */
+.ln-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.ln-day {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 8px; cursor: pointer;
+  text-align: center; transition: border-color 0.15s, transform 0.12s;
+}
+.ln-day:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+.ln-day-name { font: 10px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 8px; }
+.ln-day-art {
+  position: relative; overflow: hidden;
+  width: 100%; aspect-ratio: 1/1; border-radius: 5px;
+  background: var(--surface-3); display: block;
+}
+.ln-day-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ln-day-blank { opacity: 0.55; }
+.ln-day-mood { font-size: 11px; color: var(--text-dim); margin-top: 7px; }
+
+/* --- year grid ---
+   Seven rows, one per weekday, filled column by column — the shape people
+   already know from contribution graphs, which means it needs no
+   explaining. It scrolls rather than shrinking below a readable cell. */
+.ln-year-wrap { overflow-x: auto; padding-bottom: 6px; }
+.ln-year-months {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 12px; gap: 3px;
+  font: 10px/1 var(--font-mono); letter-spacing: 0.06em; color: var(--text-faint);
+  margin-bottom: 7px; min-width: min-content;
+}
+.ln-year-months span { grid-row: 1; white-space: nowrap; }
+.ln-year-grid {
+  display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 12px);
+  grid-auto-columns: 12px; gap: 3px; min-width: min-content;
+}
+.ln-cell {
+  width: 12px; height: 12px; border-radius: 3px; padding: 0; cursor: pointer;
+  background: var(--surface-3); border: none;
+  transition: transform 0.1s, outline-color 0.15s;
+  outline: 1px solid transparent;
+}
+.ln-cell:hover { transform: scale(1.35); outline-color: var(--text); }
+.ln-legend { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 12px; font: 11px/1 var(--font-mono); color: var(--text-faint); }
+.ln-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.ln-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+/* --- mood mix bar --- */
+.ln-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; margin-top: 14px; background: var(--surface-3); }
+.ln-bar-seg { height: 100%; }
+
+/* --- timeline --- */
+.ln-timeline { display: flex; flex-direction: column; }
+.ln-entry { display: flex; gap: 16px; }
+.ln-entry-rail { position: relative; width: 12px; flex-shrink: 0; display: flex; justify-content: center; }
+.ln-entry-rail::before { content: ''; position: absolute; top: 0; bottom: 0; width: 1px; background: var(--border); }
+.ln-entry-dot { position: relative; width: 11px; height: 11px; border-radius: 50%; background: var(--surface-4); margin-top: 16px; outline: 3px solid var(--bg); }
+.ln-entry-body { flex: 1; min-width: 0; padding: 12px 0 22px; }
+.ln-entry-head { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.ln-entry-date { font: 11px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
+.ln-entry-pick { display: flex; align-items: center; gap: 11px; margin-bottom: 9px; }
+.ln-entry-pick img { width: 42px; height: 42px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+.ln-entry-note { font-size: 14px; line-height: 1.6; color: var(--text); }
+.ln-entry-q { font-size: 13px; color: var(--text-dim); margin-top: 8px; border-left: 2px solid var(--border-strong); padding-left: 11px; }
+.ln-entry-q span { display: block; font-style: italic; color: var(--text-faint); margin-bottom: 3px; }
+.ln-entry-edit { background: transparent; border: none; color: var(--text-faint); font-size: 12px; cursor: pointer; padding: 6px 0 0; }
+.ln-entry-edit:hover { color: var(--gold); }
+
+@media (max-width: 640px) {
+  .ln-week { grid-template-columns: repeat(4, 1fr); }
+  .ln-card { padding: 16px 16px; }
+  .ln-card-head { flex-direction: column; }
+}
+
+/* ---- EARWORM ----
+   The board is as wide as the title rather than a fixed five columns, so
+   every size here is driven by --ew-cols and the cells shrink as titles get
+   longer. Eleven columns is the cap; past that a phone cannot show a
+   readable letter. */
+.ew-modal .modal-panel { max-width: 640px; }
+.ew-head-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.ew-mode {
+  display: inline-flex; gap: 2px; padding: 3px;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px;
+}
+.ew-mode button {
+  font: 600 12px/1 var(--font-mono); letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 9px 15px; border-radius: 999px; border: none; cursor: pointer;
+  background: transparent; color: var(--text-dim);
+  transition: background 0.18s, color 0.18s;
+}
+.ew-mode button.active { background: var(--gold); color: #16120a; }
+.ew-clues { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.ew-clue {
+  font: 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-dim); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 999px; padding: 7px 11px;
+}
+.ew-clue b { color: var(--text); }
+.ew-clue-hint { border-color: var(--gold-dim); color: var(--gold); }
+#ew-hint {
+  font: 600 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em;
+  background: transparent; border: 1px dashed var(--border-strong);
+  color: var(--text-dim); border-radius: 999px; padding: 8px 12px; cursor: pointer;
+  transition: color 0.18s, border-color 0.18s;
+}
+#ew-hint:hover { color: var(--text); border-color: var(--text-dim); }
+#ew-status { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
+
+.ew-board { display: flex; flex-direction: column; gap: 6px; align-items: center; margin: 4px 0 16px; }
+.ew-row {
+  display: grid; width: 100%;
+  grid-template-columns: repeat(var(--ew-cols, 5), 1fr); gap: 6px;
+  max-width: calc(var(--ew-cols, 5) * 56px);
+}
+.ew-cell {
+  aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 700; text-transform: uppercase;
+  font-size: clamp(12px, 3.2vw, 26px);
+  border: 2px solid var(--surface-4); border-radius: 6px; color: var(--text);
+}
+.ew-cell.filled { border-color: var(--text-faint); }
+.ew-cell.exact   { background: var(--green);     border-color: var(--green);     color: #06210f; animation: ewFlip 0.5s var(--ease) both; }
+.ew-cell.present { background: var(--yellow);    border-color: var(--yellow);    color: #241a00; animation: ewFlip 0.5s var(--ease) both; }
+.ew-cell.absent  { background: var(--surface-4); border-color: var(--surface-4); color: var(--text-dim); animation: ewFlip 0.5s var(--ease) both; }
+@keyframes ewFlip { 0% { transform: rotateX(-90deg); opacity: 0; } 100% { transform: rotateX(0); opacity: 1; } }
+.ew-shake { animation: ewShake 0.4s; }
+@keyframes ewShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); } 40% { transform: translateX(7px); }
+  60% { transform: translateX(-4px); } 80% { transform: translateX(4px); }
+}
+
+.ew-keys { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.ew-krow { display: flex; gap: 5px; justify-content: center; width: 100%; }
+.ew-key {
+  flex: 1 1 0; min-width: 0; max-width: 46px; height: 52px;
+  border: none; border-radius: 6px; cursor: pointer;
+  background: var(--surface-3); color: var(--text);
+  font-weight: 700; font-size: 13px; text-transform: uppercase;
+  transition: background 0.15s, color 0.15s, transform 0.08s;
+}
+.ew-key:active { transform: scale(0.94); }
+.ew-key.ew-wide { flex: 1.7 1 0; max-width: 72px; font-size: 11px; }
+.ew-key.exact   { background: var(--green);  color: #06210f; }
+.ew-key.present { background: var(--yellow); color: #241a00; }
+.ew-key.absent  { background: var(--surface-2); color: var(--text-faint); }
+
+.ew-result { text-align: center; padding: 16px 6px 2px; }
+.ew-result-art { width: 96px; height: 96px; border-radius: 12px; object-fit: cover; margin-bottom: 10px; box-shadow: 0 16px 40px rgba(0,0,0,0.5); }
+.ew-result h3 { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+.ew-result p { color: var(--text-dim); font-size: 14px; margin-top: 2px; }
+.ew-result-actions { margin-top: 14px; }
+@media (max-width: 520px) {
+  .ew-key { height: 46px; max-width: none; }
+  .ew-row { max-width: 100%; gap: 4px; }
+  .ew-board { gap: 4px; }
+}
+
 /* ---- SHOP ---- */
 .shop-balance {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -2187,12 +2429,12 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
     transparent 360deg);
   animation: vinylSpin 3.04s linear infinite;
 }
-/* Playback never got going (autoplay refused, codec unavailable, a
-   data-saver mode). The poster is a still of the same record, so turn
-   the whole thing instead of leaving a frozen photograph. */
-.splash-video-wrap.splash-still .splash-video {
-  animation: vinylSpin 3.04s linear infinite;
-}
+/* There is deliberately no "spin the poster instead" fallback here any
+   more. Rotating the <video> rotates a RECTANGLE, so its corners swing
+   into frame and the record appears sheared across a diagonal — which is
+   exactly what it was doing. The sweep above already carries the rotation
+   whether or not the clip is playing, so a stalled poster still reads as a
+   turning record without anything being rotated. */
 .splash-video-wrap.is-morphing {
   /* Motion blur peaks mid-flight, which is what sells it as movement
      rather than a resize. */
@@ -2633,6 +2875,7 @@ window.ICONS = {
     <span class="nav-indicator" id="nav-indicator"></span>
     <button data-mode="home" class="active">Home</button>
     <button data-mode="crate" class="nav-icon-btn"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>The Crate</button>
+    <button data-mode="diary">Diary</button>
     <button data-mode="albums">Albums</button>
     <button data-mode="songs">Songs</button>
     <button data-mode="games">Games</button>
@@ -2651,6 +2894,20 @@ window.ICONS = {
   <!-- ============================ HOME ============================ -->
   <section id="view-home" style="margin-top:32px;">
     <div id="stats-wrap"></div>
+
+    <!-- The diary's front door. It sits above recommendations on purpose:
+         the whole pitch is that Vinal is a record of your listening, not a
+         suggestion engine, so the thing you write is the thing you see. -->
+    <div class="ln-card">
+      <div class="ln-card-head">
+        <div>
+          <div class="ln-card-eyebrow">Liner Notes</div>
+          <h3 class="ln-card-title" id="ln-card-streak"></h3>
+        </div>
+        <button class="btn-mini" id="ln-card-all">See the diary &rarr;</button>
+      </div>
+      <div id="ln-card-body"></div>
+    </div>
     <div class="section-head">
       <h2>Recommended for you</h2>
       <span class="muted" id="reco-status"></span>
@@ -2704,6 +2961,28 @@ window.ICONS = {
   </section>
 
   <!-- ============================ ALBUM RANKING ============================ -->
+  <!-- ============================ DIARY ============================ -->
+  <section id="view-diary" style="display:none; margin-top:32px;">
+    <div class="section-head">
+      <h2><span data-icon="disc"></span> Liner Notes</h2>
+      <span class="muted">What you played, and what it meant</span>
+      <button class="btn-primary" id="ln-write-btn" style="margin-left:auto;">Write today</button>
+    </div>
+
+    <div id="ln-stats"></div>
+
+    <div class="section-head" style="margin-top:30px;"><h2>This week</h2></div>
+    <div class="ln-week" id="ln-week"></div>
+
+    <div class="section-head" style="margin-top:30px;"><h2>The year</h2>
+      <span class="muted">Every day, coloured by how it sounded</span></div>
+    <div class="ln-year-wrap" id="ln-year"></div>
+    <div class="ln-legend" id="ln-legend"></div>
+
+    <div class="section-head" style="margin-top:30px;"><h2>Entries</h2></div>
+    <div class="ln-timeline" id="ln-timeline"></div>
+  </section>
+
   <section id="view-albums" style="display:none; margin-top:32px;">
     <div class="section-head"><h2 id="albums-title">Your album rankings</h2></div>
     <div class="controls-row">
@@ -2782,6 +3061,13 @@ window.ICONS = {
         <p>One album and one song a day &mdash; guess each in six. Same for everyone.</p>
         <div class="gc-go">Play today &rarr;</div>
         <div class="gc-best" id="drop-card-status"></div>
+      </div>
+      <div class="game-card" id="ew-card" style="border-color: var(--gold-dim); background: linear-gradient(150deg, var(--gold-dim), var(--surface) 60%);">
+        <div class="gc-emoji" data-icon="mic"></div>
+        <h3>Earworm</h3>
+        <p>Spell the record, letter by letter. A daily one, or endless from your own library.</p>
+        <div class="gc-go">Play &rarr;</div>
+        <div class="gc-best" id="ew-card-status"></div>
       </div>
       <div class="game-card" data-game="cover">
         <div class="gc-emoji" data-icon="camera"></div>
@@ -2994,6 +3280,74 @@ window.ICONS = {
 
     <div class="drop-rows" id="drop-rows"></div>
     <div id="drop-result"></div>
+  </div>
+</div>
+
+<!-- ============================ LINER NOTES ============================ -->
+<div class="modal ln-modal" id="ln-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="ln-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="disc"></span>
+      <div><h2>Liner note</h2><p id="ln-date"></p></div></div>
+
+    <div class="ln-field">
+      <label class="ln-label">The record</label>
+      <div id="ln-pick"></div>
+      <div id="ln-search-wrap">
+        <div class="ln-kind" id="ln-kind">
+          <button data-ln-kind="album" class="active">Album</button>
+          <button data-ln-kind="track">Song</button>
+        </div>
+        <div class="ln-search">
+          <input id="ln-search" class="g-input" type="text" placeholder="What were you playing&hellip;" autocomplete="off">
+          <div class="g-sugg" id="ln-sugg"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ln-field">
+      <label class="ln-label">How it sounded</label>
+      <div class="ln-moods" id="ln-moods"></div>
+    </div>
+
+    <div class="ln-field">
+      <label class="ln-label">A line of your own <span class="ln-count" id="ln-count"></span></label>
+      <textarea id="ln-note" class="ln-textarea" rows="3" placeholder="What was going on while it was playing?"></textarea>
+    </div>
+
+    <div class="ln-field">
+      <label class="ln-label">Today&rsquo;s question</label>
+      <p class="ln-question" id="ln-question"></p>
+      <textarea id="ln-answer" class="ln-textarea" rows="2" placeholder="Answer it, or leave it."></textarea>
+    </div>
+
+    <div class="ln-actions">
+      <button class="ln-delete" id="ln-delete">Delete</button>
+      <button class="btn-primary" id="ln-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ EARWORM ============================ -->
+<div class="modal ew-modal" id="ew-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="ew-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="mic"></span>
+      <div><h2>Earworm</h2><p>Spell the record. Six tries.</p></div></div>
+
+    <div class="ew-head-row">
+      <div class="ew-mode" id="ew-mode">
+        <button data-ew-mode="daily" class="active">Daily</button>
+        <button data-ew-mode="unlimited">Unlimited</button>
+      </div>
+      <button id="ew-hint">Reveal artist</button>
+    </div>
+
+    <div class="ew-clues" id="ew-clues"></div>
+    <div id="ew-status"></div>
+    <div class="ew-board" id="ew-board"></div>
+    <div class="ew-keys" id="ew-keys"></div>
+    <div id="ew-result"></div>
   </div>
 </div>
 
@@ -4068,6 +4422,7 @@ function applyAlbumTint(rgb) {
 const views = {
   home: document.getElementById('view-home'),
   crate: document.getElementById('view-crate'),
+  diary: document.getElementById('view-diary'),
   albums: document.getElementById('view-albums'),
   songs: document.getElementById('view-songs'),
   games: document.getElementById('view-games'),
@@ -4089,6 +4444,7 @@ function setMode(mode, fromCode) {
   if (mode === 'home') { renderRecommendations(); renderNewReleases(); renderArtistHero(); }
   else { const h = document.getElementById('artist-hero'); if (h) h.style.display = 'none'; }
   if (mode === 'crate' && window.renderCrate) window.renderCrate();
+  if (mode === 'diary' && window.renderDiary) window.renderDiary();
   if (mode === 'albums') renderAlbums();
   if (mode === 'songs') renderSongs();
   if (mode === 'games' && window.renderGameBests) window.renderGameBests();
@@ -5163,7 +5519,7 @@ const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const Cloud=(function(){
   let sb=null,user=null,ready=false;
-  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year'];
+  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1'];
   const pending={};
   function isOn(){return!!(sb&&user);}
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
@@ -5179,6 +5535,9 @@ const Cloud=(function(){
     const mSng=mergeItemMap(lsGet('crate_songs_v1')||{},cloud['crate_songs_v1']||{});
     lsSetRaw('crate_albums_v1',mAlb);lsSetRaw('crate_songs_v1',mSng);
     lsSetRaw('crate_claimed',mergeClaimed(lsGet('crate_claimed'),cloud['crate_claimed']));
+    // Diary entries merge per DAY, newest write wins, so writing on a phone
+    // and then on a laptop keeps both days instead of one clobbering the other.
+    lsSetRaw('crate_liner_v1',mergeItemMap(lsGet('crate_liner_v1')||{},cloud['crate_liner_v1']||{}));
     lsSetRaw('crate_activity',mergeActivity(lsGet('crate_activity'),cloud['crate_activity']));
     ['crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year'].forEach(function(k){const a=lsGet(k)||0,b=cloud[k]||0;if(Math.max(a,b))lsSetRaw(k,Math.max(a,b));});
     if(cloud['crate_album_size']&&!localStorage.getItem('crate_album_size'))lsSetRaw('crate_album_size',cloud['crate_album_size']);
@@ -7067,7 +7426,10 @@ window.handleGrooveLink=handleGrooveLink;
     let dh = wide ? bufH : bufH * 0.88, dw = dh * ca;
     const maxW = bufW * (wide ? 0.62 : 1.0);
     if (dw > maxW) { dw = maxW; dh = dw / ca; }
-    const dx = wide ? (bufW * 0.99 - dw) : (bufW - dw) / 2;
+    // Was 0.99, which parked the portrait hard against the right edge and
+    // ran the back of the head off the screen. Leave a margin so the whole
+    // face is on the page and the dissolve happens in open space.
+    const dx = wide ? (bufW * 0.94 - dw) : (bufW - dw) / 2;
     const dy = wide ? (bufH - dh) / 2 : 0;
     octx.drawImage(imgEl, crop.sx, crop.sy, crop.sw, crop.sh, dx, dy, dw, dh);
 
@@ -7114,7 +7476,11 @@ window.handleGrooveLink=handleGrooveLink;
     // fade the whole band at top and bottom so it dissolves into the page.
     // Feather relative to the PORTRAIT, not just the band: a band-relative
     // feather ate 60% of a narrow portrait's width and washed the face out.
-    const fx = Math.max(3, Math.min(bufW * 0.05, dw * 0.20));
+    // Asymmetric on purpose. The left edge has to dissolve generously into
+    // the wash; the right edge is the outside of the subject's head and
+    // wants to stay solid, or the portrait reads as fading out mid-face.
+    const fxL = Math.max(3, Math.min(bufW * 0.06, dw * 0.30));
+    const fxR = Math.max(2, Math.min(bufW * 0.02, dw * 0.10));
     const fy = Math.max(3, Math.min(bufH * 0.10, dh * 0.14));
     // Where the wash radiates from.
     const pcx = (dx + dw / 2) / bufW, pcy = (dy + dh / 2) / bufH;
@@ -7144,10 +7510,11 @@ window.handleGrooveLink=handleGrooveLink;
           // panel, and an oval hands the portrait over to the surrounding
           // wash with no straight edge anywhere. Squashed vertically (0.8)
           // so a head that reaches the top of the band isn't clipped.
-          const ex = (bx - (dx + dw / 2)) / (dw / 2);
+          const exRaw = (bx - (dx + dw / 2)) / (dw / 2);
+          const ex = exRaw < 0 ? exRaw : exRaw * 0.78; // gentler to the right
           const ey = (by - (dy + dh / 2)) / (dh / 2) * 0.8;
           const oval = 1 - smoothstep(0.70, 1.06, Math.sqrt(ex * ex + ey * ey));
-          const din = Math.min(bx - dx, dx + dw - bx) / fx;
+          const din = Math.min((bx - dx) / fxL, (dx + dw - bx) / fxR);
           const dinY = Math.min(by - dy, dy + dh - by) / fy;
           photo = v * oval * smoothstep(0, 1, din) * smoothstep(0, 1, dinY);
         }
@@ -7722,6 +8089,1024 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 </script>
 
 <!-- ================================================================
+     LINER NOTES — the diary.
+
+     Every other music app tells you what you played. None of them ask you
+     what it MEANT. That's the gap this fills, and it's the thing that
+     can't be scraped from a listening history: a record of the day in
+     your own words, attached to the music you had on at the time.
+
+     One entry per calendar day, four parts:
+       - the record of the day (an album or a song you pick)
+       - a mood, from a small fixed set so it can be counted later
+       - a line of your own, in your own words
+       - the day's question, which rotates and is the same for everybody
+
+     The fixed mood set is the important design decision. Free text alone
+     is lovely to write and useless to look back on; moods you can count
+     turn a year of entries into a shape you can actually see.
+
+     Storage is the existing app_state key/value table via the same
+     SYNC_KEYS mechanism as ratings, so this needs no new table and no
+     migration. localStorage is the working copy; the cloud is the backup.
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  var LN_KEY = 'crate_liner_v1';
+  var MAX_NOTE = 180;
+
+  /* --- the moods --------------------------------------------------------
+     Eight, because a year of entries needs enough range to be honest and
+     few enough that the heatmap reads at a glance. Each carries a colour
+     so a whole year can be seen at once without a legend. */
+  var MOODS = [
+    { key: 'euphoric', label: 'Euphoric', color: '#f5c842' },
+    { key: 'warm',     label: 'Warm',     color: '#e8873a' },
+    { key: 'restless', label: 'Restless', color: '#e2574c' },
+    { key: 'heavy',    label: 'Heavy',    color: '#8b5cf6' },
+    { key: 'bleak',    label: 'Bleak',    color: '#5b6b8c' },
+    { key: 'calm',     label: 'Calm',     color: '#4fb477' },
+    { key: 'nostalgic',label: 'Nostalgic',color: '#c98fb0' },
+    { key: 'focused',  label: 'Focused',  color: '#3fa3c9' }
+  ];
+  function hexA(hex, a) {
+    var n = parseInt(hex.replace('#', ''), 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  function moodOf(key) {
+    for (var i = 0; i < MOODS.length; i++) if (MOODS[i].key === key) return MOODS[i];
+    return null;
+  }
+
+  /* --- the rotating question -------------------------------------------
+     Same for everyone on a given day, so it can be talked about. Picked
+     by date hash rather than sequentially, so it doesn't march in a
+     predictable order. */
+  var QUESTIONS = [
+    'What did you have on repeat today?',
+    'What was the first thing you played this morning?',
+    'Which song matched your mood today?',
+    'What did you put on to get something done?',
+    'An album you keep meaning to go back to?',
+    'What would you have put on a tape for someone today?',
+    'Which record did you hear differently today?',
+    'What did you play that nobody else you know listens to?',
+    'A song you skipped that you normally love?',
+    'What did today sound like from the outside?',
+    'Which lyric stuck with you?',
+    'What did you play on the way home?',
+    'An artist you want to hear more of?',
+    'What was on when the day turned around?',
+    'A song you played twice in a row?',
+    'What did you listen to instead of what you meant to?'
+  ];
+
+  function lnToday() {
+    var d = new Date();
+    return lnKeyOf(d);
+  }
+  function lnKeyOf(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function lnParse(key) {
+    var p = key.split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2]);
+  }
+  function lnHash(s) {
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return Math.abs(h);
+  }
+  function questionFor(dateKey) { return QUESTIONS[lnHash(dateKey + 'q') % QUESTIONS.length]; }
+
+  /* --- storage ----------------------------------------------------------- */
+  function lnAll() {
+    try { return JSON.parse(localStorage.getItem(LN_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function lnSave(all) {
+    try { localStorage.setItem(LN_KEY, JSON.stringify(all)); } catch (e) {}
+    // Same debounced push the ratings use, so entries survive a new device.
+    if (window.Cloud && Cloud.push) Cloud.push(LN_KEY);
+  }
+  function lnGet(dateKey) { return lnAll()[dateKey] || null; }
+  function lnPut(dateKey, entry) {
+    var all = lnAll();
+    entry.savedAt = Date.now();
+    all[dateKey] = entry;
+    lnSave(all);
+    lnRenderEverything();
+  }
+
+  /* --- derived numbers ---------------------------------------------------
+     Streaks count backwards from today, and today not being written yet is
+     not a broken streak — you still have the rest of the day. */
+  function lnStats() {
+    var all = lnAll();
+    var keys = Object.keys(all).sort();
+    var days = keys.length;
+    var moodCount = {}, artistCount = {};
+    keys.forEach(function (k) {
+      var e = all[k];
+      if (e.mood) moodCount[e.mood] = (moodCount[e.mood] || 0) + 1;
+      if (e.pick && e.pick.artist) artistCount[e.pick.artist] = (artistCount[e.pick.artist] || 0) + 1;
+    });
+    var topMood = null, topMoodN = 0;
+    Object.keys(moodCount).forEach(function (m) { if (moodCount[m] > topMoodN) { topMoodN = moodCount[m]; topMood = m; } });
+    var topArtist = null, topArtistN = 0;
+    Object.keys(artistCount).forEach(function (a) { if (artistCount[a] > topArtistN) { topArtistN = artistCount[a]; topArtist = a; } });
+
+    var cur = 0;
+    var d = new Date();
+    if (!all[lnKeyOf(d)]) d.setDate(d.getDate() - 1); // today is still open
+    while (all[lnKeyOf(d)]) { cur++; d.setDate(d.getDate() - 1); }
+
+    var best = 0, run = 0, prev = null;
+    keys.forEach(function (k) {
+      if (prev) {
+        var gap = Math.round((lnParse(k) - lnParse(prev)) / 86400000);
+        run = gap === 1 ? run + 1 : 1;
+      } else run = 1;
+      if (run > best) best = run;
+      prev = k;
+    });
+
+    return { days: days, streak: cur, best: best, topMood: topMood, topMoodN: topMoodN, topArtist: topArtist, topArtistN: topArtistN, moodCount: moodCount };
+  }
+
+  /* --- the composer ------------------------------------------------------ */
+  var draft = { pick: null, mood: '', note: '', answer: null };
+  var editingKey = lnToday();
+
+  function lnOpen(dateKey) {
+    editingKey = dateKey || lnToday();
+    var existing = lnGet(editingKey);
+    draft = existing
+      ? { pick: existing.pick || null, mood: existing.mood || '', note: existing.note || '', answer: existing.answer || null }
+      : { pick: null, mood: '', note: '', answer: null };
+    document.getElementById('ln-answer').value = (existing && existing.answer && existing.answer.a) || '';
+    document.getElementById('ln-delete').style.display = existing ? '' : 'none';
+    document.getElementById('ln-search').value = '';
+    lnCloseSugg();
+    document.getElementById('ln-modal').classList.add('open');
+    lnRenderComposer();
+  }
+
+  function lnRenderComposer() {
+    var isToday = editingKey === lnToday();
+    var d = lnParse(editingKey);
+    document.getElementById('ln-date').textContent = isToday
+      ? 'Today · ' + d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+      : d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    document.getElementById('ln-question').textContent = questionFor(editingKey);
+
+    var pickEl = document.getElementById('ln-pick');
+    pickEl.innerHTML = draft.pick
+      ? '<div class="ln-picked">' +
+          '<img src="' + esc(draft.pick.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+          '<div><div class="ln-picked-name">' + esc(draft.pick.name) + '</div>' +
+          '<div class="ln-picked-artist">' + esc(draft.pick.artist || '') + '</div></div>' +
+          '<button class="ln-clear" id="ln-clear-pick" aria-label="Remove">&times;</button>' +
+        '</div>'
+      : '';
+    var clear = document.getElementById('ln-clear-pick');
+    if (clear) clear.addEventListener('click', function () { draft.pick = null; lnRenderComposer(); });
+    document.getElementById('ln-search-wrap').style.display = draft.pick ? 'none' : '';
+
+    document.getElementById('ln-moods').innerHTML = MOODS.map(function (m) {
+      var on = draft.mood === m.key;
+      return '<button class="ln-mood' + (on ? ' on' : '') + '" data-ln-mood="' + m.key + '"' +
+        (on ? ' style="background:' + m.color + ';border-color:' + m.color + ';color:#12100c;"' : '') +
+        '><span class="ln-dot" style="background:' + m.color + '"></span>' + m.label + '</button>';
+    }).join('');
+
+    var note = document.getElementById('ln-note');
+    if (note.value !== draft.note) note.value = draft.note;
+    document.getElementById('ln-count').textContent = (MAX_NOTE - draft.note.length) + '';
+
+    document.getElementById('ln-save').disabled = !(draft.pick || draft.mood || draft.note.trim());
+  }
+
+  /* --- searching for the day's record ------------------------------------ */
+  var lnTimer = null, lnItems = [];
+  function lnCloseSugg() {
+    var s = document.getElementById('ln-sugg');
+    s.classList.remove('open'); s.innerHTML = ''; lnItems = [];
+  }
+  async function lnSuggest(q) {
+    if (!q) { lnCloseSugg(); return; }
+    var type = document.querySelector('#ln-kind button.active').dataset.lnKind;
+    var data;
+    try {
+      data = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: type, limit: '8' }).toString(), {
+        priority: true, skip: function () { return document.getElementById('ln-search').value.trim() !== q; }
+      });
+    } catch (e) { return; }
+    if (!data) return;
+    var items = (type === 'album' ? (data.albums && data.albums.items) : (data.tracks && data.tracks.items)) || [];
+    lnItems = items;
+    if (!items.length) { lnCloseSugg(); return; }
+    var s = document.getElementById('ln-sugg');
+    s.innerHTML = items.map(function (it, i) {
+      var imgs = type === 'album' ? it.images : (it.album && it.album.images);
+      var art = (imgs && (imgs[2] || imgs[0]) && (imgs[2] || imgs[0]).url) || '';
+      return '<div class="g-sugg-item" data-i="' + i + '">' +
+        '<img src="' + esc(art) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+        '<div><div class="g-sugg-name">' + esc(it.name) + '</div>' +
+        '<div class="g-sugg-genre">' + esc((it.artists && it.artists[0] && it.artists[0].name) || '') + '</div></div></div>';
+    }).join('');
+    s.classList.add('open');
+    s.querySelectorAll('.g-sugg-item').forEach(function (row) {
+      row.addEventListener('click', function () {
+        var it = lnItems[+row.dataset.i];
+        if (!it) return;
+        var imgs = type === 'album' ? it.images : (it.album && it.album.images);
+        draft.pick = {
+          id: it.id, kind: type === 'album' ? 'album' : 'song', name: it.name,
+          artist: (it.artists && it.artists[0] && it.artists[0].name) || '',
+          art: (imgs && imgs[0] && imgs[0].url) || ''
+        };
+        document.getElementById('ln-search').value = '';
+        lnCloseSugg();
+        lnRenderComposer();
+      });
+    });
+  }
+
+  /* --- the home card ----------------------------------------------------- */
+  function lnRenderCard() {
+    var host = document.getElementById('ln-card-body');
+    if (!host) return;
+    var today = lnGet(lnToday());
+    var st = lnStats();
+    var streakEl = document.getElementById('ln-card-streak');
+    if (streakEl) {
+      streakEl.textContent = st.streak > 0
+        ? st.streak + ' day' + (st.streak === 1 ? '' : 's') + ' running'
+        : (st.days ? st.days + ' entries' : 'Nothing written yet');
+    }
+    if (today) {
+      var m = moodOf(today.mood);
+      host.innerHTML =
+        '<div class="ln-today-done">' +
+          (today.pick
+            ? '<img class="ln-today-art" src="' + esc(today.pick.art || '') + '" alt="" onerror="this.style.display=\'none\'">'
+            : '') +
+          '<div class="ln-today-text">' +
+            (m ? '<span class="ln-chip" style="background:' + m.color + '">' + m.label + '</span>' : '') +
+            (today.pick ? '<div class="ln-today-pick">' + esc(today.pick.name) + ' <span>' + esc(today.pick.artist || '') + '</span></div>' : '') +
+            (today.note ? '<p class="ln-today-note">' + esc(today.note) + '</p>' : '') +
+          '</div>' +
+        '</div>' +
+        '<button class="btn-mini" id="ln-edit">Edit today</button>';
+      var eb = document.getElementById('ln-edit');
+      if (eb) eb.addEventListener('click', function () { lnOpen(lnToday()); });
+    } else {
+      host.innerHTML =
+        '<p class="ln-prompt">' + esc(questionFor(lnToday())) + '</p>' +
+        '<button class="btn-primary" id="ln-start">Write today&rsquo;s note</button>';
+      var sb = document.getElementById('ln-start');
+      if (sb) sb.addEventListener('click', function () { lnOpen(lnToday()); });
+    }
+  }
+
+  /* --- the year grid -----------------------------------------------------
+     Every day of the last year as one cell, coloured by that day's mood.
+     A year of listening as a shape, which is the payoff for keeping it up. */
+  function lnRenderYear() {
+    var host = document.getElementById('ln-year');
+    if (!host) return;
+    var all = lnAll();
+    var end = new Date(); end.setHours(0, 0, 0, 0);
+    var start = new Date(end); start.setDate(start.getDate() - 363);
+    // Start on a Monday so the columns line up as weeks.
+    var shift = (start.getDay() + 6) % 7;
+    start.setDate(start.getDate() - shift);
+
+    var cells = '';
+    var d = new Date(start);
+    var months = [];
+    var lastMonth = -1;
+    var col = 0;
+    while (d <= end) {
+      var key = lnKeyOf(d);
+      var e = all[key];
+      var m = e && moodOf(e.mood);
+      var title = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) +
+        (e ? ' · ' + (m ? m.label : 'logged') + (e.pick ? ' · ' + e.pick.name : '') : ' · nothing');
+      cells += '<button class="ln-cell' + (e ? ' has' : '') + '" data-ln-day="' + key + '"' +
+        (m ? ' style="background:' + m.color + '"' : '') +
+        ' title="' + esc(title) + '"></button>';
+      if (d.getDay() === 1) {
+        if (d.getMonth() !== lastMonth) { months.push({ col: col, name: d.toLocaleDateString(undefined, { month: 'short' }) }); lastMonth = d.getMonth(); }
+        col++;
+      }
+      d.setDate(d.getDate() + 1);
+    }
+    var monthRow = months.map(function (mo) {
+      return '<span style="grid-column-start:' + (mo.col + 1) + '">' + mo.name + '</span>';
+    }).join('');
+    host.innerHTML =
+      '<div class="ln-year-months">' + monthRow + '</div>' +
+      '<div class="ln-year-grid">' + cells + '</div>';
+    host.querySelectorAll('[data-ln-day]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var k = b.dataset.lnDay;
+        if (lnParse(k) > new Date()) return; // no writing the future
+        lnOpen(k);
+      });
+    });
+  }
+
+  /* --- this week ---------------------------------------------------------- */
+  function lnRenderWeek() {
+    var host = document.getElementById('ln-week');
+    if (!host) return;
+    var all = lnAll();
+    var out = '';
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+      var key = lnKeyOf(d);
+      var e = all[key];
+      var m = e && moodOf(e.mood);
+      var tint = m
+        ? ' style="background:' + hexA(m.color, 0.32) + ';box-shadow:inset 0 0 0 1px ' + hexA(m.color, 0.6) + '"'
+        : '';
+      out += '<button class="ln-day' + (e ? '' : ' ln-day-blank') + '" data-ln-day="' + key + '">' +
+        '<div class="ln-day-name">' + d.toLocaleDateString(undefined, { weekday: 'short' }) + '</div>' +
+        '<div class="ln-day-art"' + tint + '>' +
+          (e && e.pick && e.pick.art
+            ? '<img src="' + esc(e.pick.art) + '" alt="" onerror="this.remove()">'
+            : '') +
+        '</div>' +
+        '<div class="ln-day-mood">' + (m ? m.label : (e ? 'logged' : '—')) + '</div>' +
+        '</button>';
+    }
+    host.innerHTML = out;
+    host.querySelectorAll('[data-ln-day]').forEach(function (b) {
+      b.addEventListener('click', function () { lnOpen(b.dataset.lnDay); });
+    });
+  }
+
+  /* --- the timeline ------------------------------------------------------- */
+  function lnRenderTimeline() {
+    var host = document.getElementById('ln-timeline');
+    if (!host) return;
+    var all = lnAll();
+    var keys = Object.keys(all).sort().reverse();
+    if (!keys.length) {
+      host.innerHTML = '<p class="reco-note">Nothing here yet. Write one line about what you played today and it starts building.</p>';
+      return;
+    }
+    host.innerHTML = keys.slice(0, 60).map(function (k) {
+      var e = all[k];
+      var m = moodOf(e.mood);
+      var d = lnParse(k);
+      return '<div class="ln-entry">' +
+        '<div class="ln-entry-rail">' +
+          '<span class="ln-entry-dot"' + (m ? ' style="background:' + m.color + '"' : '') + '></span>' +
+        '</div>' +
+        '<div class="ln-entry-body">' +
+          '<div class="ln-entry-head">' +
+            '<span class="ln-entry-date">' + d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) + '</span>' +
+            (m ? '<span class="ln-chip" style="background:' + m.color + '">' + m.label + '</span>' : '') +
+          '</div>' +
+          (e.pick
+            ? '<div class="ln-entry-pick">' +
+                '<img src="' + esc(e.pick.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+                '<div><div class="ln-picked-name">' + esc(e.pick.name) + '</div>' +
+                '<div class="ln-picked-artist">' + esc(e.pick.artist || '') + '</div></div>' +
+              '</div>'
+            : '') +
+          (e.note ? '<p class="ln-entry-note">' + esc(e.note) + '</p>' : '') +
+          (e.answer && e.answer.q
+            ? '<div class="ln-entry-q"><span>' + esc(e.answer.q) + '</span>' + esc(e.answer.a || '') + '</div>'
+            : '') +
+          '<button class="ln-entry-edit" data-ln-day="' + k + '">Edit</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    host.querySelectorAll('[data-ln-day]').forEach(function (b) {
+      b.addEventListener('click', function () { lnOpen(b.dataset.lnDay); });
+    });
+  }
+
+  /* --- the patterns strip -------------------------------------------------- */
+  function lnRenderStats() {
+    var host = document.getElementById('ln-stats');
+    if (!host) return;
+    var st = lnStats();
+    var m = st.topMood && moodOf(st.topMood);
+    var total = 0;
+    Object.keys(st.moodCount).forEach(function (k) { total += st.moodCount[k]; });
+    var bar = MOODS.filter(function (x) { return st.moodCount[x.key]; })
+      .sort(function (a, b) { return st.moodCount[b.key] - st.moodCount[a.key]; })
+      .map(function (x) {
+        var pct = (st.moodCount[x.key] / total) * 100;
+        return '<span class="ln-bar-seg" style="width:' + pct.toFixed(2) + '%;background:' + x.color + '" title="' + x.label + ' · ' + st.moodCount[x.key] + '"></span>';
+      }).join('');
+
+    host.innerHTML =
+      '<div class="stats" style="margin:0;">' +
+        '<div class="stat"><div class="stat-label">Days written</div><div class="stat-value">' + st.days + '</div></div>' +
+        '<div class="stat"><div class="stat-label">Streak</div><div class="stat-value">' + st.streak + '</div></div>' +
+        '<div class="stat"><div class="stat-label">Best run</div><div class="stat-value">' + st.best + '</div></div>' +
+        '<div class="stat"><div class="stat-label">Most felt</div><div class="stat-value" style="font-size:20px;' + (m ? 'color:' + m.color : '') + '">' + (m ? m.label : '—') + '</div></div>' +
+        '<div class="stat"><div class="stat-label">Most written</div><div class="stat-value" style="font-size:20px;">' + esc(st.topArtist || '—') + '</div></div>' +
+      '</div>' +
+      (total ? '<div class="ln-bar">' + bar + '</div>' : '');
+  }
+
+  function lnRenderEverything() {
+    lnRenderCard();
+    lnRenderYear();
+    lnRenderWeek();
+    lnRenderTimeline();
+    lnRenderStats();
+  }
+
+  /* --- wiring -------------------------------------------------------------- */
+  function lnInit() {
+    var modal = document.getElementById('ln-modal');
+    if (!modal) return;
+
+    document.getElementById('ln-close').addEventListener('click', function () { modal.classList.remove('open'); });
+    modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('open'); });
+
+    document.getElementById('ln-moods').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-ln-mood]');
+      if (!b) return;
+      draft.mood = (draft.mood === b.dataset.lnMood) ? '' : b.dataset.lnMood;
+      lnRenderComposer();
+    });
+
+    var note = document.getElementById('ln-note');
+    note.addEventListener('input', function () {
+      if (note.value.length > MAX_NOTE) note.value = note.value.slice(0, MAX_NOTE);
+      draft.note = note.value;
+      document.getElementById('ln-count').textContent = (MAX_NOTE - draft.note.length) + '';
+      document.getElementById('ln-save').disabled = !(draft.pick || draft.mood || draft.note.trim());
+    });
+
+    document.querySelectorAll('#ln-kind button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        document.querySelectorAll('#ln-kind button').forEach(function (x) { x.classList.toggle('active', x === b); });
+        var q = document.getElementById('ln-search').value.trim();
+        if (q) lnSuggest(q);
+      });
+    });
+
+    var search = document.getElementById('ln-search');
+    search.addEventListener('input', function () {
+      clearTimeout(lnTimer);
+      var q = search.value.trim();
+      lnTimer = setTimeout(function () { lnSuggest(q); }, 220);
+    });
+    document.addEventListener('click', function (e) {
+      var s = document.getElementById('ln-sugg');
+      if (s && !s.contains(e.target) && e.target !== search) lnCloseSugg();
+    });
+
+    document.getElementById('ln-answer').addEventListener('input', function () {
+      draft.answer = { q: questionFor(editingKey), a: this.value.slice(0, MAX_NOTE) };
+    });
+
+    document.getElementById('ln-save').addEventListener('click', function () {
+      var a = document.getElementById('ln-answer').value.trim();
+      lnPut(editingKey, {
+        pick: draft.pick,
+        mood: draft.mood,
+        note: draft.note.trim(),
+        answer: a ? { q: questionFor(editingKey), a: a } : null
+      });
+      modal.classList.remove('open');
+      if (typeof toast === 'function') toast('Liner note saved');
+      if (typeof logActivity === 'function' && window.ICONS) {
+        logActivity(ICONS.disc, 'Wrote a liner note', draft.pick ? draft.pick.name : (draft.mood || ''));
+      }
+    });
+
+    document.getElementById('ln-delete').addEventListener('click', function () {
+      var all = lnAll();
+      delete all[editingKey];
+      lnSave(all);
+      modal.classList.remove('open');
+      lnRenderEverything();
+    });
+
+    var legend = document.getElementById('ln-legend');
+    if (legend) {
+      legend.innerHTML = MOODS.map(function (m) {
+        return '<span><i style="background:' + m.color + '"></i>' + m.label + '</span>';
+      }).join('');
+    }
+    var writeBtn = document.getElementById('ln-write-btn');
+    if (writeBtn) writeBtn.addEventListener('click', function () { lnOpen(lnToday()); });
+    var seeAll = document.getElementById('ln-card-all');
+    if (seeAll) seeAll.addEventListener('click', function () { if (window.goToView) window.goToView('diary'); });
+
+    window.openLinerNotes = lnOpen;
+    window.renderDiary = lnRenderEverything;
+    lnRenderEverything();
+  }
+
+  // The composer needs the modal to be present; this script sits at the end
+  // of <body>, so it is.
+  lnInit();
+
+})();
+</script>
+
+<!-- ================================================================
+     EARWORM — the title, letter by letter.
+
+     Daily Drop asks you to deduce a record from its attributes. This is
+     the other half: you already suspect what it is, now spell it. The
+     answer is the TITLE of a famous album or song, stripped to letters,
+     and the board is as wide as that title rather than a fixed five —
+     capped, because a nineteen-letter grid is unplayable on a phone.
+
+     Two modes. Daily is a pure function of the date, so everyone gets the
+     same one and it can be shared. Unlimited draws from the records YOU
+     have rated, which is the whole point of having a library — and falls
+     back to the famous pool if you haven't rated enough yet.
+
+     Clues are deliberately thin: the kind (album or song), the letter
+     count, and the genre. The artist is available on request, because
+     being stuck with no way forward is not difficulty, it's a dead end —
+     but taking it is recorded on the result.
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  var ROWS = 6;
+  var MIN_LEN = 4;
+  var MAX_LEN = 11; // a phone can show eleven columns; beyond that it's mush
+
+  /* --- pools ------------------------------------------------------------
+     Deliberately famous: a title you've never heard of is not a puzzle,
+     it's a slot machine. Reuses the same shape as Daily Drop's pools. */
+  var EW_ALBUMS = [
+    'Rumours|Fleetwood Mac', 'Thriller|Michael Jackson', 'Nevermind|Nirvana',
+    'Abbey Road|The Beatles', 'Purple Rain|Prince', 'Graduation|Kanye West',
+    'Illmatic|Nas', 'Blonde|Frank Ocean', 'Lemonade|Beyonce',
+    'Reputation|Taylor Swift', 'Midnights|Taylor Swift', 'Folklore|Taylor Swift',
+    'Views|Drake', 'Scorpion|Drake', 'Utopia|Travis Scott',
+    'Astroworld|Travis Scott', 'Damn|Kendrick Lamar', 'Sour|Olivia Rodrigo',
+    'Divide|Ed Sheeran', 'Parachutes|Coldplay', 'Ok Computer|Radiohead',
+    'Kid A|Radiohead', 'Hybrid Theory|Linkin Park', 'Meteora|Linkin Park',
+    'Nothing Was The Same|Drake', 'Channel Orange|Frank Ocean',
+    'Igor|Tyler The Creator', 'Flower Boy|Tyler The Creator',
+    'Ctrl|SZA', 'Sos|SZA', 'Renaissance|Beyonce', 'Dangerous Woman|Ariana Grande',
+    'Thank U Next|Ariana Grande', 'Future Nostalgia|Dua Lipa',
+    'After Hours|The Weeknd', 'Starboy|The Weeknd', 'Beauty Behind The Madness|The Weeknd',
+    'Back In Black|AC DC', 'Hotel California|Eagles', 'The Wall|Pink Floyd',
+    'Animals|Pink Floyd', 'Ready To Die|The Notorious BIG', 'The Chronic|Dr Dre',
+    'Doggystyle|Snoop Dogg', 'Stankonia|Outkast', 'Aquemini|Outkast',
+    'Californication|Red Hot Chili Peppers', 'Bad|Michael Jackson',
+    'Off The Wall|Michael Jackson', 'Ten|Pearl Jam', 'Dookie|Green Day',
+    'American Idiot|Green Day', 'Is This It|The Strokes', 'Whatever People Say I Am|Arctic Monkeys',
+    'Am|Arctic Monkeys', 'Definitely Maybe|Oasis', 'Blue|Joni Mitchell',
+    'Rubber Soul|The Beatles', 'Revolver|The Beatles', 'Let It Be|The Beatles',
+    'Born To Run|Bruce Springsteen', 'Nebraska|Bruce Springsteen',
+    'Legend|Bob Marley', 'Exodus|Bob Marley', 'Innervisions|Stevie Wonder',
+    'Kind Of Blue|Miles Davis', 'Blue Train|John Coltrane', 'Grace|Jeff Buckley',
+    'Homework|Daft Punk', 'Discovery|Daft Punk', 'Random Access Memories|Daft Punk',
+    'Melodrama|Lorde', 'Pure Heroine|Lorde', 'Fine Line|Harry Styles',
+    'Harrys House|Harry Styles', 'Positions|Ariana Grande', 'Happier Than Ever|Billie Eilish',
+    'Hit Me Hard And Soft|Billie Eilish', 'Norman Fucking Rockwell|Lana Del Rey',
+    'Born To Die|Lana Del Rey', 'Ultraviolence|Lana Del Rey', 'Igor|Tyler The Creator',
+    'Take Care|Drake', 'Certified Lover Boy|Drake', 'Her Loss|Drake',
+    'Trench|Twenty One Pilots', 'Blurryface|Twenty One Pilots',
+    'Currents|Tame Impala', 'Lonerism|Tame Impala', 'The Slow Rush|Tame Impala'
+  ];
+  var EW_SONGS = [
+    'Bohemian Rhapsody|Queen', 'Billie Jean|Michael Jackson', 'Thriller|Michael Jackson',
+    'Smells Like Teen Spirit|Nirvana', 'Imagine|John Lennon', 'Yesterday|The Beatles',
+    'Hey Jude|The Beatles', 'Let It Be|The Beatles', 'Creep|Radiohead',
+    'Wonderwall|Oasis', 'Yellow|Coldplay', 'Fix You|Coldplay',
+    'Hallelujah|Jeff Buckley', 'Hotel California|Eagles', 'Purple Rain|Prince',
+    'Superstition|Stevie Wonder', 'Respect|Aretha Franklin', 'Redemption Song|Bob Marley',
+    'No Woman No Cry|Bob Marley', 'Rolling In The Deep|Adele', 'Someone Like You|Adele',
+    'Hello|Adele', 'Shape Of You|Ed Sheeran', 'Perfect|Ed Sheeran',
+    'Blinding Lights|The Weeknd', 'Starboy|The Weeknd', 'Levitating|Dua Lipa',
+    'Dont Start Now|Dua Lipa', 'Bad Guy|Billie Eilish', 'Ocean Eyes|Billie Eilish',
+    'Anti Hero|Taylor Swift', 'Blank Space|Taylor Swift', 'Cruel Summer|Taylor Swift',
+    'Shake It Off|Taylor Swift', 'Style|Taylor Swift', 'Lover|Taylor Swift',
+    'Hotline Bling|Drake', 'Gods Plan|Drake', 'One Dance|Drake', 'Passionfruit|Drake',
+    'Sicko Mode|Travis Scott', 'Goosebumps|Travis Scott', 'Humble|Kendrick Lamar',
+    'Alright|Kendrick Lamar', 'Money Trees|Kendrick Lamar', 'Stronger|Kanye West',
+    'Heartless|Kanye West', 'Runaway|Kanye West', 'Gold Digger|Kanye West',
+    'Lose Yourself|Eminem', 'Stan|Eminem', 'Without Me|Eminem',
+    'Juicy|The Notorious BIG', 'California Love|2Pac', 'In Da Club|50 Cent',
+    'Crazy In Love|Beyonce', 'Halo|Beyonce', 'Formation|Beyonce',
+    'Umbrella|Rihanna', 'Diamonds|Rihanna', 'We Found Love|Rihanna',
+    'Poker Face|Lady Gaga', 'Bad Romance|Lady Gaga', 'Shallow|Lady Gaga',
+    'Uptown Funk|Mark Ronson', 'Get Lucky|Daft Punk', 'One More Time|Daft Punk',
+    'Seven Nation Army|The White Stripes', 'Mr Brightside|The Killers',
+    'Take Me Out|Franz Ferdinand', 'Do I Wanna Know|Arctic Monkeys',
+    '505|Arctic Monkeys', 'Riptide|Vance Joy', 'Ho Hey|The Lumineers',
+    'Radioactive|Imagine Dragons', 'Believer|Imagine Dragons',
+    'Counting Stars|OneRepublic', 'Viva La Vida|Coldplay', 'The Scientist|Coldplay',
+    'Karma Police|Radiohead', 'No Surprises|Radiohead', 'Everlong|Foo Fighters',
+    'The Less I Know The Better|Tame Impala', 'Redbone|Childish Gambino',
+    'Nights|Frank Ocean', 'Pink Matter|Frank Ocean', 'Good News|Mac Miller',
+    'Self Care|Mac Miller', 'Kill Bill|SZA', 'Good Days|SZA',
+    'Vampire|Olivia Rodrigo', 'Drivers License|Olivia Rodrigo', 'Good 4 U|Olivia Rodrigo',
+    'Flowers|Miley Cyrus', 'As It Was|Harry Styles', 'Watermelon Sugar|Harry Styles'
+  ];
+
+  /* --- helpers ---------------------------------------------------------- */
+  function ewToday() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function ewHash(s) {
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return Math.abs(h);
+  }
+  // Letters only: spaces, punctuation and accents all disappear, so the
+  // board is one clean run of characters and "Don't Start Now" is eleven
+  // letters rather than a typography quiz.
+  function ewLetters(s) {
+    return String(s || '')
+      .normalize('NFD')
+      .toUpperCase().replace(/[^A-Z]/g, '');
+  }
+  function ewPlayable(title) {
+    var L = ewLetters(title);
+    return L.length >= MIN_LEN && L.length <= MAX_LEN;
+  }
+
+  var ewState = {
+    mode: 'daily',          // 'daily' | 'unlimited'
+    answer: '',             // letters only
+    display: '',            // the title as written
+    artist: '',
+    kind: 'album',
+    genre: '',
+    art: '',
+    rows: [],               // array of {letters:[], marks:[]}
+    current: '',
+    done: false,
+    won: false,
+    hinted: false,
+    busy: false
+  };
+
+  var el = {};
+
+  /* --- picking the answer ------------------------------------------------ */
+  function ewPoolPick(seed) {
+    // Interleave albums and songs so a run of days doesn't feel one-sided.
+    var pool = (ewHash(seed + 'kind') % 2 === 0) ? EW_ALBUMS : EW_SONGS;
+    var kind = pool === EW_ALBUMS ? 'album' : 'song';
+    var usable = pool.filter(function (e) { return ewPlayable(e.split('|')[0]); });
+    var entry = usable[ewHash(seed) % usable.length];
+    var parts = entry.split('|');
+    return { title: parts[0], artist: parts[1], kind: kind };
+  }
+
+  function ewLibraryPick() {
+    // Your own rated records. Anything unplayable by length is skipped
+    // rather than truncated — a half title is not a puzzle.
+    var out = [];
+    try {
+      var albums = JSON.parse(localStorage.getItem('crate_albums_v1') || '{}');
+      Object.keys(albums).forEach(function (id) {
+        var a = albums[id];
+        if (a && a.name && ewPlayable(a.name)) {
+          out.push({ title: a.name, artist: a.artist || '', kind: 'album', art: a.art || '' });
+        }
+      });
+      var songs = JSON.parse(localStorage.getItem('crate_songs_v1') || '{}');
+      Object.keys(songs).forEach(function (id) {
+        var s = songs[id];
+        if (s && s.name && ewPlayable(s.name)) {
+          out.push({ title: s.name, artist: s.artist || '', kind: 'song', art: s.art || '' });
+        }
+      });
+    } catch (e) {}
+    if (!out.length) return null;
+    return out[Math.floor(Math.random() * out.length)];
+  }
+
+  async function ewLoadAnswer() {
+    ewState.busy = true;
+    ewRenderStatus('Loading…');
+    var pick;
+    if (ewState.mode === 'unlimited') {
+      pick = ewLibraryPick();
+      if (!pick) {
+        // Not enough rated yet — say so plainly and use the famous pool
+        // instead of showing an empty game.
+        pick = ewPoolPick('free' + Date.now() + Math.random());
+        ewState.fromPool = true;
+      } else {
+        ewState.fromPool = false;
+      }
+    } else {
+      pick = ewPoolPick(ewToday());
+      ewState.fromPool = false;
+    }
+
+    ewState.display = pick.title;
+    ewState.answer = ewLetters(pick.title);
+    ewState.artist = pick.artist;
+    ewState.kind = pick.kind;
+    ewState.art = pick.art || '';
+    ewState.genre = '';
+
+    // Genre comes from the same Apple lookup the Daily Drop uses, so the
+    // two games label things the same way.
+    try {
+      if (window.VinalGenre && pick.artist) ewState.genre = await window.VinalGenre(pick.artist);
+    } catch (e) {}
+
+    ewState.rows = [];
+    ewState.current = '';
+    ewState.done = false;
+    ewState.won = false;
+    ewState.hinted = false;
+    ewState.busy = false;
+
+    if (ewState.mode === 'daily') ewRestoreDaily();
+    ewRenderAll();
+  }
+
+  /* --- persistence (daily only; unlimited is meant to be endless) -------- */
+  function ewKey() { return 'vinal_earworm_' + ewToday(); }
+  function ewRestoreDaily() {
+    try {
+      var st = JSON.parse(localStorage.getItem(ewKey()));
+      if (!st || st.answer !== ewState.answer) return;
+      st.guesses.forEach(function (g) { ewState.rows.push(ewScore(g)); });
+      ewState.done = st.done; ewState.won = st.won; ewState.hinted = !!st.hinted;
+    } catch (e) {}
+  }
+  function ewSaveDaily() {
+    if (ewState.mode !== 'daily') return;
+    try {
+      localStorage.setItem(ewKey(), JSON.stringify({
+        answer: ewState.answer,
+        guesses: ewState.rows.map(function (r) { return r.letters.join(''); }),
+        done: ewState.done, won: ewState.won, hinted: ewState.hinted
+      }));
+    } catch (e) {}
+  }
+
+  /* --- scoring ----------------------------------------------------------
+     Two passes, the same as the game everyone already knows: exact
+     positions first, then the leftovers are matched against what's
+     actually still unaccounted for. One pass would mark the second L in
+     "HELLO" amber against an answer with a single L. */
+  function ewScore(guess) {
+    var ans = ewState.answer.split('');
+    var g = guess.split('');
+    var marks = new Array(g.length).fill('absent');
+    var pool = {};
+    for (var i = 0; i < g.length; i++) {
+      if (g[i] === ans[i]) marks[i] = 'exact';
+      else pool[ans[i]] = (pool[ans[i]] || 0) + 1;
+    }
+    for (var j = 0; j < g.length; j++) {
+      if (marks[j] === 'exact') continue;
+      if (pool[g[j]]) { marks[j] = 'present'; pool[g[j]]--; }
+    }
+    return { letters: g, marks: marks };
+  }
+
+  /* --- keyboard state ---------------------------------------------------- */
+  function ewKeyStates() {
+    var rank = { absent: 0, present: 1, exact: 2 };
+    var best = {};
+    ewState.rows.forEach(function (r) {
+      r.letters.forEach(function (ch, i) {
+        var m = r.marks[i];
+        if (best[ch] === undefined || rank[m] > rank[best[ch]]) best[ch] = m;
+      });
+    });
+    return best;
+  }
+
+  /* --- rendering --------------------------------------------------------- */
+  function ewRenderStatus(txt) { if (el.status) el.status.textContent = txt; }
+
+  function ewRenderAll() {
+    ewRenderBoard();
+    ewRenderKeyboard();
+    ewRenderClues();
+    ewRenderResult();
+  }
+
+  function ewRenderBoard() {
+    var n = ewState.answer.length;
+    if (!n) { el.board.innerHTML = ''; return; }
+    // The grid is as wide as the title, so the cell size has to come down
+    // as titles get longer or eleven columns won't fit a phone.
+    el.board.style.setProperty('--ew-cols', n);
+    var html = '';
+    for (var r = 0; r < ROWS; r++) {
+      var row = ewState.rows[r];
+      html += '<div class="ew-row">';
+      for (var c = 0; c < n; c++) {
+        if (row) {
+          html += '<div class="ew-cell ' + row.marks[c] + '" style="animation-delay:' + (c * 0.07) + 's">' + row.letters[c] + '</div>';
+        } else if (r === ewState.rows.length && !ewState.done) {
+          var ch = ewState.current[c] || '';
+          html += '<div class="ew-cell' + (ch ? ' filled' : '') + '">' + ch + '</div>';
+        } else {
+          html += '<div class="ew-cell"></div>';
+        }
+      }
+      html += '</div>';
+    }
+    el.board.innerHTML = html;
+  }
+
+  var EW_KEYS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+  function ewRenderKeyboard() {
+    var st = ewKeyStates();
+    var html = '';
+    EW_KEYS.forEach(function (row, i) {
+      html += '<div class="ew-krow">';
+      if (i === 2) html += '<button class="ew-key ew-wide" data-ew-key="ENTER">Enter</button>';
+      row.split('').forEach(function (ch) {
+        html += '<button class="ew-key ' + (st[ch] || '') + '" data-ew-key="' + ch + '">' + ch + '</button>';
+      });
+      if (i === 2) html += '<button class="ew-key ew-wide" data-ew-key="BACK">&#9003;</button>';
+      html += '</div>';
+    });
+    el.keys.innerHTML = html;
+  }
+
+  function ewRenderClues() {
+    var bits = [];
+    bits.push('<span class="ew-clue"><b>' + (ewState.kind === 'album' ? 'Album' : 'Song') + '</b></span>');
+    bits.push('<span class="ew-clue"><b>' + ewState.answer.length + '</b> letters</span>');
+    if (ewState.genre) bits.push('<span class="ew-clue">' + esc(ewState.genre) + '</span>');
+    if (ewState.hinted || ewState.done) {
+      bits.push('<span class="ew-clue ew-clue-hint">' + esc(ewState.artist) + '</span>');
+    }
+    el.clues.innerHTML = bits.join('');
+    el.hintBtn.style.display = (ewState.hinted || ewState.done || !ewState.artist) ? 'none' : '';
+    if (ewState.mode === 'unlimited' && ewState.fromPool) {
+      ewRenderStatus('Rate a few more records and these come from your own library.');
+    } else if (!ewState.done) {
+      var left = ROWS - ewState.rows.length;
+      ewRenderStatus(left + ' guess' + (left === 1 ? '' : 'es') + ' left');
+    }
+  }
+
+  function ewRenderResult() {
+    if (!ewState.done) { el.result.innerHTML = ''; return; }
+    var grid = ewShareGrid();
+    el.result.innerHTML =
+      '<div class="ew-result">' +
+        (ewState.art ? '<img class="ew-result-art" src="' + esc(ewState.art) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
+        '<h3>' + (ewState.won ? 'Got it — ' : 'It was ') + esc(ewState.display) + '</h3>' +
+        '<p>' + esc(ewState.artist) + (ewState.genre ? ' · ' + esc(ewState.genre) : '') + '</p>' +
+        (ewState.mode === 'daily' ? '<div class="drop-share">' + esc(grid) + '</div>' : '') +
+        '<div class="ew-result-actions">' +
+          (ewState.mode === 'daily'
+            ? '<button class="btn-primary" id="ew-copy">Copy result</button>'
+            : '<button class="btn-primary" id="ew-again">Another one</button>') +
+        '</div>' +
+      '</div>';
+    var copy = document.getElementById('ew-copy');
+    if (copy) copy.addEventListener('click', function () {
+      if (navigator.clipboard) navigator.clipboard.writeText(ewShareGrid());
+      copy.textContent = 'Copied ✓';
+      setTimeout(function () { copy.textContent = 'Copy result'; }, 1600);
+    });
+    var again = document.getElementById('ew-again');
+    if (again) again.addEventListener('click', function () { ewLoadAnswer(); });
+  }
+
+  function ewShareGrid() {
+    var head = 'Vinal Earworm — ' + ewToday() + '\n' +
+      (ewState.won ? ewState.rows.length : 'X') + '/' + ROWS +
+      (ewState.hinted ? ' (hint)' : '') + '\n';
+    var body = ewState.rows.map(function (r) {
+      return r.marks.map(function (m) {
+        return m === 'exact' ? '🟩' : (m === 'present' ? '🟨' : '⬛');
+      }).join('');
+    }).join('\n');
+    return head + body + '\nwildcrate.xyz';
+  }
+
+  /* --- input ------------------------------------------------------------- */
+  function ewType(ch) {
+    if (ewState.done || ewState.busy) return;
+    if (ewState.current.length >= ewState.answer.length) return;
+    ewState.current += ch;
+    ewRenderBoard();
+  }
+  function ewBack() {
+    if (ewState.done || ewState.busy) return;
+    ewState.current = ewState.current.slice(0, -1);
+    ewRenderBoard();
+  }
+  function ewSubmit() {
+    if (ewState.done || ewState.busy) return;
+    if (ewState.current.length !== ewState.answer.length) {
+      // No dictionary check: titles aren't words, and rejecting "SICKOMODE"
+      // for not being in a word list would be absurd. Length is the only
+      // rule, so say so rather than silently ignoring the key.
+      el.board.classList.remove('ew-shake');
+      void el.board.offsetWidth;
+      el.board.classList.add('ew-shake');
+      ewRenderStatus('Needs all ' + ewState.answer.length + ' letters');
+      return;
+    }
+    var scored = ewScore(ewState.current);
+    ewState.rows.push(scored);
+    ewState.won = ewState.current === ewState.answer;
+    ewState.current = '';
+    if (ewState.won || ewState.rows.length >= ROWS) ewState.done = true;
+    ewSaveDaily();
+    ewRenderAll();
+
+    if (ewState.done && ewState.won) {
+      if (typeof celebrate === 'function') celebrate('Earworm solved', ewState.display + ' — in ' + ewState.rows.length);
+      if (ewState.mode === 'daily' && window.Wallet) {
+        // Fewer guesses pays more; a hint halves it.
+        var pay = Math.max(8, 50 - (ewState.rows.length - 1) * 7);
+        if (ewState.hinted) pay = Math.round(pay / 2);
+        Wallet.awardDiscs(pay, { reason: 'Earworm' });
+      }
+      if (typeof logActivity === 'function' && window.ICONS) logActivity(ICONS.trophy, 'Solved Earworm', ewState.display);
+    }
+  }
+
+  function ewOnKeydown(e) {
+    if (!el.modal || !el.modal.classList.contains('open')) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'Enter') { e.preventDefault(); ewSubmit(); return; }
+    if (e.key === 'Backspace') { e.preventDefault(); ewBack(); return; }
+    var ch = e.key.toUpperCase();
+    if (ch.length === 1 && ch >= 'A' && ch <= 'Z') { e.preventDefault(); ewType(ch); }
+  }
+
+  /* --- wiring ------------------------------------------------------------ */
+  function ewSetMode(m) {
+    if (ewState.mode === m) return;
+    ewState.mode = m;
+    document.querySelectorAll('#ew-mode button').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.ewMode === m);
+    });
+    ewLoadAnswer();
+  }
+
+  function ewOpen() {
+    el.modal.classList.add('open');
+    if (!ewState.answer) ewLoadAnswer();
+  }
+
+  function ewInit() {
+    el.modal = document.getElementById('ew-modal');
+    if (!el.modal) return;
+    el.board = document.getElementById('ew-board');
+    el.keys = document.getElementById('ew-keys');
+    el.clues = document.getElementById('ew-clues');
+    el.status = document.getElementById('ew-status');
+    el.result = document.getElementById('ew-result');
+    el.hintBtn = document.getElementById('ew-hint');
+
+    document.getElementById('ew-close').addEventListener('click', function () { el.modal.classList.remove('open'); });
+    el.modal.addEventListener('click', function (e) { if (e.target === el.modal) el.modal.classList.remove('open'); });
+    document.querySelectorAll('#ew-mode button').forEach(function (b) {
+      b.addEventListener('click', function () { ewSetMode(b.dataset.ewMode); });
+    });
+    el.keys.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-ew-key]');
+      if (!b) return;
+      var k = b.dataset.ewKey;
+      if (k === 'ENTER') ewSubmit();
+      else if (k === 'BACK') ewBack();
+      else ewType(k);
+    });
+    el.hintBtn.addEventListener('click', function () {
+      ewState.hinted = true;
+      ewSaveDaily();
+      ewRenderClues();
+    });
+    document.addEventListener('keydown', ewOnKeydown);
+
+    var card = document.getElementById('ew-card');
+    if (card) card.addEventListener('click', ewOpen);
+    window.openEarworm = ewOpen;
+  }
+
+  ewInit();
+})();
+</script>
+
+<!-- ================================================================
      Dismiss choreography — the splash transforms into the dashboard.
 
      Rather than fading out and revealing a static page, the three things
@@ -7887,15 +9272,12 @@ function playDismissAnimation(gateEl, callback) {
     gate.addEventListener('pointerdown', tryPlay);
     video.addEventListener('canplay', tryPlay);
 
-    // Don't take play()'s word for it — check the clock actually moved.
-    var seen = 0;
-    setTimeout(function () { seen = video.currentTime; }, 1200);
-    setTimeout(function () {
-      if (video.currentTime <= seen + 0.02) {
-        var w = document.getElementById('splash-video-wrap');
-        if (w) w.classList.add('splash-still');
-      }
-    }, 2100);
+    // A stall check used to live here, comparing currentTime at 1.2s and
+    // 2.1s. The clip loops every 3.04s, so whenever the loop wrapped inside
+    // that window the later reading was SMALLER than the earlier one and a
+    // perfectly healthy video was declared stalled — about a one-in-three
+    // chance per load. Nothing depends on the answer now that the sweep
+    // animates independently, so there is nothing left to get wrong.
   }
 
   // bfcache restore (browser back/forward within the tab) reuses the exact
@@ -8532,6 +9914,9 @@ function playDismissAnimation(gateEl, callback) {
     if (card) card.addEventListener('click', openDrop);
     updateCardStatus();
     window.openDailyDrop = openDrop;
+    // Earworm shows the same genre label, so it uses the same lookup (and
+    // therefore the same localStorage cache) rather than a second one.
+    window.VinalGenre = artistGenre;
   }
 
   init();
