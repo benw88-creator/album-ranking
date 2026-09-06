@@ -654,11 +654,37 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
 .drop-tile.hit  { background: var(--green); color: #06210f; border-color: var(--green); }
 .drop-tile.near { background: var(--yellow); color: #241a00; border-color: var(--yellow); }
 .drop-tile.miss { background: var(--surface-4); color: var(--text-dim); }
+/* "none" is not a wrong answer — it's an attribute we couldn't look up for
+   this record. It has to read as inert, or an unknown genre looks like a
+   confident "no" and sends you off in the wrong direction. */
+.drop-tile.none {
+  background: var(--surface-3); color: var(--text-faint);
+  border: 1px dashed var(--border-strong);
+}
 .drop-tile-label {
   font: 9px/1 var(--font-mono); letter-spacing: 0.09em;
   text-transform: uppercase; opacity: 0.75; margin-bottom: 3px;
 }
-.drop-tile-val { font-family: var(--font-mono); font-weight: 600; font-size: 13px; }
+.drop-tile-val {
+  font-family: var(--font-mono); font-weight: 600; font-size: 13px;
+  line-height: 1.15; word-break: break-word;
+}
+/* Genres and country names share the same narrow column as a four-digit
+   year, so long values step down a size rather than overflow it. */
+.drop-tile-val.sm { font-size: 10.5px; letter-spacing: -0.01em; }
+
+.drop-legend {
+  display: flex; flex-wrap: wrap; gap: 5px 14px; align-items: center;
+  font: 11px/1.4 var(--font-mono); color: var(--text-faint);
+  margin: -6px 0 14px;
+}
+.drop-legend b {
+  display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+  margin-right: 5px; vertical-align: -1px;
+}
+.drop-legend .lg-hit  { background: var(--green); }
+.drop-legend .lg-near { background: var(--yellow); }
+.drop-legend .lg-miss { background: var(--surface-4); }
 
 .drop-result { text-align: center; padding: 18px 8px 4px; }
 .drop-result-art { width: 108px; height: 108px; border-radius: 12px; object-fit: cover; margin-bottom: 12px; box-shadow: 0 16px 40px rgba(0,0,0,0.5); }
@@ -673,6 +699,8 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
 @media (max-width: 520px) {
   .drop-tiles { grid-template-columns: repeat(5, 1fr); gap: 4px; }
   .drop-tile-val { font-size: 11px; }
+  .drop-tile-val.sm { font-size: 9px; }
+  .drop-legend { font-size: 10px; gap: 4px 10px; }
 }
 /* ---- SHOP ---- */
 .shop-balance {
@@ -2810,6 +2838,13 @@ window.ICONS = {
       <span class="drop-date" id="drop-date"></span>
     </div>
     <div class="drop-guesses-left" id="drop-left"></div>
+    <div class="drop-legend">
+      <span><b class="lg-hit"></b>exact</span>
+      <span><b class="lg-near"></b>close</span>
+      <span><b class="lg-miss"></b>no</span>
+      <span>&uarr; answer is higher</span>
+      <span>&darr; answer is lower</span>
+    </div>
 
     <div class="drop-search" id="drop-search">
       <input id="drop-input" class="g-input" type="text" placeholder="Guess an album&hellip;" autocomplete="off">
@@ -7230,7 +7265,7 @@ function playDismissAnimation(gateEl, callback) {
 
      One album puzzle and one song puzzle per day, six guesses each.
      Every guess is scored against the answer on five attributes
-     (artist / year / genre / size / popularity); green means matched,
+     (artist / year / genre / size / origin); green means matched,
      amber means close, and arrows say which way to move. The answer's
      own values are never printed — only the guess's — so a row leaks
      exactly as much as a Wordle row does.
@@ -7363,6 +7398,32 @@ function playDismissAnimation(gateEl, callback) {
       .replace(/\(.*?\)|\[.*?\]/g, '')       // drop "(Deluxe Edition)" etc.
       .replace(/[^a-z0-9]+/g, ' ').trim();
   }
+  /* The title with its edition furniture removed, for display and for
+     re-querying. normName() already ignores brackets when comparing, but the
+     search query and the row label both want a clean human title. */
+  function baseName(s) {
+    var out = String(s || '')
+      /* "(Remastered)", "[Deluxe Edition]", "(Super Deluxe)" — but only when
+         the brackets actually contain an edition word, so real titles like
+         "(What's the Story) Morning Glory?" survive intact. */
+      .replace(/\s*[({[][^)\]}]*\b(remaster(ed)?|deluxe|expanded|anniversary|edition|reissue|version|mono|stereo|bonus|super|legacy|explicit|special)\b[^)\]}]*[)\]}]/gi, '')
+      /* "Rumours - 2004 Remaster" */
+      .replace(/\s*[-–—]\s*[^-–—]*\b(remaster(ed)?|deluxe|expanded|anniversary|edition|reissue|mono|stereo|bonus)\b[^-–—]*$/gi, '')
+      .trim();
+    return out || String(s || '');
+  }
+
+  /* Two records are the same *work* if they are the same release, or the same
+     title by the same artist. Guessing "Nevermind (Remastered)" when the
+     answer is "Nevermind" has to count as solving it — the player named the
+     record, and which master Spotify surfaced is not their problem. */
+  function workKey(x) { return (x.artistId || '') + '|' + normName(x.name); }
+  function sameWork(a, b) {
+    if (!a || !b) return false;
+    if (a.id === b.id) return true;
+    return !!a.artistId && a.artistId === b.artistId && normName(a.name) === normName(b.name);
+  }
+
   function bestEdition(items, wanted) {
     if (!items || !items.length) return null;
     var want = normName(wanted);
@@ -7383,7 +7444,7 @@ function playDismissAnimation(gateEl, callback) {
     if (detailCache['al' + id]) return detailCache['al' + id];
     var full = await spotifyGet('/albums/' + id);
     if (!full || !full.id) return null;
-    var genres = await artistGenres(full.artists && full.artists[0] && full.artists[0].id);
+    var facts = await artistFacts(full.artists && full.artists[0] && full.artists[0].id);
     var out = {
       kind: 'album', id: full.id, name: full.name,
       artist: (full.artists && full.artists[0] && full.artists[0].name) || '',
@@ -7391,12 +7452,24 @@ function playDismissAnimation(gateEl, callback) {
       art: (full.images && full.images[0] && full.images[0].url) || '',
       year: parseInt(String(full.release_date || '').slice(0, 4), 10) || 0,
       size: full.total_tracks || 0,
-      pop: typeof full.popularity === 'number' ? full.popularity : 0,
-      genres: genres
+      genres: facts.genres,
+      country: facts.country
     };
     detailCache['al' + id] = out;
     return out;
   }
+  /* A guess picked off the dropdown may be a 2011 reissue. Re-resolve it
+     through the same earliest-edition search the answer uses, so the Year
+     tile is scored on 1991 and not on when Geffen last repackaged it. */
+  async function canonicalAlbum(it) {
+    var artist = (it.artists && it.artists[0] && it.artists[0].name) || '';
+    try {
+      var canon = await resolveAlbum(baseName(it.name), artist);
+      if (canon) return canon;
+    } catch (e) {}
+    return albumDetails(it.id);
+  }
+
   async function resolveTrack(name, artist) {
     var q = artist ? ('track:"' + name + '" artist:"' + artist + '"') : name;
     var data = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: 'track', limit: '10' }).toString(), { priority: true });
@@ -7411,7 +7484,7 @@ function playDismissAnimation(gateEl, callback) {
   }
   async function trackFrom(t) {
     if (detailCache['tr' + t.id]) return detailCache['tr' + t.id];
-    var genres = await artistGenres(t.artists && t.artists[0] && t.artists[0].id);
+    var facts = await artistFacts(t.artists && t.artists[0] && t.artists[0].id);
     var out = {
       kind: 'song', id: t.id, name: t.name,
       artist: (t.artists && t.artists[0] && t.artists[0].name) || '',
@@ -7419,15 +7492,89 @@ function playDismissAnimation(gateEl, callback) {
       art: (t.album && t.album.images && t.album.images[0] && t.album.images[0].url) || '',
       year: parseInt(String((t.album && t.album.release_date) || '').slice(0, 4), 10) || 0,
       size: Math.round((t.duration_ms || 0) / 1000),
-      pop: typeof t.popularity === 'number' ? t.popularity : 0,
-      genres: genres
+      genres: facts.genres,
+      country: facts.country
     };
     detailCache['tr' + t.id] = out;
     return out;
   }
-  async function artistGenres(id) {
-    if (!id) return [];
-    try { var a = await spotifyGet('/artists/' + id); return (a && a.genres) || []; } catch (e) { return []; }
+  /* --- artist facts (MusicBrainz) ---------------------------------------
+     Spotify no longer returns genres, popularity or follower counts to this
+     app — an artist object now carries little more than a name and an image
+     — so the two clue columns built on those fields were scoring against
+     values that were permanently zero, and a wrong guess could come back
+     green. MusicBrainz replaces them, and is the better source anyway: its
+     Spotify-URL relation maps a Spotify artist id to one exact MBID, so the
+     60s UK Nirvana can never be mistaken for the Seattle one the way a
+     name search would, and the artist record carries community genres plus
+     a country of origin.
+
+     It is a polite client. One request at a time with a 1.1s gap (their
+     published anonymous ceiling is 1/sec), and every answer — misses
+     included — is cached in localStorage, so the only cost is the first
+     time anyone in the world of this browser meets a given artist. */
+  var MB_TTL_OK = 30 * 24 * 60 * 60 * 1000;
+  var MB_TTL_FAIL = 6 * 60 * 60 * 1000;
+  var NO_FACTS = { genres: [], country: '' };
+  var mbMem = {}, mbChain = Promise.resolve(), mbLast = 0;
+
+  function mbCacheRead(id) {
+    try { var o = JSON.parse(localStorage.getItem('vmb:' + id)); if (o && o.x > Date.now()) return o.d; } catch (e) {}
+    return null;
+  }
+  function mbCacheWrite(id, data, ok) {
+    try {
+      localStorage.setItem('vmb:' + id, JSON.stringify({ d: data, x: Date.now() + (ok ? MB_TTL_OK : MB_TTL_FAIL) }));
+    } catch (e) {}
+  }
+  function mbGet(path) {
+    /* Serialised through a single promise chain so two quick guesses can't
+       fire concurrently and earn a 503. Never rejects — a failed lookup is
+       a missing clue, not a broken game. */
+    mbChain = mbChain.then(async function () {
+      var gap = 1100 - (Date.now() - mbLast);
+      if (gap > 0) await new Promise(function (r) { setTimeout(r, gap); });
+      mbLast = Date.now();
+      var ctrl = new AbortController();
+      var to = setTimeout(function () { ctrl.abort(); }, 8000);
+      try {
+        var res = await fetch('https://musicbrainz.org/ws/2' + path, { signal: ctrl.signal, headers: { Accept: 'application/json' } });
+        return res.ok ? await res.json() : null;
+      } catch (e) { return null; } finally { clearTimeout(to); }
+    });
+    return mbChain;
+  }
+
+  async function artistFacts(spotifyId) {
+    if (!spotifyId) return NO_FACTS;
+    if (mbMem[spotifyId]) return mbMem[spotifyId];
+    var cached = mbCacheRead(spotifyId);
+    if (cached) { mbMem[spotifyId] = cached; return cached; }
+
+    var link = await mbGet('/url?resource=' + encodeURIComponent('https://open.spotify.com/artist/' + spotifyId) + '&inc=artist-rels&fmt=json');
+    var rel = link && (link.relations || []).filter(function (r) { return r.artist; })[0];
+    var mbid = rel && rel.artist && rel.artist.id;
+    if (!mbid) { mbCacheWrite(spotifyId, NO_FACTS, false); return NO_FACTS; }
+
+    var a = await mbGet('/artist/' + mbid + '?inc=genres+tags&fmt=json');
+    if (!a) { mbCacheWrite(spotifyId, NO_FACTS, false); return NO_FACTS; }
+
+    /* Curated genres first, most-voted first. Where an artist has none, fall
+       back to the community tag cloud with the decade and habit tags
+       ("90s", "seen live", "favourites") filtered out. */
+    var byVotes = function (x, y) { return (y.count || 0) - (x.count || 0); };
+    var genres = (a.genres || []).slice().sort(byVotes).map(function (g) { return g.name; });
+    if (!genres.length) {
+      genres = (a.tags || []).slice().sort(byVotes).map(function (t) { return t.name; })
+        .filter(function (n) { return !/^[0-9]+s?$|^seen live$|^favou?rite/i.test(n); });
+    }
+    var out = {
+      genres: genres.slice(0, 6),
+      country: a.country || (a.area && a.area['iso-3166-1-codes'] && a.area['iso-3166-1-codes'][0]) || ''
+    };
+    mbMem[spotifyId] = out;
+    mbCacheWrite(spotifyId, out, !!(out.genres.length || out.country));
+    return out;
   }
 
   /* --- scoring ----------------------------------------------------------- */
@@ -7436,29 +7583,77 @@ function playDismissAnimation(gateEl, callback) {
     var state = abs <= hitWithin ? 'hit' : (abs <= nearWithin ? 'near' : 'miss');
     return { state: state, dir: state === 'hit' ? '' : (d < 0 ? ' ↑' : ' ↓') };
   }
+  /* Artists carry several genres each, so the tile reports the one that
+     actually connected rather than the guess's top genre — otherwise a green
+     "Pop" tile on a match made through "dance pop" reads as a lie. */
   function genreScore(g, t) {
-    if (!g.length || !t.length) return { state: 'miss', dir: '' };
-    var gs = g.map(function (x) { return x.toLowerCase(); });
+    if (!g.length || !t.length) return { state: 'none', label: '' };
     var ts = t.map(function (x) { return x.toLowerCase(); });
-    if (gs.some(function (x) { return ts.indexOf(x) !== -1; })) return { state: 'hit', dir: '' };
+    for (var i = 0; i < g.length; i++) {
+      if (ts.indexOf(g[i].toLowerCase()) !== -1) return { state: 'hit', label: g[i] };
+    }
     /* Partial credit for a shared word: "indie rock" vs "alternative rock". */
     var words = {};
     ts.forEach(function (s) { s.split(/[\s-]+/).forEach(function (w) { if (w.length > 2) words[w] = 1; }); });
-    var shares = gs.some(function (s) { return s.split(/[\s-]+/).some(function (w) { return words[w]; }); });
-    return { state: shares ? 'near' : 'miss', dir: '' };
+    for (var j = 0; j < g.length; j++) {
+      var shares = g[j].toLowerCase().split(/[\s-]+/).some(function (w) { return words[w]; });
+      if (shares) return { state: 'near', label: g[j] };
+    }
+    return { state: 'miss', label: g[0] };
+  }
+
+  /* Origin replaces the old popularity column. Same country is exact; the
+     same broad scene — Britain and Ireland, or the Caribbean — is close,
+     because that is roughly how much it narrows the field. */
+  var REGION = {
+    US: 'NA', CA: 'NA', MX: 'NA',
+    JM: 'CB', PR: 'CB', TT: 'CB', BB: 'CB', CU: 'CB', DO: 'CB', BS: 'CB', HT: 'CB',
+    GB: 'BI', IE: 'BI',
+    FR: 'EU', DE: 'EU', NL: 'EU', BE: 'EU', SE: 'EU', NO: 'EU', DK: 'EU', FI: 'EU',
+    IS: 'EU', ES: 'EU', PT: 'EU', IT: 'EU', AT: 'EU', CH: 'EU', PL: 'EU', CZ: 'EU',
+    GR: 'EU', RO: 'EU', HU: 'EU', UA: 'EU', RU: 'EU',
+    AU: 'OC', NZ: 'OC',
+    JP: 'AS', KR: 'AS', CN: 'AS', TW: 'AS', HK: 'AS', IN: 'AS', PH: 'AS', TH: 'AS',
+    ID: 'AS', SG: 'AS', IL: 'AS', TR: 'AS',
+    BR: 'SA', AR: 'SA', CO: 'SA', CL: 'SA', PE: 'SA', VE: 'SA', UY: 'SA',
+    NG: 'AF', ZA: 'AF', GH: 'AF', SN: 'AF', ML: 'AF', EG: 'AF', MA: 'AF', KE: 'AF',
+    CI: 'AF', CD: 'AF', ET: 'AF'
+  };
+  var CNAME = {
+    US: 'USA', GB: 'UK', CA: 'Canada', AU: 'Australia', NZ: 'N. Zealand', IE: 'Ireland',
+    SE: 'Sweden', NO: 'Norway', DK: 'Denmark', FI: 'Finland', IS: 'Iceland', NL: 'Neth.',
+    BE: 'Belgium', DE: 'Germany', FR: 'France', ES: 'Spain', PT: 'Portugal', IT: 'Italy',
+    AT: 'Austria', CH: 'Swiss', PL: 'Poland', RU: 'Russia', UA: 'Ukraine', GR: 'Greece',
+    JM: 'Jamaica', PR: 'P. Rico', TT: 'Trinidad', BB: 'Barbados', CU: 'Cuba',
+    MX: 'Mexico', BR: 'Brazil', AR: 'Argentina', CO: 'Colombia', CL: 'Chile',
+    NG: 'Nigeria', ZA: 'S. Africa', GH: 'Ghana', SN: 'Senegal', ML: 'Mali',
+    EG: 'Egypt', KE: 'Kenya', ET: 'Ethiopia',
+    JP: 'Japan', KR: 'S. Korea', CN: 'China', TW: 'Taiwan', IN: 'India',
+    PH: 'Philippines', ID: 'Indonesia', IL: 'Israel', TR: 'Turkey'
+  };
+  function countryName(cc) { return CNAME[cc] || cc || ''; }
+  function originScore(g, t) {
+    if (!g || !t) return { state: 'none' };
+    if (g === t) return { state: 'hit' };
+    return { state: REGION[g] && REGION[g] === REGION[t] ? 'near' : 'miss' };
+  }
+
+  function titleCase(s) {
+    return String(s || '').replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); });
   }
   function mmss(sec) { return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
 
   function scoreGuess(guess, target, mode) {
     var sizeCmp = mode === 'song' ? numScore(guess.size, target.size, 10, 45) : numScore(guess.size, target.size, 0, 3);
     var yearCmp = numScore(guess.year, target.year, 0, 3);
-    var popCmp = numScore(guess.pop, target.pop, 5, 15);
+    var gen = genreScore(guess.genres || [], target.genres || []);
+    var org = originScore(guess.country, target.country);
     return [
       { label: 'Artist', value: guess.artist, state: guess.artistId && guess.artistId === target.artistId ? 'hit' : 'miss', dir: '' },
       { label: 'Year', value: String(guess.year || '?'), state: yearCmp.state, dir: yearCmp.dir },
-      { label: 'Genre', value: (guess.genres[0] || 'unknown'), state: genreScore(guess.genres, target.genres).state, dir: '' },
+      { label: 'Genre', value: gen.state === 'none' ? '—' : titleCase(gen.label), state: gen.state, dir: '' },
       { label: mode === 'song' ? 'Length' : 'Tracks', value: mode === 'song' ? mmss(guess.size) : String(guess.size), state: sizeCmp.state, dir: sizeCmp.dir },
-      { label: 'Popularity', value: String(guess.pop), state: popCmp.state, dir: popCmp.dir }
+      { label: 'Origin', value: org.state === 'none' ? '—' : countryName(guess.country), state: org.state, dir: '' }
     ];
   }
 
@@ -7471,7 +7666,7 @@ function playDismissAnimation(gateEl, callback) {
   function saveState(m, st) { try { localStorage.setItem(stateKey(m), JSON.stringify(st)); } catch (e) {} }
 
   /* --- game -------------------------------------------------------------- */
-  var mode = 'album', target = null, rows = [], busy = false;
+  var mode = 'album', target = null, rows = [], guessed = [], busy = false;
   var elModal, elRows, elInput, elSugg, elLeft, elResult, elDate;
 
   function setMode(m) {
@@ -7484,7 +7679,7 @@ function playDismissAnimation(gateEl, callback) {
   }
 
   async function start() {
-    target = null; rows = []; busy = true;
+    target = null; rows = []; guessed = []; busy = true;
     elRows.innerHTML = '';
     elResult.innerHTML = '';
     elDate.textContent = todayKey();
@@ -7534,6 +7729,7 @@ function playDismissAnimation(gateEl, callback) {
   function addRow(guess, silent) {
     var cells = scoreGuess(guess, target, mode);
     rows.push(cells);
+    guessed.push(workKey(guess));
     var row = document.createElement('div');
     row.className = 'drop-row';
     if (silent) row.style.animation = 'none';
@@ -7544,9 +7740,10 @@ function playDismissAnimation(gateEl, callback) {
         '<div class="drop-row-artist">' + esc(guess.artist) + '</div></div>' +
       '</div>' +
       '<div class="drop-tiles">' + cells.map(function (c) {
+        var v = String(c.value) + c.dir;
         return '<div class="drop-tile ' + c.state + '"' + (silent ? ' style="animation:none"' : '') + '>' +
           '<div class="drop-tile-label">' + esc(c.label) + '</div>' +
-          '<div class="drop-tile-val">' + esc(String(c.value)) + c.dir + '</div></div>';
+          '<div class="drop-tile-val' + (v.length > 7 ? ' sm' : '') + '">' + esc(v) + '</div></div>';
       }).join('') + '</div>';
     elRows.appendChild(row);
   }
@@ -7554,12 +7751,12 @@ function playDismissAnimation(gateEl, callback) {
   async function submitGuess(guess) {
     var st = loadState(mode);
     if (st.done || busy) return;
-    if (st.guesses.indexOf(guess.id) !== -1) { flashSaved(); return; }
+    if (guessed.indexOf(workKey(guess)) !== -1) { flashSaved(); return; }
 
     addRow(guess, false);
     st.guesses.push(guess.id);
 
-    var won = guess.id === target.id;
+    var won = sameWork(guess, target);
     if (won || st.guesses.length >= GUESS_LIMIT) { st.done = true; st.won = won; }
     saveState(mode, st);
     refreshLeft();
@@ -7583,7 +7780,7 @@ function playDismissAnimation(gateEl, callback) {
       '\n' + (st.won ? st.guesses.length : 'X') + '/' + GUESS_LIMIT + '\n';
     var body = rows.map(function (cells) {
       return cells.map(function (c) {
-        return c.state === 'hit' ? '🟩' : (c.state === 'near' ? '🟨' : '⬛');
+        return c.state === 'hit' ? '🟩' : (c.state === 'near' ? '🟨' : (c.state === 'none' ? '⬜' : '⬛'));
       }).join('');
     }).join('\n');
     return head + body + '\nwildcrate.xyz';
@@ -7594,7 +7791,9 @@ function playDismissAnimation(gateEl, callback) {
       '<div class="drop-result">' +
         '<img class="drop-result-art" src="' + esc(target.art || '') + '" alt="" onerror="this.style.display=\'none\'">' +
         '<h3>' + (won ? 'Got it — ' : 'It was ') + esc(target.name) + '</h3>' +
-        '<p>' + esc(target.artist) + ' · ' + (target.year || '') + '</p>' +
+        '<p>' + esc(target.artist) + ' · ' + (target.year || '') +
+          (target.genres && target.genres[0] ? ' · ' + esc(titleCase(target.genres[0])) : '') +
+          (target.country ? ' · ' + esc(countryName(target.country)) : '') + '</p>' +
         '<div class="drop-share">' + esc(shareGrid()) + '</div>' +
         '<div><button class="btn-primary" id="drop-share-btn" style="margin-top:14px;">Copy result</button></div>' +
         '<div class="drop-note">A new album and a new song every day at midnight.</div>' +
@@ -7621,17 +7820,36 @@ function playDismissAnimation(gateEl, callback) {
   var suggestItems = [], suggestTimer = null;
   function closeSugg() { elSugg.classList.remove('open'); elSugg.innerHTML = ''; suggestItems = []; }
 
+  /* One row per record, not one per pressing. For albums the survivor is the
+     earliest release — that is the edition whose year the Year clue should be
+     measured against. */
+  function collapseEditions(items, type) {
+    var at = {}, out = [];
+    items.forEach(function (it) {
+      var artistId = (it.artists && it.artists[0] && it.artists[0].id) || '';
+      var key = artistId + '|' + normName(it.name);
+      if (!(key in at)) { at[key] = out.length; out.push(it); return; }
+      if (type !== 'album') return;
+      var kept = String(out[at[key]].release_date || '9999');
+      if (String(it.release_date || '9999').localeCompare(kept) < 0) out[at[key]] = it;
+    });
+    return out;
+  }
+
   async function runSuggest(q) {
     if (!q) { closeSugg(); return; }
     var type = mode === 'album' ? 'album' : 'track';
     var data;
     try {
-      data = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: type, limit: '6' }).toString(), {
+      /* Ask for more than we show: reissues collapse into one row, so a
+         six-result search could otherwise offer the same album three times. */
+      data = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: type, limit: '16' }).toString(), {
         priority: true, skip: function () { return elInput.value.trim() !== q; }
       });
     } catch (e) { return; }
     if (!data || elInput.value.trim() !== q) return;
     var items = (type === 'album' ? (data.albums && data.albums.items) : (data.tracks && data.tracks.items)) || [];
+    items = collapseEditions(items, type).slice(0, 6);
     suggestItems = items;
     if (!items.length) { closeSugg(); return; }
     elSugg.innerHTML = items.map(function (it, i) {
@@ -7639,7 +7857,7 @@ function playDismissAnimation(gateEl, callback) {
       var art = (imgs && (imgs[2] || imgs[0]) && (imgs[2] || imgs[0]).url) || '';
       return '<div class="g-sugg-item" data-i="' + i + '">' +
         '<img src="' + esc(art) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
-        '<div><div class="g-sugg-name">' + esc(it.name) + '</div>' +
+        '<div><div class="g-sugg-name">' + esc(baseName(it.name)) + '</div>' +
         '<div class="g-sugg-genre">' + esc((it.artists && it.artists[0] && it.artists[0].name) || '') + '</div></div></div>';
     }).join('');
     elSugg.classList.add('open');
@@ -7650,7 +7868,7 @@ function playDismissAnimation(gateEl, callback) {
         elInput.value = '';
         if (!it) return;
         elInput.disabled = true;
-        var full = mode === 'album' ? await albumDetails(it.id) : await trackFrom(it);
+        var full = mode === 'album' ? await canonicalAlbum(it) : await trackFrom(it);
         elInput.disabled = loadState(mode).done;
         if (full) await submitGuess(full);
       });
