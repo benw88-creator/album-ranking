@@ -7842,8 +7842,9 @@ function playDismissAnimation(gateEl, callback) {
     var data;
     try {
       /* Ask for more than we show: reissues collapse into one row, so a
-         six-result search could otherwise offer the same album three times. */
-      data = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: type, limit: '16' }).toString(), {
+         six-result search could otherwise offer the same album three times.
+         Ten is the ceiling — Spotify now rejects any larger search limit. */
+      data = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: type, limit: '10' }).toString(), {
         priority: true, skip: function () { return elInput.value.trim() !== q; }
       });
     } catch (e) { return; }
