@@ -7572,9 +7572,12 @@ window.handleGrooveLink=handleGrooveLink;
   // Ink polarity, derived rather than hardcoded. A halftone only reads as a
   // POSITIVE image if bright parts of the photo get more ink when the ink is
   // lighter than the ground, and less ink when it's darker. Gold-on-black
-  // must not invert; Blanc's dark violet ink on paper-white must. Getting
-  // this backwards renders a photographic negative — which is exactly why
-  // the artist hero looked like an unreadable blur rather than a person.
+  // must not invert; a dark ink on a pale ground must. (Blanc, the light
+  // theme this was originally written against, has since been withdrawn —
+  // the rule is derived, not hardcoded, so it still holds for any future
+  // light theme.) Getting this backwards renders a photographic negative,
+  // which is exactly why the artist hero once looked like an unreadable
+  // blur rather than a person.
   function relLuma(hex) {
     const c = hexToRgb(hex);
     return (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255;
