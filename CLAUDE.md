@@ -169,8 +169,12 @@ Pieces:
   hundreds of questions.
 - All finders run on data the app already has (local album/song ratings and `crate_feed`).
   **None of them need Spotify**, which matters — see the Spotify note below.
-- **Today** (`view-today`, first nav tab) — at most one of each kind: a question, a record to
-  revisit, a game, an old answer. Six questions is a form; one of each is a place to drop into.
+- **Today** (`view-today`, first nav tab) — an endless stack, not a page. One card is live and
+  the next rides up over the top of it; the one you dealt with recedes behind rather than
+  flying off. Cards are absolutely positioned, so `#today-stream` has its height set in JS
+  after every mount — without that the page below jumps on each advance. The queue rebuilds
+  itself when it runs dry, and answered questions drop out of the finders, so it never
+  repeats itself while there is anything left to ask.
 - **Your Music Lore** — a profile section, deliberately not "Your Meaningful Music".
 
 ### Spotify listening data: the hard limit
@@ -184,3 +188,6 @@ So listening history should come from **the user's own Spotify data export** (Ex
 streaming history JSON — complete lifetime plays, no quota, works for everyone), with Last.fm
 as a live alternative for people who scrobble. Design any listening feature against an
 internal store, never against the Spotify API directly.
+
+Every question also carries an **Other…** option that opens a free-text field. The one-tap rule
+is about never *demanding* text, not about refusing it — plenty of real answers are on no list.

@@ -2969,6 +2969,64 @@ body.entering-done #artist-hero {
   border-left: 2px solid var(--border-strong); padding-left: 10px;
 }
 .lore-when { font-size: 11px; color: var(--text-faint); flex-shrink: 0; white-space: nowrap; }
+
+/* --- Today, as an escalator ------------------------------------------------
+   One card is live; the next rides up over the top of it while the old one
+   settles back and dims. Cards are absolutely positioned so they can overlap,
+   which means the container has to be told how tall the live card is or the
+   page below jumps every time. Height is set in JS after each mount. */
+#today-stream {
+  position: relative;
+  overflow: hidden;
+  transition: height 0.42s var(--ease);
+}
+#today-stream .empty { position: static; }
+.td-slot {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+}
+.td-slot.td-live {
+  z-index: 2;
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 0.52s var(--ease), opacity 0.3s var(--ease);
+}
+/* The one you have just dealt with. It stays put and recedes rather than
+   flying off, so the new card genuinely reads as arriving over the top. */
+.td-slot.td-under {
+  z-index: 1;
+  transform: translateY(-14px) scale(0.97);
+  opacity: 0.28;
+  transition: transform 0.52s var(--ease), opacity 0.52s var(--ease);
+}
+/* Must come last: the incoming card carries both td-live and td-enter for a
+   frame, and this is the state it has to start from. */
+.td-slot.td-enter {
+  transform: translateY(100%);
+  opacity: 0;
+  transition: none;
+}
+.td-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.td-next {
+  margin-left: auto;
+  background: none; border: none; color: var(--gold);
+  font-family: var(--font-body); font-size: 13px; font-weight: 600;
+  cursor: pointer; padding: 8px 2px;
+}
+.td-next:hover { text-decoration: underline; text-underline-offset: 3px; }
+.td-after .td-next { display: block; margin: 12px 0 0 auto; }
+.td-other { border-style: dashed; }
+.td-other-wrap { display: flex; gap: 8px; margin-top: 12px; }
+.td-other-in {
+  flex: 1; background: var(--surface-2); border: 1px solid var(--border-strong);
+  border-radius: 999px; color: var(--text); padding: 10px 15px;
+  font-family: var(--font-body); font-size: 13px;
+}
+.td-other-in:focus { outline: none; border-color: var(--gold-dim); }
+.td-other-save {
+  background: var(--gold); border: none; color: #1a1508; font-weight: 600;
+  border-radius: 999px; padding: 10px 18px; font-size: 13px; cursor: pointer;
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -10816,7 +10874,7 @@ function playDismissAnimation(gateEl, callback) {
   // tone: keeps a day's questions from being all daft or all earnest.
   var QUESTIONS = [
     { id: 'rinsing', tone: 'casual', kinds: ['album','song'], text: 'Why have you been rinsing this?',
-      opts: ['Going through a phase', 'Reminds me of something', 'It just slaps', 'Someone showed me it', 'No idea'] },
+      opts: ['Going through a phase', 'Reminds me of someone / something', 'It just slaps', 'Someone showed me it', 'No idea'] },
     { id: 'keeps-back', tone: 'casual', kinds: ['album','song'], text: 'This one keeps coming back...',
       opts: ['It never left', 'Seasonal', 'Someone put it back in my head', 'Comfort listen', 'Genuinely no idea'] },
     { id: 'where-take', tone: 'place', kinds: ['album','song'], text: 'Where does this take you?',
@@ -11083,33 +11141,41 @@ function playDismissAnimation(gateEl, callback) {
   // one question, one record to revisit, one game and one old answer is a
   // place you drop into.
 
-  function buildToday() {
-    var pool = [].concat(findFresh(), findContradiction(), findAlbumLove(),
-                         findArtistGap(), findNostalgia());
-    var receipts = findReceipt();
-    var byType = {};
-    pool.forEach(function (d) { (byType[d.type] = byType[d.type] || []).push(d); });
+  // ---- the stack ----------------------------------------------------------
+  // Today is an escalator, not a page. One card is live at a time and the next
+  // rides up over the top of the one you just dealt with, so there is always
+  // something in front of you and never a scrollbar to manage. The queue
+  // rebuilds itself when it runs dry, which is what makes it endless.
 
-    // Prefer a discovery about something recent, then something contradictory,
-    // then whatever else there is -- so the first card feels current.
-    var order = ['fresh', 'contradiction', 'album-love', 'gap', 'nostalgia'];
-    var question = null;
-    for (var i = 0; i < order.length && !question; i++) {
-      if (byType[order[i]] && byType[order[i]].length) question = pick(byType[order[i]]);
+  var _queue = [];
+  var _qi = 0;
+
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
     }
-    var revisit = byType['nostalgia'] && byType['nostalgia'].length
-      ? pick(byType['nostalgia']) : null;
-    if (revisit && question && revisit.item.id === question.item.id) revisit = null;
-
-    return {
-      question: question,
-      revisit: revisit,
-      receipt: receipts.length ? pick(receipts) : null,
-      remaining: pool.length
-    };
+    return a;
   }
 
-  // ---- rendering ----------------------------------------------------------
+  function buildQueue() {
+    var pool = shuffle([].concat(findFresh(), findContradiction(), findAlbumLove(),
+                                 findArtistGap(), findNostalgia()));
+    var receipts = shuffle(findReceipt());
+    var out = [];
+    pool.forEach(function (d, i) {
+      out.push({ t: 'ask', d: d });
+      // Break up the questioning so it never feels like a form: an old answer
+      // handed back every few cards, something to play now and then.
+      if (i % 4 === 3 && receipts.length) out.push({ t: 'ask', d: receipts.shift() });
+      if (i % 7 === 6) out.push({ t: 'game' });
+      if (i % 9 === 8) out.push({ t: 'revisit', d: d });
+    });
+    while (receipts.length) out.push({ t: 'ask', d: receipts.shift() });
+    return out;
+  }
+
+  // ---- cards --------------------------------------------------------------
 
   function artOf(item) { return item && item.art ? item.art : ''; }
 
@@ -11125,9 +11191,10 @@ function playDismissAnimation(gateEl, callback) {
       '<div class="td-item-ar">' + esc2(item.artist || '') + '</div></div></div>';
   }
 
+  // "Other" is on every question. The tap-only rule is about not *demanding*
+  // text, not about refusing it -- plenty of real answers are not on any list.
   function questionCard(d, kicker) {
-    var key = d.item.kind + ':' + d.item.id + ':' + d.q.id;
-    return '<div class="td-card td-ask" data-ask="' + esc2(key) + '">' +
+    return '<div class="td-card td-ask">' +
       cardHead(kicker, d.line) +
       itemStrip(d.item) +
       '<div class="td-q">' + esc2(d.q.text) + '</div>' +
@@ -11135,7 +11202,12 @@ function playDismissAnimation(gateEl, callback) {
         d.q.opts.map(function (o) {
           return '<button class="td-opt" data-opt="' + esc2(o) + '">' + esc2(o) + '</button>';
         }).join('') +
+        '<button class="td-opt td-other" data-opt="__other">Other…</button>' +
         '<button class="td-opt td-skip" data-opt="__skip">Not this one</button>' +
+      '</div>' +
+      '<div class="td-other-wrap" style="display:none;">' +
+        '<input class="td-other-in" type="text" maxlength="120" placeholder="Go on then…">' +
+        '<button class="td-other-save" type="button">Save</button>' +
       '</div>' +
       '<div class="td-after" style="display:none;">' +
         '<div class="td-saved"><span class="td-tick">✓</span> <span class="td-saved-txt"></span></div>' +
@@ -11144,14 +11216,15 @@ function playDismissAnimation(gateEl, callback) {
           '<textarea class="td-note" rows="2" placeholder="Optional. A line is plenty."></textarea>' +
           '<button class="td-note-save" type="button">Save</button>' +
         '</div>' +
+        '<button class="td-next" type="button">Next →</button>' +
       '</div></div>';
   }
 
   function revisitCard(d) {
     return '<div class="td-card td-revisit" data-meta="' + esc2(JSON.stringify(d.item)) + '">' +
-      cardHead('Worth another spin', d.line) +
-      itemStrip(d.item) +
-      '<button class="td-go" type="button">Open it</button></div>';
+      cardHead('Worth another spin', d.line) + itemStrip(d.item) +
+      '<div class="td-row"><button class="td-go" type="button">Open it</button>' +
+      '<button class="td-next" type="button">Next →</button></div></div>';
   }
 
   function gameCard() {
@@ -11160,41 +11233,173 @@ function playDismissAnimation(gateEl, callback) {
       { id: 'earworm', name: 'Earworm', blurb: 'Spell the record letter by letter.' },
       { id: 'wars', name: 'Bid Wars', blurb: 'Outbid a mate on five records, blind.' }
     ];
-    var g = pick(games);
+    var g = games[Math.floor(Math.random() * games.length)];
     return '<div class="td-card td-game" data-game="' + g.id + '">' +
       cardHead('Something to play', g.blurb) +
       '<div class="td-game-nm">' + g.name + '</div>' +
-      '<button class="td-go" type="button">Play</button></div>';
+      '<div class="td-row"><button class="td-go" type="button">Play</button>' +
+      '<button class="td-next" type="button">Next →</button></div></div>';
   }
 
-  async function friendCard() {
-    if (!on()) return '';
-    try {
-      var people = await Cloud.followingList(me().id);
-      if (!people || !people.length) return '';
-      var ids = people.map(function (p) { return p.id; }).slice(0, 30);
-      var r = await sb().from('crate_feed')
-        .select('user_id,username,album_id,album_name,album_artist,album_art,score,created_at')
-        .in('user_id', ids).order('created_at', { ascending: false }).limit(1);
-      var f = r.data && r.data[0];
-      if (!f) return '';
-      return '<div class="td-card td-friend" data-meta="' + esc2(JSON.stringify({ id: f.album_id, name: f.album_name, artist: f.album_artist, art: f.album_art })) + '">' +
-        cardHead('Someone you follow', esc2(f.username || 'A friend') + ' rated this ' + Math.round(f.score) + '/100.') +
-        itemStrip({ name: f.album_name, artist: f.album_artist, art: f.album_art }) +
-        '<button class="td-go" type="button">Have a look</button></div>';
-    } catch (e) { return ''; }
+  function quietCard() {
+    return '<div class="td-card td-quiet">' +
+      cardHead('All caught up', 'Rate a few more records and there will be something new to ask.') +
+      '</div>';
   }
 
-  // Leaving the tab and coming back should not wipe what you just answered,
-  // and should not silently swap the questions either. The DOM is left
-  // exactly as it was until the day rolls over or Refresh is pressed.
+  function cardHTML(entry) {
+    if (!entry) return quietCard();
+    if (entry.t === 'game') return gameCard();
+    if (entry.t === 'revisit') return revisitCard(entry.d);
+    return questionCard(entry.d, entry.d.type === 'receipt' ? 'You said this once' : 'VINALL noticed');
+  }
+
+  // ---- the escalator ------------------------------------------------------
+  // Cards are absolutely positioned so the incoming one can ride over the top
+  // of the outgoing one. The container's height is driven to match whichever
+  // card is live, which is what keeps the page below from jumping.
+
+  function stackEl() { return document.getElementById('today-stream'); }
+
+  function mountCard(html, animate) {
+    var host = stackEl();
+    if (!host) return null;
+    var old = host.querySelector('.td-live');
+    var el = document.createElement('div');
+    el.className = 'td-slot td-live' + (animate ? ' td-enter' : '');
+    el.innerHTML = html;
+    host.appendChild(el);
+
+    // Height has to be measured after the card is in the document, or the
+    // container collapses and the page below snaps up mid-transition.
+    var h = el.offsetHeight;
+    host.style.height = h + 'px';
+
+    if (animate) {
+      if (old) { old.classList.remove('td-live'); old.classList.add('td-under'); }
+      void el.offsetWidth;               // commit the off-screen start state
+      el.classList.remove('td-enter');
+      setTimeout(function () { if (old && old.parentNode) old.parentNode.removeChild(old); }, 560);
+    } else if (old && old.parentNode) {
+      old.parentNode.removeChild(old);
+    }
+    return el;
+  }
+
+  function advance() {
+    _qi++;
+    if (_qi >= _queue.length) {
+      // Endless: the finders re-run, and anything just answered drops out.
+      _queue = buildQueue();
+      _qi = 0;
+    }
+    var el = mountCard(cardHTML(_queue[_qi]), true);
+    if (el) wireCard(el);
+  }
+
+  function wireCard(slot) {
+    var entry = _queue[_qi];
+    var d = entry && entry.d;
+    var card = slot.querySelector('.td-card');
+    if (!card) return;
+
+    var nextBtn = slot.querySelector('.td-next');
+    if (nextBtn) nextBtn.addEventListener('click', advance);
+
+    var go = slot.querySelector('.td-go');
+    if (go) go.addEventListener('click', function () {
+      if (entry.t === 'game') {
+        var which = card.dataset.game;
+        if (which === 'wars') { goToView('wars'); if (window.renderWars) renderWars(); }
+        else { goToView('games'); }
+        return;
+      }
+      var meta = null;
+      try { meta = JSON.parse(card.dataset.meta); } catch (e) {}
+      if (meta && window.openAlbum) openAlbum(meta);
+    });
+
+    if (entry.t !== 'ask' || !d) return;
+
+    function settle(choice) {
+      slot.querySelector('.td-opts').style.display = 'none';
+      var other = slot.querySelector('.td-other-wrap');
+      if (other) other.style.display = 'none';
+      var after = slot.querySelector('.td-after');
+      after.querySelector('.td-saved-txt').textContent = choice;
+      after.style.display = 'block';
+      var h = slot.offsetHeight;
+      var host = stackEl();
+      if (host) host.style.height = h + 'px';
+      if (window.Wallet && Wallet.awardDiscs) Wallet.awardDiscs(2, { reason: 'lore' });
+    }
+
+    slot.querySelectorAll('.td-opt').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        var val = btn.dataset.opt;
+
+        if (val === '__other') {
+          slot.querySelector('.td-other-wrap').style.display = 'flex';
+          var inp = slot.querySelector('.td-other-in');
+          inp.focus();
+          var host = stackEl();
+          if (host) host.style.height = slot.offsetHeight + 'px';
+          return;
+        }
+
+        var skipped = val === '__skip';
+        slot.querySelectorAll('.td-opt').forEach(function (b) { b.disabled = true; });
+        btn.classList.add('chosen');
+        var res = await saveAnswer(d.item, d.q, skipped ? null : val, { skipped: skipped });
+        if (res.error) {
+          slot.querySelectorAll('.td-opt').forEach(function (b) { b.disabled = false; });
+          btn.classList.remove('chosen');
+          return;
+        }
+        if (skipped) { advance(); return; }
+        settle(val);
+      });
+    });
+
+    var otherSave = slot.querySelector('.td-other-save');
+    if (otherSave) otherSave.addEventListener('click', async function () {
+      var txt = slot.querySelector('.td-other-in').value.trim();
+      if (!txt) return;
+      otherSave.textContent = '…';
+      var res = await saveAnswer(d.item, d.q, txt, {});
+      otherSave.textContent = 'Save';
+      if (res.error) return;
+      settle(txt);
+    });
+
+    var noteBtn = slot.querySelector('.td-note-btn');
+    if (noteBtn) noteBtn.addEventListener('click', function () {
+      noteBtn.style.display = 'none';
+      slot.querySelector('.td-note-wrap').style.display = 'flex';
+      slot.querySelector('.td-note').focus();
+      var host = stackEl();
+      if (host) host.style.height = slot.offsetHeight + 'px';
+    });
+    var noteSave = slot.querySelector('.td-note-save');
+    if (noteSave) noteSave.addEventListener('click', async function () {
+      var txt = slot.querySelector('.td-note').value.trim();
+      noteSave.textContent = 'Saving…';
+      var chosen = slot.querySelector('.td-opt.chosen');
+      var choice = chosen ? chosen.dataset.opt : slot.querySelector('.td-saved-txt').textContent;
+      await saveAnswer(d.item, d.q, choice, { note: txt });
+      slot.querySelector('.td-note-wrap').innerHTML = '<div class="td-note-done">Saved.</div>';
+    });
+  }
+
+  // Leaving the tab and coming back keeps your place in the stack; Refresh
+  // reshuffles it. Only a new day, or an empty stack, rebuilds on its own.
   async function renderToday(force) {
     var stamp = new Date().toDateString();
-    var host = document.getElementById('today-stream');
+    var host = stackEl();
     if (!host) return;
-    if (!force && host.dataset.built === stamp && host.children.length) return;
 
     if (!on()) {
+      host.style.height = '';
       host.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.sparkle +
         '</span><h3>Today</h3><p>Log in and VINALL starts noticing things.</p>' +
         '<button class="btn-primary" id="today-login" style="margin-top:8px;">Log in</button></div>';
@@ -11203,96 +11408,17 @@ function playDismissAnimation(gateEl, callback) {
       return;
     }
 
+    if (!force && host.dataset.built === stamp && host.querySelector('.td-live')) return;
+
     host.innerHTML = '<p class="reco-note">Having a look through your crate…</p>';
-    await loadLore();
-    var t = buildToday();
-    var parts = [];
-
-    if (t.question) parts.push(questionCard(t.question, 'VINALL noticed'));
-    if (t.revisit) parts.push(revisitCard(t.revisit));
-    parts.push(gameCard());
-    if (t.receipt) parts.push(questionCard(t.receipt, 'You said this once'));
-
-    var fc = await friendCard();
-    if (fc) parts.push(fc);
-
-    if (!t.question && !t.receipt) {
-      parts.unshift('<div class="td-card td-quiet">' +
-        cardHead('Nothing to ask yet', 'Rate a few records and stuff shows up here.') +
-        '</div>');
-    }
-
-    host.innerHTML = parts.join('');
+    host.style.height = '';
+    await loadLore(force);
+    _queue = buildQueue();
+    _qi = 0;
+    host.innerHTML = '';
+    var el = mountCard(cardHTML(_queue[0]), false);
+    if (el) wireCard(el);
     host.dataset.built = stamp;
-    wireToday(host, t);
-  }
-
-  // ---- interaction --------------------------------------------------------
-  // One tap saves. The note is offered afterwards and never demanded: the
-  // whole point is that an answer is already complete without it.
-
-  function wireToday(host, t) {
-    var lookup = {};
-    [t.question, t.receipt].forEach(function (d) {
-      if (d) lookup[d.item.kind + ':' + d.item.id + ':' + d.q.id] = d;
-    });
-
-    host.querySelectorAll('[data-ask]').forEach(function (card) {
-      var d = lookup[card.dataset.ask];
-      if (!d) return;
-      card.querySelectorAll('.td-opt').forEach(function (btn) {
-        btn.addEventListener('click', async function () {
-          var val = btn.dataset.opt;
-          var skipped = val === '__skip';
-          card.querySelectorAll('.td-opt').forEach(function (b) { b.disabled = true; });
-          btn.classList.add('chosen');
-          var res = await saveAnswer(d.item, d.q, skipped ? null : val, { skipped: skipped });
-          if (res.error) {
-            card.querySelectorAll('.td-opt').forEach(function (b) { b.disabled = false; });
-            btn.classList.remove('chosen');
-            return;
-          }
-          if (skipped) { card.classList.add('td-gone'); setTimeout(function () { renderToday(true); }, 260); return; }
-          card.querySelector('.td-opts').style.display = 'none';
-          var after = card.querySelector('.td-after');
-          after.querySelector('.td-saved-txt').textContent = val;
-          after.style.display = 'block';
-          if (window.Wallet && Wallet.awardDiscs) Wallet.awardDiscs(2, { reason: 'lore' });
-        });
-      });
-
-      var noteBtn = card.querySelector('.td-note-btn');
-      if (noteBtn) noteBtn.addEventListener('click', function () {
-        noteBtn.style.display = 'none';
-        card.querySelector('.td-note-wrap').style.display = 'flex';
-        card.querySelector('.td-note').focus();
-      });
-      var noteSave = card.querySelector('.td-note-save');
-      if (noteSave) noteSave.addEventListener('click', async function () {
-        var txt = card.querySelector('.td-note').value.trim();
-        noteSave.textContent = 'Saving…';
-        var chosen = card.querySelector('.td-opt.chosen');
-        await saveAnswer(d.item, d.q, chosen ? chosen.dataset.opt : null, { note: txt });
-        card.querySelector('.td-note-wrap').innerHTML = '<div class="td-note-done">Saved.</div>';
-      });
-    });
-
-    host.querySelectorAll('[data-meta]').forEach(function (card) {
-      var meta = null;
-      try { meta = JSON.parse(card.dataset.meta); } catch (e) { return; }
-      var go = card.querySelector('.td-go');
-      if (!go) return;
-      go.addEventListener('click', function () {
-        if (window.openAlbum) openAlbum({ id: meta.id, name: meta.name, artist: meta.artist, art: meta.art });
-      });
-    });
-
-    var g = host.querySelector('[data-game]');
-    if (g) g.querySelector('.td-go').addEventListener('click', function () {
-      var which = g.dataset.game;
-      if (which === 'wars') { goToView('wars'); if (window.renderWars) renderWars(); }
-      else { goToView('games'); }
-    });
   }
 
   // ---- Your Music Lore ----------------------------------------------------
