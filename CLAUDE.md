@@ -112,3 +112,10 @@ Design decisions worth not undoing:
   opponent's only once `status = 'resolved'`.
 - **It is async by design.** With a user base this small, anything needing both players
   online at once would never actually get played.
+
+### Rating scales (easy to get wrong)
+
+Albums are rated **0-100** (`#rate-slider` is `min=0 max=100`), and that is the number
+stored in `crate_feed.score`, so a Bid War record's value is on a 0-100 scale too. Songs
+are rated 0-10 on a separate slider. Getting these the wrong way round is why
+`bid_war_values.value` originally shipped as `numeric(4,2)` and had to be widened.
