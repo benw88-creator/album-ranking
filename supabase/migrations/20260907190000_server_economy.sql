@@ -71,8 +71,8 @@ begin
     new.streak_best         := 0;
     new.streak_last_date    := null;
     new.streak_freezes      := 1;
-    new.owned_themes        := '{classic}';
-    new.owned_banners       := '{}';
+    new.owned_themes        := '{classic}'::text[];
+    new.owned_banners       := '{}'::text[];
     new.rating_awards_count := 0;
     new.lore_awards_count   := 0;
     return new;
@@ -95,11 +95,11 @@ begin
   -- otherwise the cosmetics are free after all.
   if new.active_theme is not null
      and new.active_theme <> 'classic'
-     and not (new.active_theme = any(coalesce(new.owned_themes, '{}'))) then
+     and not (new.active_theme = any(coalesce(new.owned_themes, '{}'::text[]))) then
     new.active_theme := old.active_theme;
   end if;
   if new.active_banner is not null
-     and not (new.active_banner = any(coalesce(new.owned_banners, '{}'))) then
+     and not (new.active_banner = any(coalesce(new.owned_banners, '{}'::text[]))) then
     new.active_banner := old.active_banner;
   end if;
 
@@ -208,8 +208,8 @@ begin
 
   select * into p from public.profiles where id = v_me for update;
 
-  v_owned := case when p_kind = 'theme' then coalesce(p.owned_themes, '{}')
-                  else coalesce(p.owned_banners, '{}') end;
+  v_owned := case when p_kind = 'theme' then coalesce(p.owned_themes, '{}'::text[])
+                  else coalesce(p.owned_banners, '{}'::text[]) end;
   if p_key = any(v_owned) then raise exception 'Already owned'; end if;
 
   -- is_admin still gets everything free, as documented in the discs migration.
@@ -219,8 +219,8 @@ begin
 
   update public.profiles set
     discs = case when coalesce(is_admin, false) then discs else coalesce(discs, 0) - v_cost end,
-    owned_themes  = case when p_kind = 'theme'  then array_append(coalesce(owned_themes, '{}'), p_key)  else owned_themes end,
-    owned_banners = case when p_kind = 'banner' then array_append(coalesce(owned_banners, '{}'), p_key) else owned_banners end
+    owned_themes  = case when p_kind = 'theme'  then array_append(coalesce(owned_themes, '{}'::text[]), p_key)  else owned_themes end,
+    owned_banners = case when p_kind = 'banner' then array_append(coalesce(owned_banners, '{}'::text[]), p_key) else owned_banners end
   where id = v_me
   returning * into p;
 
