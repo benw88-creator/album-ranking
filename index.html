@@ -134,26 +134,6 @@
   --radius-sm:     5px;
   --radius-xs:     3px;
 }
-[data-theme="blanc"] {
-  --bg:            #f3efe6;
-  --surface:       #ffffff;
-  --surface-2:     #ece6d8;
-  --surface-3:     #e2dac8;
-  --surface-4:     #d8ceb8;
-  --text:          #1c1712;
-  --text-dim:      #6b6154;
-  --text-faint:    #a89b87;
-  --border:        rgba(28,23,18,0.08);
-  --border-strong: rgba(28,23,18,0.16);
-  --gold:          #7c3aed;
-  --gold-glow:     rgba(124,58,237,0.2);
-  --gold-dim:      rgba(124,58,237,0.10);
-  --accent-2:      #ec4899;
-  --accent-2-dim:  rgba(236,72,153,0.12);
-  --radius:        22px;
-  --radius-sm:     13px;
-  --radius-xs:     9px;
-}
 
 /* Background texture per theme — layered behind the existing radial
    glow on body, scoped with html[data-theme=...] so it's more specific
@@ -167,12 +147,6 @@ html[data-theme="cassette"] body {
   background-image:
     radial-gradient(ellipse 80% 40% at 50% 0%, rgba(94,184,255,0.05) 0%, transparent 70%),
     repeating-linear-gradient(0deg, rgba(94,184,255,0.03) 0px, rgba(94,184,255,0.03) 1px, transparent 1px, transparent 3px);
-}
-html[data-theme="blanc"] body {
-  background-image:
-    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(184,134,11,0.05) 0%, transparent 70%),
-    radial-gradient(circle, rgba(28,23,18,0.05) 1px, transparent 1px);
-  background-size: auto, 16px 16px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -3031,6 +3005,43 @@ body.entering-done #artist-hero {
 .safety-box { margin-top: 34px; padding-top: 20px; border-top: 1px solid var(--border); }
 .safety-row { display: flex; gap: 8px; }
 #report-reasons .td-opt { font-size: 12px; }
+
+/* --- Answers that misbehave ------------------------------------------------
+   Decorative only, and only on a handful of options. Motion is suppressed for
+   anyone who has asked for less of it. */
+@keyframes fxFadedGlow {
+  0%, 100% { box-shadow: 0 0 0 rgba(79,180,119,0);   border-color: rgba(79,180,119,0.35); }
+  50%      { box-shadow: 0 0 16px rgba(79,180,119,0.45); border-color: rgba(79,180,119,0.85); }
+}
+@keyframes fxFadedText {
+  0%, 100% { color: var(--green); opacity: 0.75; letter-spacing: 0; }
+  50%      { color: #9df5bd;      opacity: 1;    letter-spacing: 0.04em; }
+}
+.td-opt.opt-faded { animation: fxFadedGlow 2.4s ease-in-out infinite; }
+.td-opt.opt-faded span { display: inline-block; animation: fxFadedText 2.4s ease-in-out infinite; }
+
+@keyframes fxWobble {
+  0%   { transform: rotate(-2deg)   translateY(0)     skewX(-3deg); }
+  25%  { transform: rotate(2.5deg)  translateY(-1.5px) skewX(2deg); }
+  50%  { transform: rotate(-1.5deg) translateY(1.5px)  skewX(-2deg); }
+  75%  { transform: rotate(2deg)    translateY(-1px)   skewX(3deg); }
+  100% { transform: rotate(-2deg)   translateY(0)      skewX(-3deg); }
+}
+.td-opt.opt-drunk span { display: inline-block; animation: fxWobble 1.5s ease-in-out infinite; }
+.td-opt.opt-drunk { border-color: rgba(239,185,39,0.45); }
+
+@keyframes fxLate {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+.td-opt.opt-late span { display: inline-block; animation: fxLate 3.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .td-opt.opt-faded, .td-opt.opt-faded span,
+  .td-opt.opt-drunk span, .td-opt.opt-late span { animation: none; }
+  .td-opt.opt-faded { border-color: rgba(79,180,119,0.6); }
+  .td-opt.opt-faded span { color: var(--green); }
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -3204,7 +3215,7 @@ window.ICONS = {
   <!-- ============================ TODAY ============================ -->
   <section id="view-today" style="display:none; margin-top:32px;">
     <div class="section-head"><h2><span data-icon="sparkle"></span> Today</h2><button class="btn-mini" id="today-refresh" style="margin-left:auto;">Refresh</button></div>
-    <p class="reco-note">Tap an answer, that&rsquo;s it. Writing something is optional.</p>
+    <p class="reco-note">Answer and slide.</p>
     <div id="today-stream"></div>
   </section>
 
@@ -8203,7 +8214,6 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     cassette: { name: 'Cassette', cost: 150, desc: 'Deep graphite with turquoise and blue.' },
     citrus:   { name: 'Citrus',   cost: 250, desc: 'Espresso dark, blood orange and lime.' },
     neon:     { name: 'Neon Vault', cost: 350, desc: 'Indigo black, magenta and cyan. Loud.' },
-    blanc:    { name: 'Blanc',    cost: 400, desc: 'A rare light mode — paper white, violet ink.' },
   };
   const SWATCH = {
     classic:  'linear-gradient(135deg,#0a0908 20%,#F5C842 60%,#ff7a4d)',
@@ -8211,7 +8221,6 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     cassette: 'linear-gradient(135deg,#0b0d10 20%,#12e0c8 60%,#5eb8ff)',
     citrus:   'linear-gradient(135deg,#12100a 20%,#ff9f1c 60%,#c6ff3d)',
     neon:     'linear-gradient(135deg,#0a0616 20%,#ff3d9a 60%,#22e3ff)',
-    blanc:    'linear-gradient(135deg,#f3efe6 20%,#7c3aed 60%,#ec4899)',
   };
   const BANNERS = {
     none:   { name: 'None',      cost: 0,   desc: 'No banner — the plain profile header.', gradient: 'transparent' },
@@ -11082,13 +11091,13 @@ window.track = function (name, props) {
     { id: 'keeps-back', tone: 'casual', kinds: ['album','song'], text: 'This one keeps coming back...',
       opts: ['It never left', 'Seasonal', 'Someone put it back in my head', 'Comfort listen', 'Genuinely no idea'] },
     { id: 'where-take', tone: 'place', kinds: ['album','song'], text: 'Where does this take you?',
-      opts: ['A room', 'A journey', 'A summer', 'Somewhere I cannot name', 'Nowhere, I just like it'] },
+      opts: ['A room', 'A journey', 'A summer', 'somewhere I can’t place', 'Nowhere, I just like it'] },
     { id: 'who-remind', tone: 'people', kinds: ['album','song'], text: 'Who does this remind you of?',
-      opts: ['A mate', 'Family', 'Someone I do not speak to', 'Nobody', 'Rather not say'] },
+      opts: ['A mate', 'Family', 'someone I don’t speak to now', 'Nobody', 'Rather not say'] },
     { id: 'first-heard', tone: 'time', kinds: ['album','song'], text: 'Where were you when you first heard this?',
       opts: ['At home', 'In a car', 'At a party', 'Someone else’s room', 'Headphones, walking', 'No memory of it'] },
     { id: 'who-showed', tone: 'people', kinds: ['album','song'], text: 'Who introduced you to this?',
-      opts: ['A friend', 'Family', 'Found it myself', 'An algorithm, embarrassingly', 'A film or game', 'Cannot remember'] },
+      opts: ['A friend', 'Family', 'Found it myself', 'the algorithm, embarrassingly', 'A film or game', 'no idea, genuinely'] },
     { id: 'what-era', tone: 'time', kinds: ['album','song'], text: 'What era of your life does this belong to?',
       opts: ['Right now', 'School', 'Last summer', 'A bad stretch', 'A good stretch', 'Before I was properly me'] },
     { id: 'what-year', tone: 'time', kinds: ['album','song'], text: 'What year does this feel like?',
@@ -11098,31 +11107,31 @@ window.track = function (name, props) {
     { id: 'weather', tone: 'place', kinds: ['album','song'], text: 'What weather is this?',
       opts: ['Rain', 'Grey and cold', 'Proper summer', 'Late night', 'Early morning', 'Indoors, always'] },
     { id: 'court', tone: 'silly', kinds: ['album','song'], text: 'Would you defend this song in court?',
-      opts: ['Without hesitation', 'Under oath, reluctantly', 'I would take the fifth', 'I would testify against it'] },
+      opts: ['in a heartbeat', 'reluctantly, under oath', 'no comment', 'I’d testify against it'] },
     { id: 'never-around', tone: 'silly', kinds: ['album','song'], text: 'Who would you never play this around?',
-      opts: ['My parents', 'My mates', 'Anyone with taste', 'One specific person', 'I would play it for anyone'] },
+      opts: ['My parents', 'My mates', 'Anyone with taste', 'One specific person', 'I’d play it to anyone'] },
     { id: 'party', tone: 'silly', kinds: ['album','song'], text: 'Would you put this on at a party?',
-      opts: ['Instantly', 'Late, when it thins out', 'Pre-drinks only', 'Absolutely not', 'It would clear the room'] },
+      opts: ['Instantly', 'Late, when it thins out', 'Pre-drinks only', 'Only if I’m faded', 'it’d clear the room'] },
     { id: 'emotional', tone: 'opinion', kinds: ['album','song'], text: 'Is this actually good, or are you emotionally attached?',
-      opts: ['Actually good', 'Emotionally attached', 'Both, obviously', 'Objectively terrible, still love it'] },
+      opts: ['Actually good', 'Emotionally attached', 'Both, obviously', 'objectively terrible, still love it'] },
     { id: 'aux', tone: 'silly', kinds: ['song'], text: 'Aux cord test — do you risk it?',
-      opts: ['Risk it', 'Depends who is in the car', 'Only with headphones', 'Never'] },
+      opts: ['Risk it', 'depends who’s in the car', 'Only with headphones', 'Never'] },
     { id: 'loud', tone: 'silly', kinds: ['album','song'], text: 'How loud does this need to be?',
-      opts: ['Quiet, it is personal', 'Normal', 'Loud', 'Neighbours-problem loud'] },
+      opts: ['quiet, it’s personal', 'Normal', 'Loud', 'loud enough to annoy someone'] },
     { id: 'skip', tone: 'silly', kinds: ['song'], text: 'Be honest — do you ever skip this?',
-      opts: ['Never', 'If I am not in the mood', 'Only the intro', 'Constantly, and I keep it anyway'] },
+      opts: ['Never', 'if I’m not feeling it', 'Only the intro', 'constantly, and I keep it anyway'] },
     { id: 'tattoo', tone: 'silly', kinds: ['album','song'], text: 'Lyric tattoo. Yes or absolutely not?',
       opts: ['Genuinely yes', 'Ten years ago, yes', 'Absolutely not', 'Not telling you'] },
     { id: 'karaoke', tone: 'silly', kinds: ['song'], text: 'Could you do this at karaoke?',
-      opts: ['Flawlessly', 'After a few', 'I would ruin it', 'Nobody should attempt this'] },
+      opts: ['Flawlessly', 'After a few', 'I’d butcher it', 'nobody should attempt this'] },
     { id: 'guilty', tone: 'opinion', kinds: ['album','song'], text: 'Guilty pleasure or a hill you would die on?',
-      opts: ['Hill I would die on', 'Slightly guilty', 'Deeply guilty', 'No guilt has ever entered this'] },
+      opts: ['hill I’d die on', 'Slightly guilty', 'Deeply guilty', 'No guilt has ever entered this'] },
     { id: 'changed', tone: 'opinion', kinds: ['album','song'], text: 'Has your opinion on this changed?',
       opts: ['Grown on me', 'Gone off it', 'Same as ever', 'Completely reversed'] },
     { id: 'grower', tone: 'opinion', kinds: ['album'], text: 'Instant, or a grower?',
       opts: ['Instant', 'Took a few listens', 'Took years', 'Still working on it'] },
     { id: 'best-track', tone: 'opinion', kinds: ['album'], text: 'Is one track carrying this whole album?',
-      opts: ['Yes, and everyone knows which', 'Yes, but nobody agrees with me', 'No, it is consistent', 'No, it is all mid'] },
+      opts: ['Yes, and everyone knows which', 'Yes, but nobody agrees with me', 'nah, it’s solid all through', 'nah, it’s all mid'] },
     { id: 'front-back', tone: 'opinion', kinds: ['album'], text: 'Do you actually play this front to back?',
       opts: ['Always', 'Sometimes', 'Only the singles', 'Never, and I still rate it'] },
     { id: 'overrated', tone: 'opinion', kinds: ['album','song'], text: 'Overrated, underrated, or correctly rated?',
@@ -11130,19 +11139,19 @@ window.track = function (name, props) {
     { id: 'gateway', tone: 'opinion', kinds: ['album','artist'], text: 'Was this your way into the artist?',
       opts: ['Yes, this was the one', 'No, came later', 'Still the only one I know', 'Worked backwards from it'] },
     { id: 'send-to', tone: 'people', kinds: ['album','song'], text: 'Who would you send this to right now?',
-      opts: ['One specific person', 'The group chat', 'Nobody, it is mine', 'Everyone'] },
+      opts: ['One specific person', 'The group chat', 'nobody, it’s mine', 'Everyone'] },
     { id: 'shared-with', tone: 'people', kinds: ['album','song'], text: 'Is this shared with anyone?',
-      opts: ['It is ours', 'It was ours', 'Only mine', 'Everyone I know has it'] },
+      opts: ['it’s ours', 'it was ours', 'Only mine', 'Everyone I know has it'] },
     { id: 'inherited', tone: 'people', kinds: ['album','artist'], text: 'Did you inherit this taste from someone?',
-      opts: ['A parent', 'A sibling', 'A friend', 'Entirely my own', 'Someone I would rather not credit'] },
+      opts: ['A parent', 'A sibling', 'A friend', 'Entirely my own', 'someone I’d rather not credit'] },
     { id: 'activity', tone: 'casual', kinds: ['album','song'], text: 'What are you usually doing when this is on?',
-      opts: ['Walking', 'Travelling', 'Working', 'Doing nothing', 'Lying awake', 'Getting ready', 'Tipsy', 'Faded'] },
+      opts: ['Walking', 'Travelling', 'Working', 'Doing nothing', 'Lying awake', 'Getting ready', 'Tipsy', 'Drunk', 'Faded'] },
     { id: 'time-of-day', tone: 'casual', kinds: ['album','song'], text: 'When does this actually get played?',
       opts: ['Morning', 'Afternoon', 'Evening', 'Late night', '3am specifically'] },
     { id: 'alone', tone: 'casual', kinds: ['album','song'], text: 'Alone, or with people?',
-      opts: ['Alone, always', 'With people', 'Either', 'Alone but I would never admit it'] },
+      opts: ['Alone, always', 'With people', 'Either', 'alone, but I’d never admit it'] },
     { id: 'season', tone: 'time', kinds: ['album','song'], text: 'Which season owns this?',
-      opts: ['Summer', 'Autumn', 'Winter', 'Spring', 'It is year-round'] }
+      opts: ['Summer', 'Autumn', 'Winter', 'Spring', 'all year, no season'] }
   ];
 
   // ---- what VINALL has noticed ------------------------------------------
@@ -11165,6 +11174,15 @@ window.track = function (name, props) {
     for (var k in _lore) { if (k.indexOf(kind + '|' + id + '|') === 0) return true; }
     return false;
   }
+
+  // A few answers get to behave. Purely decorative, but it is the difference
+  // between a form and something with a sense of humour.
+  var OPT_FX = {
+    'faded': 'opt-faded', 'only if i’m faded': 'opt-faded',
+    'drunk': 'opt-drunk', 'tipsy': 'opt-drunk',
+    'lying awake': 'opt-late', '3am specifically': 'opt-late'
+  };
+  function fxClass(o) { return OPT_FX[String(o).toLowerCase()] || ''; }
 
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
@@ -11362,18 +11380,47 @@ window.track = function (name, props) {
     return a;
   }
 
+  // Everything you have rated that has no lore on it yet. Without this the
+  // pool was only the handful of records that tripped a specific finder, so
+  // the same album came back again and again wearing a different question --
+  // which reads as the app being broken, not as it being persistent.
+  function findAnyRated() {
+    var out = [], al = albums(), sg = songs();
+    Object.keys(al).forEach(function (k) {
+      var a = al[k];
+      if (!a || !a.id || anyLoreFor('album', a.id)) return;
+      out.push(mkDiscovery('any', 'You rated ' + esc2(a.name) + ' ' + (a.score || 0) + '/100.',
+        itemFromAlbum(a), null));
+    });
+    Object.keys(sg).forEach(function (k) {
+      var s = sg[k];
+      if (!s || !s.id || (s.score || 0) < 7 || anyLoreFor('song', s.id)) return;
+      out.push(mkDiscovery('any', esc2(s.name) + ' is one of your higher-rated songs.',
+        itemFromSong(s), null));
+    });
+    return out.filter(Boolean);
+  }
+
   function buildQueue() {
-    var pool = shuffle([].concat(findFresh(), findContradiction(), findAlbumLove(),
-                                 findArtistGap(), findNostalgia()));
+    var raw = [].concat(findFresh(), findContradiction(), findAlbumLove(),
+                        findArtistGap(), findNostalgia(), findAnyRated());
+    // One entry per record per pass. You work through everything you own
+    // before anything comes round again.
+    var seen = {}, pool = [];
+    shuffle(raw).forEach(function (d) {
+      if (!d || !d.item) return;
+      var k = d.item.kind + ':' + d.item.id;
+      if (seen[k]) return;
+      seen[k] = 1;
+      pool.push(d);
+    });
+
     var receipts = shuffle(findReceipt());
     var out = [];
     pool.forEach(function (d, i) {
       out.push({ t: 'ask', d: d });
-      // Break up the questioning so it never feels like a form: an old answer
-      // handed back every few cards, something to play now and then.
-      if (i % 4 === 3 && receipts.length) out.push({ t: 'ask', d: receipts.shift() });
-      if (i % 7 === 6) out.push({ t: 'game' });
-      if (i % 9 === 8) out.push({ t: 'revisit', d: d });
+      if (i % 5 === 4 && receipts.length) out.push({ t: 'ask', d: receipts.shift() });
+      if (i % 9 === 8) out.push({ t: 'game' });
     });
     while (receipts.length) out.push({ t: 'ask', d: receipts.shift() });
     return out;
@@ -11404,7 +11451,7 @@ window.track = function (name, props) {
       '<div class="td-q">' + esc2(d.q.text) + '</div>' +
       '<div class="td-opts">' +
         d.q.opts.map(function (o) {
-          return '<button class="td-opt" data-opt="' + esc2(o) + '">' + esc2(o) + '</button>';
+          return '<button class="td-opt ' + fxClass(o) + '" data-opt="' + esc2(o) + '"><span>' + esc2(o) + '</span></button>';
         }).join('') +
         '<button class="td-opt td-other" data-opt="__other">Other…</button>' +
         '<button class="td-opt td-skip" data-opt="__skip">Not this one</button>' +
@@ -11664,7 +11711,42 @@ window.track = function (name, props) {
     }).join('');
   }
 
+  // Scroll or swipe to move on. A gentle scroll still scrolls the page; only a
+  // decisive one takes the card, and the lock stops a single flick from
+  // burning through three questions at once.
+  function wireSwipe() {
+    var host = stackEl();
+    if (!host) return;
+    var acc = 0, lock = 0;
+
+    host.addEventListener('wheel', function (e) {
+      if (!host.querySelector('.td-live')) return;
+      if (Date.now() < lock) { e.preventDefault(); return; }
+      if (e.deltaY <= 0) { acc = 0; return; }
+      acc += e.deltaY;
+      if (acc > 90) {
+        acc = 0;
+        lock = Date.now() + 700;
+        e.preventDefault();
+        advance();
+      }
+    }, { passive: false });
+
+    var y0 = null;
+    host.addEventListener('touchstart', function (e) {
+      y0 = e.touches && e.touches[0] ? e.touches[0].clientY : null;
+    }, { passive: true });
+    host.addEventListener('touchend', function (e) {
+      if (y0 == null || !host.querySelector('.td-live')) return;
+      var end = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : y0;
+      var dy = y0 - end;
+      y0 = null;
+      if (dy > 55 && Date.now() >= lock) { lock = Date.now() + 700; advance(); }
+    }, { passive: true });
+  }
+
   function wireLore() {
+    wireSwipe();
     var rb = document.getElementById('today-refresh');
     if (rb) rb.addEventListener('click', function () {
       rb.disabled = true;
