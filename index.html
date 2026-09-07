@@ -2810,6 +2810,95 @@ body.entering-done #artist-hero {
 .war-tag.won       { background: rgba(79,180,119,0.15); color: var(--green); }
 .war-tag.lost      { background: rgba(226,75,74,0.15); color: var(--red); }
 .war-tag.draw      { background: var(--surface-3); color: var(--text-dim); }
+
+/* ================================================================
+   TODAY / LORE
+   Cards, not a feed. Each one is a single small thing to do, and
+   the answer options are the loudest element on it -- the question
+   should read as an invitation, not a field to fill in.
+   ================================================================ */
+.td-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; margin-bottom: 14px;
+  transition: opacity 0.24s var(--ease), transform 0.24s var(--ease);
+}
+.td-card.td-gone { opacity: 0; transform: translateY(-6px); }
+.td-kicker {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--gold); margin-bottom: 8px; font-weight: 600;
+}
+.td-line { font-size: 15px; line-height: 1.5; color: var(--text); margin-bottom: 14px; }
+.td-item { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
+.td-item img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--surface-3); }
+.td-item-meta { min-width: 0; }
+.td-item-nm { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.td-item-ar { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.td-q { font-family: var(--font-display); font-size: 19px; font-weight: 600; line-height: 1.35; margin-bottom: 14px; }
+.td-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.td-opt {
+  border: 1px solid var(--border-strong); background: var(--surface-2);
+  color: var(--text); border-radius: 999px; padding: 9px 15px;
+  font-size: 13px; font-family: var(--font-body); cursor: pointer;
+  transition: background 0.14s, border-color 0.14s, transform 0.1s var(--ease);
+}
+.td-opt:hover:not(:disabled) { background: var(--surface-3); border-color: var(--gold-dim); }
+.td-opt:active:not(:disabled) { transform: scale(0.96); }
+.td-opt.chosen { background: var(--gold); border-color: var(--gold); color: #1a1508; font-weight: 600; }
+.td-opt:disabled { opacity: 0.45; cursor: default; }
+.td-skip { color: var(--text-faint); border-style: dashed; }
+
+.td-after { margin-top: 4px; }
+.td-saved { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 10px; }
+.td-tick { color: var(--green); font-weight: 700; }
+.td-saved-txt { font-weight: 600; }
+.td-note-btn {
+  background: none; border: none; color: var(--text-dim); font-size: 13px;
+  cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px;
+}
+.td-note-btn:hover { color: var(--text); }
+.td-note-wrap { display: flex; gap: 8px; align-items: flex-start; }
+.td-note {
+  flex: 1; background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); padding: 9px 11px;
+  font-family: var(--font-body); font-size: 13px; resize: vertical;
+}
+.td-note-save {
+  background: var(--surface-3); border: 1px solid var(--border-strong); color: var(--text);
+  border-radius: var(--radius-sm); padding: 9px 14px; font-size: 13px; cursor: pointer;
+}
+.td-note-done { font-size: 13px; color: var(--text-dim); }
+.td-go {
+  background: var(--surface-3); border: 1px solid var(--border-strong); color: var(--text);
+  border-radius: 999px; padding: 9px 18px; font-size: 13px; cursor: pointer;
+  transition: background 0.14s;
+}
+.td-go:hover { background: var(--surface-4); }
+.td-game-nm { font-family: var(--font-display); font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+.td-quiet .td-kicker { color: var(--text-dim); }
+
+/* Your Music Lore — a list that reads as accumulation, not as a report. */
+.lore-row {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.lore-row img, .lore-noart {
+  width: 44px; height: 44px; border-radius: 8px; object-fit: cover;
+  flex-shrink: 0; background: var(--surface-3);
+}
+.lore-body { flex: 1; min-width: 0; }
+.lore-item { font-weight: 600; font-size: 14px; }
+.lore-ar { color: var(--text-dim); font-weight: 400; }
+.lore-q { font-size: 12px; color: var(--text-dim); margin: 3px 0 5px; }
+.lore-a {
+  display: inline-block; background: var(--gold-dim); color: var(--gold);
+  border-radius: 999px; padding: 3px 10px; font-size: 13px; font-weight: 600;
+}
+.lore-note {
+  margin-top: 7px; font-size: 13px; color: var(--text); line-height: 1.5;
+  border-left: 2px solid var(--border-strong); padding-left: 10px;
+}
+.lore-when { font-size: 11px; color: var(--text-faint); flex-shrink: 0; white-space: nowrap; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -2960,6 +3049,7 @@ window.ICONS = {
   <!-- ============================ MODE NAV ============================ -->
   <nav class="modes" id="modes">
     <span class="nav-indicator" id="nav-indicator"></span>
+    <button data-mode="today">Today</button>
     <button data-mode="home" class="active">Home</button>
     <button data-mode="crate" class="nav-icon-btn"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>The Crate</button>
     <button data-mode="diary">Diary</button>
@@ -2978,6 +3068,13 @@ window.ICONS = {
     <p>The music catalogue couldn&rsquo;t load. Try refreshing the page.</p>
     <button class="btn-mini" id="gate-connect" onclick="location.reload()">&#8635; Refresh</button>
   </div>
+
+  <!-- ============================ TODAY ============================ -->
+  <section id="view-today" style="display:none; margin-top:32px;">
+    <div class="section-head"><h2><span data-icon="sparkle"></span> Today</h2></div>
+    <p class="reco-note">A few things worth a minute. Tap an answer &mdash; that&rsquo;s the whole thing, writing is optional.</p>
+    <div id="today-stream"></div>
+  </section>
 
   <!-- ============================ HOME ============================ -->
   <section id="view-home" style="margin-top:32px;">
@@ -3228,6 +3325,9 @@ window.ICONS = {
   <!-- ============================ PROFILE ============================ -->
   <section id="view-profile" style="display:none; margin-top:32px;">
     <div id="profile-body"></div>
+    <div class="section-head" style="margin-top:34px;"><h2>Your Music Lore</h2><span class="muted" id="lore-count"></span></div>
+    <p class="reco-note">What you&rsquo;ve said about your records, as it piles up.</p>
+    <div id="lore-list"></div>
   </section>
 
   <!-- ============================ PEOPLE ============================ -->
@@ -4572,6 +4672,7 @@ function applyAlbumTint(rgb) {
    ================================================================ */
 const views = {
   home: document.getElementById('view-home'),
+  today: document.getElementById('view-today'),
   crate: document.getElementById('view-crate'),
   diary: document.getElementById('view-diary'),
   albums: document.getElementById('view-albums'),
@@ -4601,8 +4702,10 @@ function setMode(mode, fromCode) {
   if (mode === 'songs') renderSongs();
   if (mode === 'games' && window.renderGameBests) window.renderGameBests();
   if (mode === 'wars' && window.renderWars) window.renderWars();
+  if (mode === 'today' && window.renderToday) window.renderToday();
   if (mode === 'achievements' && window.renderAchievements) window.renderAchievements();
   if (mode === 'profile' && window.renderProfile) window.renderProfile();
+  if (mode === 'profile' && window.renderLore) window.renderLore();
   if (mode === 'people' && window.renderPeople) window.renderPeople();
   if (mode === 'grooves' && window.renderGrooves) window.renderGrooves();
 }
@@ -10625,6 +10728,547 @@ function playDismissAnimation(gateEl, callback) {
 
   window.renderWars = renderWars;
   window.openBidWar = openWar;
+})();
+</script>
+
+<!-- ================================================================
+     LORE — the core VINALL loop.
+
+       listen / rate  ->  VINALL notices something  ->  it asks a small
+       question  ->  you tap  ->  it remembers  ->  it brings it back.
+
+     Two deliberate constraints, both from the brief:
+
+       * The word "meaning" appears nowhere in this UI. Asking someone
+         what a song means makes them feel they owe you something
+         profound, so they write nothing at all.
+       * Every question answers in one tap. Text is always optional and
+         offered *after* the tap, never instead of it.
+
+     Questions are data, not code, so the library grows without touching
+     the engine. Each carries its own one-tap options, because good
+     options are question-specific -- generic ones read like a survey.
+     ================================================================ -->
+<script>
+(function () {
+  function sb() { return (window.Cloud && Cloud.client) ? Cloud.client() : null; }
+  function me() { return (window.Cloud && Cloud.getUser) ? Cloud.getUser() : null; }
+  function on() { return !!(window.Cloud && Cloud.isOn && Cloud.isOn()); }
+  function esc2(s) { return window.esc ? esc(s) : String(s == null ? '' : s); }
+
+  // kinds: which item types a question suits.
+  // tone: keeps a day's questions from being all daft or all earnest.
+  var QUESTIONS = [
+    { id: 'rinsing', tone: 'casual', kinds: ['album','song'], text: 'Why have you been rinsing this?',
+      opts: ['Going through a phase', 'Reminds me of something', 'It just slaps', 'Someone showed me it', 'No idea'] },
+    { id: 'keeps-back', tone: 'casual', kinds: ['album','song'], text: 'This one keeps coming back...',
+      opts: ['It never left', 'Seasonal', 'Someone put it back in my head', 'Comfort listen', 'Genuinely no idea'] },
+    { id: 'where-take', tone: 'place', kinds: ['album','song'], text: 'Where does this take you?',
+      opts: ['A room', 'A journey', 'A summer', 'Somewhere I cannot name', 'Nowhere, I just like it'] },
+    { id: 'who-remind', tone: 'people', kinds: ['album','song'], text: 'Who does this remind you of?',
+      opts: ['A mate', 'Family', 'Someone I do not speak to', 'Nobody', 'Rather not say'] },
+    { id: 'first-heard', tone: 'time', kinds: ['album','song'], text: 'Where were you when you first heard this?',
+      opts: ['At home', 'In a car', 'At a party', 'Someone else’s room', 'Headphones, walking', 'No memory of it'] },
+    { id: 'who-showed', tone: 'people', kinds: ['album','song'], text: 'Who introduced you to this?',
+      opts: ['A friend', 'Family', 'Found it myself', 'An algorithm, embarrassingly', 'A film or game', 'Cannot remember'] },
+    { id: 'what-era', tone: 'time', kinds: ['album','song'], text: 'What era of your life does this belong to?',
+      opts: ['Right now', 'School', 'Last summer', 'A bad stretch', 'A good stretch', 'Before I was properly me'] },
+    { id: 'what-year', tone: 'time', kinds: ['album','song'], text: 'What year does this feel like?',
+      opts: ['This year', 'A couple of years ago', 'School years', 'Before my time', 'Timeless, genuinely'] },
+    { id: 'place-mind', tone: 'place', kinds: ['album','song'], text: 'What place immediately comes to mind?',
+      opts: ['My room', 'A car', 'A town', 'Abroad', 'A night out', 'Nowhere in particular'] },
+    { id: 'weather', tone: 'place', kinds: ['album','song'], text: 'What weather is this?',
+      opts: ['Rain', 'Grey and cold', 'Proper summer', 'Late night', 'Early morning', 'Indoors, always'] },
+    { id: 'court', tone: 'silly', kinds: ['album','song'], text: 'Would you defend this song in court?',
+      opts: ['Without hesitation', 'Under oath, reluctantly', 'I would take the fifth', 'I would testify against it'] },
+    { id: 'never-around', tone: 'silly', kinds: ['album','song'], text: 'Who would you never play this around?',
+      opts: ['My parents', 'My mates', 'Anyone with taste', 'One specific person', 'I would play it for anyone'] },
+    { id: 'party', tone: 'silly', kinds: ['album','song'], text: 'Would you put this on at a party?',
+      opts: ['Instantly', 'Late, when it thins out', 'Pre-drinks only', 'Absolutely not', 'It would clear the room'] },
+    { id: 'emotional', tone: 'opinion', kinds: ['album','song'], text: 'Is this actually good, or are you emotionally attached?',
+      opts: ['Actually good', 'Emotionally attached', 'Both, obviously', 'Objectively terrible, still love it'] },
+    { id: 'aux', tone: 'silly', kinds: ['song'], text: 'Aux cord test — do you risk it?',
+      opts: ['Risk it', 'Depends who is in the car', 'Only with headphones', 'Never'] },
+    { id: 'loud', tone: 'silly', kinds: ['album','song'], text: 'How loud does this need to be?',
+      opts: ['Quiet, it is personal', 'Normal', 'Loud', 'Neighbours-problem loud'] },
+    { id: 'skip', tone: 'silly', kinds: ['song'], text: 'Be honest — do you ever skip this?',
+      opts: ['Never', 'If I am not in the mood', 'Only the intro', 'Constantly, and I keep it anyway'] },
+    { id: 'tattoo', tone: 'silly', kinds: ['album','song'], text: 'Lyric tattoo. Yes or absolutely not?',
+      opts: ['Genuinely yes', 'Ten years ago, yes', 'Absolutely not', 'Not telling you'] },
+    { id: 'karaoke', tone: 'silly', kinds: ['song'], text: 'Could you do this at karaoke?',
+      opts: ['Flawlessly', 'After a few', 'I would ruin it', 'Nobody should attempt this'] },
+    { id: 'guilty', tone: 'opinion', kinds: ['album','song'], text: 'Guilty pleasure or a hill you would die on?',
+      opts: ['Hill I would die on', 'Slightly guilty', 'Deeply guilty', 'No guilt has ever entered this'] },
+    { id: 'changed', tone: 'opinion', kinds: ['album','song'], text: 'Has your opinion on this changed?',
+      opts: ['Grown on me', 'Gone off it', 'Same as ever', 'Completely reversed'] },
+    { id: 'grower', tone: 'opinion', kinds: ['album'], text: 'Instant, or a grower?',
+      opts: ['Instant', 'Took a few listens', 'Took years', 'Still working on it'] },
+    { id: 'best-track', tone: 'opinion', kinds: ['album'], text: 'Is one track carrying this whole album?',
+      opts: ['Yes, and everyone knows which', 'Yes, but nobody agrees with me', 'No, it is consistent', 'No, it is all mid'] },
+    { id: 'front-back', tone: 'opinion', kinds: ['album'], text: 'Do you actually play this front to back?',
+      opts: ['Always', 'Sometimes', 'Only the singles', 'Never, and I still rate it'] },
+    { id: 'overrated', tone: 'opinion', kinds: ['album','song'], text: 'Overrated, underrated, or correctly rated?',
+      opts: ['Underrated', 'Correctly rated', 'Overrated and I still like it', 'Wildly overrated'] },
+    { id: 'gateway', tone: 'opinion', kinds: ['album','artist'], text: 'Was this your way into the artist?',
+      opts: ['Yes, this was the one', 'No, came later', 'Still the only one I know', 'Worked backwards from it'] },
+    { id: 'send-to', tone: 'people', kinds: ['album','song'], text: 'Who would you send this to right now?',
+      opts: ['One specific person', 'The group chat', 'Nobody, it is mine', 'Everyone'] },
+    { id: 'shared-with', tone: 'people', kinds: ['album','song'], text: 'Is this shared with anyone?',
+      opts: ['It is ours', 'It was ours', 'Only mine', 'Everyone I know has it'] },
+    { id: 'inherited', tone: 'people', kinds: ['album','artist'], text: 'Did you inherit this taste from someone?',
+      opts: ['A parent', 'A sibling', 'A friend', 'Entirely my own', 'Someone I would rather not credit'] },
+    { id: 'activity', tone: 'casual', kinds: ['album','song'], text: 'What are you usually doing when this is on?',
+      opts: ['Walking', 'Travelling', 'Working', 'Doing nothing', 'Lying awake', 'Getting ready'] },
+    { id: 'time-of-day', tone: 'casual', kinds: ['album','song'], text: 'When does this actually get played?',
+      opts: ['Morning', 'Afternoon', 'Evening', 'Late night', '3am specifically'] },
+    { id: 'alone', tone: 'casual', kinds: ['album','song'], text: 'Alone, or with people?',
+      opts: ['Alone, always', 'With people', 'Either', 'Alone but I would never admit it'] },
+    { id: 'season', tone: 'time', kinds: ['album','song'], text: 'Which season owns this?',
+      opts: ['Summer', 'Autumn', 'Winter', 'Spring', 'It is year-round'] }
+  ];
+
+  // ---- what VINALL has noticed ------------------------------------------
+  // A "discovery" is a reason to ask, not the question itself. The line sets
+  // the context ("you rated this two years ago and never let go of it") and a
+  // question from the library does the asking. Same question, different
+  // framing, reads completely differently -- which is where the variety comes
+  // from without needing hundreds of questions.
+
+  var DAY = 86400000;
+  var _lore = null;      // this user's answers, keyed for fast lookup
+  var _loreList = [];
+
+  function albums() { try { return window.loadAlbums ? loadAlbums() : {}; } catch (e) { return {}; } }
+  function songs() { try { return window.loadSongs ? loadSongs() : {}; } catch (e) { return {}; } }
+  function answeredKey(kind, id, qid) { return kind + '|' + id + '|' + qid; }
+  function hasAnswered(kind, id, qid) { return !!(_lore && _lore[answeredKey(kind, id, qid)]); }
+  function anyLoreFor(kind, id) {
+    if (!_lore) return false;
+    for (var k in _lore) { if (k.indexOf(kind + '|' + id + '|') === 0) return true; }
+    return false;
+  }
+
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  // A question this person has not already answered for this item.
+  function questionFor(kind, id, tones) {
+    var avail = QUESTIONS.filter(function (q) {
+      if (q.kinds.indexOf(kind) === -1) return false;
+      if (hasAnswered(kind, id, q.id)) return false;
+      if (tones && tones.length && tones.indexOf(q.tone) === -1) return false;
+      return true;
+    });
+    if (!avail.length && tones) return questionFor(kind, id, null);
+    return avail.length ? pick(avail) : null;
+  }
+
+  function itemFromAlbum(a) {
+    return { kind: 'album', id: a.id, name: a.name, artist: a.artist, art: a.art };
+  }
+  function itemFromSong(s) {
+    return { kind: 'song', id: s.id, name: s.name, artist: s.artist, art: s.art };
+  }
+
+  function mkDiscovery(type, line, item, tones) {
+    var q = questionFor(item.kind, item.id, tones);
+    if (!q) return null;
+    return { type: type, line: line, item: item, q: q };
+  }
+
+  // Each finder returns candidate discoveries; the page picks from the pool.
+  // Deliberately no "we think this song means X" anywhere -- VINALL points at
+  // something it noticed and lets the person do the interpreting.
+
+  function findFresh() {
+    var out = [], al = albums(), now = Date.now();
+    Object.keys(al).forEach(function (k) {
+      var a = al[k];
+      if (!a || !a.savedAt || now - a.savedAt > 21 * DAY) return;
+      if (anyLoreFor('album', a.id)) return;
+      out.push(mkDiscovery('fresh',
+        'You put ' + esc2(a.name) + ' in your crate ' + (window.timeAgo ? timeAgo(a.savedAt) : 'recently') + '.',
+        itemFromAlbum(a), ['casual', 'place', 'people']));
+    });
+    return out.filter(Boolean);
+  }
+
+  function findNostalgia() {
+    var out = [], al = albums(), now = Date.now();
+    Object.keys(al).forEach(function (k) {
+      var a = al[k];
+      if (!a || !a.savedAt || now - a.savedAt < 300 * DAY) return;
+      out.push(mkDiscovery('nostalgia',
+        'You rated ' + esc2(a.name) + ' ' + (window.timeAgo ? timeAgo(a.savedAt) : 'a long time ago') + ' and it is still here.',
+        itemFromAlbum(a), ['time', 'opinion']));
+    });
+    return out.filter(Boolean);
+  }
+
+  // "You keep coming back to this artist but have never rated an album."
+  function findArtistGap() {
+    var out = [], sg = songs(), al = albums();
+    var byArtist = {}, ratedArtists = {};
+    Object.keys(al).forEach(function (k) { if (al[k] && al[k].artistId) ratedArtists[al[k].artistId] = true; });
+    Object.keys(sg).forEach(function (k) {
+      var s = sg[k];
+      if (!s || !s.artistId) return;
+      (byArtist[s.artistId] = byArtist[s.artistId] || []).push(s);
+    });
+    Object.keys(byArtist).forEach(function (aid) {
+      var list = byArtist[aid];
+      if (list.length < 3 || ratedArtists[aid]) return;
+      var best = list.slice().sort(function (a, b) { return (b.score || 0) - (a.score || 0); })[0];
+      out.push(mkDiscovery('gap',
+        'You have rated ' + list.length + ' ' + esc2(best.artist) + ' songs and not one of their albums.',
+        itemFromSong(best), ['opinion', 'people']));
+    });
+    return out.filter(Boolean);
+  }
+
+  // The brief's "three songs from this album in your top 20 -- maybe admit you
+  // love the album". Computed from their own song ratings, no listening data.
+  function findAlbumLove() {
+    var out = [], sg = songs(), al = albums(), byAlbum = {};
+    Object.keys(sg).forEach(function (k) {
+      var s = sg[k];
+      if (!s || !s.albumId || (s.score || 0) < 8) return;
+      (byAlbum[s.albumId] = byAlbum[s.albumId] || []).push(s);
+    });
+    Object.keys(byAlbum).forEach(function (aid) {
+      var list = byAlbum[aid];
+      if (list.length < 3 || al[aid]) return;
+      var s = list[0];
+      out.push(mkDiscovery('album-love',
+        'You have got ' + list.length + ' songs from ' + esc2(s.albumName || 'this album') +
+        ' rated 8 or higher, and you have never rated the album itself.',
+        { kind: 'album', id: aid, name: s.albumName || 'this album', artist: s.artist, art: s.art },
+        ['opinion']));
+    });
+    return out.filter(Boolean);
+  }
+
+  // A rating that has aged strangely: loved it, never touched it since.
+  function findContradiction() {
+    var out = [], al = albums(), now = Date.now();
+    Object.keys(al).forEach(function (k) {
+      var a = al[k];
+      if (!a || !a.savedAt) return;
+      var old = now - a.savedAt > 200 * DAY;
+      if (old && (a.score || 0) >= 85) {
+        out.push(mkDiscovery('contradiction',
+          'You gave ' + esc2(a.name) + ' ' + a.score + '/100 and have not touched it since.',
+          itemFromAlbum(a), ['opinion', 'time']));
+      } else if (old && (a.score || 0) <= 45) {
+        out.push(mkDiscovery('contradiction',
+          'You gave ' + esc2(a.name) + ' ' + a.score + '/100 and it is still sitting in your crate.',
+          itemFromAlbum(a), ['opinion', 'silly']));
+      }
+    });
+    return out.filter(Boolean);
+  }
+
+  // Something you said before, handed back to you. The brief's "Receipts".
+  function findReceipt() {
+    var out = [];
+    _loreList.filter(function (r) {
+      return !r.skipped && r.choice && Date.now() - new Date(r.created_at).getTime() > 45 * DAY;
+    }).forEach(function (r) {
+      out.push({
+        type: 'receipt', item: { kind: r.item_kind, id: r.item_id, name: r.item_name, artist: r.item_artist, art: r.item_art },
+        line: 'You said "' + esc2(r.choice) + '" about ' + esc2(r.item_name) + '.',
+        receipt: r,
+        q: { id: 'still-true', tone: 'opinion', text: 'Still true?',
+             opts: ['Still true', 'Not any more', 'More than ever', 'No idea what I meant'] }
+      });
+    });
+    return out;
+  }
+
+  // ---- storage ------------------------------------------------------------
+
+  async function loadLore(force) {
+    if (_lore && !force) return _loreList;
+    _lore = {}; _loreList = [];
+    if (!on()) return _loreList;
+    try {
+      var r = await sb().from('lore_answers').select('*')
+        .eq('user_id', me().id).order('created_at', { ascending: false }).limit(400);
+      _loreList = r.data || [];
+      _loreList.forEach(function (x) { _lore[answeredKey(x.item_kind, x.item_id, x.question_id)] = x; });
+    } catch (e) {}
+    return _loreList;
+  }
+
+  async function saveAnswer(item, q, choice, opts) {
+    if (!on()) { Cloud.openAuth(); return { error: 'not logged in' }; }
+    opts = opts || {};
+    var row = {
+      user_id: me().id,
+      item_kind: item.kind, item_id: item.id,
+      item_name: item.name || '', item_artist: item.artist || '', item_art: item.art || '',
+      question_id: q.id, question_text: q.text,
+      choice: choice || null, note: opts.note || null,
+      skipped: !!opts.skipped,
+      updated_at: new Date().toISOString()
+    };
+    try {
+      var r = await sb().from('lore_answers')
+        .upsert(row, { onConflict: 'user_id,item_kind,item_id,question_id' }).select().single();
+      if (r.error) return { error: r.error.message };
+      _lore = _lore || {};
+      _lore[answeredKey(item.kind, item.id, q.id)] = r.data;
+      _loreList.unshift(r.data);
+      return { data: r.data };
+    } catch (e) { return { error: String((e && e.message) || e) }; }
+  }
+
+  // ---- what to put in front of someone today ------------------------------
+  // One of each kind at most. A page of six questions is a form; a page with
+  // one question, one record to revisit, one game and one old answer is a
+  // place you drop into.
+
+  function buildToday() {
+    var pool = [].concat(findFresh(), findContradiction(), findAlbumLove(),
+                         findArtistGap(), findNostalgia());
+    var receipts = findReceipt();
+    var byType = {};
+    pool.forEach(function (d) { (byType[d.type] = byType[d.type] || []).push(d); });
+
+    // Prefer a discovery about something recent, then something contradictory,
+    // then whatever else there is -- so the first card feels current.
+    var order = ['fresh', 'contradiction', 'album-love', 'gap', 'nostalgia'];
+    var question = null;
+    for (var i = 0; i < order.length && !question; i++) {
+      if (byType[order[i]] && byType[order[i]].length) question = pick(byType[order[i]]);
+    }
+    var revisit = byType['nostalgia'] && byType['nostalgia'].length
+      ? pick(byType['nostalgia']) : null;
+    if (revisit && question && revisit.item.id === question.item.id) revisit = null;
+
+    return {
+      question: question,
+      revisit: revisit,
+      receipt: receipts.length ? pick(receipts) : null,
+      remaining: pool.length
+    };
+  }
+
+  // ---- rendering ----------------------------------------------------------
+
+  function artOf(item) { return item && item.art ? item.art : ''; }
+
+  function cardHead(kicker, line) {
+    return '<div class="td-kicker">' + kicker + '</div>' +
+           '<div class="td-line">' + line + '</div>';
+  }
+
+  function itemStrip(item) {
+    return '<div class="td-item">' +
+      (artOf(item) ? '<img src="' + esc2(artOf(item)) + '" alt="" loading="lazy">' : '') +
+      '<div class="td-item-meta"><div class="td-item-nm">' + esc2(item.name) + '</div>' +
+      '<div class="td-item-ar">' + esc2(item.artist || '') + '</div></div></div>';
+  }
+
+  function questionCard(d, kicker) {
+    var key = d.item.kind + ':' + d.item.id + ':' + d.q.id;
+    return '<div class="td-card td-ask" data-ask="' + esc2(key) + '">' +
+      cardHead(kicker, d.line) +
+      itemStrip(d.item) +
+      '<div class="td-q">' + esc2(d.q.text) + '</div>' +
+      '<div class="td-opts">' +
+        d.q.opts.map(function (o) {
+          return '<button class="td-opt" data-opt="' + esc2(o) + '">' + esc2(o) + '</button>';
+        }).join('') +
+        '<button class="td-opt td-skip" data-opt="__skip">Not this one</button>' +
+      '</div>' +
+      '<div class="td-after" style="display:none;">' +
+        '<div class="td-saved"><span class="td-tick">✓</span> <span class="td-saved-txt"></span></div>' +
+        '<button class="td-note-btn" type="button">Add a note</button>' +
+        '<div class="td-note-wrap" style="display:none;">' +
+          '<textarea class="td-note" rows="2" placeholder="Optional. A line is plenty."></textarea>' +
+          '<button class="td-note-save" type="button">Save</button>' +
+        '</div>' +
+      '</div></div>';
+  }
+
+  function revisitCard(d) {
+    return '<div class="td-card td-revisit" data-meta="' + esc2(JSON.stringify(d.item)) + '">' +
+      cardHead('Worth another spin', d.line) +
+      itemStrip(d.item) +
+      '<button class="td-go" type="button">Open it</button></div>';
+  }
+
+  function gameCard() {
+    var games = [
+      { id: 'drop', name: 'Daily Drop', blurb: 'One album, one song, six guesses each.' },
+      { id: 'earworm', name: 'Earworm', blurb: 'Spell the record letter by letter.' },
+      { id: 'wars', name: 'Bid Wars', blurb: 'Outbid a mate on five records, blind.' }
+    ];
+    var g = pick(games);
+    return '<div class="td-card td-game" data-game="' + g.id + '">' +
+      cardHead('Something to play', g.blurb) +
+      '<div class="td-game-nm">' + g.name + '</div>' +
+      '<button class="td-go" type="button">Play</button></div>';
+  }
+
+  async function friendCard() {
+    if (!on()) return '';
+    try {
+      var people = await Cloud.followingList(me().id);
+      if (!people || !people.length) return '';
+      var ids = people.map(function (p) { return p.id; }).slice(0, 30);
+      var r = await sb().from('crate_feed')
+        .select('user_id,username,album_id,album_name,album_artist,album_art,score,created_at')
+        .in('user_id', ids).order('created_at', { ascending: false }).limit(1);
+      var f = r.data && r.data[0];
+      if (!f) return '';
+      return '<div class="td-card td-friend" data-meta="' + esc2(JSON.stringify({ id: f.album_id, name: f.album_name, artist: f.album_artist, art: f.album_art })) + '">' +
+        cardHead('Someone you follow', esc2(f.username || 'A friend') + ' rated this ' + Math.round(f.score) + '/100.') +
+        itemStrip({ name: f.album_name, artist: f.album_artist, art: f.album_art }) +
+        '<button class="td-go" type="button">Have a look</button></div>';
+    } catch (e) { return ''; }
+  }
+
+  async function renderToday() {
+    var host = document.getElementById('today-stream');
+    if (!host) return;
+
+    if (!on()) {
+      host.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.sparkle +
+        '</span><h3>Today</h3><p>Log in and VINALL starts noticing things about your listening.</p>' +
+        '<button class="btn-primary" id="today-login" style="margin-top:8px;">Log in</button></div>';
+      var b = document.getElementById('today-login');
+      if (b) b.addEventListener('click', function () { Cloud.openAuth(); });
+      return;
+    }
+
+    host.innerHTML = '<p class="reco-note">Having a look through your crate…</p>';
+    await loadLore();
+    var t = buildToday();
+    var parts = [];
+
+    if (t.question) parts.push(questionCard(t.question, 'VINALL noticed'));
+    if (t.revisit) parts.push(revisitCard(t.revisit));
+    parts.push(gameCard());
+    if (t.receipt) parts.push(questionCard(t.receipt, 'You said this once'));
+
+    var fc = await friendCard();
+    if (fc) parts.push(fc);
+
+    if (!t.question && !t.receipt) {
+      parts.unshift('<div class="td-card td-quiet">' +
+        cardHead('Nothing to ask yet', 'Rate a few records and VINALL will start finding things worth asking about.') +
+        '</div>');
+    }
+
+    host.innerHTML = parts.join('');
+    wireToday(host, t);
+  }
+
+  // ---- interaction --------------------------------------------------------
+  // One tap saves. The note is offered afterwards and never demanded: the
+  // whole point is that an answer is already complete without it.
+
+  function wireToday(host, t) {
+    var lookup = {};
+    [t.question, t.receipt].forEach(function (d) {
+      if (d) lookup[d.item.kind + ':' + d.item.id + ':' + d.q.id] = d;
+    });
+
+    host.querySelectorAll('[data-ask]').forEach(function (card) {
+      var d = lookup[card.dataset.ask];
+      if (!d) return;
+      card.querySelectorAll('.td-opt').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+          var val = btn.dataset.opt;
+          var skipped = val === '__skip';
+          card.querySelectorAll('.td-opt').forEach(function (b) { b.disabled = true; });
+          btn.classList.add('chosen');
+          var res = await saveAnswer(d.item, d.q, skipped ? null : val, { skipped: skipped });
+          if (res.error) {
+            card.querySelectorAll('.td-opt').forEach(function (b) { b.disabled = false; });
+            btn.classList.remove('chosen');
+            return;
+          }
+          if (skipped) { card.classList.add('td-gone'); setTimeout(function () { renderToday(); }, 260); return; }
+          card.querySelector('.td-opts').style.display = 'none';
+          var after = card.querySelector('.td-after');
+          after.querySelector('.td-saved-txt').textContent = val;
+          after.style.display = 'block';
+          if (window.Wallet && Wallet.awardDiscs) Wallet.awardDiscs(2, { reason: 'lore' });
+        });
+      });
+
+      var noteBtn = card.querySelector('.td-note-btn');
+      if (noteBtn) noteBtn.addEventListener('click', function () {
+        noteBtn.style.display = 'none';
+        card.querySelector('.td-note-wrap').style.display = 'flex';
+        card.querySelector('.td-note').focus();
+      });
+      var noteSave = card.querySelector('.td-note-save');
+      if (noteSave) noteSave.addEventListener('click', async function () {
+        var txt = card.querySelector('.td-note').value.trim();
+        noteSave.textContent = 'Saving…';
+        var chosen = card.querySelector('.td-opt.chosen');
+        await saveAnswer(d.item, d.q, chosen ? chosen.dataset.opt : null, { note: txt });
+        card.querySelector('.td-note-wrap').innerHTML = '<div class="td-note-done">Saved.</div>';
+      });
+    });
+
+    host.querySelectorAll('[data-meta]').forEach(function (card) {
+      var meta = null;
+      try { meta = JSON.parse(card.dataset.meta); } catch (e) { return; }
+      var go = card.querySelector('.td-go');
+      if (!go) return;
+      go.addEventListener('click', function () {
+        if (window.openAlbum) openAlbum({ id: meta.id, name: meta.name, artist: meta.artist, art: meta.art });
+      });
+    });
+
+    var g = host.querySelector('[data-game]');
+    if (g) g.querySelector('.td-go').addEventListener('click', function () {
+      var which = g.dataset.game;
+      if (which === 'wars') { goToView('wars'); if (window.renderWars) renderWars(); }
+      else { goToView('games'); }
+    });
+  }
+
+  // ---- Your Music Lore ----------------------------------------------------
+  // Deliberately not "Your Meaningful Music". This is a record of what someone
+  // has said about their records over time, presented as accumulation rather
+  // than as a personality readout.
+
+  async function renderLore() {
+    var host = document.getElementById('lore-list');
+    if (!host) return;
+    if (!on()) { host.innerHTML = '<div class="reco-note">Log in to start building your lore.</div>'; return; }
+    host.innerHTML = '<p class="reco-note">Loading…</p>';
+    await loadLore(true);
+    var real = _loreList.filter(function (r) { return !r.skipped && (r.choice || r.note); });
+    var head = document.getElementById('lore-count');
+    if (head) head.textContent = real.length ? real.length + (real.length === 1 ? ' entry' : ' entries') : '';
+    if (!real.length) {
+      host.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.sparkle +
+        '</span><h3>No lore yet</h3><p>Answer something on Today and it starts here.</p></div>';
+      return;
+    }
+    host.innerHTML = real.map(function (r) {
+      return '<div class="lore-row">' +
+        (r.item_art ? '<img src="' + esc2(r.item_art) + '" alt="" loading="lazy">' : '<div class="lore-noart"></div>') +
+        '<div class="lore-body">' +
+          '<div class="lore-item">' + esc2(r.item_name) + '<span class="lore-ar"> · ' + esc2(r.item_artist || '') + '</span></div>' +
+          '<div class="lore-q">' + esc2(r.question_text) + '</div>' +
+          (r.choice ? '<div class="lore-a">' + esc2(r.choice) + '</div>' : '') +
+          (r.note ? '<div class="lore-note">' + esc2(r.note) + '</div>' : '') +
+        '</div>' +
+        '<div class="lore-when">' + esc2(window.timeAgo ? timeAgo(new Date(r.created_at).getTime()) : '') + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  window.renderToday = renderToday;
+  window.renderLore = renderLore;
+  window.VinallLore = { load: loadLore, save: saveAnswer, questions: QUESTIONS };
 })();
 </script>
 </body>

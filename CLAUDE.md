@@ -139,3 +139,48 @@ Design decisions worth not undoing:
 - Play counts are power-law distributed, unlike ratings, so one record on the board is
   usually worth more than the other four combined. That makes wars more lopsided but the
   bidding sharper: spotting and winning the big one is most of the game.
+
+## Lore — the core loop
+
+The product thesis: VINALL is not a site where you rate music, it is where your relationship
+with music accumulates. The loop is **listen/rate → VINALL notices → it asks something small
+→ you tap → it remembers → it resurfaces it later.**
+
+Two rules that are easy to break by accident and must not be:
+
+- **The word "meaning" never appears in this UI.** Asking what a song means makes people feel
+  they owe you something profound, so they write nothing. Questions are casual and specific
+  ("Why have you been rinsing this?", "Would you defend this song in court?").
+- **Every question answers in one tap.** Free text is offered *after* the tap and never
+  instead of it. An answer is complete without a note.
+
+Pieces:
+
+- `lore_answers` (migration `..._180000_lore.sql`) — one row per question per item per person.
+  `question_text` is snapshotted next to `question_id` because the library lives in the client
+  and keeps changing; Receipts depends on quoting back exactly what was asked. `skipped`
+  records a question waved away so the engine stops offering it.
+- **Question library** — data, not code, at the top of the Lore module in `index.html`. Add
+  questions by appending to `QUESTIONS`; the engine needs no changes.
+- **Discovery finders** — `findFresh`, `findNostalgia`, `findArtistGap`, `findAlbumLove`,
+  `findContradiction`, `findReceipt`. A discovery is a *reason to ask*, not the question: the
+  line sets context and a library question does the asking, so the same question reads
+  differently in different framings. That is where variety comes from without needing
+  hundreds of questions.
+- All finders run on data the app already has (local album/song ratings and `crate_feed`).
+  **None of them need Spotify**, which matters — see the Spotify note below.
+- **Today** (`view-today`, first nav tab) — at most one of each kind: a question, a record to
+  revisit, a game, an old answer. Six questions is a form; one of each is a place to drop into.
+- **Your Music Lore** — a profile section, deliberately not "Your Meaningful Music".
+
+### Spotify listening data: the hard limit
+
+Development Mode allows **5 authenticated users**, and the app owner needs Premium. Extended
+Quota requires a registered business with **250k MAU** — circular and unreachable.
+`recently-played` is a 50-item rolling window that cannot be paged past, there are no
+per-user play counts anywhere in the API, and Audio Features is blocked for dev-mode apps.
+
+So listening history should come from **the user's own Spotify data export** (Extended
+streaming history JSON — complete lifetime plays, no quota, works for everyone), with Last.fm
+as a live alternative for people who scrobble. Design any listening feature against an
+internal store, never against the Spotify API directly.
