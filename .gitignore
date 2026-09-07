@@ -6,6 +6,7 @@
 # Vercel / Supabase CLI state
 .vercel
 .supabase
+supabase/.temp/
 
 # Tooling
 node_modules/
