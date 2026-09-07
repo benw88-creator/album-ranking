@@ -2413,20 +2413,36 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
    A light sweep pinned to that same centre gives it one. It's a
    transform-only animation, so it runs on the compositor and turns at a
    steady rate whether or not the video itself ever starts. */
+/* The sweep was two hard-edged spokes: transparent to 0.16 across 22deg is
+   a step, not a highlight, and a conic gradient's stops fall along exact
+   radii — so you could see the straight line where it began. Fixed by
+   ramping in and out over many more stops and blurring the whole layer, so
+   what turns is a soft band of light rather than a wedge with an edge.
+   The layer is inset well beyond the frame so the blur never reveals its
+   own boundary. */
 .splash-video-wrap::after {
   content: '';
-  position: absolute; inset: -30%;
+  position: absolute; inset: -60%;
   pointer-events: none;
   background: conic-gradient(from 0deg at 50% 50%,
     transparent 0deg,
-    rgba(255,255,255,0.16) 22deg,
-    rgba(255,255,255,0.04) 52deg,
-    transparent 78deg,
-    transparent 168deg,
-    rgba(255,255,255,0.10) 196deg,
-    rgba(255,255,255,0.03) 224deg,
-    transparent 250deg,
+    rgba(255,255,255,0.015) 10deg,
+    rgba(255,255,255,0.045) 20deg,
+    rgba(255,255,255,0.085) 32deg,
+    rgba(255,255,255,0.105) 44deg,
+    rgba(255,255,255,0.085) 56deg,
+    rgba(255,255,255,0.045) 70deg,
+    rgba(255,255,255,0.015) 84deg,
+    transparent 100deg,
+    transparent 170deg,
+    rgba(255,255,255,0.012) 182deg,
+    rgba(255,255,255,0.038) 196deg,
+    rgba(255,255,255,0.062) 210deg,
+    rgba(255,255,255,0.038) 226deg,
+    rgba(255,255,255,0.012) 240deg,
+    transparent 254deg,
     transparent 360deg);
+  filter: blur(26px);
   animation: vinylSpin 3.04s linear infinite;
 }
 /* There is deliberately no "spin the poster instead" fallback here any
@@ -2527,6 +2543,12 @@ body.entering-done #artist-hero {
    filter above was silently draining the colour the dither picks out of
    each artist's photo, and object-fit would letterbox a canvas that is
    already sized to the host in device pixels. */
+/* The dot field used to stop dead at the canvas edge, which read as a
+   rectangle of dots pasted onto the page rather than a portrait emerging
+   out of it. One elliptical mask thins the dots out on every side. It is a
+   single mask rather than four edge gradients on purpose: mask-composite
+   support is patchy, and one ellipse degrades to "no mask" gracefully
+   anywhere it isn't supported. */
 .artist-hero-canvas {
   position: absolute;
   inset: 0;
@@ -2534,6 +2556,10 @@ body.entering-done #artist-hero {
   height: 100%;
   filter: none;
   object-fit: fill;
+  -webkit-mask-image: radial-gradient(ellipse 80% 84% at 50% 44%,
+    #000 40%, rgba(0,0,0,0.78) 62%, rgba(0,0,0,0.32) 82%, transparent 100%);
+          mask-image: radial-gradient(ellipse 80% 84% at 50% 44%,
+    #000 40%, rgba(0,0,0,0.78) 62%, rgba(0,0,0,0.32) 82%, transparent 100%);
 }
 .artist-hero-duotone {
   position: absolute;
@@ -3071,7 +3097,7 @@ window.ICONS = {
 
   <!-- ============================ TODAY ============================ -->
   <section id="view-today" style="display:none; margin-top:32px;">
-    <div class="section-head"><h2><span data-icon="sparkle"></span> Today</h2></div>
+    <div class="section-head"><h2><span data-icon="sparkle"></span> Today</h2><button class="btn-mini" id="today-refresh" style="margin-left:auto;">Refresh</button></div>
     <p class="reco-note">Tap an answer, that&rsquo;s it. Writing something is optional.</p>
     <div id="today-stream"></div>
   </section>
@@ -3806,6 +3832,14 @@ window.ICONS = {
 </div>
 
 <!-- ============================ BID WARS ============================ -->
+<div class="modal" id="missing-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="missing-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="mic"></span><div><h2 id="missing-title"></h2><p id="missing-sub"></p></div></div>
+    <div id="missing-list" style="max-height:56vh; overflow-y:auto;"></div>
+  </div>
+</div>
+
 <div class="modal" id="war-new-modal">
   <div class="modal-panel">
     <button class="modal-close" id="war-new-close" aria-label="Close">&times;</button>
@@ -5491,12 +5525,53 @@ function drawCompCard(a,claimed){
     '<div><div class="ach-name">'+esc(a.name)+' Completionist</div><div class="ach-sub">Rate every studio album</div></div></div>'+
     '<div class="ach-bar"><div class="ach-bar-fill" style="width:'+pct+'%"></div></div>'+
     '<div class="ach-prog"><span>'+have+' / '+Y+'</span><span>'+pct+'%</span></div>'+
-    (complete&&!done?'<button class="ach-claim" data-claim="'+key+'" data-label="'+esc(a.name)+' Completionist">Claim achievement</button>':'');
+    (complete&&!done?'<button class="ach-claim" data-claim="'+key+'" data-label="'+esc(a.name)+' Completionist">Claim achievement</button>':'')+
+    (!complete?'<button class="ach-claim" style="background:var(--surface-3);color:var(--text);" data-missing="'+esc(a.id)+'">See what’s missing</button>':'');
+  // Stash the actual album objects so the modal can show covers and open them,
+  // rather than re-deriving them from the base-title strings above.
+  _missingByArtist[a.id]={name:a.name,list:studioList.filter(function(s){return!ratedBases[baseAlbumTitle(s.name)];})};
   const btn=card.querySelector('[data-claim]');
+  const mb=card.querySelector('[data-missing]');
+  if(mb)mb.addEventListener('click',function(){openMissing(mb.dataset.missing);});
   if(btn)btn.addEventListener('click',function(){setClaimed(key);logActivity(ICONS.trophy,'Unlocked',a.name+' Completionist');celebrate('\u{1F3C6} '+a.name+' Completionist','You\u2019ve rated every studio album.');if(window.Wallet)Wallet.awardDiscs(30,{reason:'Completionist'});drawCompCard(a,loadClaimed());});
 }
 
+(function(){
+  var mc=document.getElementById('missing-close');
+  if(mc)mc.addEventListener('click',function(){document.getElementById('missing-modal').classList.remove('open');});
+  var mm=document.getElementById('missing-modal');
+  if(mm)mm.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+})();
 let compUnratedOnly=false,_compState=null;
+const _missingByArtist={};
+
+/* "See what's missing" — the albums by this artist you haven't rated yet.
+   Reuses the studio list the Completionist card already fetched, so opening
+   it costs nothing and works offline once the card has loaded. */
+function openMissing(artistId){
+  const rec=_missingByArtist[artistId];
+  const modal=document.getElementById('missing-modal');
+  if(!rec||!modal)return;
+  document.getElementById('missing-title').textContent=rec.name;
+  document.getElementById('missing-sub').textContent=rec.list.length+(rec.list.length===1?' album left':' albums left');
+  const host=document.getElementById('missing-list');
+  host.innerHTML=rec.list.length
+    ? rec.list.map(function(s){return'<div class="ptop-row" data-miss="'+esc(s.id)+'">'+
+        '<img src="'+esc(s.art||'')+'" alt="" loading="lazy">'+
+        '<div style="flex:1;"><div class="nm">'+esc(s.name)+'</div>'+
+        (s.year?'<div class="ar">'+esc(s.year)+'</div>':'')+'</div>'+
+        '<span class="suggest-send">Rate it</span></div>';}).join('')
+    : '<div class="reco-note">Nothing left — you’ve rated the lot.</div>';
+  host.querySelectorAll('[data-miss]').forEach(function(el){
+    el.addEventListener('click',function(){
+      const s=rec.list.find(function(x){return x.id===el.dataset.miss;});
+      if(!s)return;
+      modal.classList.remove('open');
+      openAlbum({id:s.id,name:s.name,artist:rec.name,artistId:artistId,art:s.art,year:s.year||''});
+    });
+  });
+  modal.classList.add('open');
+}
 function primeCompletion(meta){
   const host=document.getElementById('detail-completion');if(!host)return;
   _compState=null;
@@ -10828,7 +10903,7 @@ function playDismissAnimation(gateEl, callback) {
     { id: 'inherited', tone: 'people', kinds: ['album','artist'], text: 'Did you inherit this taste from someone?',
       opts: ['A parent', 'A sibling', 'A friend', 'Entirely my own', 'Someone I would rather not credit'] },
     { id: 'activity', tone: 'casual', kinds: ['album','song'], text: 'What are you usually doing when this is on?',
-      opts: ['Walking', 'Travelling', 'Working', 'Doing nothing', 'Lying awake', 'Getting ready'] },
+      opts: ['Walking', 'Travelling', 'Working', 'Doing nothing', 'Lying awake', 'Getting ready', 'Tipsy', 'Faded'] },
     { id: 'time-of-day', tone: 'casual', kinds: ['album','song'], text: 'When does this actually get played?',
       opts: ['Morning', 'Afternoon', 'Evening', 'Late night', '3am specifically'] },
     { id: 'alone', tone: 'casual', kinds: ['album','song'], text: 'Alone, or with people?',
@@ -11139,9 +11214,14 @@ function playDismissAnimation(gateEl, callback) {
     } catch (e) { return ''; }
   }
 
-  async function renderToday() {
+  // Leaving the tab and coming back should not wipe what you just answered,
+  // and should not silently swap the questions either. The DOM is left
+  // exactly as it was until the day rolls over or Refresh is pressed.
+  async function renderToday(force) {
+    var stamp = new Date().toDateString();
     var host = document.getElementById('today-stream');
     if (!host) return;
+    if (!force && host.dataset.built === stamp && host.children.length) return;
 
     if (!on()) {
       host.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.sparkle +
@@ -11172,6 +11252,7 @@ function playDismissAnimation(gateEl, callback) {
     }
 
     host.innerHTML = parts.join('');
+    host.dataset.built = stamp;
     wireToday(host, t);
   }
 
@@ -11200,7 +11281,7 @@ function playDismissAnimation(gateEl, callback) {
             btn.classList.remove('chosen');
             return;
           }
-          if (skipped) { card.classList.add('td-gone'); setTimeout(function () { renderToday(); }, 260); return; }
+          if (skipped) { card.classList.add('td-gone'); setTimeout(function () { renderToday(true); }, 260); return; }
           card.querySelector('.td-opts').style.display = 'none';
           var after = card.querySelector('.td-after');
           after.querySelector('.td-saved-txt').textContent = val;
@@ -11275,6 +11356,17 @@ function playDismissAnimation(gateEl, callback) {
       '</div>';
     }).join('');
   }
+
+  function wireLore() {
+    var rb = document.getElementById('today-refresh');
+    if (rb) rb.addEventListener('click', function () {
+      rb.disabled = true;
+      rb.textContent = 'Looking…';
+      renderToday(true).then(function () { rb.disabled = false; rb.textContent = 'Refresh'; });
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireLore);
+  else wireLore();
 
   window.renderToday = renderToday;
   window.renderLore = renderLore;
