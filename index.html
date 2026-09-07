@@ -3736,7 +3736,7 @@ window.ICONS = {
       <div class="war-wait">
         <div class="war-wait-ic" data-icon="stopwatch"></div>
         <h3>Bids locked</h3>
-        <p id="war-wait-sub">Waiting on them to bid. You&rsquo;ll get a notification the moment it settles.</p>
+        <p id="war-wait-sub">Waiting on them to bid. This settles itself the moment they do &mdash; no need to refresh.</p>
       </div>
       <div id="war-mybids" class="war-mybids"></div>
     </div>
@@ -10447,7 +10447,7 @@ function playDismissAnimation(gateEl, callback) {
     startPoll();
     document.getElementById('war-sub').textContent = 'Sealed — waiting on ' + nameOf(other(w));
     document.getElementById('war-wait-sub').textContent =
-      'Waiting on ' + nameOf(other(w)) + ' to bid. You’ll get a notification the moment it settles.';
+      'Waiting on ' + nameOf(other(w)) + ' to bid. This settles itself the moment they do — no need to refresh.';
     document.getElementById('war-mybids').innerHTML =
       '<h3 class="prof-section-title" style="margin-top:0;">Your bids</h3>' +
       (w.records || []).map(function (r) {
