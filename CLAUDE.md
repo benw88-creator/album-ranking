@@ -217,3 +217,19 @@ Account deletion is `/api/delete-account`: `delete_my_data()` clears this projec
 the user, then the Admin API removes the `auth.users` row with the service role. It walks a
 table/column list dynamically so a schema change cannot turn deletion into a hard error.
 Apple has required in-app deletion since June 2022.
+
+### Checking a Bid War valuation
+
+`/api/album-streams?q=<search>` or `?album=<spotify id>` returns exactly what a war would
+value an album at, plus the match ratio; add `&debug=1` for the per-track breakdown and the
+list of tracks that did not match. It imports the same `_streams.js` the war route does, so
+the two cannot drift.
+
+Reach for it first whenever a total looks wrong. The first time these numbers were wrong the
+algorithm turned out to be fine — the fault was stored data — and there was no way to tell
+the two apart without this.
+
+**A war's values are frozen at creation.** That is deliberate, so neither player can watch
+them move mid-war, but it also means a war created under a broken or superseded valuation
+carries those numbers for good. If the valuation method changes again, purge `album_plays`
+and clear pending wars in the same migration, as `..._220000_purge_stale_values.sql` does.
