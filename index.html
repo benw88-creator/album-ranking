@@ -2789,7 +2789,7 @@ body.entering-done #artist-hero {
 .war-rev-bids { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 13px; flex-shrink: 0; }
 .war-rev-bid { padding: 3px 7px; border-radius: 6px; background: var(--surface-3); color: var(--text-dim); }
 .war-rev-bid.high { background: var(--gold-dim); color: var(--gold); }
-.war-rev-val { font-family: var(--font-display); font-weight: 700; font-size: 17px; min-width: 42px; text-align: right; flex-shrink: 0; }
+.war-rev-val { font-family: var(--font-display); font-weight: 700; font-size: 17px; min-width: 62px; text-align: right; flex-shrink: 0; }
 .war-rev.won .war-rev-val { color: var(--green); }
 .war-rev.tie .war-rev-val { color: var(--text-faint); }
 
@@ -3209,7 +3209,7 @@ window.ICONS = {
   <!-- ============================ BID WARS ============================ -->
   <section id="view-wars" style="display:none; margin-top:32px;">
     <div class="section-head"><h2><span data-icon="trophy"></span> Bid Wars</h2><button class="btn-primary" id="war-new-btn" style="margin-left:auto;">Start a war</button></div>
-    <p class="reco-note">Five records. A hundred chips. One shot, bid blind. Every record you outbid your mate on is worth whatever The Crate rates it &mdash; highest total takes the war.</p>
+    <p class="reco-note">Five records. A hundred chips. One shot, bid blind. Every record you outbid your mate on is worth its total plays &mdash; most plays takes the war.</p>
     <div id="war-challenges"></div>
     <div id="war-active"></div>
     <div id="war-history"></div>
@@ -10140,6 +10140,30 @@ function playDismissAnimation(gateEl, callback) {
     } catch (e) { return {}; }
   }
 
+
+  // Creation goes through /api/bid-war-create, not a Postgres function: the
+  // values are Last.fm play counts, and they have to be fetched somewhere the
+  // player cannot watch. Everything after creation is still pure Postgres.
+  async function createWar(opponentId) {
+    var token = null;
+    try {
+      var s = await sb().auth.getSession();
+      token = s && s.data && s.data.session && s.data.session.access_token;
+    } catch (e) {}
+    if (!token) return { error: { message: 'Log in again to start a war.' } };
+    try {
+      var r = await fetch('/api/bid-war-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ opponent_id: opponentId }),
+      });
+      var d = await r.json();
+      if (!r.ok) return { error: { message: (d && d.error) || 'Could not start that war.' } };
+      return { data: d };
+    } catch (e) {
+      return { error: { message: String((e && e.message) || e) } };
+    }
+  }
   async function loadProfiles(ids) {
     var need = ids.filter(function (id) { return id && !_profiles[id]; });
     if (!need.length) return;
@@ -10161,6 +10185,17 @@ function playDismissAnimation(gateEl, callback) {
     if (w.status !== 'resolved') return null;
     if (!w.winner_id) return 'draw';
     return w.winner_id === me().id ? 'won' : 'lost';
+  }
+
+  // Play counts are the unit now, so they need to read as counts. Anything
+  // under a million keeps its separators; above that, one decimal is plenty
+  // and keeps the reveal from turning into a wall of digits.
+  function fmtPlays(n) {
+    n = Number(n) || 0;
+    if (n >= 1e9) return (n / 1e9).toFixed(2).replace(/\.?0+$/, '') + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 1e4) return Math.round(n / 1e3) + 'K';
+    return n.toLocaleString('en-GB');
   }
   function esc2(s) { return window.esc ? esc(s) : String(s == null ? '' : s); }
 
@@ -10229,7 +10264,7 @@ function playDismissAnimation(gateEl, callback) {
       hist.innerHTML = '<h3 class="prof-section-title">Settled</h3>' +
         done.map(function (w) {
           var oc = outcome(w);
-          var sub = (Number(myTotal(w)) || 0).toFixed(1) + ' &ndash; ' + (Number(theirTotal(w)) || 0).toFixed(1);
+          var sub = fmtPlays(myTotal(w)) + " &ndash; " + fmtPlays(theirTotal(w)) + " plays";
           return card(w, oc === 'won' ? 'Won' : oc === 'lost' ? 'Lost' : 'Draw', oc, sub);
         }).join('');
     }
@@ -10415,7 +10450,7 @@ function playDismissAnimation(gateEl, callback) {
           '<span style="color:var(--text-faint);">/</span>' +
           '<span class="war-rev-bid' + (theirBid > myBid ? ' high' : '') + '">' + theirBid + '</span>' +
         '</div>' +
-        '<div class="war-rev-val">' + (Number(r.value) || 0).toFixed(1) + '</div></div>';
+        '<div class="war-rev-val">' + fmtPlays(r.value) + '</div></div>';
     }).join('');
 
     var rows = host.querySelectorAll('.war-rev');
@@ -10426,16 +10461,16 @@ function playDismissAnimation(gateEl, callback) {
         var r = recs[i];
         if (r.won_by === w.initiator_id) { if (iAmInit) runMine += Number(r.value) || 0; else runTheirs += Number(r.value) || 0; }
         else if (r.won_by === w.opponent_id) { if (iAmInit) runTheirs += Number(r.value) || 0; else runMine += Number(r.value) || 0; }
-        document.getElementById('war-score-me-num').textContent = runMine.toFixed(1);
-        document.getElementById('war-score-them-num').textContent = runTheirs.toFixed(1);
+        document.getElementById('war-score-me-num').textContent = fmtPlays(runMine);
+        document.getElementById('war-score-them-num').textContent = fmtPlays(runTheirs);
         document.getElementById('war-score-me').classList.toggle('lead', runMine > runTheirs);
         document.getElementById('war-score-them').classList.toggle('lead', runTheirs > runMine);
       }, 320 + i * 460);
     });
 
     setTimeout(function () {
-      document.getElementById('war-score-me-num').textContent = mineTotal.toFixed(1);
-      document.getElementById('war-score-them-num').textContent = theirsTotal.toFixed(1);
+      document.getElementById('war-score-me-num').textContent = fmtPlays(mineTotal);
+      document.getElementById('war-score-them-num').textContent = fmtPlays(theirsTotal);
       var payout = oc === 'won' ? 30 : oc === 'draw' ? 15 : 8;
       var tail = oc === 'won' ? '' : (oc === 'draw' ? ' each' : ' for turning up');
       verdict.innerHTML = (oc === 'won' ? 'You took it' : (oc === 'lost' ? nameOf(other(w)) + ' took it' : 'Dead even')) +
@@ -10443,7 +10478,7 @@ function playDismissAnimation(gateEl, callback) {
       verdict.classList.add('in');
       if (window.Wallet && Wallet.refresh) Wallet.refresh();
       if (oc === 'won' && typeof window.celebrate === 'function') {
-        window.celebrate('You won the war', 'Took ' + mineTotal.toFixed(1) + ' against ' + theirsTotal.toFixed(1) + '. Plus 30 Discs.');
+        window.celebrate('You won the war', 'Took ' + fmtPlays(mineTotal) + ' plays against ' + fmtPlays(theirsTotal) + '. Plus 30 Discs.');
       }
     }, 320 + rows.length * 460 + 260);
   }
@@ -10474,9 +10509,7 @@ function playDismissAnimation(gateEl, callback) {
         var s = el.querySelector('.suggest-send');
         s.textContent = '...';
         document.getElementById('war-new-error').textContent = '';
-        var res;
-        try { res = await sb().rpc('bid_war_create', { p_opponent: el.dataset.opp }); }
-        catch (e) { res = { error: { message: String((e && e.message) || e) } }; }
+        var res = await createWar(el.dataset.opp);
         if (res.error) {
           document.getElementById('war-new-error').textContent = res.error.message || 'Could not start that war.';
           s.textContent = 'Challenge';

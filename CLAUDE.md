@@ -81,41 +81,46 @@ moving disc awards and shop purchases server-side.
 ## Bid Wars
 
 A 1v1 sealed-bid auction, reachable from its own nav tab (`view-wars`) and from a card in
-the Minigames grid. Client code lives in one IIFE at the bottom of `index.html`
-(`window.renderWars`, `window.openBidWar`); schema and logic are in
-`supabase/migrations/20260907130000_bid_wars.sql`.
+the Minigames grid. Client code is one IIFE at the bottom of `index.html`
+(`window.renderWars`, `window.openBidWar`). Schema and resolution live in
+`supabase/migrations/20260907130000_bid_wars.sql` and `..._160000_bid_wars_streams.sql`;
+creation lives in `api/bid-war-create.js`.
 
 How a war runs:
 
-1. You challenge someone you follow. The server picks five records and stores their values
-   somewhere the client cannot read.
+1. You challenge someone you follow. `/api/bid-war-create` picks five records, values each
+   by its total play count, and stores those values where the client cannot read them.
 2. Both players spread 100 chips across the five records, blind, one submission each.
-3. When the second bid lands, the war resolves in that same transaction. Higher bid takes
-   each record; equal bids mean nobody takes it.
-4. A record you won is worth the community's average rating of it. Highest total wins.
-   Winner +30 Discs, loser +8, draw +15 each.
+3. When the second bid lands, `bid_war_submit` resolves the war in that same transaction.
+   Higher bid takes each record; equal bids mean nobody takes it.
+4. A record you won is worth its total plays. Most plays wins. Winner +30 Discs, loser +8,
+   draw +15 each.
 
 Design decisions worth not undoing:
 
-- **Records are drawn from `crate_feed`**, grouped by album, taking the 40 most-rated and
-  picking 5 at random. That table already denormalises album name/artist/art alongside a
-  score, so a record always has both artwork and a value. Scoring deliberately does *not*
-  use Spotify popularity: Spotify no longer returns popularity to this app at all.
-- **Everything is server-authoritative.** Clients have no INSERT or UPDATE policy on any
-  bid war table; `bid_war_create`, `bid_war_submit` and `bid_war_decline` are
-  `security definer`. A player cannot write their own winner, score or Disc payout. Bid War
-  payouts are the only part of the Discs economy a client cannot forge.
-- **Values live in `bid_war_values`**, which has RLS enabled and *no policies*, making it
-  unreachable from the client under any query. `bid_war_submit` folds the values into
-  `bid_wars.records` at resolution, when revealing them is the whole point.
+- **Value is Last.fm playcount** (total scrobbles, i.e. total plays), fetched by
+  `api/bid-war-create.js` and cached in `album_plays` for 14 days. Spotify was not an
+  option: stream counts are not in the Web API at all, and this app no longer even receives
+  `popularity`. Requires `LASTFM_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel.
+- **Creation is a server route, not a Postgres function.** Postgres cannot make the HTTP
+  call, and the browser must not: a player who fetches the playcounts themselves knows what
+  every record is worth before bidding. The route verifies the caller's Supabase JWT and
+  never trusts an id from the request body.
+- **Records still come from `crate_feed`** (top 40 by rating count, shuffled), so the board
+  is always albums this community has actually put in front of itself, with real artwork.
+  Only the *valuation* changed from rating to plays.
+- **Everything after creation is server-authoritative.** Clients have no INSERT or UPDATE
+  policy on any bid war table. `bid_war_submit` and `bid_war_decline` are `security
+  definer`; `bid_war_pool` and `bid_war_create_from` are service-role only. A player cannot
+  write their own winner, score or Disc payout, and Bid War payouts remain the only part of
+  the Discs economy a client cannot forge.
+- **`album_plays` and `bid_war_values` have RLS on and no policies**, so neither is
+  reachable from the browser. `bid_war_submit` folds the values into `bid_wars.records` at
+  resolution, when revealing them is the whole point.
 - **Bids are sealed** by the SELECT policy on `bid_war_bids`: your own row always, your
   opponent's only once `status = 'resolved'`.
 - **It is async by design.** With a user base this small, anything needing both players
   online at once would never actually get played.
-
-### Rating scales (easy to get wrong)
-
-Albums are rated **0-100** (`#rate-slider` is `min=0 max=100`), and that is the number
-stored in `crate_feed.score`, so a Bid War record's value is on a 0-100 scale too. Songs
-are rated 0-10 on a separate slider. Getting these the wrong way round is why
-`bid_war_values.value` originally shipped as `numeric(4,2)` and had to be widened.
+- Play counts are power-law distributed, unlike ratings, so one record on the board is
+  usually worth more than the other four combined. That makes wars more lopsided but the
+  bidding sharper: spotting and winning the big one is most of the game.
