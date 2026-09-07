@@ -27,10 +27,14 @@
 //   SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET  — already set, reused here
 //   SUPABASE_URL                               — optional, defaults below
 
+// The valuation lives in _streams.js and is shared with /api/album-streams,
+// so the number that decides a war is the same number you can query and
+// check. They cannot drift apart.
+import { spotifyToken, valueAlbum } from './_streams.js';
+
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
-const STALE_DAYS = 14;      // stream totals creep; refetching often is waste
+const STALE_DAYS = 14;
 const NEEDED = 5;
-const MIN_MATCH = 0.6;      // below this the sum is too incomplete to be fair
 
 function svcHeaders(key, extra) {
   return Object.assign({
@@ -39,92 +43,6 @@ function svcHeaders(key, extra) {
     'Content-Type': 'application/json',
   }, extra || {});
 }
-
-// kworb and Spotify disagree on feature credits and punctuation more often
-// than on the actual title, so both sides get flattened the same way.
-function normTitle(s) {
-  return String(s || '')
-    .replace(/\((feat|with)[^)]*\)/gi, '')
-    .replace(/\[(feat|with)[^\]]*\]/gi, '')
-    .replace(/-\s*(feat|with)\b.*$/i, '')
-    .replace(/[^a-z0-9]/gi, '')
-    .toLowerCase();
-}
-
-async function spotifyToken() {
-  const id = process.env.SPOTIFY_CLIENT_ID;
-  const secret = process.env.SPOTIFY_CLIENT_SECRET;
-  if (!id || !secret) return null;
-  try {
-    const r = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: 'Basic ' + Buffer.from(id + ':' + secret).toString('base64'),
-      },
-      body: 'grant_type=client_credentials',
-    });
-    if (!r.ok) return null;
-    const d = await r.json();
-    return d.access_token || null;
-  } catch (e) { return null; }
-}
-
-// The album's real tracklist, plus the artist we need for the kworb lookup.
-async function albumTracks(albumId, token) {
-  try {
-    const r = await fetch('https://api.spotify.com/v1/albums/' + encodeURIComponent(albumId), {
-      headers: { Authorization: 'Bearer ' + token },
-    });
-    if (!r.ok) return null;
-    const d = await r.json();
-    const artistId = d.artists && d.artists[0] && d.artists[0].id;
-    const tracks = ((d.tracks && d.tracks.items) || []).map(function (t) { return t.name; });
-    if (!artistId || !tracks.length) return null;
-    return { artistId: artistId, tracks: tracks };
-  } catch (e) { return null; }
-}
-
-// artistId -> Map(normalised title -> total streams). Cached per invocation so
-// several albums by one artist cost a single fetch.
-async function artistStreamTable(artistId, cache) {
-  if (cache[artistId]) return cache[artistId];
-  try {
-    const r = await fetch('https://kworb.net/spotify/artist/' + artistId + '_songs.html', {
-      headers: { 'User-Agent': 'vinal-bid-wars/1.0 (+https://wildcrate.xyz)' },
-    });
-    if (!r.ok) { cache[artistId] = null; return null; }
-    const html = await r.text();
-    const re = /<tr><td class="text"><div>[^<]*(?:<a[^>]*>)?([^<]+)<\/a>?<\/div><\/td><td>([\d,]+)<\/td>/g;
-    const map = {};
-    let m;
-    while ((m = re.exec(html)) !== null) {
-      const k = normTitle(m[1]);
-      const v = parseInt(m[2].replace(/,/g, ''), 10);
-      // first occurrence wins: kworb lists the biggest version first
-      if (k && Number.isFinite(v) && map[k] === undefined) map[k] = v;
-    }
-    cache[artistId] = Object.keys(map).length ? map : null;
-    return cache[artistId];
-  } catch (e) { cache[artistId] = null; return null; }
-}
-
-async function albumStreams(albumId, token, cache) {
-  const info = await albumTracks(albumId, token);
-  if (!info) return null;
-  const table = await artistStreamTable(info.artistId, cache);
-  if (!table) return null;
-  let sum = 0, hit = 0;
-  info.tracks.forEach(function (name) {
-    const v = table[normTitle(name)];
-    if (v) { sum += v; hit++; }
-  });
-  // A half-matched tracklist would undervalue the record against one that
-  // matched fully, so drop it and let the pool offer another.
-  if (!hit || hit / info.tracks.length < MIN_MATCH) return null;
-  return sum;
-}
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
 
@@ -185,11 +103,20 @@ export default async function handler(req, res) {
     const chosen = [];
     const toCache = [];
     const artistCache = {};
+    const rejected = [];
     for (let i = 0; i < pool.length && chosen.length < NEEDED; i++) {
       const p = pool[i];
       let streams = cached[p.album_id];
       if (!streams) {
-        streams = await albumStreams(p.album_id, token, artistCache);
+        const v = await valueAlbum(p.album_id, token, artistCache);
+        if (v.ok) {
+          streams = v.total;
+        } else {
+          // Rejected albums are worth logging: a run of these is how a
+          // broken kworb layout announces itself instead of quietly
+          // producing nonsense totals.
+          rejected.push({ album: p.name, reason: v.reason, matched: v.matched, of: v.tracks });
+        }
         if (streams) {
           toCache.push({
             album_id: p.album_id, name: p.name, artist: p.artist,
@@ -217,7 +144,10 @@ export default async function handler(req, res) {
     }
 
     if (chosen.length < NEEDED) {
-      res.status(400).json({ error: 'Could not get stream counts for enough records — try again in a moment' });
+      res.status(400).json({
+        error: 'Could not get stream counts for enough records — try again in a moment',
+        rejected: rejected.slice(0, 8),
+      });
       return;
     }
 
