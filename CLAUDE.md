@@ -65,18 +65,22 @@ try to apply it again; that is safe, because it uses `create or replace` and
 
 ## Security notes
 
-Write policies on every table are correctly scoped by `auth.uid()` — users cannot modify
-each other's rows.
+Write policies on every table are scoped by `auth.uid()` — users cannot modify each other's
+rows.
 
-Two narrower gaps remain: either participant can update a `bid_wars` row, so a player could
-set themselves as winner; and a member can update their own `groove_members` row, possibly
-including their own role.
+**The economy is server-side** as of `..._190000_server_economy.sql`. `discs`, the streak
+columns, the cosmetic arrays and the daily award counters are all pinned by the
+`pin_profile_economy` trigger, which replaced the narrower `pin_profile_is_admin`. The only
+ways to move them are `wallet_record_rating()`, `wallet_buy()` and the `award_lore_disc`
+trigger, all `security definer`. Prices live in `shop_items`, never in the request. Equipping
+a theme or banner is still a client write, because the trigger reverts anything not owned.
 
-More broadly, `discs`, the streak columns, the cosmetic arrays and `leaderboard_times` are
-all written straight from the browser through `Cloud.saveProfile`, which upserts arbitrary
-client-supplied fields. The economy is therefore client-authoritative: a user can set their
-own numbers. Only `is_admin` is protected, by the trigger above. Fixing the rest means
-moving disc awards and shop purchases server-side.
+Do not reintroduce a client-side balance. The previous version computed discs in the browser
+and posted the result, and its "daily cap" was an in-memory variable — both were trivially
+bypassed from the console, and nothing can be sold on top of that.
+
+One gap remains: a `groove_members` row can be updated by its own member, which may include
+their role within the groove.
 
 ## Bid Wars
 
@@ -191,3 +195,25 @@ internal store, never against the Spotify API directly.
 
 Every question also carries an **Other…** option that opens a free-text field. The one-tap rule
 is about never *demanding* text, not about refusing it — plenty of real answers are on no list.
+
+## Analytics and safety
+
+`analytics_events` records event names with small prop bags — `question_shown`,
+`question_answered`, `question_skipped`, `question_other`, `note_added`, `today_opened`,
+`rating_saved`. Written through `window.track(name, props)`, fire-and-forget so a failed
+insert never interrupts anything. Users may only read their own rows;
+`analytics_summary(days)` is admin-gated and returns the funnel, including `answered_2_plus`
+against `answerers` — whether anyone answers a **second** question is the number that says
+whether this product works.
+
+`reports` and `blocks` exist because App Store guideline 1.2 requires a filter, a report
+path, a block and a contact before it will accept user-generated content. `hasSlur` was the
+filter; the rest are new. Blocks are one-directional and silent — the blocked person is never
+told — and are currently applied to the People list and the crate feed. **They are not yet
+applied to comments, grooves, notifications or search**, which is worth closing before any
+store submission.
+
+Account deletion is `/api/delete-account`: `delete_my_data()` clears this project's rows as
+the user, then the Admin API removes the `auth.users` row with the service role. It walks a
+table/column list dynamically so a schema change cannot turn deletion into a hard error.
+Apple has required in-app deletion since June 2022.

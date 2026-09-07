@@ -3027,6 +3027,10 @@ body.entering-done #artist-hero {
   background: var(--gold); border: none; color: #1a1508; font-weight: 600;
   border-radius: 999px; padding: 10px 18px; font-size: 13px; cursor: pointer;
 }
+
+.safety-box { margin-top: 34px; padding-top: 20px; border-top: 1px solid var(--border); }
+.safety-row { display: flex; gap: 8px; }
+#report-reasons .td-opt { font-size: 12px; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -3934,6 +3938,29 @@ window.ICONS = {
 </div>
 
 <!-- ============================ BID WARS ============================ -->
+<div class="modal" id="report-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="report-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="bell"></span><div><h2>Report</h2><p id="report-sub"></p></div></div>
+    <p class="reco-note">Pick what&rsquo;s wrong. We look at every report.</p>
+    <div id="report-reasons" class="td-opts" style="margin-bottom:12px;"></div>
+    <textarea id="report-note" class="td-note" rows="3" placeholder="Anything else we should know? Optional."></textarea>
+    <div class="war-err" id="report-error"></div>
+    <button class="btn-primary" id="report-send" style="width:100%;">Send report</button>
+  </div>
+</div>
+
+<div class="modal" id="delete-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="delete-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="trash"></span><div><h2>Delete account</h2><p>This cannot be undone.</p></div></div>
+    <p class="reco-note">Your ratings, lore, lists, grooves and profile are all removed permanently. Type <b>DELETE</b> to confirm.</p>
+    <input id="del-confirm" class="g-input" type="text" placeholder="DELETE" autocomplete="off" style="margin-bottom:10px;">
+    <div class="war-err" id="del-error"></div>
+    <button class="btn-primary" id="del-go" style="width:100%; background:var(--red); color:#fff;">Delete for good</button>
+  </div>
+</div>
+
 <div class="modal" id="missing-modal">
   <div class="modal-panel">
     <button class="modal-close" id="missing-close" aria-label="Close">&times;</button>
@@ -6493,6 +6520,7 @@ async function drawProfile(host,prof,isOwner){
       grid.querySelectorAll('.card').forEach(function(el){el.addEventListener('click',function(){const a=albumsObj[el.dataset.pid];if(a)openFriendAlbum(a,songsObj,prof.username);});});
     }
   }
+  drawSafety(host, prof, isOwner);
 }
 
 /* Read-only view of a friend/public profile's rating for one album, including
@@ -6558,7 +6586,10 @@ async function renderPeople(){
   const fhost=document.getElementById('people-following');
   if(!me){document.getElementById('people-result').innerHTML='<div class="reco-note">Log in to follow people.</div>';fhost.innerHTML='';return;}
   fhost.innerHTML='<p class="reco-note">Loading\u2026</p>';
-  const list=await Cloud.followingList(me.id);
+  await loadBlocks();
+  // Blocked people disappear from your lists rather than being hidden
+  // behind a notice, which is what a block is supposed to feel like.
+  const list=(await Cloud.followingList(me.id)).filter(function(p){return !isBlocked(p.id);});
   if(!list.length){fhost.innerHTML='<div class="reco-note">You\u2019re not following anyone yet. Find someone by username above.</div>';return;}
   fhost.innerHTML=list.map(function(p){return personRow(p);}).join('');
   wirePersonRows(fhost);
@@ -7029,7 +7060,9 @@ window.handleGrooveLink=handleGrooveLink;
     _loading=true;
     if(refresh){_feedCache=[];_offset=0;feedEl.innerHTML='';if(emptyEl)emptyEl.style.display='none';}
     if(_offset===0)showShimmers(4);
-    const posts=await (window.Cloud?Cloud.fetchFeed({limit:PAGE,offset:_offset}):[]);
+    await (window.loadBlocks?loadBlocks():Promise.resolve());
+    const posts=(await (window.Cloud?Cloud.fetchFeed({limit:PAGE,offset:_offset}):[]))
+      .filter(function(p){return !(window.isBlocked&&isBlocked(p.user_id));});
     if(_offset===0){feedEl.innerHTML='';}
     if(!posts.length&&_offset===0){if(emptyEl)emptyEl.style.display='block';_loading=false;return;}
     // fetch likes in one batch
@@ -8310,68 +8343,65 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     return state;
   }
 
+  // Every one of these used to compute a balance here and post it to the
+  // profile. The server owns all of it now: these ask, then render whatever
+  // comes back. A client that lies gets ignored rather than obeyed.
+
+  function applyWallet(w) {
+    if (!w) return;
+    if (w.discs != null) state.discs = w.discs;
+    if (w.streak_current != null) state.streak_current = w.streak_current;
+    if (w.streak_best != null) state.streak_best = w.streak_best;
+    if (w.streak_freezes != null) state.streak_freezes = w.streak_freezes;
+    if (w.owned_themes) state.owned_themes = w.owned_themes;
+    if (w.owned_banners) state.owned_banners = w.owned_banners;
+    updateShopButton();
+    if (typeof window.renderStats === 'function') window.renderStats();
+  }
+
+  async function rpc(name, args) {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return { error: 'not logged in' };
+    try {
+      const r = await Cloud.client().rpc(name, args || {});
+      return r.error ? { error: r.error.message } : { data: r.data };
+    } catch (e) { return { error: String((e && e.message) || e) }; }
+  }
+
   async function recordRating() {
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
     if (!loaded) await load();
-    const today = todayStr();
-    if (ratingsTodayDate !== today) { ratingsToday = 0; ratingsTodayDate = today; }
-
-    let discsEarned = 0;
-    if (ratingsToday < DAILY_RATING_CAP) { discsEarned = DISCS_PER_RATING; ratingsToday++; }
-
-    let streakChanged = false, milestoneHit = null;
-    if (state.streak_last_date !== today) {
-      const gap = state.streak_last_date ? daysBetween(state.streak_last_date, today) : null;
-      if (gap === 1) { state.streak_current += 1; }
-      else if (gap === null) { state.streak_current = 1; }
-      else if (gap > 1) {
-        if (state.streak_freezes > 0) { state.streak_freezes -= 1; state.streak_current += 1; }
-        else { state.streak_current = 1; }
-      }
-      state.streak_best = Math.max(state.streak_best, state.streak_current);
-      state.streak_last_date = today;
-      streakChanged = true;
-      if (STREAK_MILESTONES.indexOf(state.streak_current) !== -1) milestoneHit = state.streak_current;
+    const res = await rpc('wallet_record_rating');
+    if (res.error) return;
+    const w = res.data || {};
+    applyWallet(w);
+    if (w.earned > 0) { toast('+' + w.earned + ' Discs'); spawnDiscParticle(w.earned); }
+    if (w.milestone && typeof window.celebrate === 'function') {
+      window.celebrate('🔥 ' + w.milestone + '-day streak!', 'Keep it going — rate something tomorrow.');
     }
-
-    if (discsEarned > 0) state.discs += discsEarned;
-    if (discsEarned > 0 || streakChanged) {
-      await persist({
-        discs: state.discs, streak_current: state.streak_current, streak_best: state.streak_best,
-        streak_last_date: state.streak_last_date, streak_freezes: state.streak_freezes,
-      });
-    }
-    if (discsEarned > 0) { toast('+' + discsEarned + ' Discs'); spawnDiscParticle(discsEarned); }
-    if (milestoneHit && typeof window.celebrate === 'function') {
-      window.celebrate('🔥 ' + milestoneHit + '-day streak!', 'Keep it going — rate something tomorrow.');
-    }
-    if (typeof window.renderStats === 'function') window.renderStats();
+    if (window.track) track('rating_saved', { earned: w.earned || 0 });
   }
 
+  // Discs for lore are awarded by a trigger on lore_answers, so there is
+  // nothing to add here — just pull the new balance and show it.
   async function awardDiscs(amount, opts) {
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
-    if (!loaded) await load();
-    state.discs += amount;
-    await persist({ discs: state.discs });
+    const res = await rpc('wallet_state');
+    if (res.error || !res.data) return;
+    applyWallet(res.data);
     toast('+' + amount + ' Discs' + (opts && opts.reason ? (' — ' + opts.reason) : ''));
     spawnDiscParticle(amount);
-    if (typeof window.renderStats === 'function') window.renderStats();
   }
 
   async function buyTheme(key) {
-    if (!loaded) await load();
-    const t = THEMES[key];
-    if (!t) return { error: 'Unknown theme' };
-    if (state.owned_themes.indexOf(key) !== -1) return { error: 'Already owned' };
-    if (!state.is_admin) {
-      if (state.discs < t.cost) return { error: 'Not enough Discs' };
-      state.discs -= t.cost;
-    }
-    state.owned_themes = state.owned_themes.concat([key]);
-    await persist({ discs: state.discs, owned_themes: state.owned_themes });
+    if (!THEMES[key]) return { error: 'Unknown theme' };
+    const res = await rpc('wallet_buy', { p_kind: 'theme', p_key: key });
+    if (res.error) return { error: res.error };
+    applyWallet(res.data);
     return { ok: true };
   }
 
+  // Equipping stays on the client: the trigger refuses anything not owned,
+  // so there is nothing here worth protecting with a round trip.
   async function equipTheme(key) {
     if (!loaded) await load();
     if (!state.is_admin && state.owned_themes.indexOf(key) === -1) return { error: 'Not owned' };
@@ -8382,16 +8412,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   }
 
   async function buyBanner(key) {
-    if (!loaded) await load();
-    const b = BANNERS[key];
-    if (!b) return { error: 'Unknown banner' };
-    if (state.owned_banners.indexOf(key) !== -1) return { error: 'Already owned' };
-    if (!state.is_admin) {
-      if (state.discs < b.cost) return { error: 'Not enough Discs' };
-      state.discs -= b.cost;
-    }
-    state.owned_banners = state.owned_banners.concat([key]);
-    await persist({ discs: state.discs, owned_banners: state.owned_banners });
+    if (!BANNERS[key]) return { error: 'Unknown banner' };
+    const res = await rpc('wallet_buy', { p_kind: 'banner', p_key: key });
+    if (res.error) return { error: res.error };
+    applyWallet(res.data);
     return { ok: true };
   }
 
@@ -10844,6 +10868,186 @@ function playDismissAnimation(gateEl, callback) {
   window.openBidWar = openWar;
 })();
 </script>
+<!-- ================================================================
+     SAFETY — report, block, delete account.
+     ================================================================ -->
+<script>
+
+/* Report, block, delete. App Store guideline 1.2 wants all four of a filter,
+   a report path, a block, and a contact before it will take an app with
+   user-generated content. The slur filter already existed; these are the
+   rest. Blocking is one-directional and silent by design — the blocked
+   person is never told. */
+let _blocked = null;
+
+async function loadBlocks(force) {
+  if (_blocked && !force) return _blocked;
+  _blocked = {};
+  if (!Cloud.isOn()) return _blocked;
+  try {
+    const r = await Cloud.client().from('blocks').select('blocked_id').eq('blocker_id', Cloud.getUser().id);
+    (r.data || []).forEach(function (b) { _blocked[b.blocked_id] = true; });
+  } catch (e) {}
+  return _blocked;
+}
+function isBlocked(id) { return !!(_blocked && _blocked[id]); }
+window.isBlocked = isBlocked;
+window.loadBlocks = loadBlocks;
+
+const REPORT_REASONS = ['Harassment or bullying', 'Hate speech', 'Sexual content',
+                        'Spam or scam', 'Impersonation', 'Something else'];
+
+function drawSafety(host, prof, isOwner) {
+  const box = document.createElement('div');
+  box.className = 'safety-box';
+  if (isOwner) {
+    box.innerHTML = '<h3 class="prof-section-title">Account</h3>' +
+      '<p class="reco-note">Deleting removes your ratings, lore, lists and profile. It cannot be undone.</p>' +
+      '<button class="btn-mini" id="acct-delete" style="color:var(--red);">Delete my account</button>';
+  } else {
+    box.innerHTML = '<h3 class="prof-section-title">Safety</h3>' +
+      '<div class="safety-row">' +
+        '<button class="btn-mini" id="user-report">Report</button>' +
+        '<button class="btn-mini" id="user-block">' + (isBlocked(prof.id) ? 'Unblock' : 'Block') + '</button>' +
+      '</div>';
+  }
+  host.appendChild(box);
+
+  const del = box.querySelector('#acct-delete');
+  if (del) del.addEventListener('click', function () { openDeleteAccount(); });
+
+  const rep = box.querySelector('#user-report');
+  if (rep) rep.addEventListener('click', function () { openReport('user', prof.id, prof.id, prof.username); });
+
+  const blk = box.querySelector('#user-block');
+  if (blk) blk.addEventListener('click', async function () {
+    const on = isBlocked(prof.id);
+    blk.disabled = true;
+    try {
+      if (on) await Cloud.client().from('blocks').delete().eq('blocker_id', Cloud.getUser().id).eq('blocked_id', prof.id);
+      else await Cloud.client().from('blocks').insert({ blocker_id: Cloud.getUser().id, blocked_id: prof.id });
+      await loadBlocks(true);
+    } catch (e) {}
+    blk.disabled = false;
+    blk.textContent = isBlocked(prof.id) ? 'Unblock' : 'Block';
+  });
+}
+
+let _reportTarget = null;
+function openReport(kind, id, targetUserId, label) {
+  if (!Cloud.isOn()) { Cloud.openAuth(); return; }
+  _reportTarget = { kind: kind, id: id, user: targetUserId || null };
+  document.getElementById('report-sub').textContent = label ? ('Reporting ' + label) : '';
+  document.getElementById('report-note').value = '';
+  document.getElementById('report-error').textContent = '';
+  document.getElementById('report-reasons').innerHTML = REPORT_REASONS.map(function (r) {
+    return '<button class="td-opt" data-reason="' + esc(r) + '">' + esc(r) + '</button>';
+  }).join('');
+  document.getElementById('report-reasons').querySelectorAll('[data-reason]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.getElementById('report-reasons').querySelectorAll('[data-reason]')
+        .forEach(function (x) { x.classList.remove('chosen'); });
+      b.classList.add('chosen');
+    });
+  });
+  document.getElementById('report-modal').classList.add('open');
+}
+
+async function submitReport() {
+  const chosen = document.querySelector('#report-reasons .chosen');
+  const err = document.getElementById('report-error');
+  if (!chosen) { err.textContent = 'Pick a reason first.'; return; }
+  const btn = document.getElementById('report-send');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const r = await Cloud.client().from('reports').insert({
+      reporter_id: Cloud.getUser().id,
+      target_kind: _reportTarget.kind,
+      target_id: String(_reportTarget.id),
+      target_user_id: _reportTarget.user,
+      reason: chosen.dataset.reason,
+      note: document.getElementById('report-note').value.trim() || null
+    });
+    if (r.error) {
+      err.textContent = /duplicate/i.test(r.error.message) ? 'You have already reported this.' : r.error.message;
+    } else {
+      document.getElementById('report-modal').classList.remove('open');
+      if (window.celebrate) {} // no celebration for this, obviously
+      alert('Thanks — that has been sent for review.');
+    }
+  } catch (e) { err.textContent = String((e && e.message) || e); }
+  btn.disabled = false; btn.textContent = 'Send report';
+}
+
+function openDeleteAccount() {
+  document.getElementById('del-confirm').value = '';
+  document.getElementById('del-error').textContent = '';
+  document.getElementById('delete-modal').classList.add('open');
+}
+
+async function doDeleteAccount() {
+  const typed = document.getElementById('del-confirm').value.trim();
+  const err = document.getElementById('del-error');
+  if (typed !== 'DELETE') { err.textContent = 'Type DELETE to confirm.'; return; }
+  const btn = document.getElementById('del-go');
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  try {
+    const s = await Cloud.client().auth.getSession();
+    const token = s && s.data && s.data.session && s.data.session.access_token;
+    const res = await fetch('/api/delete-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ confirm: 'DELETE' })
+    });
+    const d = await res.json();
+    if (!res.ok) { err.textContent = d.error || 'Could not delete.'; btn.disabled = false; btn.textContent = 'Delete for good'; return; }
+    try { localStorage.clear(); } catch (e) {}
+    alert('Your account and everything in it has been deleted.');
+    location.href = location.pathname;
+  } catch (e) {
+    err.textContent = String((e && e.message) || e);
+    btn.disabled = false; btn.textContent = 'Delete for good';
+  }
+}
+
+(function () {
+  function wireSafety() {
+    var rc = document.getElementById('report-close');
+    if (rc) rc.addEventListener('click', function () { document.getElementById('report-modal').classList.remove('open'); });
+    var rs = document.getElementById('report-send');
+    if (rs) rs.addEventListener('click', submitReport);
+    var dc = document.getElementById('delete-close');
+    if (dc) dc.addEventListener('click', function () { document.getElementById('delete-modal').classList.remove('open'); });
+    var dg = document.getElementById('del-go');
+    if (dg) dg.addEventListener('click', doDeleteAccount);
+    ['report-modal', 'delete-modal'].forEach(function (id) {
+      var m = document.getElementById(id);
+      if (m) m.addEventListener('click', function (e) { if (e.target === this) this.classList.remove('open'); });
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireSafety);
+  else wireSafety();
+})();
+</script>
+
+<!-- Analytics. Event names and small prop bags, nothing resembling a page
+     view. The question this exists to answer is whether anybody answers a
+     SECOND question — before this there was no way to know, and that number
+     decides whether the whole idea works. Fire-and-forget: a failed insert
+     must never interrupt what the user was doing. -->
+<script>
+window.track = function (name, props) {
+  try {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
+    var u = Cloud.getUser();
+    if (!u) return;
+    Cloud.client().from('analytics_events')
+      .insert({ user_id: u.id, name: name, props: props || {} })
+      .then(function () {}, function () {});
+  } catch (e) {}
+};
+</script>
+
 
 <!-- ================================================================
      LORE — the core VINALL loop.
@@ -11293,6 +11497,7 @@ function playDismissAnimation(gateEl, callback) {
       _queue = buildQueue();
       _qi = 0;
     }
+    if (window.track && _queue[_qi] && _queue[_qi].t === 'ask') track('question_shown', { q: _queue[_qi].d.q.id, why: _queue[_qi].d.type });
     var el = mountCard(cardHTML(_queue[_qi]), true);
     if (el) wireCard(el);
   }
@@ -11356,6 +11561,7 @@ function playDismissAnimation(gateEl, callback) {
           btn.classList.remove('chosen');
           return;
         }
+        if (window.track) track(skipped ? 'question_skipped' : 'question_answered', { q: d.q.id, choice: skipped ? null : val });
         if (skipped) { advance(); return; }
         settle(val);
       });
@@ -11368,6 +11574,7 @@ function playDismissAnimation(gateEl, callback) {
       otherSave.textContent = '…';
       var res = await saveAnswer(d.item, d.q, txt, {});
       otherSave.textContent = 'Save';
+      if (window.track) track('question_other', { q: d.q.id });
       if (res.error) return;
       settle(txt);
     });
@@ -11387,6 +11594,7 @@ function playDismissAnimation(gateEl, callback) {
       var chosen = slot.querySelector('.td-opt.chosen');
       var choice = chosen ? chosen.dataset.opt : slot.querySelector('.td-saved-txt').textContent;
       await saveAnswer(d.item, d.q, choice, { note: txt });
+      if (window.track) track('note_added', { q: d.q.id });
       slot.querySelector('.td-note-wrap').innerHTML = '<div class="td-note-done">Saved.</div>';
     });
   }
@@ -11416,9 +11624,11 @@ function playDismissAnimation(gateEl, callback) {
     _queue = buildQueue();
     _qi = 0;
     host.innerHTML = '';
+    if (window.track && _queue[0] && _queue[0].t === 'ask') track('question_shown', { q: _queue[0].d.q.id, why: _queue[0].d.type });
     var el = mountCard(cardHTML(_queue[0]), false);
     if (el) wireCard(el);
     host.dataset.built = stamp;
+    if (window.track) track('today_opened', { queue: _queue.length });
   }
 
   // ---- Your Music Lore ----------------------------------------------------
