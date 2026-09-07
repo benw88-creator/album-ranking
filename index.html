@@ -10218,6 +10218,7 @@ function playDismissAnimation(gateEl, callback) {
       return;
     }
 
+    subscribeWars();
     act.innerHTML = '<p class="reco-note">Loading&hellip;</p>';
     chal.innerHTML = ''; hist.innerHTML = '';
 
@@ -10275,6 +10276,53 @@ function playDismissAnimation(gateEl, callback) {
       });
     });
   }
+
+  // ---- staying current ----------------------------------------------------
+  // A war resolves inside the *opponent's* submit, on their machine. Without a
+  // push, the player who bid first stares at "waiting" until they reload, which
+  // is the worst moment in the game to feel dead. Realtime flips them straight
+  // to the reveal; the poll is a fallback for when the socket cannot connect.
+
+  var _chan = null;
+  var _poll = null;
+
+  function subscribeWars() {
+    if (_chan || !on()) return;
+    try {
+      _chan = sb().channel('bid-wars')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bid_wars' }, function (payload) {
+          var row = payload && payload.new;
+          if (!row || !row.id) return;
+          // RLS already limits this to wars we are in.
+          if (_war && row.id === _war.id && row.status === 'resolved') {
+            _war = row;
+            loadProfiles([other(row)]).then(function () { showReveal(row); });
+          }
+          renderWars();
+        })
+        .subscribe();
+    } catch (e) { _chan = null; }
+  }
+
+  // Only runs while a war of ours is genuinely mid-flight.
+  function startPoll() {
+    stopPoll();
+    _poll = setInterval(async function () {
+      if (!_war || _war.status !== 'pending') { stopPoll(); return; }
+      try {
+        var r = await sb().from('bid_wars').select('*').eq('id', _war.id).single();
+        var w = r && r.data;
+        if (w && w.status === 'resolved') {
+          stopPoll();
+          _war = w;
+          await loadProfiles([other(w)]);
+          showReveal(w);
+          renderWars();
+        }
+      } catch (e) {}
+    }, 15000);
+  }
+  function stopPoll() { if (_poll) { clearInterval(_poll); _poll = null; } }
 
   // ---- the board ----------------------------------------------------------
 
@@ -10396,6 +10444,7 @@ function playDismissAnimation(gateEl, callback) {
 
   function showWaiting(w, bids) {
     setPane('waiting');
+    startPoll();
     document.getElementById('war-sub').textContent = 'Sealed — waiting on ' + nameOf(other(w));
     document.getElementById('war-wait-sub').textContent =
       'Waiting on ' + nameOf(other(w)) + ' to bid. You’ll get a notification the moment it settles.';
@@ -10417,6 +10466,7 @@ function playDismissAnimation(gateEl, callback) {
   // than announced.
 
   function showReveal(w) {
+    stopPoll();
     setPane('reveal');
     var iAmInit = w.initiator_id === me().id;
     var mineTotal = Number(myTotal(w)) || 0;
@@ -10554,6 +10604,7 @@ function playDismissAnimation(gateEl, callback) {
     ['war-new-close', 'war-close'].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener('click', function () {
+        stopPoll();
         var m = el.closest('.modal');
         if (m) m.classList.remove('open');
       });
@@ -10561,6 +10612,7 @@ function playDismissAnimation(gateEl, callback) {
     ['war-new-modal', 'war-modal'].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener('click', function (e) {
+        if (e.target === this) stopPoll();
         if (e.target === this) this.classList.remove('open');
       });
     });

@@ -98,10 +98,25 @@ How a war runs:
 
 Design decisions worth not undoing:
 
-- **Value is Last.fm playcount** (total scrobbles, i.e. total plays), fetched by
-  `api/bid-war-create.js` and cached in `album_plays` for 14 days. Spotify was not an
-  option: stream counts are not in the Web API at all, and this app no longer even receives
-  `popularity`. Requires `LASTFM_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel.
+- **Value is total Spotify streams**: the sum of every track on the album. Spotify exposes
+  no stream counts at all (not per track, not per album, and this app no longer receives
+  even `popularity`), so `api/bid-war-create.js` takes the album's real tracklist from the
+  Spotify API, reads per-track totals from kworb.net's artist table, and sums the matches.
+  Cached in `album_plays` for 14 days, `source = 'kworb'`.
+  An album is skipped unless at least 60% of its tracks match, so a half-matched record
+  cannot be undervalued against a fully matched one. Measured match rates: 100% for
+  american dream, Blonde, SOS, To Pimp A Butterfly, In Rainbows, The Money Store; 92% IGOR;
+  64% Rumours, where kworb omits very low-stream deep cuts that barely move a sum.
+  This replaced Last.fm album playcount, which was wrong by about a thousand times —
+  scrobbles are not streams, and album-level scrobbles undercount further because plays
+  scatter across singles and reissues. `LASTFM_API_KEY` is no longer used here.
+  The kworb dependency is scraped HTML, so it is the most brittle part of the feature: if
+  match rates collapse, check the table markup in `artistStreamTable`.
+- **Wars settle live.** `bid_wars` is in the `supabase_realtime` publication, so the player
+  who bid first is pushed straight to the reveal when the second bid lands, instead of
+  sitting on "waiting" until they reload. A 15s poll covers a failed socket. `bid_war_bids`
+  and `bid_war_values` are deliberately not published — streaming either would unseal the
+  bids or leak the values.
 - **Creation is a server route, not a Postgres function.** Postgres cannot make the HTTP
   call, and the browser must not: a player who fetches the playcounts themselves knows what
   every record is worth before bidding. The route verifies the caller's Supabase JWT and
