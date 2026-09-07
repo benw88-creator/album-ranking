@@ -2985,8 +2985,8 @@ window.ICONS = {
   <div class="splash-scrim" id="splash-scrim"></div>
   <div class="splash-content">
     <div class="splash-word" id="splash-word">VINALL</div>
-    <p class="splash-tag">Rate albums. Build your taste. Find your people.</p>
-    <button class="splash-cta" id="splash-cta">Drop the needle <span class="arrow" aria-hidden="true">&rarr;</span></button>
+    <p class="splash-tag">Music, remembered.</p>
+    <button class="splash-cta" id="splash-cta">GO</button>
   </div>
 </div>
 
@@ -3021,7 +3021,7 @@ window.ICONS = {
       <div class="brand-mark" aria-hidden="true"></div>
       <div class="brand-text">
         <h1>VINALL</h1>
-        <p>Rank the music you love.</p>
+        <p>Music, remembered.</p>
       </div>
       <div class="waveform" aria-hidden="true">
         <span></span><span></span><span></span><span></span><span></span>
@@ -3072,7 +3072,7 @@ window.ICONS = {
   <!-- ============================ TODAY ============================ -->
   <section id="view-today" style="display:none; margin-top:32px;">
     <div class="section-head"><h2><span data-icon="sparkle"></span> Today</h2></div>
-    <p class="reco-note">A few things worth a minute. Tap an answer &mdash; that&rsquo;s the whole thing, writing is optional.</p>
+    <p class="reco-note">Tap an answer, that&rsquo;s it. Writing something is optional.</p>
     <div id="today-stream"></div>
   </section>
 
@@ -3150,7 +3150,7 @@ window.ICONS = {
   <section id="view-diary" style="display:none; margin-top:32px;">
     <div class="section-head">
       <h2><span data-icon="disc"></span> Liner Notes</h2>
-      <span class="muted">What you played, and what it meant</span>
+      <span class="muted">What you played, and what was going on</span>
       <button class="btn-primary" id="ln-write-btn" style="margin-left:auto;">Write today</button>
     </div>
 
@@ -3291,7 +3291,7 @@ window.ICONS = {
       <div class="game-card" id="war-card" style="border-color: var(--accent-2-dim); background: linear-gradient(150deg, var(--accent-2-dim), var(--surface) 60%);">
         <div class="gc-emoji" data-icon="trophy"></div>
         <h3>Bid Wars</h3>
-        <p>Head to head. Outbid a mate on five records &mdash; blind. Winner takes 30 Discs.</p>
+        <p>Outbid a mate on five records, blind. Winner takes 30 Discs.</p>
         <div class="gc-go">Challenge someone &rarr;</div>
       </div>
       <div class="game-card" id="leaderboard-card">
@@ -3306,7 +3306,7 @@ window.ICONS = {
   <!-- ============================ BID WARS ============================ -->
   <section id="view-wars" style="display:none; margin-top:32px;">
     <div class="section-head"><h2><span data-icon="trophy"></span> Bid Wars</h2><button class="btn-primary" id="war-new-btn" style="margin-left:auto;">Start a war</button></div>
-    <p class="reco-note">Five records. A hundred chips. One shot, bid blind. Every record you outbid your mate on is worth its total plays &mdash; most plays takes the war.</p>
+    <p class="reco-note">Five records, 100 chips, bid blind. Win a record and you get its streams. Most streams wins.</p>
     <div id="war-challenges"></div>
     <div id="war-active"></div>
     <div id="war-history"></div>
@@ -3326,7 +3326,7 @@ window.ICONS = {
   <section id="view-profile" style="display:none; margin-top:32px;">
     <div id="profile-body"></div>
     <div class="section-head" style="margin-top:34px;"><h2>Your Music Lore</h2><span class="muted" id="lore-count"></span></div>
-    <p class="reco-note">What you&rsquo;ve said about your records, as it piles up.</p>
+    <p class="reco-note">Everything you&rsquo;ve said about your records.</p>
     <div id="lore-list"></div>
   </section>
 
@@ -3829,14 +3829,14 @@ window.ICONS = {
       <div id="war-board"></div>
       <div class="war-err" id="war-error"></div>
       <button class="btn-primary war-submit" id="war-submit">Lock in your bids</button>
-      <p class="war-foot">Bids are sealed &mdash; they can&rsquo;t see yours and you can&rsquo;t see theirs. You only get one shot, so spend carefully.</p>
+      <p class="war-foot">They can&rsquo;t see your bids and you can&rsquo;t see theirs. One go each, so spend it properly.</p>
     </div>
 
     <div id="war-waiting" style="display:none;">
       <div class="war-wait">
         <div class="war-wait-ic" data-icon="stopwatch"></div>
         <h3>Bids locked</h3>
-        <p id="war-wait-sub">Waiting on them to bid. This settles itself the moment they do &mdash; no need to refresh.</p>
+        <p id="war-wait-sub">Waiting on them. Updates the second they bid.</p>
       </div>
       <div id="war-mybids" class="war-mybids"></div>
     </div>
@@ -4581,6 +4581,12 @@ function hideArtistHero(hero) {
   hero.classList.add('artist-hero-hidden');
 }
 async function renderArtistHero() {
+  var busy = window.__introBusyUntil || 0;
+  if (Date.now() < busy) {
+    clearTimeout(renderArtistHero._wait);
+    renderArtistHero._wait = setTimeout(renderArtistHero, busy - Date.now() + 60);
+    return;
+  }
   const hero = document.getElementById('artist-hero');
   if (!hero) return;
 
@@ -9399,6 +9405,10 @@ function playDismissAnimation(gateEl, callback) {
 
   // Start the dashboard's own entrance immediately — it should already be
   // rising into place while the record is still flying, not after.
+  // The favourite-artist hero used to appear while the record was still
+  // flying to the header, which read as two animations fighting. Hold it
+  // back until the morph has finished and settled.
+  window.__introBusyUntil = Date.now() + (reduced ? 1200 : 3000);
   document.body.classList.add('is-entering');
   // is-entering starts the dashboard at opacity 0; entering-done is what
   // brings it back. requestAnimationFrame stops firing in a tab that isn't
@@ -9422,7 +9432,7 @@ function playDismissAnimation(gateEl, callback) {
     setTimeout(callback, 180);
     return;
   }
-  var DUR = reduced ? 0.45 : 0.95;
+  var DUR = reduced ? 0.6 : 1.35;
 
   var markRect = markTarget.getBoundingClientRect();
 
@@ -10550,7 +10560,7 @@ function playDismissAnimation(gateEl, callback) {
     startPoll();
     document.getElementById('war-sub').textContent = 'Sealed — waiting on ' + nameOf(other(w));
     document.getElementById('war-wait-sub').textContent =
-      'Waiting on ' + nameOf(other(w)) + ' to bid. This settles itself the moment they do — no need to refresh.';
+      'Waiting on ' + nameOf(other(w)) + '. Updates the second they bid.';
     document.getElementById('war-mybids').innerHTML =
       '<h3 class="prof-section-title" style="margin-top:0;">Your bids</h3>' +
       (w.records || []).map(function (r) {
@@ -11135,7 +11145,7 @@ function playDismissAnimation(gateEl, callback) {
 
     if (!on()) {
       host.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.sparkle +
-        '</span><h3>Today</h3><p>Log in and VINALL starts noticing things about your listening.</p>' +
+        '</span><h3>Today</h3><p>Log in and VINALL starts noticing things.</p>' +
         '<button class="btn-primary" id="today-login" style="margin-top:8px;">Log in</button></div>';
       var b = document.getElementById('today-login');
       if (b) b.addEventListener('click', function () { Cloud.openAuth(); });
@@ -11157,7 +11167,7 @@ function playDismissAnimation(gateEl, callback) {
 
     if (!t.question && !t.receipt) {
       parts.unshift('<div class="td-card td-quiet">' +
-        cardHead('Nothing to ask yet', 'Rate a few records and VINALL will start finding things worth asking about.') +
+        cardHead('Nothing to ask yet', 'Rate a few records and stuff shows up here.') +
         '</div>');
     }
 
