@@ -2336,6 +2336,41 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   transition: opacity 0.65s var(--ease);
 }
 .splash-gate.is-hiding { opacity: 0; pointer-events: none; }
+
+/* --- Splash deterioration -------------------------------------------------
+   The gate breaks into a dot field that thins out to nothing, revealing the
+   dashboard already sitting behind it. Two masks intersect: a tiled circle
+   whose radius shrinks (the dots opening up) and a radial wipe closing in
+   from the edges (so the decay travels instead of happening all at once).
+   The custom properties need @property to interpolate; without it they snap
+   and the opacity in the same keyframes carries a plain fade instead. */
+@property --dsv  { syntax: '<length>';     inherits: false; initial-value: 7px; }
+@property --wipe { syntax: '<percentage>'; inherits: false; initial-value: 130%; }
+
+.splash-gate.is-dissolving {
+  pointer-events: none;
+  -webkit-mask-image:
+    radial-gradient(circle at 50% 50%, #000 var(--dsv), transparent calc(var(--dsv) + 0.7px)),
+    radial-gradient(132% 132% at 50% 42%, #000 var(--wipe), transparent calc(var(--wipe) + 16%));
+          mask-image:
+    radial-gradient(circle at 50% 50%, #000 var(--dsv), transparent calc(var(--dsv) + 0.7px)),
+    radial-gradient(132% 132% at 50% 42%, #000 var(--wipe), transparent calc(var(--wipe) + 16%));
+  -webkit-mask-size: 10px 10px, 100% 100%;
+          mask-size: 10px 10px, 100% 100%;
+  -webkit-mask-repeat: repeat, no-repeat;
+          mask-repeat: repeat, no-repeat;
+  -webkit-mask-composite: source-in;
+          mask-composite: intersect;
+  animation: splashDeteriorate 1500ms cubic-bezier(0.32, 0, 0.62, 1) forwards;
+}
+@keyframes splashDeteriorate {
+  0%   { --dsv: 7px;   --wipe: 130%; opacity: 1; filter: blur(0px); }
+  55%  { opacity: 1; }
+  100% { --dsv: 0px;   --wipe: 0%;   opacity: 0; filter: blur(3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash-gate.is-dissolving { animation-duration: 420ms; }
+}
 .splash-video {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; background: var(--bg);
@@ -2556,10 +2591,19 @@ body.entering-done #artist-hero {
   height: 100%;
   filter: none;
   object-fit: fill;
-  -webkit-mask-image: radial-gradient(ellipse 80% 84% at 50% 44%,
-    #000 40%, rgba(0,0,0,0.78) 62%, rgba(0,0,0,0.32) 82%, transparent 100%);
-          mask-image: radial-gradient(ellipse 80% 84% at 50% 44%,
-    #000 40%, rgba(0,0,0,0.78) 62%, rgba(0,0,0,0.32) 82%, transparent 100%);
+  /* Edge fade only. The previous ellipse ate well into the portrait; these
+     two gradients leave the middle completely untouched and thin out only
+     the outer eighth on each side. Where mask-composite isn't supported the
+     two masks simply add together, which is the old un-masked look — a safe
+     way to fail. */
+  -webkit-mask-image:
+    linear-gradient(to right,  transparent 0%, #000 11%, #000 89%, transparent 100%),
+    linear-gradient(to bottom, transparent 0%, #000 9%,  #000 88%, transparent 100%);
+          mask-image:
+    linear-gradient(to right,  transparent 0%, #000 11%, #000 89%, transparent 100%),
+    linear-gradient(to bottom, transparent 0%, #000 9%,  #000 88%, transparent 100%);
+  -webkit-mask-composite: source-in;
+          mask-composite: intersect;
 }
 .artist-hero-duotone {
   position: absolute;
@@ -4642,7 +4686,7 @@ async function renderArtistHero() {
 
   document.getElementById('artist-hero-bg').src = img;
   document.getElementById('artist-hero-name').textContent = fav.name;
-  document.getElementById('artist-hero-meta').innerHTML = 'Your favourite artist';
+  document.getElementById('artist-hero-meta').innerHTML = '';
   hero.dataset.artistId = fav.id;
   _heroArtistKey = fav.id;
   showArtistHero(hero);
@@ -7120,7 +7164,7 @@ window.handleGrooveLink=handleGrooveLink;
     const hero=document.getElementById('artist-hero');
     document.getElementById('artist-hero-bg').src=img;
     document.getElementById('artist-hero-name').textContent=qp.get('debugArtistName')||'Test Artist';
-    document.getElementById('artist-hero-meta').innerHTML='Your favourite artist';
+    document.getElementById('artist-hero-meta').innerHTML='';
     showArtistHero(hero);
     if(window.VinalDither)window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
   }, 1000);
@@ -9469,103 +9513,32 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      the landing position is always exactly right regardless of viewport.
      ================================================================ -->
 <script>
+/* Dismiss: the splash deteriorates and the dashboard is revealed behind it.
+
+   The previous version flew the record into the header logo and slid the
+   dashboard up out of a blur. Two things moved at once and neither finished
+   before the other started, so it read as a collision rather than a
+   transition — and the record's landing depended on runtime geometry that
+   had to be measured perfectly every time.
+
+   This is simpler and harder to break: the dashboard is already sitting
+   there at full opacity, and the splash erodes off the top of it. The mask
+   is a tiled circle whose radius animates to nothing, so the image breaks
+   into dots and thins out, combined with a soft radial wipe so the decay
+   travels rather than happening everywhere at once.
+
+   Every part of it degrades safely. If @property or mask-composite is
+   missing the custom properties never interpolate, the mask stays put, and
+   the opacity in the same keyframes still carries a clean fade. */
 function playDismissAnimation(gateEl, callback) {
   var reduced = window.motionReduced ? window.motionReduced() : false;
-  var wrap = document.getElementById('splash-video-wrap');
-  var word = document.getElementById('splash-word');
-  var scrim = document.getElementById('splash-scrim');
-  var content = gateEl.querySelector('.splash-content');
-  var markTarget = document.querySelector('.brand-mark');
-  var wordTarget = document.querySelector('.brand-text h1');
 
-  // Start the dashboard's own entrance immediately — it should already be
-  // rising into place while the record is still flying, not after.
-  // The favourite-artist hero used to appear while the record was still
-  // flying to the header, which read as two animations fighting. Hold it
-  // back until the morph has finished and settled.
-  window.__introBusyUntil = Date.now() + (reduced ? 1200 : 3000);
-  document.body.classList.add('is-entering');
-  // is-entering starts the dashboard at opacity 0; entering-done is what
-  // brings it back. requestAnimationFrame stops firing in a tab that isn't
-  // being painted, so if someone switches away mid-intro the dashboard could
-  // sit invisible until the cleanup below rescues it. Back the frame up with
-  // a timer so the entrance always completes.
-  var enterDone = function () { document.body.classList.add('entering-done'); };
-  requestAnimationFrame(enterDone);
-  setTimeout(enterDone, 60);
+  // The dashboard is not animated in any more — it is simply already there,
+  // which is the whole point of revealing it rather than introducing it.
+  document.body.classList.add('entering-done');
 
-  if (content) content.classList.add('is-leaving');
-  if (scrim) scrim.classList.add('is-clearing');
-  gateEl.classList.add('is-dismissing');
-
-  // Only bail to a plain fade if the geometry genuinely isn't measurable.
-  // Reduced-motion users still get the morph — a single element travelling
-  // is not the disorienting kind of motion that setting is about, and
-  // skipping it entirely just reads as "the intro is broken". What they
-  // don't get is the motion blur, and it runs shorter.
-  if (!wrap || !markTarget) {
-    setTimeout(callback, 180);
-    return;
-  }
-  var DUR = reduced ? 0.6 : 1.35;
-
-  var markRect = markTarget.getBoundingClientRect();
-
-  // Freeze the wrapper at its current on-screen geometry first, so the
-  // browser has a concrete start value to animate FROM (animating from
-  // `inset:0` to explicit pixels doesn't interpolate).
-  var startRect = wrap.getBoundingClientRect();
-  // Order matters here, and it was wrong: `inset` is the shorthand for
-  // top/right/bottom/left, so assigning it AFTER pinning top and left threw
-  // both away again. The record then had no start position to animate from
-  // and jumped straight to the header logo instead of flying there —
-  // measured mid-flight, it was already sitting at the logo's coordinates
-  // at full size. Clear the shorthand first, then pin.
-  wrap.style.inset = 'auto';
-  wrap.style.position = 'fixed';
-  wrap.style.margin = '0';
-  wrap.style.top = startRect.top + 'px';
-  wrap.style.left = startRect.left + 'px';
-  wrap.style.width = startRect.width + 'px';
-  wrap.style.height = startRect.height + 'px';
-
-  // The wordmark likewise needs fixing in place before it can fly.
-  var wordStart = word ? word.getBoundingClientRect() : null;
-  if (word && wordTarget) {
-    var wordEnd = wordTarget.getBoundingClientRect();
-    var scale = wordEnd.height / wordStart.height;
-    word.classList.add('is-flying');
-    word.style.transitionDuration = DUR + 's';
-    word.style.top = wordStart.top + 'px';
-    word.style.left = wordStart.left + 'px';
-    word.style.width = wordStart.width + 'px';
-    word.style.height = wordStart.height + 'px';
-    word.style.lineHeight = wordStart.height + 'px';
-    // Force the styles above to land before the transform that animates.
-    void word.offsetWidth;
-    var dx = (wordEnd.left + wordEnd.width / 2) - (wordStart.left + wordStart.width / 2);
-    var dy = (wordEnd.top + wordEnd.height / 2) - (wordStart.top + wordStart.height / 2);
-    word.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + scale + ')';
-    word.style.opacity = '0';
-  }
-
-  void wrap.offsetWidth; // commit the start geometry before transitioning
-
-  if (!reduced) wrap.classList.add('is-morphing'); // the blur pass
-  var E = 'cubic-bezier(0.16, 1, 0.3, 1)'; // --ease, spelled out: var() in an
-                                           // inline shorthand is unreliable
-  wrap.style.transition =
-    'top ' + DUR + 's ' + E + ', left ' + DUR + 's ' + E + ', width ' + DUR + 's ' + E + ',' +
-    'height ' + DUR + 's ' + E + ', border-radius ' + DUR + 's ' + E + ',' +
-    'opacity 0.25s ease-in ' + (DUR - 0.2) + 's';
-  wrap.style.top = markRect.top + 'px';
-  wrap.style.left = markRect.left + 'px';
-  wrap.style.width = markRect.width + 'px';
-  wrap.style.height = markRect.height + 'px';
-  wrap.style.borderRadius = '50%';
-  // Fades out right at the end so the real (spinning) header logo takes
-  // over without a visible swap.
-  wrap.style.opacity = '0';
+  var DUR = reduced ? 420 : 1500;
+  gateEl.classList.add(reduced ? 'is-hiding' : 'is-dissolving');
 
   var done = false;
   function finish() {
@@ -9573,10 +9546,8 @@ function playDismissAnimation(gateEl, callback) {
     done = true;
     callback();
   }
-  wrap.addEventListener('transitionend', function (e) {
-    if (e.propertyName === 'opacity') finish();
-  });
-  setTimeout(finish, DUR * 1000 + 250); // guarantee completion even if transitionend never fires
+  gateEl.addEventListener('animationend', finish);
+  setTimeout(finish, DUR + 220);
 }
 </script>
 
