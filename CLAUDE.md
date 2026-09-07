@@ -51,10 +51,29 @@ For local work (optional, needs Node): `vercel env pull .env.local`.
 
 ## Database
 
-Supabase project ref `cqfxyebejpkyhswolrwi`.
+Supabase project ref `cqfxyebejpkyhswolrwi` (project name "Crate", Postgres 17, eu-west-1).
 
-The schema is currently maintained by hand in the Supabase dashboard; only
-`supabase-migration-discs.sql` is tracked, and it is not a full history. This is the one
-part of the project that does not travel between machines. To fix that:
-`supabase link --project-ref cqfxyebejpkyhswolrwi` then `supabase db pull` to snapshot the
-live schema into `supabase/migrations/`, and commit it.
+The schema is still maintained by hand in the dashboard. `supabase/migrations/` holds only
+the one trigger migration below, not a full history. Snapshotting the rest needs
+`supabase db pull`, which needs Docker, which needs WSL2, which needs admin rights — so it
+can only be done from the main PC, not the school laptop.
+
+`supabase/migrations/20260907090000_protect_is_admin.sql` was applied by hand in the SQL
+editor, so it is **not** recorded in Supabase's migration history. `supabase db push` will
+try to apply it again; that is safe, because it uses `create or replace` and
+`drop trigger if exists`.
+
+## Security notes
+
+Write policies on every table are correctly scoped by `auth.uid()` — users cannot modify
+each other's rows.
+
+Two narrower gaps remain: either participant can update a `bid_wars` row, so a player could
+set themselves as winner; and a member can update their own `groove_members` row, possibly
+including their own role.
+
+More broadly, `discs`, the streak columns, the cosmetic arrays and `leaderboard_times` are
+all written straight from the browser through `Cloud.saveProfile`, which upserts arbitrary
+client-supplied fields. The economy is therefore client-authoritative: a user can set their
+own numbers. Only `is_admin` is protected, by the trigger above. Fixing the rest means
+moving disc awards and shop purchases server-side.
