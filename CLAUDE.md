@@ -77,3 +77,38 @@ all written straight from the browser through `Cloud.saveProfile`, which upserts
 client-supplied fields. The economy is therefore client-authoritative: a user can set their
 own numbers. Only `is_admin` is protected, by the trigger above. Fixing the rest means
 moving disc awards and shop purchases server-side.
+
+## Bid Wars
+
+A 1v1 sealed-bid auction, reachable from its own nav tab (`view-wars`) and from a card in
+the Minigames grid. Client code lives in one IIFE at the bottom of `index.html`
+(`window.renderWars`, `window.openBidWar`); schema and logic are in
+`supabase/migrations/20260907130000_bid_wars.sql`.
+
+How a war runs:
+
+1. You challenge someone you follow. The server picks five records and stores their values
+   somewhere the client cannot read.
+2. Both players spread 100 chips across the five records, blind, one submission each.
+3. When the second bid lands, the war resolves in that same transaction. Higher bid takes
+   each record; equal bids mean nobody takes it.
+4. A record you won is worth the community's average rating of it. Highest total wins.
+   Winner +30 Discs, loser +8, draw +15 each.
+
+Design decisions worth not undoing:
+
+- **Records are drawn from `crate_feed`**, grouped by album, taking the 40 most-rated and
+  picking 5 at random. That table already denormalises album name/artist/art alongside a
+  score, so a record always has both artwork and a value. Scoring deliberately does *not*
+  use Spotify popularity: Spotify no longer returns popularity to this app at all.
+- **Everything is server-authoritative.** Clients have no INSERT or UPDATE policy on any
+  bid war table; `bid_war_create`, `bid_war_submit` and `bid_war_decline` are
+  `security definer`. A player cannot write their own winner, score or Disc payout. Bid War
+  payouts are the only part of the Discs economy a client cannot forge.
+- **Values live in `bid_war_values`**, which has RLS enabled and *no policies*, making it
+  unreachable from the client under any query. `bid_war_submit` folds the values into
+  `bid_wars.records` at resolution, when revealing them is the whole point.
+- **Bids are sealed** by the SELECT policy on `bid_war_bids`: your own row always, your
+  opponent's only once `status = 'resolved'`.
+- **It is async by design.** With a user base this small, anything needing both players
+  online at once would never actually get played.

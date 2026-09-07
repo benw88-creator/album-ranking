@@ -2723,6 +2723,93 @@ body.entering-done #artist-hero {
   filter: brightness(1.1);
 }
 
+
+/* ================================================================
+   BID WARS
+   Sealed-bid auction, 1v1. The whole screen is built around one
+   number — chips left — because that is the only decision the
+   player is actually making. Everything else is feedback on it.
+   ================================================================ */
+.war-panel { max-width: 520px; }
+
+/* Chips remaining. Deliberately oversized: it is the resource being
+   spent, and watching it drain is most of the tension. */
+.war-chips { margin-bottom: 18px; }
+.war-chips-num { display: flex; align-items: baseline; gap: 8px; font-family: var(--font-display); }
+.war-chips-num span { font-size: 44px; font-weight: 700; line-height: 1; color: var(--gold); font-variant-numeric: tabular-nums; transition: color 0.2s var(--ease); }
+.war-chips-num small { font-size: 12px; color: var(--text-dim); letter-spacing: 0.04em; text-transform: uppercase; }
+.war-chips.over .war-chips-num span { color: var(--red); }
+.war-chips-bar { height: 5px; background: var(--surface-3); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+.war-chips-fill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--gold), var(--accent-2)); border-radius: 3px; transition: width 0.35s var(--ease), background 0.2s; }
+.war-chips.over .war-chips-fill { background: var(--red); }
+
+/* One record up for auction. */
+.war-rec { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); margin-bottom: 10px; transition: border-color 0.2s var(--ease), transform 0.2s var(--ease); }
+.war-rec.staked { border-color: var(--gold-dim); transform: translateX(2px); }
+.war-rec img { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--surface-3); }
+.war-rec-meta { flex: 1; min-width: 0; }
+.war-rec-nm { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.war-rec-ar { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.war-stepper { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.war-stepper button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface-3); color: var(--text); font-size: 17px; line-height: 1; cursor: pointer; transition: background 0.14s, transform 0.1s; }
+.war-stepper button:hover:not(:disabled) { background: var(--surface-4); }
+.war-stepper button:active:not(:disabled) { transform: scale(0.9); }
+.war-stepper button:disabled { opacity: 0.3; cursor: default; }
+.war-stepper input { width: 46px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--font-mono); font-size: 14px; padding: 6px 0; -moz-appearance: textfield; }
+.war-stepper input::-webkit-outer-spin-button,
+.war-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.war-submit { width: 100%; margin-top: 6px; }
+.war-foot { font-size: 12px; color: var(--text-faint); margin-top: 10px; line-height: 1.5; }
+.war-err { color: var(--red); font-size: 13px; min-height: 18px; margin: 4px 0; }
+
+.war-wait { text-align: center; padding: 22px 0 8px; }
+.war-wait-ic { width: 40px; margin: 0 auto 10px; color: var(--gold); }
+.war-wait h3 { font-family: var(--font-display); margin-bottom: 4px; }
+.war-wait p { color: var(--text-dim); font-size: 13px; }
+.war-mybids { margin-top: 16px; }
+
+/* --- The reveal ---------------------------------------------------
+   Records flip in one at a time rather than all at once. A result
+   that lands in a single frame is just a number; staggering it makes
+   each record its own small win or loss on the way to the verdict. */
+.war-score { display: flex; align-items: center; justify-content: center; gap: 18px; margin-bottom: 20px; }
+.war-score-side { text-align: center; flex: 1; padding: 12px 8px; border-radius: 14px; border: 1px solid var(--border); transition: border-color 0.3s var(--ease), background 0.3s var(--ease); }
+.war-score-side.lead { border-color: var(--gold); background: var(--gold-dim); }
+.ws-name { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ws-num { font-family: var(--font-display); font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+.war-score-vs { font-size: 12px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; }
+
+.war-rev { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); margin-bottom: 10px; opacity: 0; transform: translateY(10px) scale(0.98); }
+.war-rev.in { animation: warFlip 0.5s var(--ease) forwards; }
+@keyframes warFlip { to { opacity: 1; transform: none; } }
+.war-rev.won  { border-color: var(--green); background: linear-gradient(100deg, rgba(79,180,119,0.12), var(--surface-2) 70%); }
+.war-rev.lost { border-color: rgba(226,75,74,0.35); }
+.war-rev img { width: 44px; height: 44px; border-radius: 7px; object-fit: cover; flex-shrink: 0; }
+.war-rev-bids { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 13px; flex-shrink: 0; }
+.war-rev-bid { padding: 3px 7px; border-radius: 6px; background: var(--surface-3); color: var(--text-dim); }
+.war-rev-bid.high { background: var(--gold-dim); color: var(--gold); }
+.war-rev-val { font-family: var(--font-display); font-weight: 700; font-size: 17px; min-width: 42px; text-align: right; flex-shrink: 0; }
+.war-rev.won .war-rev-val { color: var(--green); }
+.war-rev.tie .war-rev-val { color: var(--text-faint); }
+
+.war-verdict { text-align: center; font-family: var(--font-display); font-size: 22px; font-weight: 700; margin-top: 18px; opacity: 0; transition: opacity 0.4s var(--ease); }
+.war-verdict.in { opacity: 1; }
+.war-verdict small { display: block; font-family: var(--font-body); font-size: 13px; font-weight: 400; color: var(--text-dim); margin-top: 6px; }
+
+/* --- List cards on the section page --- */
+.war-card { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: transform 0.14s var(--ease), border-color 0.14s; }
+.war-card:hover { transform: translateX(3px); border-color: var(--border-strong); }
+.war-card img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
+.war-card-meta { flex: 1; min-width: 0; }
+.war-card-nm { font-weight: 600; font-size: 14px; }
+.war-card-sub { font-size: 12px; color: var(--text-dim); }
+.war-tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 8px; border-radius: 6px; flex-shrink: 0; }
+.war-tag.your-move { background: var(--gold); color: #1a1508; font-weight: 700; }
+.war-tag.waiting   { background: var(--surface-3); color: var(--text-dim); }
+.war-tag.won       { background: rgba(79,180,119,0.15); color: var(--green); }
+.war-tag.lost      { background: rgba(226,75,74,0.15); color: var(--red); }
+.war-tag.draw      { background: var(--surface-3); color: var(--text-dim); }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -2879,6 +2966,7 @@ window.ICONS = {
     <button data-mode="albums">Albums</button>
     <button data-mode="songs">Songs</button>
     <button data-mode="games">Games</button>
+    <button data-mode="wars">Bid Wars</button>
     <button data-mode="achievements" class="nav-icon-btn" aria-label="Achievements" title="Achievements"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="6.5" r="4"/><path d="M5.2 9.8 4 14l4-1.6 4 1.6-1.2-4.2"/></svg></button>
     <button class="activity-toggle nav-icon-btn" id="notif-toggle" title="Notifications" aria-label="Notifications"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 2.2c-1.8 0-3.1 1.4-3.1 3.4v2c0 .8-.3 1.6-.9 2.3l-.5.6h9l-.5-.6c-.6-.7-.9-1.5-.9-2.3v-2c0-2-1.3-3.4-3.1-3.4Z"/><path d="M6.3 11.8a1.8 1.8 0 0 0 3.4 0"/></svg><span class="dot" id="notif-dot" style="display:none;"></span></button>
     <button class="activity-toggle nav-icon-btn" id="activity-toggle" title="Recent activity" aria-label="Recent activity"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.6 1.5"/></svg><span class="dot"></span></button>
@@ -3103,6 +3191,12 @@ window.ICONS = {
         <p>Bracket battle &mdash; pick your favourite until one album wins it all.</p>
         <div class="gc-go">Start &rarr;</div>
       </div>
+      <div class="game-card" id="war-card" style="border-color: var(--accent-2-dim); background: linear-gradient(150deg, var(--accent-2-dim), var(--surface) 60%);">
+        <div class="gc-emoji" data-icon="trophy"></div>
+        <h3>Bid Wars</h3>
+        <p>Head to head. Outbid a mate on five records &mdash; blind. Winner takes 30 Discs.</p>
+        <div class="gc-go">Challenge someone &rarr;</div>
+      </div>
       <div class="game-card" id="leaderboard-card">
         <div class="gc-emoji" data-icon="stopwatch"></div>
         <h3>Speed Leaderboard</h3>
@@ -3110,6 +3204,15 @@ window.ICONS = {
         <div class="gc-go">View &rarr;</div>
       </div>
     </div>
+  </section>
+
+  <!-- ============================ BID WARS ============================ -->
+  <section id="view-wars" style="display:none; margin-top:32px;">
+    <div class="section-head"><h2><span data-icon="trophy"></span> Bid Wars</h2><button class="btn-primary" id="war-new-btn" style="margin-left:auto;">Start a war</button></div>
+    <p class="reco-note">Five records. A hundred chips. One shot, bid blind. Every record you outbid your mate on is worth whatever The Crate rates it &mdash; highest total takes the war.</p>
+    <div id="war-challenges"></div>
+    <div id="war-active"></div>
+    <div id="war-history"></div>
   </section>
 
   <!-- ============================ ACHIEVEMENTS ============================ -->
@@ -3599,6 +3702,54 @@ window.ICONS = {
     </div>
     <h3 class="prof-section-title" style="margin-top:0;">Members</h3>
     <div id="groove-members" style="max-height:40vh; overflow-y:auto;"></div>
+  </div>
+</div>
+
+<!-- ============================ BID WARS ============================ -->
+<div class="modal" id="war-new-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="war-new-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="trophy"></span><div><h2>Start a war</h2><p>Pick someone you follow. They&rsquo;ll get a challenge.</p></div></div>
+    <input id="war-opp-search" class="g-input" type="text" placeholder="Search people you follow&hellip;" autocomplete="off" style="margin-bottom:10px;">
+    <div id="war-opp-list" style="max-height:44vh; overflow-y:auto;"></div>
+    <div id="war-new-error" class="war-err"></div>
+  </div>
+</div>
+
+<div class="modal" id="war-modal">
+  <div class="modal-panel war-panel">
+    <button class="modal-close" id="war-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="trophy"></span><div><h2 id="war-title">Bid War</h2><p id="war-sub"></p></div></div>
+
+    <div id="war-bidding">
+      <div class="war-chips" id="war-chips">
+        <div class="war-chips-num"><span id="war-chips-left">100</span><small>chips left</small></div>
+        <div class="war-chips-bar"><div class="war-chips-fill" id="war-chips-fill"></div></div>
+      </div>
+      <div id="war-board"></div>
+      <div class="war-err" id="war-error"></div>
+      <button class="btn-primary war-submit" id="war-submit">Lock in your bids</button>
+      <p class="war-foot">Bids are sealed &mdash; they can&rsquo;t see yours and you can&rsquo;t see theirs. You only get one shot, so spend carefully.</p>
+    </div>
+
+    <div id="war-waiting" style="display:none;">
+      <div class="war-wait">
+        <div class="war-wait-ic" data-icon="stopwatch"></div>
+        <h3>Bids locked</h3>
+        <p id="war-wait-sub">Waiting on them to bid. You&rsquo;ll get a notification the moment it settles.</p>
+      </div>
+      <div id="war-mybids" class="war-mybids"></div>
+    </div>
+
+    <div id="war-reveal" style="display:none;">
+      <div class="war-score">
+        <div class="war-score-side" id="war-score-me"><div class="ws-name">You</div><div class="ws-num" id="war-score-me-num">0.0</div></div>
+        <div class="war-score-vs">vs</div>
+        <div class="war-score-side" id="war-score-them"><div class="ws-name" id="war-them-name">Them</div><div class="ws-num" id="war-score-them-num">0.0</div></div>
+      </div>
+      <div id="war-reveal-list"></div>
+      <div class="war-verdict" id="war-verdict"></div>
+    </div>
   </div>
 </div>
 
@@ -4426,6 +4577,7 @@ const views = {
   albums: document.getElementById('view-albums'),
   songs: document.getElementById('view-songs'),
   games: document.getElementById('view-games'),
+  wars: document.getElementById('view-wars'),
   achievements: document.getElementById('view-achievements'),
   profile: document.getElementById('view-profile'),
   people: document.getElementById('view-people'),
@@ -4448,6 +4600,7 @@ function setMode(mode, fromCode) {
   if (mode === 'albums') renderAlbums();
   if (mode === 'songs') renderSongs();
   if (mode === 'games' && window.renderGameBests) window.renderGameBests();
+  if (mode === 'wars' && window.renderWars) window.renderWars();
   if (mode === 'achievements' && window.renderAchievements) window.renderAchievements();
   if (mode === 'profile' && window.renderProfile) window.renderProfile();
   if (mode === 'people' && window.renderPeople) window.renderPeople();
@@ -6279,8 +6432,8 @@ window.renderProfile=renderProfile;
 /* ================================================================
    13. NOTIFICATIONS + SUGGESTIONS
    ================================================================ */
-function notifText(n){const who=esc((n.data&&n.data.username)||'Someone');if(n.type==='follow')return who+' followed you';if(n.type==='suggestion'){const it=(n.data&&n.data.item)||{};const kind=(n.data&&n.data.kind)||'album';const label=kind==='list'?'the list':(kind==='song'?'the song':'the album');return who+' recommended '+label+' <b>'+esc(it.name||'')+'</b>'+(it.artist?' by '+esc(it.artist):'');}if(n.type==='groove_invite')return who+' invited you to a Groove';return who+' did something';}
-function notifEmoji(t){return t==='follow'?ICONS.people:t==='suggestion'?ICONS.note:t==='groove_invite'?ICONS.groove:ICONS.bell;}
+function notifText(n){const who=esc((n.data&&n.data.username)||'Someone');if(n.type==='follow')return who+' followed you';if(n.type==='suggestion'){const it=(n.data&&n.data.item)||{};const kind=(n.data&&n.data.kind)||'album';const label=kind==='list'?'the list':(kind==='song'?'the song':'the album');return who+' recommended '+label+' <b>'+esc(it.name||'')+'</b>'+(it.artist?' by '+esc(it.artist):'');}if(n.type==='groove_invite')return who+' invited you to a Groove';if(n.type==='bid_war_challenge')return who+' challenged you to a <b>Bid War</b>';if(n.type==='bid_war_turn')return who+' has bid &mdash; your move';if(n.type==='bid_war_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' in a Bid War'):o==='lost'?(who+' beat you in a Bid War'):('Your Bid War with '+who+' ended level');}return who+' did something';}
+function notifEmoji(t){return t==='follow'?ICONS.people:t==='suggestion'?ICONS.note:t==='groove_invite'?ICONS.groove:(t==='bid_war_challenge'||t==='bid_war_turn'||t==='bid_war_result')?ICONS.trophy:ICONS.bell;}
 
 async function renderNotifications(){
   const host=document.getElementById('notif-list');if(!host)return;
@@ -6288,11 +6441,12 @@ async function renderNotifications(){
   host.innerHTML='<div class="act-empty">Loading\u2026</div>';
   const list=await Cloud.fetchNotifications();
   if(!list.length){host.innerHTML='<div class="act-empty">No notifications yet.</div>';return;}
-  host.innerHTML=list.map(function(n){const it=(n.data&&n.data.item)||{};const clickable=(n.type==='suggestion'&&it.id&&(n.data.kind==='album'));const grooveClick=(n.type==='groove_invite');return'<div class="act-item notif-item'+(n.read?'':' unread')+'"'+(clickable?' data-album="'+esc(it.id)+'"':'')+(grooveClick?' data-groove-invite="1"':'')+'>'+
+  host.innerHTML=list.map(function(n){const it=(n.data&&n.data.item)||{};const clickable=(n.type==='suggestion'&&it.id&&(n.data.kind==='album'));const grooveClick=(n.type==='groove_invite');const warId=(/^bid_war_/.test(n.type||'')&&n.data&&n.data.war_id)||'';return'<div class="act-item notif-item'+(n.read?'':' unread')+'"'+(clickable?' data-album="'+esc(it.id)+'"':'')+(grooveClick?' data-groove-invite="1"':'')+(warId?' data-war-notif="'+esc(warId)+'"':'')+'>'+
     '<span class="act-emoji">'+notifEmoji(n.type)+'</span>'+
     '<div><div class="act-text">'+notifText(n)+'</div><div class="act-time">'+esc(timeAgo(new Date(n.created_at).getTime()))+'</div></div></div>';}).join('');
   host.querySelectorAll('[data-album]').forEach(function(el){el.addEventListener('click',function(){const n=list.find(function(x){return((x.data&&x.data.item)||{}).id===el.dataset.album;});const it=n&&n.data&&n.data.item;if(it){closeNotifPanel();openAlbum(it);}});});
   host.querySelectorAll('[data-groove-invite]').forEach(function(el){el.addEventListener('click',function(){closeNotifPanel();setMode('grooves');if(window.renderGrooves)renderGrooves();});});
+  host.querySelectorAll('[data-war-notif]').forEach(function(el){el.addEventListener('click',function(){closeNotifPanel();setMode('wars');if(window.renderWars)renderWars();if(window.openBidWar)openBidWar(el.dataset.warNotif);});});
 }
 
 async function refreshNotifDot(){if(!Cloud.isOn()){const d=document.getElementById('notif-dot');if(d)d.style.display='none';return;}const c=await Cloud.unreadCount();const d=document.getElementById('notif-dot');if(d)d.style.display=c>0?'block':'none';}
@@ -7967,6 +8121,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   function get() { return state; }
 
   window.Wallet = {
+    // Bid War payouts are credited by Postgres, not here, so the wallet has
+    // to be re-read rather than adjusted locally after one settles.
+    refresh: async function () {
+      await load();
+      if (typeof window.renderStats === 'function') window.renderStats();
+      return state;
+    },
     load: load, get: get, recordRating: recordRating, awardDiscs: awardDiscs,
     buyTheme: buyTheme, equipTheme: equipTheme, buyBanner: buyBanner, equipBanner: equipBanner,
     applyTheme: applyTheme, THEMES: THEMES, BANNERS: BANNERS,
@@ -9929,6 +10090,456 @@ function playDismissAnimation(gateEl, callback) {
   }
 
   init();
+})();
+</script>
+
+<!-- ================================================================
+     BID WARS — 1v1 sealed-bid auction over records from The Crate.
+
+     All state changes go through security definer functions in
+     Postgres (bid_war_create / bid_war_submit / bid_war_decline), so
+     this module never writes a score, a winner or a Disc payout. It
+     asks the server and renders what comes back. That is what stops a
+     player from settling their own war in the console.
+     ================================================================ -->
+<script>
+(function () {
+  function sb() { return (window.Cloud && Cloud.client) ? Cloud.client() : null; }
+  function me() { return (window.Cloud && Cloud.getUser) ? Cloud.getUser() : null; }
+  function on() { return !!(window.Cloud && Cloud.isOn && Cloud.isOn()); }
+
+  var CHIPS = 100;
+  var _war = null;        // war currently open in the modal
+  var _bids = {};         // album_id -> chips, while composing
+  var _oppTimer = null;
+  var _profiles = {};     // id -> profile, cached per render
+
+  // ---- data ---------------------------------------------------------------
+
+  async function myWars() {
+    if (!on()) return [];
+    var u = me();
+    try {
+      var res = await sb().from('bid_wars').select('*')
+        .or('initiator_id.eq.' + u.id + ',opponent_id.eq.' + u.id)
+        .neq('status', 'declined')
+        .order('created_at', { ascending: false }).limit(40);
+      return res.data || [];
+    } catch (e) { return []; }
+  }
+
+  // Which of these have I already bid on? One query rather than one per war.
+  async function myBidWarIds(warIds) {
+    if (!warIds.length) return {};
+    try {
+      var res = await sb().from('bid_war_bids').select('war_id')
+        .eq('user_id', me().id).in('war_id', warIds);
+      var out = {};
+      (res.data || []).forEach(function (r) { out[r.war_id] = true; });
+      return out;
+    } catch (e) { return {}; }
+  }
+
+  async function loadProfiles(ids) {
+    var need = ids.filter(function (id) { return id && !_profiles[id]; });
+    if (!need.length) return;
+    try {
+      var res = await sb().from('profiles').select('id,username,avatar_url').in('id', need);
+      (res.data || []).forEach(function (p) { _profiles[p.id] = p; });
+    } catch (e) {}
+  }
+
+  function other(w) { return w.initiator_id === me().id ? w.opponent_id : w.initiator_id; }
+  function nameOf(id) { var p = _profiles[id]; return (p && p.username) || 'someone'; }
+  function avaOf(id) {
+    var p = _profiles[id];
+    return (window.avatarSrc ? avatarSrc(p && p.avatar_url) : (p && p.avatar_url) || '');
+  }
+  function myTotal(w) { return w.initiator_id === me().id ? w.initiator_total : w.opponent_total; }
+  function theirTotal(w) { return w.initiator_id === me().id ? w.opponent_total : w.initiator_total; }
+  function outcome(w) {
+    if (w.status !== 'resolved') return null;
+    if (!w.winner_id) return 'draw';
+    return w.winner_id === me().id ? 'won' : 'lost';
+  }
+  function esc2(s) { return window.esc ? esc(s) : String(s == null ? '' : s); }
+
+  // ---- section ------------------------------------------------------------
+
+  async function renderWars() {
+    var chal = document.getElementById('war-challenges');
+    var act  = document.getElementById('war-active');
+    var hist = document.getElementById('war-history');
+    if (!chal) return;
+
+    if (!on()) {
+      chal.innerHTML = '';
+      hist.innerHTML = '';
+      act.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.trophy +
+        '</span><h3>Bid Wars</h3><p>Log in to challenge your mates.</p>' +
+        '<button class="btn-primary" id="war-login" style="margin-top:8px;">Log in</button></div>';
+      var b = document.getElementById('war-login');
+      if (b) b.addEventListener('click', function () { Cloud.openAuth(); });
+      return;
+    }
+
+    act.innerHTML = '<p class="reco-note">Loading&hellip;</p>';
+    chal.innerHTML = ''; hist.innerHTML = '';
+
+    var wars = await myWars();
+    if (!wars.length) {
+      act.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.trophy +
+        '</span><h3>No wars yet</h3><p>Challenge someone you follow and find out who really knows The Crate.</p></div>';
+      return;
+    }
+
+    await loadProfiles(wars.map(other));
+    var bidMap = await myBidWarIds(wars.filter(function (w) { return w.status === 'pending'; })
+                                      .map(function (w) { return w.id; }));
+
+    var todo = [], waiting = [], done = [];
+    wars.forEach(function (w) {
+      if (w.status === 'resolved') done.push(w);
+      else if (bidMap[w.id]) waiting.push(w);
+      else todo.push(w);
+    });
+
+    function card(w, tag, tagClass, sub) {
+      var o = other(w);
+      return '<div class="war-card" data-war="' + esc2(w.id) + '">' +
+        '<img src="' + esc2(avaOf(o)) + '" alt="">' +
+        '<div class="war-card-meta"><div class="war-card-nm">' + esc2(nameOf(o)) + '</div>' +
+        '<div class="war-card-sub">' + sub + '</div></div>' +
+        '<span class="war-tag ' + tagClass + '">' + tag + '</span></div>';
+    }
+
+    if (todo.length) {
+      chal.innerHTML = '<h3 class="prof-section-title" style="margin-top:8px;">Your move</h3>' +
+        todo.map(function (w) {
+          return card(w, 'Bid now', 'your-move',
+            w.initiator_id === me().id ? 'You started this &mdash; place your bids'
+                                       : 'Challenged you to a Bid War');
+        }).join('');
+    }
+    act.innerHTML = waiting.length
+      ? '<h3 class="prof-section-title">Waiting on them</h3>' +
+        waiting.map(function (w) { return card(w, 'Sealed', 'waiting', 'Your bids are in'); }).join('')
+      : '';
+    if (done.length) {
+      hist.innerHTML = '<h3 class="prof-section-title">Settled</h3>' +
+        done.map(function (w) {
+          var oc = outcome(w);
+          var sub = (Number(myTotal(w)) || 0).toFixed(1) + ' &ndash; ' + (Number(theirTotal(w)) || 0).toFixed(1);
+          return card(w, oc === 'won' ? 'Won' : oc === 'lost' ? 'Lost' : 'Draw', oc, sub);
+        }).join('');
+    }
+
+    [chal, act, hist].forEach(function (host) {
+      host.querySelectorAll('[data-war]').forEach(function (el) {
+        el.addEventListener('click', function () { openWar(el.dataset.war); });
+      });
+    });
+  }
+
+  // ---- the board ----------------------------------------------------------
+
+  async function openWar(id) {
+    var res;
+    try { res = await sb().from('bid_wars').select('*').eq('id', id).single(); } catch (e) { return; }
+    var w = res && res.data;
+    if (!w) return;
+    _war = w;
+    await loadProfiles([other(w)]);
+
+    document.getElementById('war-title').textContent = 'You vs ' + nameOf(other(w));
+    document.getElementById('war-modal').classList.add('open');
+    document.getElementById('war-error').textContent = '';
+
+    if (w.status === 'resolved') { showReveal(w); return; }
+
+    var mine = null;
+    try {
+      var b = await sb().from('bid_war_bids').select('bids')
+        .eq('war_id', w.id).eq('user_id', me().id).maybeSingle();
+      mine = b && b.data;
+    } catch (e) {}
+
+    if (mine) showWaiting(w, mine.bids);
+    else showBidding(w);
+  }
+
+  function setPane(which) {
+    ['war-bidding', 'war-waiting', 'war-reveal'].forEach(function (p) {
+      document.getElementById(p).style.display = (p === 'war-' + which) ? 'block' : 'none';
+    });
+  }
+
+  function showBidding(w) {
+    setPane('bidding');
+    document.getElementById('war-sub').textContent = 'Five records, ' + w.chips + ' chips. Bid blind.';
+    _bids = {};
+    var recs = w.records || [];
+    document.getElementById('war-board').innerHTML = recs.map(function (r) {
+      return '<div class="war-rec" data-rec="' + esc2(r.album_id) + '">' +
+        '<img src="' + esc2(r.art || '') + '" alt="" loading="lazy">' +
+        '<div class="war-rec-meta"><div class="war-rec-nm">' + esc2(r.name) + '</div>' +
+        '<div class="war-rec-ar">' + esc2(r.artist) + '</div></div>' +
+        '<div class="war-stepper">' +
+          '<button type="button" data-step="-1" aria-label="Bid less">&minus;</button>' +
+          '<input type="number" inputmode="numeric" value="0" min="0" max="' + w.chips + '" data-input="' + esc2(r.album_id) + '">' +
+          '<button type="button" data-step="1" aria-label="Bid more">+</button>' +
+        '</div></div>';
+    }).join('');
+
+    var board = document.getElementById('war-board');
+    board.querySelectorAll('.war-rec').forEach(function (row) {
+      var id = row.dataset.rec;
+      var input = row.querySelector('input');
+      function commit(v) {
+        v = Math.max(0, Math.min(w.chips, Math.round(Number(v) || 0)));
+        _bids[id] = v;
+        input.value = v;
+        row.classList.toggle('staked', v > 0);
+        paintChips(w);
+      }
+      row.querySelectorAll('[data-step]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          // 5s are the useful granularity at 100 chips; 1-at-a-time would be
+          // twenty clicks to commit half your pot.
+          commit((Number(input.value) || 0) + Number(btn.dataset.step) * 5);
+        });
+      });
+      input.addEventListener('input', function () { commit(input.value); });
+      _bids[id] = 0;
+    });
+    paintChips(w);
+
+    var sBtn = document.getElementById('war-submit');
+    sBtn.disabled = false;
+    sBtn.textContent = 'Lock in your bids';
+  }
+
+  function spent() {
+    return Object.keys(_bids).reduce(function (s, k) { return s + (Number(_bids[k]) || 0); }, 0);
+  }
+
+  function paintChips(w) {
+    var left = w.chips - spent();
+    var box = document.getElementById('war-chips');
+    document.getElementById('war-chips-left').textContent = left;
+    document.getElementById('war-chips-fill').style.width =
+      Math.max(0, Math.min(100, (left / w.chips) * 100)) + '%';
+    box.classList.toggle('over', left < 0);
+    document.getElementById('war-submit').disabled = left < 0;
+    document.getElementById('war-error').textContent = left < 0
+      ? 'That is ' + (-left) + ' chips over your pot.' : '';
+  }
+
+  async function submitBids() {
+    if (!_war) return;
+    var btn = document.getElementById('war-submit');
+    btn.disabled = true;
+    btn.textContent = 'Sealing…';
+    var res;
+    try {
+      res = await sb().rpc('bid_war_submit', { p_war: _war.id, p_bids: _bids });
+    } catch (e) {
+      res = { error: { message: String((e && e.message) || e) } };
+    }
+    if (res.error) {
+      document.getElementById('war-error').textContent = res.error.message || 'Could not submit.';
+      btn.disabled = false;
+      btn.textContent = 'Lock in your bids';
+      return;
+    }
+    var w = res.data;
+    _war = w;
+    if (w && w.status === 'resolved') showReveal(w);
+    else showWaiting(w || _war, _bids);
+    renderWars();
+  }
+
+  function showWaiting(w, bids) {
+    setPane('waiting');
+    document.getElementById('war-sub').textContent = 'Sealed — waiting on ' + nameOf(other(w));
+    document.getElementById('war-wait-sub').textContent =
+      'Waiting on ' + nameOf(other(w)) + ' to bid. You’ll get a notification the moment it settles.';
+    document.getElementById('war-mybids').innerHTML =
+      '<h3 class="prof-section-title" style="margin-top:0;">Your bids</h3>' +
+      (w.records || []).map(function (r) {
+        var v = Number((bids || {})[r.album_id]) || 0;
+        return '<div class="war-rev in' + (v > 0 ? '' : ' tie') + '">' +
+          '<img src="' + esc2(r.art || '') + '" alt="">' +
+          '<div class="war-rec-meta"><div class="war-rec-nm">' + esc2(r.name) + '</div>' +
+          '<div class="war-rec-ar">' + esc2(r.artist) + '</div></div>' +
+          '<div class="war-rev-val">' + v + '</div></div>';
+      }).join('');
+  }
+
+  // ---- the reveal ---------------------------------------------------------
+  // Records land one at a time, each nudging the running totals. The verdict
+  // waits until the last one has settled so the outcome is earned rather
+  // than announced.
+
+  function showReveal(w) {
+    setPane('reveal');
+    var iAmInit = w.initiator_id === me().id;
+    var mineTotal = Number(myTotal(w)) || 0;
+    var theirsTotal = Number(theirTotal(w)) || 0;
+    var oc = outcome(w);
+
+    document.getElementById('war-sub').textContent = 'Settled';
+    document.getElementById('war-them-name').textContent = nameOf(other(w));
+    document.getElementById('war-score-me-num').textContent = '0.0';
+    document.getElementById('war-score-them-num').textContent = '0.0';
+    document.getElementById('war-score-me').classList.remove('lead');
+    document.getElementById('war-score-them').classList.remove('lead');
+
+    var verdict = document.getElementById('war-verdict');
+    verdict.classList.remove('in');
+    verdict.innerHTML = '';
+
+    var recs = w.records || [];
+    var host = document.getElementById('war-reveal-list');
+    host.innerHTML = recs.map(function (r) {
+      var myBid = Number(iAmInit ? r.bid_initiator : r.bid_opponent) || 0;
+      var theirBid = Number(iAmInit ? r.bid_opponent : r.bid_initiator) || 0;
+      var won = r.won_by && r.won_by === me().id;
+      var tie = !r.won_by;
+      return '<div class="war-rev' + (tie ? ' tie' : won ? ' won' : ' lost') + '">' +
+        '<img src="' + esc2(r.art || '') + '" alt="">' +
+        '<div class="war-rec-meta"><div class="war-rec-nm">' + esc2(r.name) + '</div>' +
+        '<div class="war-rec-ar">' + esc2(r.artist) + '</div></div>' +
+        '<div class="war-rev-bids">' +
+          '<span class="war-rev-bid' + (myBid > theirBid ? ' high' : '') + '">' + myBid + '</span>' +
+          '<span style="color:var(--text-faint);">/</span>' +
+          '<span class="war-rev-bid' + (theirBid > myBid ? ' high' : '') + '">' + theirBid + '</span>' +
+        '</div>' +
+        '<div class="war-rev-val">' + (Number(r.value) || 0).toFixed(1) + '</div></div>';
+    }).join('');
+
+    var rows = host.querySelectorAll('.war-rev');
+    var runMine = 0, runTheirs = 0;
+    rows.forEach(function (row, i) {
+      setTimeout(function () {
+        row.classList.add('in');
+        var r = recs[i];
+        if (r.won_by === w.initiator_id) { if (iAmInit) runMine += Number(r.value) || 0; else runTheirs += Number(r.value) || 0; }
+        else if (r.won_by === w.opponent_id) { if (iAmInit) runTheirs += Number(r.value) || 0; else runMine += Number(r.value) || 0; }
+        document.getElementById('war-score-me-num').textContent = runMine.toFixed(1);
+        document.getElementById('war-score-them-num').textContent = runTheirs.toFixed(1);
+        document.getElementById('war-score-me').classList.toggle('lead', runMine > runTheirs);
+        document.getElementById('war-score-them').classList.toggle('lead', runTheirs > runMine);
+      }, 320 + i * 460);
+    });
+
+    setTimeout(function () {
+      document.getElementById('war-score-me-num').textContent = mineTotal.toFixed(1);
+      document.getElementById('war-score-them-num').textContent = theirsTotal.toFixed(1);
+      var payout = oc === 'won' ? 30 : oc === 'draw' ? 15 : 8;
+      var tail = oc === 'won' ? '' : (oc === 'draw' ? ' each' : ' for turning up');
+      verdict.innerHTML = (oc === 'won' ? 'You took it' : (oc === 'lost' ? nameOf(other(w)) + ' took it' : 'Dead even')) +
+        '<small>+' + payout + ' Discs' + tail + '</small>';
+      verdict.classList.add('in');
+      if (window.Wallet && Wallet.refresh) Wallet.refresh();
+      if (oc === 'won' && typeof window.celebrate === 'function') {
+        window.celebrate('You won the war', 'Took ' + mineTotal.toFixed(1) + ' against ' + theirsTotal.toFixed(1) + '. Plus 30 Discs.');
+      }
+    }, 320 + rows.length * 460 + 260);
+  }
+
+  // ---- challenging someone ------------------------------------------------
+
+  async function drawOpponents(filter) {
+    var host = document.getElementById('war-opp-list');
+    var people = [];
+    try { people = await Cloud.followingList(me().id); } catch (e) {}
+    var f = (filter || '').toLowerCase();
+    var shown = f ? people.filter(function (p) {
+      return (p.username || '').toLowerCase().indexOf(f) !== -1;
+    }) : people;
+    if (!shown.length) {
+      host.innerHTML = '<div class="reco-note">No one to challenge yet. Follow some people first.</div>';
+      return;
+    }
+    host.innerHTML = shown.map(function (p) {
+      var ava = window.avatarSrc ? avatarSrc(p.avatar_url) : (p.avatar_url || '');
+      return '<div class="ptop-row" data-opp="' + esc2(p.id) + '">' +
+        '<img src="' + esc2(ava) + '" alt="">' +
+        '<div style="flex:1;"><div class="nm">' + esc2(p.username || 'user') + '</div></div>' +
+        '<span class="suggest-send">Challenge</span></div>';
+    }).join('');
+    host.querySelectorAll('[data-opp]').forEach(function (el) {
+      el.addEventListener('click', async function () {
+        var s = el.querySelector('.suggest-send');
+        s.textContent = '...';
+        document.getElementById('war-new-error').textContent = '';
+        var res;
+        try { res = await sb().rpc('bid_war_create', { p_opponent: el.dataset.opp }); }
+        catch (e) { res = { error: { message: String((e && e.message) || e) } }; }
+        if (res.error) {
+          document.getElementById('war-new-error').textContent = res.error.message || 'Could not start that war.';
+          s.textContent = 'Challenge';
+          return;
+        }
+        s.textContent = 'On';
+        s.classList.add('sent');
+        document.getElementById('war-new-modal').classList.remove('open');
+        await renderWars();
+        openWar(res.data.id);
+      });
+    });
+  }
+
+  // ---- wiring -------------------------------------------------------------
+
+  function openNew() {
+    if (!on()) { Cloud.openAuth(); return; }
+    document.getElementById('war-new-error').textContent = '';
+    document.getElementById('war-opp-search').value = '';
+    document.getElementById('war-new-modal').classList.add('open');
+    drawOpponents('');
+  }
+
+  var _wired = false;
+  function wire() {
+    if (_wired) return;
+    _wired = true;
+    var nb = document.getElementById('war-new-btn');
+    if (nb) nb.addEventListener('click', openNew);
+    var card = document.getElementById('war-card');
+    if (card) card.addEventListener('click', function () {
+      if (window.goToView) goToView('wars');
+      renderWars();
+    });
+    var s = document.getElementById('war-opp-search');
+    if (s) s.addEventListener('input', function () {
+      clearTimeout(_oppTimer);
+      var v = this.value;
+      _oppTimer = setTimeout(function () { drawOpponents(v); }, 250);
+    });
+    ['war-new-close', 'war-close'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('click', function () {
+        var m = el.closest('.modal');
+        if (m) m.classList.remove('open');
+      });
+    });
+    ['war-new-modal', 'war-modal'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('click', function (e) {
+        if (e.target === this) this.classList.remove('open');
+      });
+    });
+    var sub = document.getElementById('war-submit');
+    if (sub) sub.addEventListener('click', submitBids);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
+  else wire();
+
+  window.renderWars = renderWars;
+  window.openBidWar = openWar;
 })();
 </script>
 </body>
