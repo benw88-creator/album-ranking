@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vinal — Music Ranker</title>
+<title>VINALL — Music Ranker</title>
 <meta name="description" content="Rate, rank and discover the albums and songs you love.">
 <meta name="theme-color" content="#0a0908">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9IiMwYTA5MDgiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMzMzMzNkIiBzdHJva2Utd2lkdGg9IjEuMiIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMyNjI2MmUiIHN0cm9rZS13aWR0aD0iMSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE5IiBmaWxsPSJub25lIiBzdHJva2U9IiMyNjI2MmUiIHN0cm9rZS13aWR0aD0iMSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjEwIiBmaWxsPSIjRjVDODQyIi8+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMi4yIiBmaWxsPSIjMGEwOTA4Ii8+PC9zdmc+Cg==">
@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   VINAL — REDESIGNED UI  (vinal-28)
+   VINALL — REDESIGNED UI  (vinal-28)
    Design: "Vinyl Crate at 2am"
    ============================================================ */
 
@@ -2246,7 +2246,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 }
 .ap-avg-label { font-size: 13px; color: var(--text-dim); }
 .ap-avg-count { font-size: 13px; color: var(--text-faint); margin-left: auto; }
-/* Vinal community comments on the album (not on ratings) */
+/* VINALL community comments on the album (not on ratings) */
 .ap-comment-section { margin-top: 16px; }
 .ap-comment-title {
   font-family: var(--font-display); font-size: 12px; font-weight: 700;
@@ -2672,7 +2672,7 @@ body.entering-done #artist-hero {
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.1;
-  /* Shiny gold gradient fill — same technique as the Vinal logo wordmark,
+  /* Shiny gold gradient fill — same technique as the VINALL logo wordmark,
      with an extra highlight stop so it catches light rather than reading flat. */
   background: linear-gradient(100deg, #d6a93a 0%, #F5C842 28%, #fff3c4 48%, #F5C842 68%, #b8861f 100%);
   -webkit-background-clip: text;
@@ -2895,7 +2895,7 @@ window.ICONS = {
   </div>
   <div class="splash-scrim" id="splash-scrim"></div>
   <div class="splash-content">
-    <div class="splash-word" id="splash-word">VINAL</div>
+    <div class="splash-word" id="splash-word">VINALL</div>
     <p class="splash-tag">Rate albums. Build your taste. Find your people.</p>
     <button class="splash-cta" id="splash-cta">Drop the needle <span class="arrow" aria-hidden="true">&rarr;</span></button>
   </div>
@@ -2931,7 +2931,7 @@ window.ICONS = {
     <div class="brand">
       <div class="brand-mark" aria-hidden="true"></div>
       <div class="brand-text">
-        <h1>Vinal</h1>
+        <h1>VINALL</h1>
         <p>Rank the music you love.</p>
       </div>
       <div class="waveform" aria-hidden="true">
@@ -2984,7 +2984,7 @@ window.ICONS = {
     <div id="stats-wrap"></div>
 
     <!-- The diary's front door. It sits above recommendations on purpose:
-         the whole pitch is that Vinal is a record of your listening, not a
+         the whole pitch is that VINALL is a record of your listening, not a
          suggestion engine, so the thing you write is the thing you see. -->
     <div class="ln-card">
       <div class="ln-card-head">
@@ -3489,7 +3489,7 @@ window.ICONS = {
     <!-- Login / Signup view -->
     <div id="auth-view-main">
       <div class="modal-head"><span class="mh-emoji" data-icon="person"></span>
-        <div><h2 id="auth-title">Log in to Vinal</h2><p id="auth-sub">Save your rankings &amp; sync across devices.</p></div></div>
+        <div><h2 id="auth-title">Log in to VINALL</h2><p id="auth-sub">Save your rankings &amp; sync across devices.</p></div></div>
       <label class="g-label" style="text-align:left;" for="auth-email">Email</label>
       <input id="auth-email" class="g-input" type="email" placeholder="you@example.com" autocomplete="email" style="margin-bottom:12px;">
       <label class="g-label" style="text-align:left;" for="auth-pass">Password</label>
@@ -3608,7 +3608,7 @@ window.ICONS = {
   </div>
 </div>
 
-<!-- album page — all Vinal ratings for one album, community average, comments -->
+<!-- album page — all VINALL ratings for one album, community average, comments -->
 <div class="modal album-page-modal" id="albumpage-modal">
   <div class="modal-panel">
     <button class="modal-close" id="albumpage-close" aria-label="Close">&times;</button>
@@ -3623,7 +3623,7 @@ window.ICONS = {
     <div class="ap-avg" id="ap-avg">
       <div>
         <div class="ap-avg-score" id="ap-avg-score" style="--score:var(--gold)">—</div>
-        <div class="ap-avg-label">Vinal average</div>
+        <div class="ap-avg-label">VINALL average</div>
       </div>
       <div class="ap-avg-count" id="ap-avg-count"></div>
     </div>
@@ -3872,7 +3872,7 @@ window.ICONS = {
 </div>
 <script>
 /* ================================================================
-   VINAL — build: vinal-28 — v3.0 visual redesign
+   VINALL — build: vinal-28 — v3.0 visual redesign
    JS identical to vinal-25 except card renders + version tag.
    ================================================================ */
 const SPOTIFY_API = 'https://api.spotify.com/v1';
@@ -4851,7 +4851,7 @@ function showGate(show){document.getElementById('gate').classList.toggle('show',
 function renderAuthArea(connected){
   const el=document.getElementById('auth-area');
   // Spotify access works silently in the background via the app token —
-  // no "Connect Spotify" button needed. Just show Vinal account state.
+  // no "Connect Spotify" button needed. Just show VINALL account state.
   if(connected){
     // personal Spotify token still present (legacy) — just treat same as app token
     searchInput.disabled=false;searchInput.placeholder='Search albums or artists\u2026';showGate(false);
@@ -5777,7 +5777,7 @@ const Cloud=(function(){
   }
   function setMode(m){
     mode=m;
-    document.getElementById('auth-title').textContent=m==='login'?'Log in to Vinal':'Create your account';
+    document.getElementById('auth-title').textContent=m==='login'?'Log in to VINALL':'Create your account';
     document.getElementById('auth-submit').textContent=m==='login'?'Log in':'Sign up';
     document.getElementById('auth-toggle-text').textContent=m==='login'?'New here?':'Already have an account?';
     document.getElementById('auth-toggle').textContent=m==='login'?'Create an account':'Log in';
@@ -6884,7 +6884,7 @@ window.handleGrooveLink=handleGrooveLink;
 
     // render ratings
     if(!ratings.length){
-      document.getElementById('ap-ratings-list').innerHTML='<div class="reco-note">No Vinal ratings yet — be the first!</div>';
+      document.getElementById('ap-ratings-list').innerHTML='<div class="reco-note">No VINALL ratings yet — be the first!</div>';
     } else {
       const avg=Math.round(ratings.reduce(function(s,r){return s+(r.score||0);},0)/ratings.length);
       const avgEl=document.getElementById('ap-avg-score');
@@ -6920,7 +6920,7 @@ window.handleGrooveLink=handleGrooveLink;
    16. INIT
    ================================================================ */
 (async function init(){
-  console.log('%cVinal build: vinal-28 \u2014 v3.0 visual redesign','color:#F5C842;font-weight:700;font-size:14px;');
+  console.log('%cVINALL build: vinal-28 \u2014 v3.0 visual redesign','color:#F5C842;font-weight:700;font-size:14px;');
   applyAlbumSize();
   renderStats();
   // Dev-only: preview the dithered artist hero without needing a real Cloud
@@ -6957,14 +6957,14 @@ window.handleGrooveLink=handleGrooveLink;
 </script>
 
 <!-- ================================================================
-     VINAL DITHER — halftone/Bayer-dot treatment used in two spots:
+     VINALL DITHER — halftone/Bayer-dot treatment used in two spots:
        1. #auth-dither-canvas — animated backdrop behind the login card,
           built from ./dither-frames/001.jpg..044.jpg (a rotating-vinyl
           clip), loaded lazily on first login-modal open so a visitor who
           never logs in never pays for it.
        2. #artist-hero-canvas — the user's favourite-artist photo (from
           #artist-hero-bg, same <img>, no extra network request) redrawn
-          live in Vinal's own gold-on-black palette instead of shown as a
+          live in VINALL's own gold-on-black palette instead of shown as a
           plain photo.
      Both reuse the same DitherField class; only the config differs.
      Preview the artist-hero treatment without a real login by opening
@@ -7277,7 +7277,7 @@ window.handleGrooveLink=handleGrooveLink;
     if (!canvas || !modal) return;
     if (!authField) {
       let images;
-      try { images = await loadAuthFrames(); } catch (e) { console.warn('Vinal dither: frame load failed', e); return; }
+      try { images = await loadAuthFrames(); } catch (e) { console.warn('VINALL dither: frame load failed', e); return; }
       sizeCanvasTo(canvas, modal);
       authField = new DitherField(canvas, images, {
         pixelSize: 11, dotScale: 0.55, spacing: 0.4, levels: 4,
@@ -7556,7 +7556,7 @@ window.handleGrooveLink=handleGrooveLink;
     } catch (e) {
       // Cross-origin photo without CORS clearance: nothing can be read out
       // of it, so leave the plain <img> showing rather than a blank canvas.
-      console.warn('Vinal hero: cannot sample artist photo', e);
+      console.warn('VINALL hero: cannot sample artist photo', e);
       return false;
     }
 
@@ -9155,7 +9155,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   }
 
   function ewShareGrid() {
-    var head = 'Vinal Earworm — ' + ewToday() + '\n' +
+    var head = 'VINALL Earworm — ' + ewToday() + '\n' +
       (ewState.won ? ewState.rows.length : 'X') + '/' + ROWS +
       (ewState.hinted ? ' (hint)' : '') + '\n';
     var body = ewState.rows.map(function (r) {
@@ -9279,7 +9279,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      Rather than fading out and revealing a static page, the three things
      on screen each travel to where they belong in the app:
        - the record video shrinks + morphs into the header logo's circle
-       - the VINAL wordmark flies down into the header wordmark's slot
+       - the VINALL wordmark flies down into the header wordmark's slot
        - the dashboard rises out of a blur behind them
      All target geometry is measured from the real elements at runtime, so
      the landing position is always exactly right regardless of viewport.
@@ -9395,7 +9395,7 @@ function playDismissAnimation(gateEl, callback) {
 <!-- ================================================================
      SPLASH GATE boot logic. Shows on every fresh load — no
      "only once" memory, on purpose: this is the intended first-open
-     moment every time you actually open Vinal, logged in or not. Click
+     moment every time you actually open VINALL, logged in or not. Click
      the header logo any time to see it again without a fresh navigation.
      ================================================================ -->
 <script>
@@ -9433,7 +9433,7 @@ function playDismissAnimation(gateEl, callback) {
     video.load();
     var tryPlay = function () {
       var p = video.play();
-      if (p && p.catch) p.catch(function (err) { console.warn('Vinal splash: autoplay blocked, will retry on interaction', err); });
+      if (p && p.catch) p.catch(function (err) { console.warn('VINALL splash: autoplay blocked, will retry on interaction', err); });
     };
     tryPlay();
     gate.addEventListener('pointerdown', tryPlay);
@@ -9949,7 +9949,7 @@ function playDismissAnimation(gateEl, callback) {
 
   function shareGrid() {
     var st = loadState(mode);
-    var head = 'Vinal Daily Drop — ' + (mode === 'album' ? 'Album' : 'Song') + ' — ' + todayKey() +
+    var head = 'VINALL Daily Drop — ' + (mode === 'album' ? 'Album' : 'Song') + ' — ' + todayKey() +
       '\n' + (st.won ? st.guesses.length : 'X') + '/' + GUESS_LIMIT + '\n';
     var body = rows.map(function (cells) {
       return cells.map(function (c) {

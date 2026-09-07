@@ -1,6 +1,6 @@
-# Vinal
+# VINALL
 
-Album-ranking web app, live at https://wildcrate.xyz.
+Album-ranking web app (renamed from Vinal to VINALL), live at https://wildcrate.xyz.
 
 ## Shape
 
