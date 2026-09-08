@@ -7681,11 +7681,16 @@ window.handleGrooveLink=handleGrooveLink;
   // exercise the offline path before shipping it.
   if ('serviceWorker' in navigator &&
       (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    window.addEventListener('load', function () {
+    // This runs from an async init that has already awaited several things, so
+    // 'load' has usually fired by now and a listener for it would never be
+    // called — which is exactly why the first deploy registered nothing.
+    var reg = function () {
       navigator.serviceWorker.register('/sw.js').catch(function (e) {
         console.warn('VINALL: service worker did not register', e);
       });
-    });
+    };
+    if (document.readyState === 'complete') reg();
+    else window.addEventListener('load', reg);
   }
   setInterval(function(){if(_token&&Date.now()>=_tokenExp-5000){_token=null;_tokenExp=0;_tokClear();getAppToken().then(function(){renderAuthArea(false);});}},30000);
 })();
