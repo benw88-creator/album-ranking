@@ -3042,6 +3042,35 @@ body.entering-done #artist-hero {
   .td-opt.opt-faded { border-color: rgba(79,180,119,0.6); }
   .td-opt.opt-faded span { color: var(--green); }
 }
+
+.site-foot {
+  margin: 60px 0 30px; padding-top: 22px;
+  border-top: 1px solid var(--border);
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  font-size: 13px; color: var(--text-faint);
+}
+.site-foot a { color: var(--text-dim); text-decoration: none; }
+.site-foot a:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.foot-note { margin-left: auto; }
+
+/* Admin stats. Only ever rendered for an admin account. */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.stat-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+.stat-tile.stat-big { grid-column: 1 / -1; border-color: var(--gold-dim); background: linear-gradient(140deg, var(--gold-dim), var(--surface) 65%); }
+.stat-v { font-family: var(--font-display); font-size: 26px; font-weight: 700; line-height: 1; }
+.stat-big .stat-v { font-size: 42px; color: var(--gold); }
+.stat-k { font-size: 12px; color: var(--text-dim); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-s { font-size: 12px; color: var(--text-faint); margin-top: 3px; }
+.qtable { display: flex; flex-direction: column; }
+.qrow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.qid { font-family: var(--font-mono); font-size: 12px; min-width: 108px; color: var(--text); }
+.qbar { flex: 1; height: 6px; background: var(--surface-3); border-radius: 3px; overflow: hidden; min-width: 60px; }
+.qbar i { display: block; height: 100%; background: var(--gold); }
+.qnum { font-family: var(--font-mono); font-size: 12px; min-width: 38px; text-align: right; }
+.qsub { font-size: 11px; color: var(--text-faint); min-width: 92px; text-align: right; }
+.errow { padding: 9px 0; border-bottom: 1px solid var(--border); }
+.errmsg { font-family: var(--font-mono); font-size: 12px; color: var(--red); word-break: break-word; }
+.errmeta { font-size: 11px; color: var(--text-faint); margin-top: 3px; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -3072,6 +3101,52 @@ body.entering-done #artist-hero {
 </script>
 </head>
 <body>
+
+<!-- Crash reporting. Deliberately first, so it catches failures in everything
+     below it. No third-party script and no signup: errors go straight into a
+     table only an admin can read. Buffered because Cloud does not exist yet
+     at this point in the page, and capped so one error in a loop cannot
+     hammer the database. -->
+<script>
+(function () {
+  var buf = [], sent = 0, seen = {};
+  function record(o) {
+    if (sent >= 8) return;                       // one session, one handful
+    var k = (o.message || '') + '|' + (o.line || '');
+    if (seen[k]) return;                         // same error once, not 400 times
+    seen[k] = 1; sent++;
+    o.url = location.pathname + location.search;
+    o.agent = String(navigator.userAgent || '').slice(0, 200);
+    buf.push(o);
+    flush();
+  }
+  function flush() {
+    if (!buf.length || !window.Cloud || !Cloud.client) return;
+    var rows = buf.splice(0, buf.length);
+    var u = (Cloud.getUser && Cloud.getUser()) || null;
+    rows.forEach(function (r) { r.user_id = u ? u.id : null; });
+    try { Cloud.client().from('client_errors').insert(rows).then(function () {}, function () {}); }
+    catch (e) {}
+  }
+  window.addEventListener('error', function (e) {
+    record({
+      message: String((e && e.message) || 'error').slice(0, 400),
+      source: String((e && e.filename) || '').slice(0, 300),
+      line: (e && e.lineno) || null,
+      col: (e && e.colno) || null,
+      stack: (e && e.error && e.error.stack) ? String(e.error.stack).slice(0, 1500) : null
+    });
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    record({
+      message: ('unhandled rejection: ' + String((r && r.message) || r)).slice(0, 400),
+      stack: (r && r.stack) ? String(r.stack).slice(0, 1500) : null
+    });
+  });
+  setInterval(flush, 4000);
+})();
+</script>
 
 <!-- ================================================================
      ICON SET — defined first, before anything else, because some
@@ -3471,6 +3546,7 @@ window.ICONS = {
     <div class="section-head" style="margin-top:34px;"><h2>Your Music Lore</h2><span class="muted" id="lore-count"></span></div>
     <p class="reco-note">Everything you&rsquo;ve said about your records.</p>
     <div id="lore-list"></div>
+    <div id="admin-stats"></div>
   </section>
 
   <!-- ============================ PEOPLE ============================ -->
@@ -3513,6 +3589,14 @@ window.ICONS = {
     <div id="detail-tracks"></div>
   </section>
 
+
+  <footer class="site-foot">
+    <a href="/privacy.html">Privacy</a>
+    <span>&middot;</span>
+    <a href="/terms.html">Terms</a>
+    <span>&middot;</span>
+    <span class="foot-note">VINALL &mdash; music, remembered.</span>
+  </footer>
 </div>
 
 <div class="save-flash" id="save-flash">Saved ✓</div>
@@ -4886,6 +4970,7 @@ function setMode(mode, fromCode) {
   if (mode === 'achievements' && window.renderAchievements) window.renderAchievements();
   if (mode === 'profile' && window.renderProfile) window.renderProfile();
   if (mode === 'profile' && window.renderLore) window.renderLore();
+  if (mode === 'profile' && window.renderAdminStats) window.renderAdminStats();
   if (mode === 'people' && window.renderPeople) window.renderPeople();
   if (mode === 'grooves' && window.renderGrooves) window.renderGrooves();
 }
@@ -6024,6 +6109,25 @@ const Cloud=(function(){
   async function pushKey(key){if(!isOn())return;const value=lsGet(key);if(value===null)return;try{await sb.from('app_state').upsert({user_id:user.id,key:key,value:value,updated_at:new Date().toISOString()});}catch(e){}}
   async function pushAll(){for(let i=0;i<SYNC_KEYS.length;i++)await pushKey(SYNC_KEYS[i]);}
   function push(key){if(!isOn())return;if(SYNC_KEYS.indexOf(key)===-1)return;clearTimeout(pending[key]);pending[key]=setTimeout(function(){pushKey(key);},600);}
+
+  /* Devices only reconciled at login, so a phone left open on the sofa could
+     sit on yesterday's ratings all day and then push them back over newer
+     ones. Re-merge whenever the tab comes back to the front. mergeItemMap
+     resolves per item by savedAt, so this is safe to run repeatedly --
+     throttled only to avoid hammering it while someone flicks between tabs. */
+  var _lastMerge = 0;
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden || !isOn()) return;
+    if (Date.now() - _lastMerge < 60000) return;
+    _lastMerge = Date.now();
+    pullAndMerge().then(function () {
+      try {
+        if (window.renderStats) renderStats();
+        if (window.renderAlbums) renderAlbums();
+        if (window.renderSongs) renderSongs();
+      } catch (e) {}
+    }, function () {});
+  });
 
   async function refreshUI(){
     const el=document.getElementById('auth-area');if(!el)return;
@@ -11042,6 +11146,103 @@ async function doDeleteAccount() {
 })();
 </script>
 
+
+<!-- ================================================================
+     ADMIN STATS — visible only to an admin account, on your own profile.
+
+     The point of this panel is one ratio: of the people who answer a
+     question, how many answer a second one. Everything else on it is
+     supporting detail. Without that number every decision about what to
+     build next is a guess.
+     ================================================================ -->
+<script>
+async function renderAdminStats() {
+  var host = document.getElementById('admin-stats');
+  if (!host) return;
+  host.innerHTML = '';
+  if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
+
+  var prof = null;
+  try { prof = await Cloud.fetchProfile(Cloud.getUser().id); } catch (e) {}
+  if (!prof || !prof.is_admin) return;      // silent for everyone else
+
+  host.innerHTML = '<h3 class="prof-section-title">Stats</h3><p class="reco-note">Loading…</p>';
+
+  var s = null, qs = [], errs = [];
+  try {
+    var r = await Cloud.client().rpc('analytics_summary', { p_days: 14 });
+    s = r.data;
+  } catch (e) {}
+  try {
+    var rq = await Cloud.client().rpc('analytics_questions', { p_days: 30 });
+    qs = rq.data || [];
+  } catch (e) {}
+  try {
+    var re = await Cloud.client().rpc('recent_errors', { p_limit: 8 });
+    errs = re.data || [];
+  } catch (e) {}
+
+  if (!s) { host.innerHTML = '<h3 class="prof-section-title">Stats</h3><div class="reco-note">Could not load stats.</div>'; return; }
+
+  function pct(a, b) { return b ? Math.round((a / b) * 100) + '%' : '—'; }
+  var answerRate = pct(s.questions_answered, s.questions_shown);
+  var second = pct(s.answered_2_plus, s.answerers);
+
+  var tiles = [
+    { k: 'Came back for a 2nd answer', v: second, big: true,
+      sub: s.answered_2_plus + ' of ' + s.answerers + ' people' },
+    { k: 'Answer rate', v: answerRate, sub: s.questions_answered + ' of ' + s.questions_shown + ' shown' },
+    { k: 'Active users', v: s.active_users, sub: 'last 14 days' },
+    { k: 'Skipped', v: s.questions_skipped, sub: 'questions waved away' },
+    { k: 'Used Other', v: s.other_used, sub: 'typed their own' },
+    { k: 'Notes added', v: s.notes_added, sub: 'optional text' },
+    { k: 'Today opened', v: s.today_opened, sub: 'sessions' },
+    { k: 'Lore, all time', v: s.total_lore, sub: 'answers kept' }
+  ];
+
+  var html = '<h3 class="prof-section-title">Stats</h3>' +
+    '<p class="reco-note">Last 14 days. Admin only — nobody else sees this.</p>' +
+    '<div class="stat-grid">' + tiles.map(function (t) {
+      return '<div class="stat-tile' + (t.big ? ' stat-big' : '') + '">' +
+        '<div class="stat-v">' + esc(String(t.v)) + '</div>' +
+        '<div class="stat-k">' + esc(t.k) + '</div>' +
+        '<div class="stat-s">' + esc(t.sub) + '</div></div>';
+    }).join('') + '</div>';
+
+  if (qs.length) {
+    // Sorted worst-first: a question nobody answers is a question to rewrite.
+    var ranked = qs.slice().filter(function (q) { return (q.shown || 0) >= 3; })
+      .sort(function (a, b) {
+        var ra = (a.answered || 0) / Math.max(a.shown || 1, 1);
+        var rb = (b.answered || 0) / Math.max(b.shown || 1, 1);
+        return ra - rb;
+      }).slice(0, 12);
+    if (ranked.length) {
+      html += '<h3 class="prof-section-title" style="margin-top:26px;">Questions, worst first</h3>' +
+        '<p class="reco-note">Low answer rate means the question is the problem, not the idea.</p>' +
+        '<div class="qtable">' + ranked.map(function (q) {
+          var rate = q.shown ? Math.round((q.answered / q.shown) * 100) : 0;
+          return '<div class="qrow"><span class="qid">' + esc(q.question_id || '?') + '</span>' +
+            '<span class="qbar"><i style="width:' + rate + '%"></i></span>' +
+            '<span class="qnum">' + rate + '%</span>' +
+            '<span class="qsub">' + q.answered + '/' + q.shown + (q.skipped ? ' · ' + q.skipped + ' skipped' : '') + '</span></div>';
+        }).join('') + '</div>';
+    }
+  }
+
+  html += '<h3 class="prof-section-title" style="margin-top:26px;">Recent errors</h3>';
+  html += errs.length
+    ? '<div class="qtable">' + errs.map(function (e) {
+        return '<div class="errow"><div class="errmsg">' + esc(String(e.message).slice(0, 160)) + '</div>' +
+          '<div class="errmeta">' + esc(timeAgo(new Date(e.created_at).getTime())) +
+          (e.url ? ' · ' + esc(e.url) : '') + '</div></div>';
+      }).join('') + '</div>'
+    : '<div class="reco-note">Nothing has crashed. That is either good news or nobody has visited.</div>';
+
+  host.innerHTML = html;
+}
+window.renderAdminStats = renderAdminStats;
+</script>
 <!-- Analytics. Event names and small prop bags, nothing resembling a page
      view. The question this exists to answer is whether anybody answers a
      SECOND question — before this there was no way to know, and that number
