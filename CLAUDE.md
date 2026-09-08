@@ -251,6 +251,42 @@ internal store, never against the Spotify API directly.
 Every question also carries an **Other…** option that opens a free-text field. The one-tap rule
 is about never *demanding* text, not about refusing it — plenty of real answers are on no list.
 
+## App shell — manifest, service worker, offline
+
+Added so the site can be wrapped without failing review for the obvious reasons.
+
+- `manifest.webmanifest` — installable, standalone display, VINALL's own dark
+  ground. Icons are generated, not hand-drawn: `assets/icons/` holds 192/512
+  plus **maskable** variants at 66% scale (a maskable icon whose art fills the
+  square gets its edges cropped by Android's circular mask), a 180px opaque
+  `apple-touch-icon`, 1024px for the store listing, and 16/32 favicons.
+- `sw.js` — **network-first for navigations, deliberately.** `index.html` is
+  one 650KB file that changes on every push, so a cache-first shell would serve
+  last week's build with nothing to indicate it. The cache is a fallback for
+  having no signal, never a fast path. Static media under `assets/` and
+  `dither-frames/` is cache-first with a background refresh. `/api/*` is never
+  touched — a cached `app-token` is an expired one. Cross-origin is left alone.
+  Only `res.ok` responses are stored: the first version cached a 404 and would
+  then have served that as the offline fallback for the path.
+  Escape hatch: `navigator.serviceWorker.controller.postMessage('vinall-sw-purge')`
+  clears every cache and unregisters the worker.
+- `offline.html` — precached, and what a cold load with no connection gets.
+  Returns to the app by itself on the `online` event.
+- **Safe areas** — `viewport-fit=cover` plus `env(safe-area-inset-*)` on
+  `.wrap`, `header`, the drawers and the modals, wrapped in
+  `@supports (padding: max(0px))` and written as `max(28px, env(...))` so a
+  phone with no insets keeps the normal gutter rather than collapsing to zero.
+- **Hardware back / edge swipe** — switching views pushes history, and back
+  returns through them. A sheet opening pushes its own entry, watched by a
+  `MutationObserver` on `.modal`/`.activity` rather than wired at each
+  `open()` site, so back closes the top sheet instead of leaving the app. Without
+  the push-on-open, back on a shallow history stack walks off the page before the
+  `popstate` handler can run — which is exactly what the first version did.
+
+`STORE-SUBMISSION.md` holds the prepared App Privacy, Data Safety and
+age-rating answers, drafted listing copy, and the shortlist of things only Ben
+can do.
+
 ## Analytics and safety
 
 `analytics_events` records event names with small prop bags — `question_shown`,
@@ -313,6 +349,13 @@ message+line so one error in a loop cannot flood the table.
 address is `spam30492@gmail.com`, set as a **temporary** stand-in — swap it for a real
 support address before any store submission or public launch, since this is the address people
 use to exercise data rights.
+
+The privacy policy was extended to cover what review actually asks for and what the
+code actually does: blocks and reports (data about two people, previously undisclosed),
+the working copy held in browser storage, retention per data type, the UK/EU legal bases
+(contract for the account and ratings, legitimate interests for analytics, crash reports
+and moderation records), where the data is held (Supabase eu-west-1, Vercel global), and
+the right to complain to the ICO.
 
 ### Correction: the ratings sync is fine
 

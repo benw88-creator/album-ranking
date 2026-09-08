@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>VINALL — offline</title>
+<meta name="theme-color" content="#0a0908">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 32px calc(24px + env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
+    background: #0a0908; color: #f2ede4;
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    text-align: center;
+  }
+  .disc {
+    width: 104px; height: 104px; margin: 0 auto 28px;
+    border-radius: 50%; background: #141210;
+    border: 1px solid #4a4238; position: relative;
+    animation: spin 8s linear infinite;
+  }
+  .disc::before, .disc::after {
+    content: ''; position: absolute; border-radius: 50%; border: 1px solid #2d2822;
+  }
+  .disc::before { inset: 14px; }
+  .disc::after { inset: 26px; }
+  .label {
+    position: absolute; inset: 34px; border-radius: 50%;
+    background: #f5c842;
+  }
+  .label::after {
+    content: ''; position: absolute; inset: 15px;
+    border-radius: 50%; background: #0a0908;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .disc { animation: none; } }
+  h1 { font-size: 24px; font-weight: 700; margin: 0 0 10px; letter-spacing: -0.01em; }
+  p { margin: 0 auto 26px; color: #9a938a; max-width: 34ch; font-size: 15px; }
+  button {
+    font: 600 15px/1 inherit; color: #17140e; background: #f5c842;
+    border: 0; border-radius: 999px; padding: 14px 26px; cursor: pointer;
+  }
+  button:active { transform: scale(0.97); }
+  small { display: block; margin-top: 22px; color: #6b655d; font-size: 12px; }
+</style>
+</head>
+<body>
+  <main>
+    <div class="disc" aria-hidden="true"><span class="label"></span></div>
+    <h1>No connection</h1>
+    <p>VINALL needs the internet to reach your crate and the music catalogue. Your ratings are saved on this device and will sync when you&rsquo;re back.</p>
+    <button type="button" id="retry">Try again</button>
+    <small>wildcrate.xyz</small>
+  </main>
+<script>
+  document.getElementById('retry').addEventListener('click', function () { location.replace('/'); });
+  // Come back on its own the moment the connection returns, so nobody is left
+  // staring at this page tapping a button.
+  window.addEventListener('online', function () { location.replace('/'); });
+</script>
+</body>
+</html>

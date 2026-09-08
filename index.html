@@ -2,11 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- viewport-fit=cover lets the page paint under the notch and home
+     indicator; the safe-area insets further down put the content back
+     inside them. Without cover, iOS letterboxes the page in black. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>VINALL — Music Ranker</title>
 <meta name="description" content="Rate, rank and discover the albums and songs you love.">
 <meta name="theme-color" content="#0a0908">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9IiMwYTA5MDgiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMzMzMzNkIiBzdHJva2Utd2lkdGg9IjEuMiIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMyNjI2MmUiIHN0cm9rZS13aWR0aD0iMSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE5IiBmaWxsPSJub25lIiBzdHJva2U9IiMyNjI2MmUiIHN0cm9rZS13aWR0aD0iMSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjEwIiBmaWxsPSIjRjVDODQyIi8+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMi4yIiBmaWxsPSIjMGEwOTA4Ii8+PC9zdmc+Cg==">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="VINALL">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -184,6 +195,22 @@ header, nav.modes, .stats, .stat, .modal-panel, .gate, .game-card, .shop-item,
    stagger, and the Discs particle burst. */
 a { color: inherit; text-decoration: none; }
 .wrap { max-width: 1140px; margin: 0 auto; padding: 0 28px; }
+
+/* Notch, rounded corners and the home indicator. max() rather than a bare
+   env() so a phone with no insets keeps the normal 28px gutter instead of
+   collapsing to zero. Guarded, because a browser without max() support
+   would otherwise drop the whole declaration. */
+@supports (padding: max(0px)) {
+  .wrap {
+    padding-left: max(28px, env(safe-area-inset-left));
+    padding-right: max(28px, env(safe-area-inset-right));
+  }
+  body { padding-bottom: env(safe-area-inset-bottom); }
+  header { padding-top: max(32px, calc(env(safe-area-inset-top) + 12px)); }
+  .activity { padding-top: env(safe-area-inset-top); }
+  .splash-content { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+  .modal-panel { margin-bottom: env(safe-area-inset-bottom); }
+}
 
 /* ---- HEADER ---- */
 header {
@@ -5048,6 +5075,7 @@ let lastListMode = 'home';
 let currentMode = 'home';
 
 function setMode(mode, fromCode) {
+  if (!fromCode && mode !== currentMode && window.pushViewHistory) window.pushViewHistory(mode);
   currentMode = mode;
   Object.keys(views).forEach(function (k) { views[k].style.display = (k === mode) ? 'block' : 'none'; });
   document.querySelectorAll('#modes button').forEach(function (b) { b.classList.toggle('active', b.dataset.mode === mode); });
@@ -5074,6 +5102,62 @@ function setMode(mode, fromCode) {
   if (mode === 'grooves' && window.renderGrooves) window.renderGrooves();
 }
 window.goToView = setMode;
+
+/* Android has a hardware back button and iOS has an edge swipe, and in a
+   webview both of them left the app outright from any tab — there was no
+   history to go back through, because switching views never pushed any.
+   Two behaviours people expect, in priority order:
+     1. If something is open on top, back closes that and nothing else.
+     2. Otherwise back returns to the previous tab.
+   The modal case is handled here rather than at every open() site so that
+   adding a modal later doesn't mean remembering to wire this up. */
+(function () {
+  function openLayers() { return document.querySelectorAll('.modal.open, .activity.open'); }
+  function hideBackdrops() {
+    ['activity-backdrop', 'notif-backdrop'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  }
+  try { history.replaceState({ vinall: 1, view: currentMode }, ''); } catch (e) {}
+
+  // Opening a sheet pushes its own entry, so back always has something of
+  // ours to consume rather than walking off the page. Watched with an
+  // observer instead of being wired at each open() site: there are a dozen
+  // of those and a thirteenth would forget to do it.
+  var depth = 0;
+  var obs = new MutationObserver(function () {
+    var n = openLayers().length;
+    if (n > depth) {
+      try { history.pushState({ vinall: 1, layer: 1, view: currentMode }, ''); } catch (e) {}
+    }
+    depth = n;
+  });
+  document.querySelectorAll('.modal, .activity').forEach(function (el) {
+    obs.observe(el, { attributes: true, attributeFilter: ['class'] });
+  });
+
+  window.addEventListener('popstate', function (e) {
+    var layers = openLayers();
+    if (layers.length) {
+      // Close the top sheet and stop. The entry this consumed was the one
+      // opening it pushed, so the depth stays honest without re-pushing.
+      layers[layers.length - 1].classList.remove('open');
+      hideBackdrops();
+      depth = openLayers().length;
+      return;
+    }
+    var v = e.state && e.state.view;
+    if (v && views[v]) setMode(v, true);
+  });
+
+  window.pushViewHistory = function (mode) {
+    try {
+      if (history.state && history.state.vinall && history.state.view === mode && !history.state.layer) return;
+      history.pushState({ vinall: 1, view: mode }, '');
+    } catch (e) {}
+  };
+})();
 
 function positionNavIndicator() {
   const nav = document.getElementById('modes');
@@ -7590,6 +7674,19 @@ window.handleGrooveLink=handleGrooveLink;
   setTimeout(function(){if(window.handleGrooveLink)handleGrooveLink();},1500);
   setTimeout(function(){if(window.refreshNotifDot)refreshNotifDot();},2500);
   setInterval(function(){if(window.refreshNotifDot&&Cloud.isOn())refreshNotifDot();},60000);
+  // Registered last and after load, so it can never delay first paint. The
+  // worker itself is network-first for the app, so this cannot pin anyone to
+  // a stale build — see sw.js.
+  // localhost counts as a secure context, and allowing it is the only way to
+  // exercise the offline path before shipping it.
+  if ('serviceWorker' in navigator &&
+      (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js').catch(function (e) {
+        console.warn('VINALL: service worker did not register', e);
+      });
+    });
+  }
   setInterval(function(){if(_token&&Date.now()>=_tokenExp-5000){_token=null;_tokenExp=0;_tokClear();getAppToken().then(function(){renderAuthArea(false);});}},30000);
 })();
 
