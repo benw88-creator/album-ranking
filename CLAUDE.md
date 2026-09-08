@@ -260,3 +260,26 @@ and `backfillRatingsOnce` repopulates the public `ratings` table on any new brow
 sound local-first design. The one real gap — that it only ran at login, so a tab left open
 could sit on stale data — is closed by re-merging on `visibilitychange`, throttled to once a
 minute.
+
+## Password reset
+
+The client side is complete: `resetPasswordForEmail` sends
+`redirectTo: location.origin + location.pathname`, and on return the app handles all three
+things that can arrive — `#type=recovery` (implicit flow), `?code=` (PKCE), and
+`#error=...` for an expired or already-used link. That last case is the common one and used
+to be ignored entirely, which is why a dead link dumped people on the normal app with no
+explanation.
+
+**The reset link going to `localhost` is a Supabase dashboard setting, not app code.**
+Authentication → URL Configuration:
+
+- **Site URL** must be `https://wildcrate.xyz` (it defaults to `http://localhost:3000`)
+- **Redirect URLs** must include `https://wildcrate.xyz/**`, plus
+  `https://*.vercel.app/**` if preview deploys should work
+
+Supabase silently falls back to Site URL whenever a requested `redirectTo` is not on the
+allow-list, so a wrong Site URL breaks reset for everyone with no error anywhere.
+
+Do **not** try to fix this with `supabase config push`. It pushes the whole `config.toml`,
+and any auth setting absent from that file is reset to the CLI's default — which on a live
+project can disable signups or change token expiry as a side effect of a two-field change.

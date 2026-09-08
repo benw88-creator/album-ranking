@@ -6251,7 +6251,13 @@ const Cloud=(function(){
       errEl.textContent='';btn.disabled=true;btn.textContent='Sending\u2026';
       try{
         const{error}=await sb.auth.resetPasswordForEmail(email,{
-          redirectTo:'https://wildcrate.xyz'
+          // Wherever this copy of the app is actually running: the live
+          // site, a Vercel preview, or localhost during development. A
+          // hardcoded host sends preview users to production, and any
+          // origin not on Supabase’s allow-list is silently replaced by
+          // the project’s Site URL — which is how this ended up sending
+          // people to localhost.
+          redirectTo:location.origin+location.pathname
         });
         if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Send reset link';return;}
         errEl.style.color='var(--gold)';
@@ -6278,14 +6284,49 @@ const Cloud=(function(){
       }catch(e){errEl.textContent='Something went wrong. Try again.';btn.disabled=false;btn.textContent='Set new password';}
     });
     document.getElementById('auth-newpass').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('auth-newpass-submit').click();});
-    // Detect password recovery redirect — Supabase appends #type=recovery to the URL
-    if(location.hash.indexOf('type=recovery')!==-1){
-      // Supabase JS picks up the session from the hash automatically;
-      // wait briefly then open the set-new-password view
-      setTimeout(function(){
+    /* Coming back from the reset email.
+       Three things arrive this way and only one of them used to be handled:
+         #type=recovery...       the implicit flow, a session in the fragment
+         ?code=...               the PKCE flow, exchanged for a session
+         #error=...              an expired or already-used link
+       That last one is the common case — reset links are single-use and
+       time-limited — and it silently did nothing, so the user landed on the
+       normal app with no explanation and assumed the whole thing was broken. */
+    const hash = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+    const query = new URLSearchParams(location.search || '');
+    const authErr = hash.get('error_description') || hash.get('error') ||
+                    query.get('error_description') || query.get('error');
+
+    if (authErr) {
+      history.replaceState(null, '', location.pathname);
+      setTimeout(function () {
         document.getElementById('auth-modal').classList.add('open');
-        showAuthView('recovery');
-      },400);
+        showAuthView('forgot');
+        const el = document.getElementById('auth-reset-error');
+        if (el) {
+          el.style.color = 'var(--red)';
+          el.textContent = /expired|invalid/i.test(authErr)
+            ? 'That link has expired or was already used. Send yourself a new one.'
+            : String(authErr).replace(/\+/g, ' ');
+        }
+      }, 300);
+    } else if (hash.get('type') === 'recovery' || query.get('type') === 'recovery' ||
+               (query.get('code') && query.get('type') !== 'signup')) {
+      // supabase-js consumes the fragment or exchanges the code itself; give it
+      // a moment, then only offer the form if a session actually materialised.
+      setTimeout(async function () {
+        let ok = false;
+        try { const { data } = await sb.auth.getSession(); ok = !!(data && data.session); } catch (e) {}
+        history.replaceState(null, '', location.pathname);
+        document.getElementById('auth-modal').classList.add('open');
+        if (ok) {
+          showAuthView('recovery');
+        } else {
+          showAuthView('forgot');
+          const el = document.getElementById('auth-reset-error');
+          if (el) { el.style.color = 'var(--red)'; el.textContent = 'That link did not work. Send yourself a new one.'; }
+        }
+      }, 500);
     }
     try{const{data}=await sb.auth.getSession();if(data&&data.session&&data.session.user){await onAuthed(data.session.user);return;}}catch(e){}
     refreshUI();
