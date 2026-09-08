@@ -2861,6 +2861,85 @@ body.entering-done #artist-hero {
    the answer options are the loudest element on it -- the question
    should read as an invitation, not a field to fill in.
    ================================================================ */
+/* ---- GROOVE ROLES ---- */
+.groove-member { align-items: center; gap: 10px; }
+.groove-role {
+  font: 700 9px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 4px 7px; border-radius: 999px; vertical-align: 1px; margin-left: 4px;
+  white-space: nowrap;
+}
+.groove-role.pres { background: var(--gold); color: #1a1508; }
+.groove-role.vp { background: var(--surface-4); color: var(--text); }
+.groove-acts { display: flex; gap: 6px; flex-shrink: 0; }
+.groove-kick { color: var(--text-faint); }
+.groove-kick:hover { color: var(--red); }
+@media (max-width: 560px) {
+  .groove-member { flex-wrap: wrap; }
+  .groove-acts { width: 100%; margin-top: 6px; }
+}
+
+/* ---- TODAY, on Home ---- */
+.today-block { margin-bottom: 36px; }
+.today-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.today-title { display: flex; align-items: center; gap: 10px; }
+.today-title h2 { font-family: var(--font-display); font-size: 24px; font-weight: 700; }
+.today-spark { color: var(--gold); display: inline-flex; }
+.today-head-right { display: flex; align-items: center; gap: 10px; }
+.today-hint { font-size: 12px; color: var(--text-faint); }
+.today-count {
+  font: 700 11px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
+  background: var(--gold-dim); color: var(--gold);
+  border-radius: 999px; padding: 7px 11px; display: inline-block;
+}
+.today-count.bump { animation: tdBump 0.42s var(--ease); }
+@keyframes tdBump {
+  0% { transform: scale(1); } 40% { transform: scale(1.22); } 100% { transform: scale(1); }
+}
+@media (max-width: 700px) { .today-hint { display: none; } }
+
+/* The options arrive rather than appearing, which makes a fresh card feel
+   dealt. Cheap: one animation, staggered by nth-child. */
+.td-opts .td-opt { animation: tdOptIn 0.34s var(--ease) both; }
+.td-opts .td-opt:nth-child(1) { animation-delay: 0.03s; }
+.td-opts .td-opt:nth-child(2) { animation-delay: 0.07s; }
+.td-opts .td-opt:nth-child(3) { animation-delay: 0.11s; }
+.td-opts .td-opt:nth-child(4) { animation-delay: 0.15s; }
+.td-opts .td-opt:nth-child(5) { animation-delay: 0.19s; }
+.td-opts .td-opt:nth-child(6) { animation-delay: 0.23s; }
+.td-opts .td-opt:nth-child(7) { animation-delay: 0.27s; }
+.td-opts .td-opt:nth-child(8) { animation-delay: 0.31s; }
+@keyframes tdOptIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Undo, and the line that shows why the card is about to move. Pausing it is
+   a style change on animation-play-state, which is why it's an animation and
+   not a transition. */
+.td-undo {
+  margin-left: auto; flex-shrink: 0;
+  background: transparent; border: 1px solid var(--border-strong);
+  color: var(--text-dim); cursor: pointer;
+  font: 700 10px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 7px 11px; border-radius: 999px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.td-undo:hover:not(:disabled) { color: var(--text); border-color: var(--text-dim); }
+.td-undo:disabled { opacity: 0.5; cursor: default; }
+.td-drain {
+  height: 2px; margin: 0 0 14px; border-radius: 2px;
+  background: var(--surface-4); overflow: hidden;
+}
+.td-drain-fill {
+  display: block; height: 100%; width: 100%;
+  background: var(--gold); transform-origin: left center; transform: scaleX(0);
+}
+.td-drain-fill.run { animation: tdDrain 2.2s linear forwards; }
+@keyframes tdDrain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
 .td-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 20px; margin-bottom: 14px;
@@ -2888,13 +2967,27 @@ body.entering-done #artist-hero {
 }
 .td-opt:hover:not(:disabled) { background: var(--surface-3); border-color: var(--gold-dim); }
 .td-opt:active:not(:disabled) { transform: scale(0.96); }
-.td-opt.chosen { background: var(--gold); border-color: var(--gold); color: #1a1508; font-weight: 600; }
+.td-opt.chosen {
+  background: var(--gold); border-color: var(--gold); color: #1a1508; font-weight: 600;
+  animation: tdPop 0.36s var(--ease);
+}
+@keyframes tdPop {
+  0% { transform: scale(1); } 45% { transform: scale(1.07); } 100% { transform: scale(1); }
+}
 .td-opt:disabled { opacity: 0.45; cursor: default; }
 .td-skip { color: var(--text-faint); border-style: dashed; }
 
 .td-after { margin-top: 4px; }
 .td-saved { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 10px; }
-.td-tick { color: var(--green); font-weight: 700; }
+.td-tick {
+  color: var(--green); font-weight: 700; display: inline-block;
+  animation: tdTick 0.44s var(--ease) both;
+}
+@keyframes tdTick {
+  0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+  60% { transform: scale(1.35) rotate(0); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
 .td-saved-txt { font-weight: 600; }
 .td-note-btn {
   background: none; border: none; color: var(--text-dim); font-size: 13px;
@@ -2969,9 +3062,10 @@ body.entering-done #artist-hero {
    flying off, so the new card genuinely reads as arriving over the top. */
 .td-slot.td-under {
   z-index: 1;
-  transform: translateY(-14px) scale(0.97);
-  opacity: 0.28;
-  transition: transform 0.52s var(--ease), opacity 0.52s var(--ease);
+  transform: translateY(-16px) scale(0.955);
+  opacity: 0.22;
+  filter: blur(1.5px);
+  transition: transform 0.52s var(--ease), opacity 0.52s var(--ease), filter 0.52s var(--ease);
 }
 /* Must come last: the incoming card carries both td-live and td-enter for a
    frame, and this is the state it has to start from. */
@@ -3267,10 +3361,8 @@ window.ICONS = {
   <!-- ============================ MODE NAV ============================ -->
   <nav class="modes" id="modes">
     <span class="nav-indicator" id="nav-indicator"></span>
-    <button data-mode="today">Today</button>
     <button data-mode="home" class="active">Home</button>
     <button data-mode="crate" class="nav-icon-btn"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>The Crate</button>
-    <button data-mode="diary">Diary</button>
     <button data-mode="albums">Albums</button>
     <button data-mode="songs">Songs</button>
     <button data-mode="games">Games</button>
@@ -3288,29 +3380,53 @@ window.ICONS = {
   </div>
 
   <!-- ============================ TODAY ============================ -->
-  <section id="view-today" style="display:none; margin-top:32px;">
-    <div class="section-head"><h2><span data-icon="sparkle"></span> Today</h2><button class="btn-mini" id="today-refresh" style="margin-left:auto;">Refresh</button></div>
-    <p class="reco-note">Answer and slide.</p>
-    <div id="today-stream"></div>
-  </section>
-
   <!-- ============================ HOME ============================ -->
   <section id="view-home" style="margin-top:32px;">
     <div id="stats-wrap"></div>
 
-    <!-- The diary's front door. It sits above recommendations on purpose:
-         the whole pitch is that VINALL is a record of your listening, not a
-         suggestion engine, so the thing you write is the thing you see. -->
+    <!-- TODAY — the loop. First thing on the page, because everything else
+         here is a record of what it already asked. -->
+    <div class="today-block">
+      <div class="today-head">
+        <div class="today-title">
+          <span class="today-spark" data-icon="sparkle"></span>
+          <h2>Today</h2>
+        </div>
+        <div class="today-head-right">
+          <span class="today-count" id="today-count" style="display:none;"></span>
+          <span class="today-hint">Tap an answer &mdash; it moves on by itself</span>
+          <button class="btn-mini" id="today-refresh">Refresh</button>
+        </div>
+      </div>
+      <div id="today-stream"></div>
+    </div>
+
+    <!-- LINER NOTES — the look-back half of the same loop. -->
     <div class="ln-card">
       <div class="ln-card-head">
         <div>
           <div class="ln-card-eyebrow">Liner Notes</div>
           <h3 class="ln-card-title" id="ln-card-streak"></h3>
         </div>
-        <button class="btn-mini" id="ln-card-all">See the diary &rarr;</button>
+        <button class="btn-primary" id="ln-write-btn">Write today</button>
       </div>
       <div id="ln-card-body"></div>
     </div>
+
+    <div id="ln-stats"></div>
+
+    <div class="section-head" style="margin-top:30px;"><h2>This week</h2></div>
+    <div class="ln-week" id="ln-week"></div>
+
+    <div class="section-head" style="margin-top:30px;"><h2>The year</h2>
+      <span class="muted">Every day, coloured by how it sounded</span></div>
+    <div class="ln-year-wrap" id="ln-year"></div>
+    <div class="ln-legend" id="ln-legend"></div>
+
+    <div class="section-head" style="margin-top:30px;"><h2>Entries</h2>
+      <button class="btn-mini" id="ln-more" style="margin-left:auto;"></button></div>
+    <div class="ln-timeline" id="ln-timeline"></div>
+
     <div class="section-head">
       <h2>Recommended for you</h2>
       <span class="muted" id="reco-status"></span>
@@ -3365,27 +3481,6 @@ window.ICONS = {
 
   <!-- ============================ ALBUM RANKING ============================ -->
   <!-- ============================ DIARY ============================ -->
-  <section id="view-diary" style="display:none; margin-top:32px;">
-    <div class="section-head">
-      <h2><span data-icon="disc"></span> Liner Notes</h2>
-      <span class="muted">What you played, and what was going on</span>
-      <button class="btn-primary" id="ln-write-btn" style="margin-left:auto;">Write today</button>
-    </div>
-
-    <div id="ln-stats"></div>
-
-    <div class="section-head" style="margin-top:30px;"><h2>This week</h2></div>
-    <div class="ln-week" id="ln-week"></div>
-
-    <div class="section-head" style="margin-top:30px;"><h2>The year</h2>
-      <span class="muted">Every day, coloured by how it sounded</span></div>
-    <div class="ln-year-wrap" id="ln-year"></div>
-    <div class="ln-legend" id="ln-legend"></div>
-
-    <div class="section-head" style="margin-top:30px;"><h2>Entries</h2></div>
-    <div class="ln-timeline" id="ln-timeline"></div>
-  </section>
-
   <section id="view-albums" style="display:none; margin-top:32px;">
     <div class="section-head"><h2 id="albums-title">Your album rankings</h2></div>
     <div class="controls-row">
@@ -4234,8 +4329,6 @@ window.ICONS = {
    JS identical to vinal-25 except card renders + version tag.
    ================================================================ */
 const SPOTIFY_API = 'https://api.spotify.com/v1';
-const LOGIN_PATH  = '/api/login';
-const TOKEN_PATH  = '/api/token';
 
 let _token = null, _tokenExp = 0, _badToken = false;
 function validToken(t) { return !!t && t !== 'undefined' && t !== 'null'; }
@@ -4250,11 +4343,13 @@ async function getAccessToken() {
   if(validToken(fromUrl)){_token=fromUrl;_tokenExp=Date.now()+(expIn*1000);_tokSave();history.replaceState(null,'',location.pathname);return _token;}
   if(_token&&Date.now()<_tokenExp-5000)return _token;
   try{const st=localStorage.getItem('sp_token');const se=parseInt(localStorage.getItem('sp_token_exp')||'0',10);if(validToken(st)&&Date.now()<se-5000){_token=st;_tokenExp=se;return _token;}}catch(e){}
-  try{const dead=parseInt(localStorage.getItem('sp_no_token_ep')||'0',10);if(dead&&Date.now()-dead<24*60*60*1000)return null;}catch(e){}
-  try{const r=await fetch(TOKEN_PATH,{credentials:'include'});if(r.status===404){try{localStorage.setItem('sp_no_token_ep',String(Date.now()));}catch(e){}return null;}if(r.ok){const j=await r.json();if(j&&j.access_token){_token=j.access_token;_tokenExp=Date.now()+((j.expires_in||3600)*1000);_tokSave();return _token;}}}catch(e){}
+  // There is deliberately no server call here any more. VINALL has no
+  // Spotify user login — accounts are Supabase email/password and every
+  // catalogue request uses the app token below. This function now only
+  // honours a token that is already in the URL or in storage, so an old
+  // session keeps working until it expires and nothing 404s on load.
   return null;
 }
-function login(){window.location.href=LOGIN_PATH;}
 
 const APP_TOKEN_PATH='/api/app-token';
 let _appToken=null,_appTokenExp=0,_appTokenDead=0;
@@ -4371,7 +4466,7 @@ async function doSearch(q) {
     if (e.stale) return;
     if (e.message === 'not-authenticated') {
       suggestionsEl.innerHTML = '<div class="sugg-empty">' +
-        (_badToken ? 'Spotify didn’t return a valid token. Check REDIRECT_URI in /api/callback.' : 'Music search unavailable 2014 try refreshing.') + '</div>';
+        (_badToken ? 'That Spotify token wasn’t valid.' : 'Music search unavailable — try refreshing.') + '</div>';
       suggestionsEl.classList.add('open');
       return;
     }
@@ -4936,9 +5031,7 @@ function applyAlbumTint(rgb) {
    ================================================================ */
 const views = {
   home: document.getElementById('view-home'),
-  today: document.getElementById('view-today'),
   crate: document.getElementById('view-crate'),
-  diary: document.getElementById('view-diary'),
   albums: document.getElementById('view-albums'),
   songs: document.getElementById('view-songs'),
   games: document.getElementById('view-games'),
@@ -4958,15 +5051,19 @@ function setMode(mode, fromCode) {
   document.querySelectorAll('#modes button').forEach(function (b) { b.classList.toggle('active', b.dataset.mode === mode); });
   if (window.positionNavIndicator) window.positionNavIndicator();
   if (mode === 'home' || mode === 'albums' || mode === 'songs') lastListMode = mode;
-  if (mode === 'home') { renderRecommendations(); renderNewReleases(); renderArtistHero(); }
+  if (mode === 'home') {
+    renderRecommendations(); renderNewReleases(); renderArtistHero();
+    // Both halves of the loop live here now. renderToday() no-ops if the
+    // stack is already built for today, so re-entering Home is cheap.
+    if (window.renderToday) window.renderToday();
+    if (window.renderDiary) window.renderDiary();
+  }
   else { const h = document.getElementById('artist-hero'); if (h) h.style.display = 'none'; }
   if (mode === 'crate' && window.renderCrate) window.renderCrate();
-  if (mode === 'diary' && window.renderDiary) window.renderDiary();
   if (mode === 'albums') renderAlbums();
   if (mode === 'songs') renderSongs();
   if (mode === 'games' && window.renderGameBests) window.renderGameBests();
   if (mode === 'wars' && window.renderWars) window.renderWars();
-  if (mode === 'today' && window.renderToday) window.renderToday();
   if (mode === 'achievements' && window.renderAchievements) window.renderAchievements();
   if (mode === 'profile' && window.renderProfile) window.renderProfile();
   if (mode === 'profile' && window.renderLore) window.renderLore();
@@ -6464,9 +6561,16 @@ const Cloud=(function(){
   async function unreadCount(){if(!isOn())return 0;try{const res=await sb.from('notifications').select('*',{count:'exact',head:true}).eq('user_id',user.id).eq('read',false);return res.count||0;}catch(e){return 0;}}
   async function markNotificationsRead(){if(!isOn())return;try{await sb.from('notifications').update({read:true}).eq('user_id',user.id).eq('read',false);}catch(e){}}
   async function sendSuggestion(targetId,item,kind){if(!isOn())return{error:'not logged in'};try{let me=null;try{me=await fetchProfile(user.id);}catch(e){}const res=await sb.from('notifications').insert({user_id:targetId,actor_id:user.id,type:'suggestion',data:{username:(me&&me.username)||'someone',avatar_url:(me&&me.avatar_url)||'',kind:kind,item:item}});return res.error?{error:res.error.message}:{ok:true};}catch(e){return{error:String(e&&e.message||e)};}}
-  async function createGroove(name){if(!isOn())return{error:'not logged in'};try{const g=await sb.from('grooves').insert({name:name,owner_id:user.id}).select().single();if(g.error)return{error:g.error.message};await sb.from('groove_members').insert({groove_id:g.data.id,user_id:user.id,status:'member'});return{data:g.data};}catch(e){return{error:String(e&&e.message||e)};}}
+  // Creation is one server call now: it writes the groove and the creator's
+  // president row together, so owner_id can't come from the client and a
+  // groove can't end up with nobody in charge.
+  async function createGroove(name){if(!isOn())return{error:'not logged in'};try{const r=await sb.rpc('groove_create',{p_name:name});if(r.error)return{error:r.error.message};return{data:r.data};}catch(e){return{error:String(e&&e.message||e)};}}
+  async function setGrooveRole(grooveId,targetId,role){if(!isOn())return{error:'not logged in'};try{const r=await sb.rpc('groove_set_role',{p_groove:grooveId,p_user:targetId,p_role:role});return r.error?{error:r.error.message}:{ok:true};}catch(e){return{error:String(e&&e.message||e)};}}
+  async function removeGrooveMember(grooveId,targetId){if(!isOn())return{error:'not logged in'};try{const r=await sb.rpc('groove_remove_member',{p_groove:grooveId,p_user:targetId});return r.error?{error:r.error.message}:{ok:true};}catch(e){return{error:String(e&&e.message||e)};}}
   async function myGrooves(){if(!isOn())return{member:[],invites:[]};try{const m=await sb.from('groove_members').select('groove_id,status').eq('user_id',user.id);const rows=m.data||[];if(!rows.length)return{member:[],invites:[]};const ids=rows.map(function(r){return r.groove_id;});const gs=await sb.from('grooves').select('*').in('id',ids);const byId={};(gs.data||[]).forEach(function(g){byId[g.id]=g;});const member=[],invites=[];rows.forEach(function(r){const g=byId[r.groove_id];if(!g)return;if(r.status==='member')member.push(g);else invites.push(g);});return{member:member,invites:invites};}catch(e){return{member:[],invites:[]};}}
-  async function grooveMembers(grooveId){if(!sb)return[];try{const m=await sb.from('groove_members').select('user_id,status').eq('groove_id',grooveId).eq('status','member');const ids=(m.data||[]).map(function(r){return r.user_id;});if(!ids.length)return[];const p=await sb.from('profiles').select('id,username,avatar_url,bio').in('id',ids);return p.data||[];}catch(e){return[];}}
+  // Roles ride along with the member list so the modal can badge people and
+  // decide what to offer without a second round trip.
+  async function grooveMembers(grooveId){if(!sb)return[];try{const m=await sb.from('groove_members').select('user_id,status,role').eq('groove_id',grooveId).eq('status','member');const rows=m.data||[];const ids=rows.map(function(r){return r.user_id;});if(!ids.length)return[];const roleBy={};rows.forEach(function(r){roleBy[r.user_id]=r.role||'member';});const p=await sb.from('profiles').select('id,username,avatar_url,bio').in('id',ids);const order={president:0,vp:1,member:2};return(p.data||[]).map(function(x){x.role=roleBy[x.id]||'member';return x;}).sort(function(a,b){return(order[a.role]-order[b.role])||String(a.username||'').localeCompare(String(b.username||''));});}catch(e){return[];}}
   async function inviteToGroove(grooveId,targetId,grooveName){if(!isOn())return{error:'not logged in'};try{const ins=await sb.from('groove_members').insert({groove_id:grooveId,user_id:targetId,status:'invited',invited_by:user.id});if(ins.error)return{error:ins.error.message};let me=null;try{me=await fetchProfile(user.id);}catch(e){}try{await sb.from('notifications').insert({user_id:targetId,actor_id:user.id,type:'groove_invite',data:{username:(me&&me.username)||'someone',avatar_url:(me&&me.avatar_url)||'',groove_id:grooveId,groove_name:grooveName}});}catch(e){}return{ok:true};}catch(e){return{error:String(e&&e.message||e)};}}
   async function acceptGrooveInvite(grooveId){if(!isOn())return{error:'not logged in'};try{const r=await sb.from('groove_members').update({status:'member'}).eq('groove_id',grooveId).eq('user_id',user.id);return r.error?{error:r.error.message}:{ok:true};}catch(e){return{error:String(e&&e.message||e)};}}
   async function leaveGroove(grooveId){if(!isOn())return{error:'not logged in'};try{const r=await sb.from('groove_members').delete().eq('groove_id',grooveId).eq('user_id',user.id);return r.error?{error:r.error.message}:{ok:true};}catch(e){return{error:String(e&&e.message||e)};}}
@@ -6515,6 +6619,7 @@ const Cloud=(function(){
          fetchLists:fetchLists,saveList:saveList,deleteList:deleteList,
          fetchNotifications:fetchNotifications,unreadCount:unreadCount,markNotificationsRead:markNotificationsRead,sendSuggestion:sendSuggestion,
          createGroove:createGroove,myGrooves:myGrooves,grooveMembers:grooveMembers,inviteToGroove:inviteToGroove,
+         setGrooveRole:setGrooveRole,removeGrooveMember:removeGrooveMember,
          acceptGrooveInvite:acceptGrooveInvite,leaveGroove:leaveGroove,fetchGroove:fetchGroove,
          submitLeaderboardTime:submitLeaderboardTime,fetchLeaderboard:fetchLeaderboard,fetchMyBestTime:fetchMyBestTime,
          syncRating:syncRating,deleteRating:deleteRating,setRatingsVisibility:setRatingsVisibility,
@@ -6730,7 +6835,9 @@ async function openFollowModal(uid,which,username){
   const listEl=document.getElementById('follow-modal-list');
   listEl.innerHTML='<p class="reco-note">Loading\u2026</p>';
   modal.classList.add('open');
-  const people=which==='followers'?await Cloud.followersList(uid):await Cloud.followingList(uid);
+  await (window.loadBlocks?loadBlocks():Promise.resolve());
+  const people=(which==='followers'?await Cloud.followersList(uid):await Cloud.followingList(uid))
+    .filter(function(p){return !(window.isBlocked&&isBlocked(p.id));});
   if(!people.length){listEl.innerHTML='<div class="reco-note">No one '+(which==='followers'?'follows '+esc(username||'them')+' yet.':'followed yet.')+'</div>';return;}
   listEl.innerHTML=people.map(function(p){return'<div class="ptop-row" data-uid="'+esc(p.id)+'"><img src="'+esc(avatarSrc(p.avatar_url))+'" alt=""><div style="flex:1;"><div class="nm">'+esc(p.username||'user')+'</div>'+(p.bio?'<div class="ar">'+esc(p.bio.slice(0,50))+'</div>':'')+' </div></div>';}).join('');
   listEl.querySelectorAll('[data-uid]').forEach(function(el){el.addEventListener('click',function(){modal.classList.remove('open');viewUserProfile(el.dataset.uid);});});
@@ -6757,8 +6864,11 @@ async function doPeopleSearch(uname){
   const host=document.getElementById('people-result');const me=Cloud.getUser&&Cloud.getUser();
   if(!uname){host.innerHTML='';return;}
   host.innerHTML='<p class="reco-note">Searching\u2026</p>';
+  await (window.loadBlocks?loadBlocks():Promise.resolve());
   const prof=await Cloud.findByUsername(uname);
-  if(!prof){host.innerHTML='<div class="reco-note">No user called \u201C'+esc(uname)+'\u201D.</div>';return;}
+  // Searching for someone you blocked should find nothing, not offer them
+  // back to you with a Follow button.
+  if(!prof||(window.isBlocked&&isBlocked(prof.id))){host.innerHTML='<div class="reco-note">No user called \u201C'+esc(uname)+'\u201D.</div>';return;}
   if(me&&prof.id===me.id){host.innerHTML='<div class="reco-note">That\u2019s you!</div>';return;}
   host.innerHTML=personRow(prof);wirePersonRows(host);
 }
@@ -6912,7 +7022,11 @@ async function renderNotifications(){
   const host=document.getElementById('notif-list');if(!host)return;
   if(!Cloud.isOn()){host.innerHTML='<div class="act-empty">Log in to get notifications.</div>';return;}
   host.innerHTML='<div class="act-empty">Loading\u2026</div>';
-  const list=await Cloud.fetchNotifications();
+  await (window.loadBlocks ? loadBlocks() : Promise.resolve());
+  // A block that still lets someone reach your notifications is not a block.
+  const list=(await Cloud.fetchNotifications()).filter(function(n){
+    return !(n.actor_id && window.isBlocked && isBlocked(n.actor_id));
+  });
   if(!list.length){host.innerHTML='<div class="act-empty">No notifications yet.</div>';return;}
   host.innerHTML=list.map(function(n){const it=(n.data&&n.data.item)||{};const clickable=(n.type==='suggestion'&&it.id&&(n.data.kind==='album'));const grooveClick=(n.type==='groove_invite');const warId=(/^bid_war_/.test(n.type||'')&&n.data&&n.data.war_id)||'';return'<div class="act-item notif-item'+(n.read?'':' unread')+'"'+(clickable?' data-album="'+esc(it.id)+'"':'')+(grooveClick?' data-groove-invite="1"':'')+(warId?' data-war-notif="'+esc(warId)+'"':'')+'>'+
     '<span class="act-emoji">'+notifEmoji(n.type)+'</span>'+
@@ -6980,12 +7094,56 @@ async function openGroove(grooveId){
   document.getElementById('groove-invite-panel').style.display='none';
   document.getElementById('groove-members').innerHTML='<p class="reco-note">Loading members\u2026</p>';
   document.getElementById('groove-modal').classList.add('open');
-  const me=Cloud.getUser();const isOwner=me&&g.owner_id===me.id;
-  document.getElementById('groove-leave-btn').style.display=isOwner?'none':'inline-block';
-  const members=await Cloud.grooveMembers(grooveId);
+  const me=Cloud.getUser();
+  const members=(await Cloud.grooveMembers(grooveId)).filter(function(p){return !(window.isBlocked&&isBlocked(p.id)&&p.id!==(me&&me.id));});
+  const mine=members.filter(function(p){return me&&p.id===me.id;})[0];
+  const myRole=(mine&&mine.role)||'member';
+  const iLead=myRole==='president'||myRole==='vp';
+  // The president has no Leave: leaving would strand the groove with nobody
+  // able to invite or promote.
+  document.getElementById('groove-leave-btn').style.display=myRole==='president'?'none':'inline-block';
   document.getElementById('groove-sub').textContent=members.length+(members.length===1?' member':' members');
-  document.getElementById('groove-members').innerHTML=members.map(function(p){return'<div class="ptop-row" data-guid="'+esc(p.id)+'"><img src="'+esc(avatarSrc(p.avatar_url))+'" alt=""><div style="flex:1;"><div class="nm">'+esc(p.username||'user')+(g.owner_id===p.id?' \u00b7 owner':'')+' </div>'+(p.bio?'<div class="ar">'+esc(p.bio.slice(0,50))+'</div>':'')+' </div></div>';}).join('');
-  document.getElementById('groove-members').querySelectorAll('[data-guid]').forEach(function(el){el.addEventListener('click',function(){document.getElementById('groove-modal').classList.remove('open');viewUserProfile(el.dataset.guid);});});
+
+  function roleBadge(r){
+    if(r==='president')return'<span class="groove-role pres">President</span>';
+    if(r==='vp')return'<span class="groove-role vp">Vice President</span>';
+    return'';
+  }
+  document.getElementById('groove-members').innerHTML=members.map(function(p){
+    const self=me&&p.id===me.id;
+    let ctrl='';
+    if(iLead&&!self&&p.role!=='president'){
+      ctrl='<div class="groove-acts">'+
+        '<button class="btn-mini" data-grole="'+esc(p.id)+'" data-to="'+(p.role==='vp'?'member':'vp')+'">'+(p.role==='vp'?'Demote':'Make VP')+'</button>'+
+        '<button class="btn-mini groove-kick" data-gkick="'+esc(p.id)+'">Remove</button></div>';
+    }
+    return'<div class="ptop-row groove-member"><img src="'+esc(avatarSrc(p.avatar_url))+'" alt="" data-guid="'+esc(p.id)+'">'+
+      '<div style="flex:1;min-width:0;" data-guid="'+esc(p.id)+'"><div class="nm">'+esc(p.username||'user')+' '+roleBadge(p.role)+'</div>'+
+      (p.bio?'<div class="ar">'+esc(p.bio.slice(0,50))+'</div>':'')+'</div>'+ctrl+'</div>';
+  }).join('');
+
+  const mhost=document.getElementById('groove-members');
+  mhost.querySelectorAll('[data-guid]').forEach(function(el){el.addEventListener('click',function(){document.getElementById('groove-modal').classList.remove('open');viewUserProfile(el.dataset.guid);});});
+  mhost.querySelectorAll('[data-grole]').forEach(function(b){b.addEventListener('click',async function(ev){
+    ev.stopPropagation();
+    b.disabled=true;b.textContent='\u2026';
+    const res=await Cloud.setGrooveRole(grooveId,b.dataset.grole,b.dataset.to);
+    if(res.error){alert(res.error);b.disabled=false;}
+    openGroove(grooveId);
+  });});
+  mhost.querySelectorAll('[data-gkick]').forEach(function(b){b.addEventListener('click',async function(ev){
+    ev.stopPropagation();
+    if(!confirm('Remove this person from '+g.name+'?'))return;
+    b.disabled=true;b.textContent='\u2026';
+    const res=await Cloud.removeGrooveMember(grooveId,b.dataset.gkick);
+    if(res.error){alert(res.error);b.disabled=false;}
+    openGroove(grooveId);
+  });});
+
+  // Inviting is a leader power now, so hide the button for everyone else
+  // rather than letting the insert fail against the policy.
+  const inviteBtn=document.getElementById('groove-invite-btn');
+  if(inviteBtn)inviteBtn.style.display=iLead?'':'none';
 }
 
 async function drawGrooveInviteList(filter){
@@ -7381,11 +7539,15 @@ window.handleGrooveLink=handleGrooveLink;
 
     // render album-level comments
     const list=document.getElementById('ap-comment-list');
-    if(!comments.length){
+    // Comments from someone you have blocked simply are not there.
+    const shownComments=comments.filter(function(c){
+      return !(c.user_id && window.isBlocked && isBlocked(c.user_id));
+    });
+    if(!shownComments.length){
       list.innerHTML='<div class="reco-note" style="font-size:13px;">No comments yet. Be the first to say something.</div>';
     } else {
       list.innerHTML='';
-      comments.forEach(function(c){list.appendChild(renderCommentRow(c));});
+      shownComments.forEach(function(c){list.appendChild(renderCommentRow(c));});
     }
   };
 })();
@@ -9094,7 +9256,22 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       host.innerHTML = '<p class="reco-note">Nothing here yet. Write one line about what you played today and it starts building.</p>';
       return;
     }
-    host.innerHTML = keys.slice(0, 60).map(function (k) {
+    var CAP = 6;
+    var showAll = host.dataset.all === '1';
+    var shown = showAll ? keys.slice(0, 60) : keys.slice(0, CAP);
+    var more = document.getElementById('ln-more');
+    if (more) {
+      if (keys.length <= CAP) more.style.display = 'none';
+      else {
+        more.style.display = '';
+        more.textContent = showAll ? 'Show fewer' : 'All ' + keys.length + ' entries';
+        more.onclick = function () {
+          host.dataset.all = showAll ? '0' : '1';
+          lnRenderTimeline();
+        };
+      }
+    }
+    host.innerHTML = shown.map(function (k) {
       var e = all[k];
       var m = moodOf(e.mood);
       var d = lnParse(k);
@@ -9239,7 +9416,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     var writeBtn = document.getElementById('ln-write-btn');
     if (writeBtn) writeBtn.addEventListener('click', function () { lnOpen(lnToday()); });
     var seeAll = document.getElementById('ln-card-all');
-    if (seeAll) seeAll.addEventListener('click', function () { if (window.goToView) window.goToView('diary'); });
+    if (seeAll) seeAll.addEventListener('click', function () { lnOpen(lnToday()); });
 
     window.openLinerNotes = lnOpen;
     window.renderDiary = lnRenderEverything;
@@ -11603,6 +11780,43 @@ window.track = function (name, props) {
     } catch (e) { return { error: String((e && e.message) || e) }; }
   }
 
+  // Undo. The award trigger fires on INSERT only and is capped at 20 discs a
+  // day, so deleting and re-answering cannot earn more than answering twenty
+  // different questions would — which is why a real delete is safe here
+  // rather than a soft "changed my mind" flag.
+  async function removeAnswer(item, q) {
+    if (!on()) return { error: 'not logged in' };
+    try {
+      var r = await sb().from('lore_answers').delete()
+        .eq('user_id', me().id)
+        .eq('item_kind', item.kind).eq('item_id', item.id)
+        .eq('question_id', q.id);
+      if (r.error) return { error: r.error.message };
+      if (_lore) delete _lore[answeredKey(item.kind, item.id, q.id)];
+      _loreList = _loreList.filter(function (x) {
+        return !(x.item_kind === item.kind && x.item_id === item.id && x.question_id === q.id);
+      });
+      return { ok: true };
+    } catch (e) { return { error: String((e && e.message) || e) }; }
+  }
+
+  // How many real answers today — the number on the header chip.
+  function answeredToday() {
+    var d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    return _loreList.filter(function (r) {
+      return !r.skipped && r.choice && new Date(r.created_at).getTime() >= d0.getTime();
+    }).length;
+  }
+  function paintCount(bump) {
+    var el = document.getElementById('today-count');
+    if (!el) return;
+    var n = answeredToday();
+    if (!n) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    el.textContent = n + ' today';
+    if (bump) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+  }
+
   // ---- what to put in front of someone today ------------------------------
   // One of each kind at most. A page of six questions is a form; a page with
   // one question, one record to revisit, one game and one old answer is a
@@ -11706,7 +11920,9 @@ window.track = function (name, props) {
         '<button class="td-other-save" type="button">Save</button>' +
       '</div>' +
       '<div class="td-after" style="display:none;">' +
-        '<div class="td-saved"><span class="td-tick">✓</span> <span class="td-saved-txt"></span></div>' +
+        '<div class="td-saved"><span class="td-tick">✓</span> <span class="td-saved-txt"></span>' +
+          '<button class="td-undo" type="button">Undo</button></div>' +
+        '<div class="td-drain"><span class="td-drain-fill"></span></div>' +
         '<button class="td-note-btn" type="button">Add a note</button>' +
         '<div class="td-note-wrap" style="display:none;">' +
           '<textarea class="td-note" rows="2" placeholder="Optional. A line is plenty."></textarea>' +
@@ -11801,7 +12017,10 @@ window.track = function (name, props) {
     if (!card) return;
 
     var nextBtn = slot.querySelector('.td-next');
-    if (nextBtn) nextBtn.addEventListener('click', advance);
+    if (nextBtn) nextBtn.addEventListener('click', function () {
+      if (typeof stopAuto === 'function') stopAuto();
+      advance();
+    });
 
     var go = slot.querySelector('.td-go');
     if (go) go.addEventListener('click', function () {
@@ -11818,6 +12037,25 @@ window.track = function (name, props) {
 
     if (entry.t !== 'ask' || !d) return;
 
+    // Answering moves you on by itself. Waiting for a second deliberate tap
+    // after every answer is what made this feel like a form; the drain line
+    // is there so the movement is expected rather than startling, and Undo
+    // is the escape hatch. Any engagement with the panel cancels the timer —
+    // if you have reached for "Add a note" you are not done with this card.
+    var AUTO_MS = 2200;
+    var autoTimer = null;
+
+    function stopAuto() {
+      if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+      var bar = slot.querySelector('.td-drain-fill');
+      if (bar) bar.style.animationPlayState = 'paused';
+    }
+
+    function sizeToSlot() {
+      var host = stackEl();
+      if (host) host.style.height = slot.offsetHeight + 'px';
+    }
+
     function settle(choice) {
       slot.querySelector('.td-opts').style.display = 'none';
       var other = slot.querySelector('.td-other-wrap');
@@ -11825,10 +12063,18 @@ window.track = function (name, props) {
       var after = slot.querySelector('.td-after');
       after.querySelector('.td-saved-txt').textContent = choice;
       after.style.display = 'block';
-      var h = slot.offsetHeight;
-      var host = stackEl();
-      if (host) host.style.height = h + 'px';
+      var bar = after.querySelector('.td-drain-fill');
+      if (bar) {
+        bar.style.animationPlayState = '';
+        bar.classList.remove('run');
+        void bar.offsetWidth;
+        bar.classList.add('run');
+      }
+      sizeToSlot();
+      paintCount(true);
       if (window.Wallet && Wallet.awardDiscs) Wallet.awardDiscs(2, { reason: 'lore' });
+      after.addEventListener('pointerenter', stopAuto);
+      autoTimer = setTimeout(function () { autoTimer = null; advance(); }, AUTO_MS);
     }
 
     slot.querySelectorAll('.td-opt').forEach(function (btn) {
@@ -11871,8 +12117,28 @@ window.track = function (name, props) {
       settle(txt);
     });
 
+    var undoBtn = slot.querySelector('.td-undo');
+    if (undoBtn) undoBtn.addEventListener('click', async function () {
+      stopAuto();
+      undoBtn.disabled = true;
+      undoBtn.textContent = '…';
+      await removeAnswer(d.item, d.q);
+      undoBtn.disabled = false;
+      undoBtn.textContent = 'Undo';
+      slot.querySelector('.td-after').style.display = 'none';
+      var opts = slot.querySelector('.td-opts');
+      opts.style.display = '';
+      opts.querySelectorAll('.td-opt').forEach(function (b) {
+        b.disabled = false;
+        b.classList.remove('chosen');
+      });
+      paintCount(false);
+      sizeToSlot();
+    });
+
     var noteBtn = slot.querySelector('.td-note-btn');
     if (noteBtn) noteBtn.addEventListener('click', function () {
+      stopAuto();
       noteBtn.style.display = 'none';
       slot.querySelector('.td-note-wrap').style.display = 'flex';
       slot.querySelector('.td-note').focus();
@@ -11920,6 +12186,7 @@ window.track = function (name, props) {
     var el = mountCard(cardHTML(_queue[0]), false);
     if (el) wireCard(el);
     host.dataset.built = stamp;
+    paintCount(false);
     if (window.track) track('today_opened', { queue: _queue.length });
   }
 
