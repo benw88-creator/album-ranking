@@ -3047,7 +3047,9 @@ body.entering-done #artist-hero {
   overflow: hidden;
   transition: height 0.42s var(--ease);
 }
-#today-stream .empty { position: static; }
+#today-stream .empty { position: static; padding: 26px 18px; }
+#today-stream .empty .emoji { font-size: 28px; margin-bottom: 8px; }
+#today-stream .empty h3 { font-size: 17px; }
 .td-slot {
   position: absolute;
   left: 0; right: 0; top: 0;
@@ -6255,7 +6257,7 @@ const Cloud=(function(){
     user=u;refreshUI();await pullAndMerge();
     backfillRatingsOnce();
     if(window.Wallet)try{await Wallet.load();}catch(e){}
-    try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderRecommendations();renderArtistHero();}if(currentMode==='profile'&&window.renderProfile)renderProfile();}catch(e){}
+    try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderRecommendations();renderArtistHero();if(window.renderToday)renderToday(true);if(window.renderDiary)renderDiary();}if(currentMode==='profile'&&window.renderProfile)renderProfile();}catch(e){}
     flashSaved();
   }
   /* One-time-per-browser backfill: people who rated albums before the
@@ -9144,6 +9146,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         : (st.days ? st.days + ' entries' : 'Nothing written yet');
     }
     if (today) {
+      var wbtn = document.getElementById('ln-write-btn');
+      if (wbtn) { wbtn.style.display = ''; wbtn.textContent = 'Edit today'; }
       var m = moodOf(today.mood);
       host.innerHTML =
         '<div class="ln-today-done">' +
@@ -9155,11 +9159,12 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
             (today.pick ? '<div class="ln-today-pick">' + esc(today.pick.name) + ' <span>' + esc(today.pick.artist || '') + '</span></div>' : '') +
             (today.note ? '<p class="ln-today-note">' + esc(today.note) + '</p>' : '') +
           '</div>' +
-        '</div>' +
-        '<button class="btn-mini" id="ln-edit">Edit today</button>';
-      var eb = document.getElementById('ln-edit');
-      if (eb) eb.addEventListener('click', function () { lnOpen(lnToday()); });
+        '</div>';
+      // No edit button in the body: the card header already carries one, and
+      // two of them side by side was the problem this replaced.
     } else {
+      var wb = document.getElementById('ln-write-btn');
+      if (wb) wb.style.display = 'none';
       host.innerHTML =
         '<p class="ln-prompt">' + esc(questionFor(lnToday())) + '</p>' +
         '<button class="btn-primary" id="ln-start">Write today&rsquo;s note</button>';
@@ -12259,6 +12264,9 @@ window.track = function (name, props) {
 
   function wireLore() {
     wireSwipe();
+    // Home is rendered by the markup on first paint, so build the stack here
+    // rather than waiting for a tab change that may never come.
+    renderToday();
     var rb = document.getElementById('today-refresh');
     if (rb) rb.addEventListener('click', function () {
       rb.disabled = true;
