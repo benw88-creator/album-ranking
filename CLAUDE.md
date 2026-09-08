@@ -233,3 +233,30 @@ the two apart without this.
 them move mid-war, but it also means a war created under a broken or superseded valuation
 carries those numbers for good. If the valuation method changes again, purge `album_plays`
 and clear pending wars in the same migration, as `..._220000_purge_stale_values.sql` does.
+
+## Admin stats, crash reports, legal
+
+`renderAdminStats()` draws a panel on your own profile, and only if `profiles.is_admin` is
+true — it renders nothing at all for everybody else. It calls `analytics_summary(14)`,
+`analytics_questions(30)` and `recent_errors(8)`. The headline tile is deliberately
+**"came back for a 2nd answer"**; the questions table is sorted worst-first, because a
+question with a low answer rate is a question to rewrite rather than evidence the idea fails.
+
+Crash reporting is the first script in the body so it catches failures in everything below.
+No third-party script and no signup: errors go to `client_errors`, which anyone may insert
+into (logged-out crashes are exactly the ones nobody would otherwise report) and only an
+admin may read back, via `recent_errors()`. Capped at 8 per session and deduped by
+message+line so one error in a loop cannot flood the table.
+
+`privacy.html` and `terms.html` are plain static pages, linked from the footer. **Both still
+contain `REPLACE-WITH-YOUR-CONTACT-EMAIL`** and are not valid until that is a real address.
+
+### Correction: the ratings sync is fine
+
+An earlier note in this file called ratings a dangerous dual source of truth. That was
+overstated. `pullAndMerge()` merges cloud `app_state` into localStorage using
+`mergeItemMap`, which resolves **per item by `savedAt`** rather than clobbering whole blobs,
+and `backfillRatingsOnce` repopulates the public `ratings` table on any new browser. It is a
+sound local-first design. The one real gap — that it only ran at login, so a tab left open
+could sit on stale data — is closed by re-merging on `visibilitychange`, throttled to once a
+minute.
