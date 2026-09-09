@@ -5377,7 +5377,12 @@ function renderStats(){
     const w=Wallet.get();
     walletTiles=
       '<div class="stat stat-wallet" id="stat-streak"><div class="s-label">\u{1F525} Streak</div><div class="s-val">'+(w.streak_current||0)+'</div></div>'+
-      '<div class="stat stat-wallet" id="stat-discs" title="Open the Disc Shop"><div class="s-label">◉ Discs</div><div class="s-val">'+(w.is_admin?'∞':(w.discs||0))+'</div></div>';
+      // An admin spends without limit, but the real balance is shown next to
+      // the ∞ rather than replaced by it. Hiding the number behind a symbol is
+      // how the whole economy sat broken for two days without anyone noticing:
+      // the one account that would have spotted a balance stuck at zero was
+      // the one account that never saw a balance at all.
+      '<div class="stat stat-wallet" id="stat-discs" title="Open the Disc Shop"><div class="s-label">◉ Discs</div><div class="s-val">'+(w.is_admin?('∞ <span style="font-size:.55em;opacity:.65;">'+(w.discs||0)+'</span>'):(w.discs||0))+'</div></div>';
   }
   wrap.innerHTML='<div class="stats">'+coreTiles+walletTiles+'</div>';
   const discTile=document.getElementById('stat-discs');
@@ -8792,7 +8797,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     const label = document.getElementById('shop-open-discs');
     if (!label) return;
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { label.textContent = 'Shop'; return; }
-    if (state.is_admin) { label.textContent = '∞'; label.dataset.val = state.discs; return; }
+    // Real balance alongside the ∞, not instead of it — see renderStats.
+    if (state.is_admin) { label.textContent = '∞ ' + (state.discs || 0); label.dataset.val = state.discs; return; }
     const prev = parseInt(label.dataset.val || '0', 10);
     countUp(label, prev, state.discs, 500);
     label.dataset.val = state.discs;
@@ -8958,7 +8964,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   function renderShop() {
     const w = get();
-    document.getElementById('shop-balance-val').textContent = w.is_admin ? '∞' : w.discs;
+    document.getElementById('shop-balance-val').textContent = w.is_admin ? ('∞ ' + (w.discs || 0)) : w.discs;
     const list = document.getElementById('shop-list');
 
     const themeRows = Object.keys(THEMES).map(function (key) {
