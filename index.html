@@ -3267,6 +3267,21 @@ body.entering-done #artist-hero {
       stack: (r && r.stack) ? String(r.stack).slice(0, 1500) : null
     });
   });
+  /* Report something that failed without throwing. Handled errors are the
+     dangerous ones: an unhandled exception at least shows up in a console,
+     whereas `if (res.error) return;` is invisible for as long as nobody
+     thinks to look. The whole Discs economy was dead for every non-admin user
+     and the only symptom anyone could see was a number not going up.
+
+     Same cap and dedupe as a crash, so a failure inside something that runs
+     on every rating cannot flood the table. */
+  window.reportIssue = function (message, extra) {
+    try {
+      console.warn('VINALL:', message, extra || '');
+      record({ message: ('handled: ' + String(message)).slice(0, 400),
+               stack: extra ? JSON.stringify(extra).slice(0, 1500) : null });
+    } catch (e) {}
+  };
   setInterval(flush, 4000);
 })();
 </script>
@@ -8836,9 +8851,26 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   async function recordRating() {
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
     if (!loaded) await load();
+    const before = state.discs;
     const res = await rpc('wallet_record_rating');
-    if (res.error) return;
+    // This used to be a bare `return`. The economy was dead for every
+    // non-admin user for two days and nothing anywhere said so.
+    if (res.error) {
+      if (window.reportIssue) reportIssue('wallet_record_rating failed', { error: res.error });
+      return;
+    }
     const w = res.data || {};
+    // The award and the balance come from different places — `earned` is a
+    // local in the function, `discs` is the row after triggers have had their
+    // say — so the two disagreeing is the exact signature of a server-side
+    // write being reverted underneath us. Worth shouting about, because the
+    // visible symptom is only ever "the number did not move".
+    if (w.earned > 0 && w.discs != null && w.discs === before) {
+      if (window.reportIssue) {
+        reportIssue('wallet awarded ' + w.earned + ' discs but the balance did not move',
+                    { before: before, after: w.discs });
+      }
+    }
     applyWallet(w);
     if (w.earned > 0) { toast('+' + w.earned + ' Discs'); spawnDiscParticle(w.earned); }
     if (w.milestone && typeof window.celebrate === 'function') {
@@ -12718,7 +12750,12 @@ window.track = function (name, props) {
       var res = await saveAnswer(d.item, d.q, txt, {});
       otherSave.textContent = 'Save';
       if (window.track) track('question_other', { q: d.q.id });
-      if (res.error) return;
+      if (res.error) {
+        // Silently dropping this looked like a dead Save button.
+        if (window.reportIssue) reportIssue('lore saveAnswer failed', { error: res.error, q: d.q.id });
+        otherSave.textContent = 'Try again';
+        return;
+      }
       settle(txt);
     });
 

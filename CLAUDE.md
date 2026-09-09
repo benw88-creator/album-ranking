@@ -98,6 +98,50 @@ Do not reintroduce a client-side balance. The previous version computed discs in
 and posted the result, and its "daily cap" was an in-memory variable — both were trivially
 bypassed from the console, and nothing can be sold on top of that.
 
+### The pin trigger's escape hatch must be `current_user`, not the JWT
+
+Fixed in `..._20260909160000_fix_economy_pin.sql`. Worth reading before touching any pin
+trigger, because the broken version looked completely reasonable.
+
+`pin_profile_economy` originally let legitimate writes through with
+`if auth.role() is distinct from 'authenticated'`, commented "the wallet functions all pass
+straight through". They did not. **`auth.role()` reads the request's JWT claim from a
+request-scoped GUC, and `security definer` does not change that** — it changes the executing
+role. So inside `wallet_record_rating()` the claim was still `authenticated`, the guard never
+fired, and the trigger reverted the award with `new.discs := old.discs`.
+
+Every server-side economy write was being silently undone: `wallet_record_rating`,
+`wallet_buy`, `award_lore_disc` and the `bid_war_submit` payouts. **The Discs economy was
+inert for every non-admin user from the day it went server-side.**
+
+Two things hid it for days, and both are worth remembering:
+
+- `wallet_record_rating` returns `earned` from a local variable but `discs` from
+  `returning *` — the row *after* triggers. So the client toasted "+3 Discs" next to a number
+  that never moved, and the RPC reported success.
+- The only person likely to notice was an admin, and an admin's balance renders as the
+  literal `∞` regardless of what is stored. **The admin view hid the bug from the one person
+  looking for it.** Be wary of any admin short-circuit that replaces a real value with a
+  symbol.
+
+`current_user` is the boundary that actually exists: PostgREST issues `SET LOCAL ROLE` per
+request, so a client write arrives as `authenticated`, while inside a definer function it is
+the function's owner, and the SQL editor and `service_role` are neither. The transaction-local
+flag in `..._groove_roles.sql` (`vinall.role_ok`) is the other correct answer. **Any check
+based on the JWT is wrong by construction, because the JWT is identical on both sides of a
+definer boundary.**
+
+Nothing was back-paid, deliberately — the award counters were reverted by the same trigger, so
+there is no record of what anyone would have earned, and reconstructing it from row counts
+would ignore the daily caps. The fix migration ends with a commented one-off grant if you want
+to make good as an explicit decision.
+
+Client side, `recordRating()` now reports through `window.reportIssue()` both when the RPC
+errors and when `earned > 0` while the balance does not move — the second is the exact
+signature of a reverted server write, and it lands in `client_errors` where the admin panel
+shows it. `if (res.error) return;` is how this stayed invisible; **a handled error with no
+report is worse than an unhandled one**, because an exception at least reaches a console.
+
 That gap where a `groove_members` row could be updated by its own member — including their
 role — is closed. See Groove roles below.
 
