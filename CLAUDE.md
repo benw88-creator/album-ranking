@@ -62,15 +62,25 @@ For local work (optional, needs Node): `vercel env pull .env.local`.
 
 Supabase project ref `cqfxyebejpkyhswolrwi` (project name "Crate", Postgres 17, eu-west-1).
 
-The schema is still maintained by hand in the dashboard. `supabase/migrations/` holds only
-the one trigger migration below, not a full history. Snapshotting the rest needs
-`supabase db pull`, which needs Docker, which needs WSL2, which needs admin rights — so it
-can only be done from the main PC, not the school laptop.
+The schema is still maintained by hand in the dashboard. `supabase/migrations/` holds the
+migrations written since, not a full history — the core tables are not in there. Snapshotting
+the rest needs `supabase db pull`, which needs Docker, which needs WSL2, which needs admin
+rights — so it can only be done from the main PC, not the school laptop.
 
-`supabase/migrations/20260907090000_protect_is_admin.sql` was applied by hand in the SQL
-editor, so it is **not** recorded in Supabase's migration history. `supabase db push` will
-try to apply it again; that is safe, because it uses `create or replace` and
-`drop trigger if exists`.
+**Several migrations were applied by hand in the SQL editor and are therefore not recorded in
+Supabase's migration history**: `..._090000_protect_is_admin.sql`,
+`..._20260908120000_groove_roles.sql` and `..._20260909120000_listening_history.sql` (the last
+two applied 2026-09-09). A future `supabase db push` will try to apply all of them again.
+That is safe — every one of them is idempotent, using `create or replace`,
+`drop ... if exists` and `if not exists` throughout. **Keep new migrations idempotent for
+exactly this reason**, because "applied by hand and not recorded" is the normal case here,
+not the exception.
+
+The school laptop has **no Node, no npm, no Supabase CLI and no working Python**, so nothing
+there can reach Supabase or Vercel directly. Migrations written on that machine have to be
+pasted into the SQL editor by hand, and JS changes cannot be executed before they ship —
+structural checks and a post-deploy console read on the live site are the available
+substitutes.
 
 ## Security notes
 
@@ -437,7 +447,17 @@ message+line so one error in a loop cannot flood the table.
 `privacy.html` and `terms.html` are plain static pages, linked from the footer. The contact
 address is `spam30492@gmail.com`, set as a **temporary** stand-in — swap it for a real
 support address before any store submission or public launch, since this is the address people
-use to exercise data rights.
+use to exercise data rights. `privacy.html` also covers imported listening history: what is
+stored, that the aggregation happens on the device, and that it is private to the account.
+
+The footer carries **"Artwork and catalogue data from Spotify."** because Spotify's Developer
+Policy requires attribution wherever their content appears, and every piece of artwork in the
+app is theirs. Apple will not raise it; Spotify can. Don't remove it.
+
+`STORE-SUBMISSION.md` holds the paste-ready **App Review notes**, and the decisions on the two
+outside dependencies: the Spotify Development Mode cap does not apply (it limits authenticated
+users, and there are none), and kworb is kept deliberately with the 14-day `album_plays` cache,
+the admin health button and frozen war values as the things that make an outage survivable.
 
 The privacy policy was extended to cover what review actually asks for and what the
 code actually does: blocks and reports (data about two people, previously undisclosed),
