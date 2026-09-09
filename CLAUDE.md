@@ -116,10 +116,13 @@ Design decisions worth not undoing:
   even `popularity`), so `api/bid-war-create.js` takes the album's real tracklist from the
   Spotify API, reads per-track totals from kworb.net's artist table, and sums the matches.
   Cached in `album_plays` for 14 days, `source = 'kworb'`.
-  An album is skipped unless at least 60% of its tracks match, so a half-matched record
-  cannot be undervalued against a fully matched one. Measured match rates: 100% for
-  american dream, Blonde, SOS, To Pimp A Butterfly, In Rainbows, The Money Store; 92% IGOR;
-  64% Rumours, where kworb omits very low-stream deep cuts that barely move a sum.
+  An album is skipped unless at least **70%** of its tracks match (`MIN_MATCH` in
+  `_streams.js`) and at least 4 match (`MIN_TRACKS`, so a 3-track EP matching 2 cannot pass
+  on percentage alone), which stops a half-matched record being undervalued against a fully
+  matched one. Measured match rates: 100% for american dream, Blonde, SOS, To Pimp A
+  Butterfly, In Rainbows, The Money Store; 92% IGOR; 64% Rumours, where kworb omits very
+  low-stream deep cuts that barely move a sum — note that Rumours now falls *below* the
+  threshold and is skipped rather than undervalued.
   This replaced Last.fm album playcount, which was wrong by about a thousand times —
   scrobbles are not streams, and album-level scrobbles undercount further because plays
   scatter across singles and reissues. `LASTFM_API_KEY` is no longer used here.
@@ -184,6 +187,22 @@ How it is held together:
 - `grooves.owner_id` is still written and still correct, but **role is now the authority**,
   not ownership. Read the role, not `owner_id`, when deciding what someone may do.
 
+**Joining by link is deliberate.** The insert policy allows a row where
+`user_id = auth.uid()` precisely so `handleGrooveLink` can add you from a `?groove=` link
+with no leader present. Groove ids are UUIDs, so they are not enumerable, and anyone holding
+the link was given it.
+
+What was not deliberate was doing it blind. `handleGrooveLink` used to `upsert` on every
+visit with no `onConflict`, so a second visit either errored or added a duplicate membership
+row depending on keys this file cannot see, and it silently promoted an `invited` row to
+`member` without the person ever seeing the invite. It now selects first and inserts only
+when there is genuinely no row, leaving any existing row alone.
+
+One consequence worth deciding on rather than discovering: a member removed by a leader can
+rejoin instantly with the same link. Fixing that needs a tombstone (a removed-members table,
+or a `status = 'removed'` row kept instead of deleted) — there is no way to tell "removed"
+from "never joined" once the row is gone.
+
 ## Lore — the core loop
 
 The product thesis: VINALL is not a site where you rate music, it is where your relationship
@@ -243,13 +262,48 @@ Quota requires a registered business with **250k MAU** — circular and unreacha
 `recently-played` is a 50-item rolling window that cannot be paged past, there are no
 per-user play counts anywhere in the API, and Audio Features is blocked for dev-mode apps.
 
-So listening history should come from **the user's own Spotify data export** (Extended
-streaming history JSON — complete lifetime plays, no quota, works for everyone), with Last.fm
-as a live alternative for people who scrobble. Design any listening feature against an
-internal store, never against the Spotify API directly.
+There is also no Spotify user login any more (see Shape), so there is no per-user Spotify
+data reaching this app by any route at all. That is not a gap to close later; it is the
+permanent condition.
+
+So listening history comes from **the user's own Spotify data export** — and now actually
+does. See **Listening history** below. Design any listening feature against
+`listening_plays`, never against the Spotify API directly.
 
 Every question also carries an **Other…** option that opens a free-text field. The one-tap rule
 is about never *demanding* text, not about refusing it — plenty of real answers are on no list.
+
+### Listening history
+
+`listening_plays` (migration `..._20260909120000_listening_history.sql`) is the internal
+store the note above was describing. One row per track per person, and the client module
+is the block commented `LISTENING HISTORY` near the bottom of `index.html`.
+
+- **Aggregated in the browser, never uploaded raw.** A real Extended export is 100k–500k
+  play events. The finders only want counts and dates, so the events are folded to one row
+  per track before anything is sent, and only the top `CAP` (4000) rows go up. Nobody's
+  play-by-play leaves their machine.
+- **`k` is the merge key** — normalised `artist|track`, mirroring `normTitle` in
+  `api/_streams.js`. That is what makes re-importing an overlapping export merge instead of
+  doubling every count. Non-latin titles normalise to empty under that regex, so they fall
+  back to the plain lowercased string rather than collapsing into one row.
+- **Two export shapes exist** and people have both in the same zip: Extended streaming
+  history (`ts`, `ms_played`, `master_metadata_*`, `spotify_track_uri`) and the basic
+  one-year `StreamingHistory*.json` (`endTime`, `artistName`, `trackName`, `msPlayed`). The
+  parser reads both. Only the Extended one carries track ids, and a Lore answer is keyed by
+  item id — so someone who imports only the basic download gets the ratings-based finders
+  exactly as before rather than an error.
+- **30 seconds is a play**, matching Spotify's own definition. Counting skips would make
+  "what have you been rinsing" mean the opposite of what it says.
+- **The panel is dormant until the migration is applied.** One head query decides whether
+  the table is reachable; if it is not, nothing renders at all. A feature that appears and
+  then errors when touched is worse than one that waits.
+- Two new finders read it: `findRinsed` (played a lot, never rated, never asked about) and
+  `findAbandoned` (played 20+ times, nothing for eight months). They are first in
+  `buildQueue` because they are the strongest signal in the pool when there is any
+  listening data, and they return nothing when there is none.
+- RLS is own-rows-only for all four operations. This is the most personal table in the
+  database and it is never read to build somebody else's public profile.
 
 ## App shell — manifest, service worker, offline
 
@@ -306,14 +360,34 @@ Blocks are now applied everywhere a blocked person could otherwise reach you: th
 the crate feed, **album comments** (filtered by `feed_comments.user_id`), **notifications**
 (by `notifications.actor_id`), **follower and following lists**, **username search** (a
 blocked user returns "no user called…" rather than a Follow button) and **groove member
-lists**. Each call site loads the block set first, so filtering never runs against an empty
-cache. Filtering is client-side, which is right for a mute-style block — the rows are still
+lists**. Filtering is client-side, which is right for a mute-style block — the rows are still
 readable by policy, they are simply never shown.
 
+**The ordering is the whole thing, and it is easy to get wrong.** `isBlocked()` reads a cache
+that `loadBlocks()` fills, and it returns `false` when that cache is empty — so a filter that
+runs before the load is not a weak filter, it is no filter, and it fails silently. Two call
+sites shipped that way (album comments and groove member lists) and looked correct in the
+diff. Every site that calls `isBlocked` now awaits `loadBlocks()` first; on the album page it
+rides along in the same `Promise.all` as the ratings and comments.
+
+`loadBlocks()` also used to cache an empty map for a logged-out visitor, which meant logging
+in mid-session left the cache looking populated and quietly disabled every filter until a
+reload. It now returns without caching when nobody is signed in.
+
 Account deletion is `/api/delete-account`: `delete_my_data()` clears this project's rows as
-the user, then the Admin API removes the `auth.users` row with the service role. It walks a
-table/column list dynamically so a schema change cannot turn deletion into a hard error.
-Apple has required in-app deletion since June 2022.
+the user, the route deletes the avatar folder from the `avatars` storage bucket with the
+service role, then the Admin API removes the `auth.users` row. Apple has required in-app
+deletion since June 2022.
+
+The table/column list in `delete_my_data()` is walked dynamically, so naming a table this
+project does not have is skipped rather than raising — but **the list itself is hand-written,
+so a new table is not covered until somebody adds it**. Two were missing: `app_state`, the
+cloud mirror of localStorage holding every rating and diary entry, and `listening_plays`.
+Both are in the list now. `bid_wars` and `bid_war_bids` need no entry because their FKs to
+`auth.users` cascade. `client_errors` deliberately holds no user id. The avatar *file* could
+never be reached from SQL at all, which is why that half lives in the route.
+
+**Adding a table that holds user rows means adding it to that array in the same migration.**
 
 ### Checking a Bid War valuation
 
@@ -325,6 +399,16 @@ the two cannot drift.
 Reach for it first whenever a total looks wrong. The first time these numbers were wrong the
 algorithm turned out to be fine — the fault was stored data — and there was no way to tell
 the two apart without this.
+
+There is now a **kworb health** button on the admin panel that probes four albums with known
+match rates and shows the ratio, the matched count and `kworbRows` for each. It exists
+because the scrape is the most brittle thing in the app and nothing surfaced a failure: if
+kworb changes its table markup, every album falls below `MIN_MATCH`, wars quietly stop being
+creatable, and the first sign of it would be a war valuing a record at zero. `kworbRows` is
+the signal that separates "kworb dropped some deep cuts" from "the scrape is dead" — a live
+artist table has hundreds of rows, a broken one has none, and that holds even when the
+search picks a different edition of the album. It runs on the button rather than on render
+because each probe costs a Spotify call and a kworb fetch.
 
 **A war's values are frozen at creation.** That is deliberate, so neither player can watch
 them move mid-war, but it also means a war created under a broken or superseded valuation
@@ -338,6 +422,11 @@ true — it renders nothing at all for everybody else. It calls `analytics_summa
 `analytics_questions(30)` and `recent_errors(8)`. The headline tile is deliberately
 **"came back for a 2nd answer"**; the questions table is sorted worst-first, because a
 question with a low answer rate is a question to rewrite rather than evidence the idea fails.
+
+`#admin-stats` and `#listening-import` both live inside `view-profile`, which is *also* how
+you look at somebody else's profile. Both now bail when `?u=` names anybody but you —
+without that the admin panel followed you around and drew your own numbers under a
+stranger's name. Any new section added to that view needs the same guard.
 
 Crash reporting is the first script in the body so it catches failures in everything below.
 No third-party script and no signup: errors go to `client_errors`, which anyone may insert

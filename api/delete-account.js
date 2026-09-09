@@ -54,6 +54,33 @@ export default async function handler(req, res) {
       return;
     }
 
+    // The avatar file. delete_my_data() only clears rows, so before this the
+    // uploaded image outlived the account it belonged to — a photo, under
+    // Apple's own data types, sitting in a public bucket with nobody left to
+    // remove it. Files live at "<user id>/avatar.<ext>", so the whole folder
+    // goes. Best-effort: a storage hiccup must not strand a half-deleted
+    // account, and the rows are already gone by here.
+    try {
+      const ls = await fetch(SUPABASE_URL + '/storage/v1/object/list/avatars', {
+        method: 'POST',
+        headers: { apikey: SERVICE, Authorization: 'Bearer ' + SERVICE, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prefix: userId + '/', limit: 100 }),
+      });
+      if (ls.ok) {
+        const files = await ls.json();
+        const names = (Array.isArray(files) ? files : [])
+          .map((f) => f && f.name).filter(Boolean)
+          .map((n) => userId + '/' + n);
+        if (names.length) {
+          await fetch(SUPABASE_URL + '/storage/v1/object/avatars', {
+            method: 'DELETE',
+            headers: { apikey: SERVICE, Authorization: 'Bearer ' + SERVICE, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prefixes: names }),
+          });
+        }
+      }
+    } catch (e) { /* the account still goes */ }
+
     // Then the login itself, which needs the service role.
     const del = await fetch(SUPABASE_URL + '/auth/v1/admin/users/' + userId, {
       method: 'DELETE',

@@ -3670,6 +3670,7 @@ window.ICONS = {
     <div class="section-head" style="margin-top:34px;"><h2>Your Music Lore</h2><span class="muted" id="lore-count"></span></div>
     <p class="reco-note">Everything you&rsquo;ve said about your records.</p>
     <div id="lore-list"></div>
+    <div id="listening-import"></div>
     <div id="admin-stats"></div>
   </section>
 
@@ -5097,6 +5098,7 @@ function setMode(mode, fromCode) {
   if (mode === 'achievements' && window.renderAchievements) window.renderAchievements();
   if (mode === 'profile' && window.renderProfile) window.renderProfile();
   if (mode === 'profile' && window.renderLore) window.renderLore();
+  if (mode === 'profile' && window.renderListeningImport) window.renderListeningImport();
   if (mode === 'profile' && window.renderAdminStats) window.renderAdminStats();
   if (mode === 'people' && window.renderPeople) window.renderPeople();
   if (mode === 'grooves' && window.renderGrooves) window.renderGrooves();
@@ -7181,6 +7183,8 @@ async function openGroove(grooveId){
   document.getElementById('groove-members').innerHTML='<p class="reco-note">Loading members\u2026</p>';
   document.getElementById('groove-modal').classList.add('open');
   const me=Cloud.getUser();
+  // The block list has to be in memory before the filter below means anything.
+  await (window.loadBlocks?loadBlocks():Promise.resolve());
   const members=(await Cloud.grooveMembers(grooveId)).filter(function(p){return !(window.isBlocked&&isBlocked(p.id)&&p.id!==(me&&me.id));});
   const mine=members.filter(function(p){return me&&p.id===me.id;})[0];
   const myRole=(mine&&mine.role)||'member';
@@ -7253,7 +7257,38 @@ async function drawGrooveInviteList(filter){
 })();
 window.renderGrooves=renderGrooves;
 
-async function handleGrooveLink(){const gid=new URLSearchParams(location.search).get('groove');if(!gid)return false;if(!Cloud.isOn()){setMode('grooves');Cloud.openAuth();return true;}const g=await Cloud.fetchGroove(gid);if(g){try{await Cloud.client().from('groove_members').upsert({groove_id:gid,user_id:Cloud.getUser().id,status:'member'});}catch(e){}}history.replaceState(null,'',location.pathname);setMode('grooves');renderGrooves();if(g)openGroove(gid);return true;}
+/* Joining by invite link. The insert policy in ..._groove_roles.sql allows a
+   row where user_id = auth.uid() precisely so this can work without a leader
+   present, so a link join is by design.
+
+   What is *not* by design is doing it blind. This used to upsert on every
+   visit with no onConflict, which meant a second visit either errored or added
+   a duplicate membership row depending on the table's keys, and it silently
+   promoted an 'invited' row to 'member' without the person ever seeing the
+   invite. Now: look first, insert only when there is genuinely no row, and
+   leave an existing row exactly as it is. */
+async function handleGrooveLink(){
+  const gid=new URLSearchParams(location.search).get('groove');
+  if(!gid)return false;
+  if(!Cloud.isOn()){setMode('grooves');Cloud.openAuth();return true;}
+  const g=await Cloud.fetchGroove(gid);
+  if(g){
+    try{
+      const uid=Cloud.getUser().id;
+      const existing=await Cloud.client().from('groove_members')
+        .select('user_id,status').eq('groove_id',gid).eq('user_id',uid).maybeSingle();
+      if(!existing.data){
+        await Cloud.client().from('groove_members')
+          .insert({groove_id:gid,user_id:uid,status:'member'});
+      }
+    }catch(e){}
+  }
+  history.replaceState(null,'',location.pathname);
+  setMode('grooves');
+  renderGrooves();
+  if(g)openGroove(gid);
+  return true;
+}
 window.handleGrooveLink=handleGrooveLink;
 
 /* ================================================================
@@ -7595,10 +7630,13 @@ window.handleGrooveLink=handleGrooveLink;
       document.getElementById('ap-my-avatar').src=(prof&&prof.avatar_url)||DEFAULT_AV;
     }
 
-    // load ratings and album-level comments in parallel
+    // load ratings and album-level comments in parallel. loadBlocks rides
+    // along because the comment filter below is a no-op until it has run, and
+    // an album page is a perfectly normal first stop in a session.
     const [ratings,comments]=await Promise.all([
       window.Cloud?Cloud.fetchAlbumPageRatings(_currentMeta.id):[],
-      window.Cloud?Cloud.fetchComments('album:'+_currentMeta.id):[]
+      window.Cloud?Cloud.fetchComments('album:'+_currentMeta.id):[],
+      window.loadBlocks?loadBlocks():Promise.resolve()
     ]);
 
     // render ratings
@@ -11323,8 +11361,11 @@ let _blocked = null;
 
 async function loadBlocks(force) {
   if (_blocked && !force) return _blocked;
+  // Don't cache anything for a guest. Caching an empty map here meant that
+  // logging in mid-session left the cache looking populated, so every filter
+  // downstream quietly stopped applying until a reload.
+  if (!Cloud.isOn()) return {};
   _blocked = {};
-  if (!Cloud.isOn()) return _blocked;
   try {
     const r = await Cloud.client().from('blocks').select('blocked_id').eq('blocker_id', Cloud.getUser().id);
     (r.data || []).forEach(function (b) { _blocked[b.blocked_id] = true; });
@@ -11487,6 +11528,12 @@ async function renderAdminStats() {
   host.innerHTML = '';
   if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
 
+  // #admin-stats lives inside view-profile, which is also how you look at
+  // somebody else's profile — so without this the panel followed you around
+  // and drew your own stats under a stranger's name.
+  var viewing = new URLSearchParams(location.search).get('u');
+  if (viewing && viewing !== Cloud.getUser().id) return;
+
   var prof = null;
   try { prof = await Cloud.fetchProfile(Cloud.getUser().id); } catch (e) {}
   if (!prof || !prof.is_admin) return;      // silent for everyone else
@@ -11564,10 +11611,384 @@ async function renderAdminStats() {
       }).join('') + '</div>'
     : '<div class="reco-note">Nothing has crashed. That is either good news or nobody has visited.</div>';
 
+  /* kworb health. The Bid War valuation reads per-track totals out of scraped
+     HTML, which is the most brittle thing in the app: if kworb changes its
+     table markup the scrape returns nothing, every album fails the match
+     threshold, and wars quietly stop being creatable. Nothing surfaced that
+     before — you would have found out from a war that valued a record at zero.
+
+     On demand rather than on render, because each probe costs a Spotify call
+     and a kworb fetch. `kworbRows` is the real signal: a live artist table has
+     hundreds of rows, a broken scrape has none, and that distinction survives
+     even when the search picks a different edition of the album. */
+  html += '<h3 class="prof-section-title" style="margin-top:26px;">kworb health</h3>' +
+    '<p class="reco-note">The stream scrape behind Bid Wars. Run this if a valuation looks wrong.</p>' +
+    '<button class="btn-mini" id="kworb-check">Check the scrape</button>' +
+    '<div id="kworb-out" style="margin-top:10px;"></div>';
+
   host.innerHTML = html;
+
+  var kb = document.getElementById('kworb-check');
+  if (kb) kb.addEventListener('click', async function () {
+    // Baselines measured when the valuation was written and recorded in
+    // CLAUDE.md. A ratio well under its baseline means kworb dropped tracks;
+    // zero rows across all four means the scrape itself is dead.
+    var PROBES = [
+      { q: 'Frank Ocean Blonde',            was: 1.0 },
+      { q: 'SZA SOS',                       was: 1.0 },
+      { q: 'Radiohead In Rainbows',         was: 1.0 },
+      { q: 'Tyler, the Creator IGOR',       was: 0.92 }
+    ];
+    kb.disabled = true;
+    kb.textContent = 'Checking…';
+    var out = document.getElementById('kworb-out');
+    var rows = [];
+    for (var i = 0; i < PROBES.length; i++) {
+      var p = PROBES[i];
+      var r = null;
+      try {
+        var resp = await fetch('/api/album-streams?q=' + encodeURIComponent(p.q) + '&debug=1');
+        r = await resp.json();
+      } catch (e) { r = { error: String((e && e.message) || e) }; }
+      rows.push({ p: p, r: r || {} });
+      out.innerHTML = '<p class="reco-note">' + (i + 1) + ' of ' + PROBES.length + '…</p>';
+    }
+    var deadScrape = rows.every(function (x) { return !x.r.kworbRows; });
+    out.innerHTML =
+      (deadScrape
+        ? '<div class="reco-note" style="color:var(--red);">No kworb rows for any artist — the scrape is broken. Check the table markup in <code>artistStreamTable</code>.</div>'
+        : '') +
+      '<div class="qtable">' + rows.map(function (x) {
+        var r = x.r;
+        if (r.error || (!r.ok && !r.ratio)) {
+          return '<div class="errow"><div class="errmsg">' + esc(x.p.q) + '</div>' +
+            '<div class="errmeta">failed — ' + esc(String(r.error || r.reason || 'unknown')) + '</div></div>';
+        }
+        var pctNow = Math.round((r.ratio || 0) * 100);
+        var drop = Math.round((x.p.was - (r.ratio || 0)) * 100);
+        return '<div class="qrow"><span class="qid">' + esc(r.album || x.p.q) + '</span>' +
+          '<span class="qbar"><i style="width:' + pctNow + '%"></i></span>' +
+          '<span class="qnum">' + pctNow + '%</span>' +
+          '<span class="qsub">' + r.matched + '/' + r.tracks + ' matched · ' +
+            (r.kworbRows || 0) + ' kworb rows · was ' + Math.round(x.p.was * 100) + '%' +
+            (drop >= 15 ? ' · DOWN ' + drop : '') +
+            (r.ok ? '' : ' · would be skipped') + '</span></div>';
+      }).join('') + '</div>';
+    kb.disabled = false;
+    kb.textContent = 'Check again';
+  });
 }
 window.renderAdminStats = renderAdminStats;
 </script>
+<!-- ================================================================
+     LISTENING HISTORY — import, store, read
+     ================================================================
+     Every Lore finder up to now has run on ratings, because Spotify will
+     not give us listening data at any tier we can reach: 5 authenticated
+     users in Development Mode, Extended Quota gated behind a registered
+     business with 250k MAU, `recently-played` a 50-item window with no
+     paging, and no per-user play counts in the API at all.
+
+     So the data comes from the person instead. Spotify will post anybody
+     their own Extended streaming history as JSON — lifetime, complete, no
+     quota, no app review — and it lands here.
+
+     Three rules this module keeps:
+
+       * Aggregate in the browser. An export is 100k-500k events and the
+         finders only want counts and dates, so the events are folded to one
+         row per track before a single byte is uploaded. Nobody's raw
+         play-by-play leaves their machine.
+       * Idempotent. `k` is a normalised artist|track key, matching the
+         server's normTitle, so re-importing an overlapping export merges
+         instead of doubling every count.
+       * Dormant until the table exists. If the migration has not been
+         applied the panel renders nothing at all, rather than showing a
+         feature that errors when you touch it.
+     ================================================================ -->
+<script>
+(function () {
+  function sb() { return (window.Cloud && Cloud.client) ? Cloud.client() : null; }
+  function on() { return !!(window.Cloud && Cloud.isOn && Cloud.isOn()); }
+  function uid() { return (window.Cloud && Cloud.getUser && Cloud.getUser()) ? Cloud.getUser().id : null; }
+
+  // A stream, per Spotify's own definition, is 30 seconds. Below that it is a
+  // skip, and counting skips would make "what have you been rinsing" mean the
+  // opposite of what it says.
+  var MIN_MS = 30000;
+  // Rows uploaded, most-played first. Nobody's tail of one-off plays is worth
+  // 200k rows in Postgres, and no finder reaches past a few thousand.
+  var CAP = 4000;
+  var CHUNK = 500;
+
+  // Mirrors normTitle in api/_streams.js. Non-latin titles normalise to empty
+  // under that regex, so fall back to the plain lowercased string rather than
+  // merging every one of them into a single row.
+  function norm(s) {
+    var t = String(s || '')
+      .replace(/\((feat|with)[^)]*\)/gi, '')
+      .replace(/\[(feat|with)[^\]]*\]/gi, '')
+      .replace(/-\s*(feat|with)\b.*$/i, '')
+      .replace(/-\s*(\d{4}\s*)?(remaster|remastered|remix|radio edit|single version|album version|mono|stereo)\b.*$/i, '')
+      .replace(/[^a-z0-9]/gi, '')
+      .toLowerCase();
+    if (t) return t;
+    return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+  function keyOf(artist, track) { return norm(artist) + '|' + norm(track); }
+
+  /* ---- parsing ---------------------------------------------------------
+     Two shapes are in circulation and people have both in the same zip:
+
+       Extended streaming history (the one to ask for)
+         { ts, ms_played, master_metadata_track_name,
+           master_metadata_album_artist_name,
+           master_metadata_album_album_name, spotify_track_uri }
+
+       StreamingHistory*.json from the basic account download — one year
+       only, no album, no uri
+         { endTime, artistName, trackName, msPlayed }
+
+     Podcast episodes come through with null track metadata; they are not
+     music and are dropped. */
+  function readEvent(e) {
+    if (!e || typeof e !== 'object') return null;
+    var track, artist, album, uri, ms, when;
+    if (e.master_metadata_track_name !== undefined || e.ts !== undefined) {
+      track  = e.master_metadata_track_name;
+      artist = e.master_metadata_album_artist_name;
+      album  = e.master_metadata_album_album_name;
+      uri    = e.spotify_track_uri || null;
+      ms     = Number(e.ms_played || 0);
+      when   = e.ts || null;
+    } else if (e.trackName !== undefined || e.endTime !== undefined) {
+      track  = e.trackName;
+      artist = e.artistName;
+      album  = null;
+      uri    = null;
+      ms     = Number(e.msPlayed || 0);
+      when   = e.endTime || null;
+    } else return null;
+    if (!track || !artist) return null;              // podcast or a blank row
+    if (!(ms >= MIN_MS)) return null;
+    var t = when ? Date.parse(when) : NaN;
+    return { track: String(track), artist: String(artist),
+             album: album ? String(album) : null, uri: uri, ms: ms,
+             at: isNaN(t) ? null : t };
+  }
+
+  // Folds a list of files into one row per track. Returns the rows plus what
+  // was actually seen, so the UI can say something true about the import
+  // rather than just "done".
+  function fold(events) {
+    var byKey = {}, kept = 0;
+    events.forEach(function (raw) {
+      var e = readEvent(raw);
+      if (!e) return;
+      kept++;
+      var k = keyOf(e.artist, e.track);
+      var row = byKey[k];
+      if (!row) {
+        row = byKey[k] = { k: k, track: e.track, artist: e.artist, album: e.album,
+                           track_uri: e.uri, plays: 0, ms_played: 0,
+                           first_played: null, last_played: null };
+      }
+      row.plays++;
+      row.ms_played += e.ms;
+      if (!row.album && e.album) row.album = e.album;
+      if (!row.track_uri && e.uri) row.track_uri = e.uri;
+      if (e.at != null) {
+        if (row.first_played == null || e.at < row.first_played) row.first_played = e.at;
+        if (row.last_played  == null || e.at > row.last_played)  row.last_played  = e.at;
+      }
+    });
+    var rows = Object.keys(byKey).map(function (k) { return byKey[k]; });
+    rows.sort(function (a, b) { return b.plays - a.plays; });
+    return { rows: rows, kept: kept, unique: rows.length };
+  }
+
+  /* ---- store ----------------------------------------------------------- */
+
+  var _plays = null;
+
+  // Does the table exist and can this person read it? One cheap head query,
+  // used both to gate the panel and to keep a missing migration from looking
+  // like a broken feature.
+  var _available = null;
+  async function available() {
+    if (_available !== null) return _available;
+    if (!on()) return false;                          // don't cache for a guest
+    try {
+      var r = await sb().from('listening_plays')
+        .select('k', { count: 'exact', head: true }).eq('user_id', uid());
+      _available = !r.error;
+    } catch (e) { _available = false; }
+    return _available;
+  }
+
+  // Exact row count, because listeningPlays() only ever loads the top slice
+  // and a summary line that quietly says 1500 when the truth is 40,000 is
+  // worse than no summary line.
+  async function countRows() {
+    if (!on() || !(await available())) return 0;
+    try {
+      var r = await sb().from('listening_plays')
+        .select('k', { count: 'exact', head: true }).eq('user_id', uid());
+      return r.count || 0;
+    } catch (e) { return 0; }
+  }
+
+  async function listeningPlays(force) {
+    if (_plays && !force) return _plays;
+    if (!on() || !(await available())) return [];
+    try {
+      var r = await sb().from('listening_plays')
+        .select('k,track,artist,album,track_uri,plays,ms_played,first_played,last_played')
+        .eq('user_id', uid()).order('plays', { ascending: false }).limit(1500);
+      _plays = r.data || [];
+    } catch (e) { _plays = []; }
+    return _plays;
+  }
+  window.listeningPlays = listeningPlays;
+
+  async function upload(rows, onProgress) {
+    var me = uid();
+    var now = new Date().toISOString();
+    var payload = rows.slice(0, CAP).map(function (r) {
+      return {
+        user_id: me, k: r.k, track: r.track, artist: r.artist,
+        album: r.album, track_uri: r.track_uri,
+        plays: r.plays, ms_played: r.ms_played,
+        first_played: r.first_played ? new Date(r.first_played).toISOString() : null,
+        last_played:  r.last_played  ? new Date(r.last_played).toISOString()  : null,
+        source: 'spotify-export', updated_at: now
+      };
+    });
+    var done = 0;
+    for (var i = 0; i < payload.length; i += CHUNK) {
+      var slice = payload.slice(i, i + CHUNK);
+      var r = await sb().from('listening_plays')
+        .upsert(slice, { onConflict: 'user_id,k' });
+      if (r.error) return { error: r.error.message, done: done };
+      done += slice.length;
+      if (onProgress) onProgress(done, payload.length);
+    }
+    return { done: done };
+  }
+
+  /* ---- the panel ------------------------------------------------------- */
+
+  async function renderListeningImport() {
+    var host = document.getElementById('listening-import');
+    if (!host) return;
+    host.innerHTML = '';
+    if (!on()) return;
+
+    // Your listening history is yours; it is never drawn on somebody else's
+    // profile page, which is the same view.
+    var viewing = new URLSearchParams(location.search).get('u');
+    if (viewing && viewing !== uid()) return;
+    if (!(await available())) return;                 // migration not applied yet
+
+    var mine = await listeningPlays(true);
+    var total = await countRows();
+    var totalPlays = mine.reduce(function (s, r) { return s + (r.plays || 0); }, 0);
+
+    host.innerHTML =
+      '<div class="section-head" style="margin-top:34px;"><h2>Your listening</h2></div>' +
+      (mine.length
+        ? '<p class="reco-note">' + total.toLocaleString() + ' tracks imported' +
+          (total > mine.length
+            ? '; your top ' + mine.length.toLocaleString() + ' account for ' +
+              totalPlays.toLocaleString() + ' plays'
+            : ', ' + totalPlays.toLocaleString() + ' plays in all') +
+          '. VINALL uses this to notice things your ratings alone cannot show.</p>'
+        : '<p class="reco-note">Spotify will email you your full listening history, ' +
+          'and it goes back to the beginning — not just this year. Ask for it at ' +
+          '<b>Spotify &rarr; Privacy settings &rarr; Extended streaming history</b>. ' +
+          'It takes a few weeks to arrive. Unzip it and drop the JSON files here.</p>') +
+      '<div class="g-field" style="max-width:460px;">' +
+        '<input type="file" id="lh-file" accept=".json,application/json" multiple>' +
+      '</div>' +
+      '<div id="lh-out" style="margin-top:8px;"></div>' +
+      (mine.length
+        ? '<div class="qtable" style="margin-top:12px;">' + mine.slice(0, 10).map(function (r) {
+            return '<div class="qrow"><span class="qid">' + esc(r.track) + '</span>' +
+              '<span class="qsub">' + esc(r.artist) + ' · ' + r.plays + ' plays</span></div>';
+          }).join('') + '</div>' +
+          '<button class="btn-mini" id="lh-clear" style="margin-top:10px;color:var(--red);">Remove my listening history</button>'
+        : '');
+
+    var input = document.getElementById('lh-file');
+    var out = document.getElementById('lh-out');
+
+    if (input) input.addEventListener('change', async function () {
+      var files = Array.prototype.slice.call(input.files || []);
+      if (!files.length) return;
+      out.innerHTML = '<p class="reco-note">Reading ' + files.length + ' file' +
+        (files.length === 1 ? '' : 's') + '…</p>';
+
+      var events = [], bad = 0;
+      for (var i = 0; i < files.length; i++) {
+        try {
+          var txt = await files[i].text();
+          var j = JSON.parse(txt);
+          if (Array.isArray(j)) events = events.concat(j);
+          else bad++;
+        } catch (e) { bad++; }
+        out.innerHTML = '<p class="reco-note">Read ' + (i + 1) + ' of ' + files.length + '…</p>';
+      }
+
+      if (!events.length) {
+        out.innerHTML = '<div class="reco-note">Nothing readable in ' +
+          (bad ? 'those files' : 'that') + '. The files you want are named ' +
+          '<code>Streaming_History_Audio_*.json</code> — not the account or ' +
+          'playlist ones, and not the zip itself.</div>';
+        return;
+      }
+
+      out.innerHTML = '<p class="reco-note">Folding ' + events.length.toLocaleString() + ' plays…</p>';
+      var f = fold(events);
+      if (!f.rows.length) {
+        out.innerHTML = '<div class="reco-note">Read ' + events.length.toLocaleString() +
+          ' rows but none were music played for 30 seconds or more. If those were ' +
+          'podcast files, the ones you want are the audio history.</div>';
+        return;
+      }
+
+      var up = await upload(f.rows, function (done, total) {
+        out.innerHTML = '<p class="reco-note">Saving ' + done.toLocaleString() +
+          ' of ' + total.toLocaleString() + '…</p>';
+      });
+      if (up.error) {
+        out.innerHTML = '<div class="reco-note">Saved ' + up.done.toLocaleString() +
+          ' before it stopped: ' + esc(up.error) + '</div>';
+        return;
+      }
+
+      if (window.track) window.track('listening_imported', { tracks: up.done, events: f.kept });
+      out.innerHTML = '<div class="reco-note">Kept ' + f.kept.toLocaleString() +
+        ' plays across ' + f.unique.toLocaleString() + ' tracks' +
+        (f.rows.length > CAP ? ' (saved your top ' + CAP.toLocaleString() + ')' : '') +
+        '. Today will start using it.</div>';
+      _plays = null;
+      if (window.renderToday) window.renderToday(true);
+      renderListeningImport();
+    });
+
+    var clr = document.getElementById('lh-clear');
+    if (clr) clr.addEventListener('click', async function () {
+      if (!confirm('Remove your imported listening history? Your ratings and lore stay.')) return;
+      clr.disabled = true;
+      try { await sb().from('listening_plays').delete().eq('user_id', uid()); } catch (e) {}
+      _plays = null;
+      renderListeningImport();
+    });
+  }
+  window.renderListeningImport = renderListeningImport;
+})();
+</script>
+
 <!-- Analytics. Event names and small prop bags, nothing resembling a page
      view. The question this exists to answer is whether anybody answers a
      SECOND question — before this there was no way to know, and that number
@@ -11849,6 +12270,74 @@ window.track = function (name, props) {
     return out;
   }
 
+  /* ---- finders that need listening data ---------------------------------
+     These are the two the brief always wanted and ratings could never
+     support: what you actually played to death, and what you played to death
+     and then dropped. Both read the imported store, never the Spotify API —
+     see the LISTENING HISTORY module for why there is no other way.
+
+     Only rows carrying a spotify:track: uri are usable, because a Lore answer
+     is keyed by item id and the older one-year export format has no ids in
+     it. Someone who imported only the basic download gets the ratings-based
+     finders exactly as before rather than an error. */
+  var _plays = [];
+
+  function playRows() { return _plays || []; }
+
+  function trackIdOf(r) {
+    var m = /^spotify:track:([A-Za-z0-9]+)$/.exec(String(r.track_uri || ''));
+    return m ? m[1] : null;
+  }
+
+  function itemFromPlay(r, id) {
+    return { kind: 'song', id: id, name: r.track, artist: r.artist, art: '' };
+  }
+
+  // timeAgo() tops out at days, which is fine for a feed and terrible in a
+  // sentence — "nothing since 743d ago" is not something a person would say.
+  // Everything this finder touches is eight months old at minimum.
+  function sinceWords(t) {
+    var d = Math.floor((Date.now() - t) / DAY);
+    if (d >= 730) return Math.floor(d / 365) + ' years ago';
+    if (d >= 365) return 'over a year ago';
+    return Math.round(d / 30) + ' months ago';
+  }
+
+  // Played a lot, never rated, never asked about. The single strongest signal
+  // in the whole dataset and the app has been blind to it until now.
+  function findRinsed() {
+    var out = [], sg = songs(), rows = playRows();
+    var rated = {};
+    Object.keys(sg).forEach(function (k) { if (sg[k] && sg[k].id) rated[sg[k].id] = true; });
+    rows.slice(0, 120).forEach(function (r) {
+      if ((r.plays || 0) < 15) return;
+      var id = trackIdOf(r);
+      if (!id || rated[id] || anyLoreFor('song', id)) return;
+      out.push(mkDiscovery('rinsed',
+        'You have played ' + esc2(r.track) + ' ' + r.plays + ' times and never said a word about it.',
+        itemFromPlay(r, id), ['casual', 'people', 'place']));
+    });
+    return out.filter(Boolean);
+  }
+
+  // Heavily played, then stopped. "A record you played to death and
+  // abandoned" is in the product thesis word for word.
+  function findAbandoned() {
+    var out = [], rows = playRows(), now = Date.now();
+    rows.slice(0, 200).forEach(function (r) {
+      if ((r.plays || 0) < 20 || !r.last_played) return;
+      var last = Date.parse(r.last_played);
+      if (isNaN(last) || now - last < 240 * DAY) return;
+      var id = trackIdOf(r);
+      if (!id || anyLoreFor('song', id)) return;
+      out.push(mkDiscovery('abandoned',
+        'You played ' + esc2(r.track) + ' ' + r.plays + ' times and then stopped — nothing since ' +
+        sinceWords(last) + '.',
+        itemFromPlay(r, id), ['time', 'opinion']));
+    });
+    return out.filter(Boolean);
+  }
+
   // ---- storage ------------------------------------------------------------
 
   async function loadLore(force) {
@@ -11968,7 +12457,11 @@ window.track = function (name, props) {
   }
 
   function buildQueue() {
-    var raw = [].concat(findFresh(), findContradiction(), findAlbumLove(),
+    // The two listening finders go first because they are the strongest thing
+    // in the pool when there is any listening data at all, and return nothing
+    // when there is none.
+    var raw = [].concat(findRinsed(), findAbandoned(),
+                        findFresh(), findContradiction(), findAlbumLove(),
                         findArtistGap(), findNostalgia(), findAnyRated());
     // One entry per record per pass. You work through everything you own
     // before anything comes round again.
@@ -12286,6 +12779,10 @@ window.track = function (name, props) {
     host.innerHTML = '<p class="reco-note">Having a look through your crate…</p>';
     host.style.height = '';
     await loadLore(force);
+    // Listening data is optional: no import, no rows, and the two listening
+    // finders simply contribute nothing.
+    try { _plays = window.listeningPlays ? await window.listeningPlays(force) : []; }
+    catch (e) { _plays = []; }
     _queue = buildQueue();
     _qi = 0;
     host.innerHTML = '';

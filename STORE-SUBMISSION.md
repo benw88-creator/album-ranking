@@ -48,6 +48,14 @@ Notes for the form:
 - **Product interaction** genuinely serves two purposes; declare both. Declaring
   only Analytics understates it, and Apple treats an understatement as the
   problem, not an overstatement.
+- **Imported listening history** falls under *User content — other*, which is
+  already Yes / linked / App Functionality, so the table needs no new row. Say so
+  in the review notes anyway: it is optional, the user supplies the file
+  themselves, the per-play events are aggregated in the browser and never
+  uploaded, only per-track totals are stored, and it is private to the account.
+  It is **not** *Browsing history* — that means browsing within the app — and it
+  is not *Purchases*. If avatars are stripped before submission, this is then the
+  only user-supplied file the app accepts.
 
 ### Google Play Data Safety
 
@@ -157,9 +165,25 @@ possible first screenshot.
 These cannot be done from the code:
 
 - [ ] A real support address to replace `spam30492@gmail.com` in `privacy.html`,
-      `terms.html` and the store listing
+      `terms.html` and the store listing. Apple emails this address during review
+      and a bounce or an unread mailbox is a rejection, so it has to be one you
+      actually open — a Gmail alias is fine, a dead one is not
 - [ ] Apply `supabase/migrations/20260908120000_groove_roles.sql` by hand in the
-      Supabase SQL editor
+      Supabase SQL editor. **Until this is applied the groove UI is broken**, not
+      merely unprotected: the client already calls `groove_create`,
+      `groove_set_role` and `groove_remove_member`, and those functions do not
+      exist yet, so creating a groove fails outright
+- [ ] Apply `supabase/migrations/20260909120000_listening_history.sql` in the same
+      editor session. It creates `listening_plays` **and** adds the two tables
+      that were missing from `delete_my_data()` — `app_state` and
+      `listening_plays`. Until it runs, "Delete my account" leaves every rating
+      and diary entry behind in `app_state`, which is the one item on this list
+      that is a straight compliance failure rather than a rough edge
+- [ ] Check **Authentication → URL Configuration** in Supabase: Site URL must be
+      `https://wildcrate.xyz` (it defaults to `http://localhost:3000`) and
+      Redirect URLs must include `https://wildcrate.xyz/**`. Supabase falls back
+      to Site URL with no error anywhere, so if this is still the default then
+      password reset is broken for every user right now
 - [ ] Delete `REDIRECT_URI` from Vercel → Settings → Environment Variables
 - [ ] Apple Developer Program enrolment (99 USD/yr, identity check, has a lead time)
 - [ ] Answer the age-rating questionnaire using the table above
