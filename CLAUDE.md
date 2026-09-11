@@ -161,6 +161,25 @@ alongside a sink. Keep that in mind before raising any number here.
   award in the game; the pass brought everything else up to parity rather than chasing them.
   Changing them means replacing the whole of `bid_war_submit`.
 
+## Rewards (`view-rewards`)
+
+The seven-day login ladder, laid out: what each day pays, which days you have taken, today
+lifted, and day seven showing the album banner as the thing the run is for. Then what the
+banner is, The Draw, the Shop, and a table of **every single thing in the app that pays
+Discs** — which was previously scattered across five surfaces and written down nowhere.
+
+It exists because **every reward in this app used to be invisible until it had already been
+earned.** The album-banner picker only rendered once you owned a pick, so nothing told a new
+player the reward existed at all — it looked like it had never been built. A reward nobody can
+see motivates nobody, and the ladder is the entire reason to come back on day two.
+
+Two traps here:
+
+- **`views` in `setMode` is an explicit map, not derived from the DOM.** Adding a nav button
+  without adding the matching entry hides every section and shows a blank page.
+- `payFor(day)` in the Rewards module mirrors the formula in `wallet_daily_login()`. **Change
+  one and you must change the other** — this one is display only, the server is what pays.
+
 ## The Draw
 
 A case-opening reel bought with Discs (`..._20260911230000_the_draw.sql`). Own modal, own
