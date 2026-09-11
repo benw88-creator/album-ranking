@@ -127,6 +127,40 @@ that actually landed, so nothing is promised once the daily cap is hit.
 **A reward that vanishes on refresh is worse than no reward.** Before adding feel to a game,
 check the feel is attached to something real.
 
+### The economy's shape, and why the sink matters more than the faucet
+
+Balanced in `..._20260911200000_login_rewards_and_inflation.sql`. Before it, the ceiling was
+~256 Discs a day doing literally everything and ~60 on a realistic session, against a shop
+costing 1,580 in total — so a normal player spent about a month earning their way to owning
+everything, and **the day they owned it all, Discs stopped meaning anything.**
+
+**Inflating what you earn, on its own, only brings that day forward.** It is safe only
+alongside a sink. Keep that in mind before raising any number here.
+
+- **Daily login** — `wallet_daily_login()`, 10 Discs on day one rising to 40 by day seven,
+  then flat. Plateaued on purpose: this rewards *opening* the app, which is a weaker thing to
+  reward than the rating streak beside it. No streak freezes, because a freeze here would
+  protect you from not opening an app. Safe to call on every load — it returns
+  `claimed_already` and changes nothing.
+- **Every seventh consecutive day earns an album banner.** `wallet_claim_album_banner(art)`
+  spends one `banner_picks` entitlement and appends a banner keyed **`album:<cover url>`** to
+  `owned_banners`. This is the sink: every claim is a different object, so unlike a fixed
+  shop it cannot be finished.
+  - The URL is **re-validated server-side** against `^https://i\.scdn\.co/image/…`. Without
+    that it is an arbitrary image embed on a public profile — a moderation problem and a
+    tracking-pixel problem at once.
+  - `album:` banners are not in the client's `BANNERS` map, so both the profile header and
+    the shop need their own branch for them. The shop lists them from `owned_banners`;
+    without that they would be owned but unreachable the moment you equipped anything else.
+  - Covers render blurred behind a dark gradient. At full strength a 640px cover makes every
+    piece of text on the header unreadable.
+- **Rates**: ratings 5 × 8/day, lore 3 × 20/day, Earworm 25, Daily Drop 40, Tournament 20,
+  achievements 20, Higher or Lower 20. **Caps are the anti-forgery defence, not the balance
+  lever** — move the amounts, not the caps.
+- **Bid War payouts (30/8/15) are deliberately not inflated.** They were already the largest
+  award in the game; the pass brought everything else up to parity rather than chasing them.
+  Changing them means replacing the whole of `bid_war_submit`.
+
 ### The pin trigger's escape hatch must be `current_user`, not the JWT
 
 Fixed in `..._20260909160000_fix_economy_pin.sql`. Worth reading before touching any pin
