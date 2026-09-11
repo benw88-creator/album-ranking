@@ -2994,6 +2994,47 @@ body.entering-done #artist-hero {
 }
 .td-opt:hover:not(:disabled) { background: var(--surface-3); border-color: var(--gold-dim); }
 .td-opt:active:not(:disabled) { transform: scale(0.96); }
+.td-opt { position: relative; overflow: hidden; }
+
+/* ---- shared feedback: burst, ripple ---------------------------------
+   Fixed layer, pointer-events none, so a burst can never sit between a
+   finger and the thing it is celebrating. */
+.vb-layer { position: fixed; inset: 0; pointer-events: none; z-index: 9999; }
+.vb-dot {
+  position: fixed; width: 7px; height: 7px; border-radius: 50%;
+  margin: -3.5px 0 0 -3.5px; opacity: 0;
+  animation: vbFly 780ms cubic-bezier(.18,.9,.32,1) forwards;
+}
+@keyframes vbFly {
+  0%   { opacity: 1; transform: translate(0,0) scale(.5); }
+  22%  { opacity: 1; transform: translate(calc(var(--dx) * .55), calc(var(--dy) * .62)) scale(1.15); }
+  100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) + 26px)) scale(.35); }
+}
+.vb-ripple {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(255,216,74,.55) 0%, rgba(255,216,74,0) 68%);
+  transform: scale(0); opacity: .9;
+  animation: vbRipple 600ms var(--ease) forwards;
+}
+@keyframes vbRipple { to { transform: scale(1); opacity: 0; } }
+
+/* A run of answers in one sitting is the thing worth rewarding, so the
+   counter earns a heavier beat every fifth one rather than the same small
+   bump forever. */
+.today-count.milestone {
+  animation: tdMilestone 0.9s var(--ease);
+  background: var(--gold); color: #1a1508;
+}
+@keyframes tdMilestone {
+  0%   { transform: scale(1) rotate(0); }
+  25%  { transform: scale(1.4) rotate(-4deg); }
+  55%  { transform: scale(1.12) rotate(3deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vb-dot, .vb-ripple, .today-count.milestone { animation: none !important; }
+}
 .td-opt.chosen {
   background: var(--gold); border-color: var(--gold); color: #1a1508; font-weight: 600;
   animation: tdPop 0.36s var(--ease);
@@ -3104,14 +3145,20 @@ body.entering-done #artist-hero {
   transition: none;
 }
 .td-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.td-next {
+/* "Not now" on the cards that aren't questions. Deliberately the quietest
+   thing on the card and deliberately the same dashed language as "Not this
+   one", so there is one way to say no and it looks the same everywhere. The
+   old gold "Next →" competed with the real action for attention and implied
+   the card was a step in a sequence, which it isn't. */
+.td-dismiss {
   margin-left: auto;
-  background: none; border: none; color: var(--gold);
-  font-family: var(--font-body); font-size: 13px; font-weight: 600;
-  cursor: pointer; padding: 8px 2px;
+  background: none; border: 1px dashed var(--border); border-radius: 999px;
+  color: var(--text-faint);
+  font-family: var(--font-body); font-size: 12px; font-weight: 600;
+  cursor: pointer; padding: 7px 14px;
+  transition: color .18s ease, border-color .18s ease;
 }
-.td-next:hover { text-decoration: underline; text-underline-offset: 3px; }
-.td-after .td-next { display: block; margin: 12px 0 0 auto; }
+.td-dismiss:hover { color: var(--text-dim); border-color: var(--text-faint); }
 .td-other { border-style: dashed; }
 .td-other-wrap { display: flex; gap: 8px; margin-top: 12px; }
 .td-other-in {
@@ -5886,6 +5933,84 @@ function loadClaimed(){try{return JSON.parse(localStorage.getItem('crate_claimed
 function isClaimed(k){return!!loadClaimed()[k];}
 function setClaimed(k){const o=loadClaimed();o[k]=true;try{localStorage.setItem('crate_claimed',JSON.stringify(o));}catch(e){}if(window.Cloud)Cloud.push('crate_claimed');}
 
+/* ---- shared feedback primitives --------------------------------------
+   One burst, one ripple, one haptic, used by Today and by every game, so a
+   correct guess in Earworm feels like a correct guess in Daily Drop feels
+   like answering a question. Before this each surface invented its own
+   feedback or had none, and the games that had none were the ones nobody
+   played twice.
+
+   Deliberately cheap: no library, no canvas, a handful of absolutely
+   positioned divs that remove themselves. Everything respects
+   prefers-reduced-motion by doing nothing at all rather than doing something
+   smaller — a burst is decoration, and decoration is the right thing to drop.
+
+   `burst(el)`    — particles out of an element's centre. Wins, milestones.
+   `ripple(el,e)` — a circle from the tap point. Every tap worth confirming.
+   `buzz(kind)`   — haptics where the platform has them. Silent where it
+                    doesn't, which is iOS Safari, so nothing may depend on it. */
+var _reduceMotion = false;
+try { _reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+
+function burst(el, opts) {
+  if (_reduceMotion || !el) return;
+  opts = opts || {};
+  var n = opts.count || 12;
+  var colors = opts.colors || ['var(--gold)', '#ffd84a', '#fff1c2'];
+  var r;
+  try { r = el.getBoundingClientRect(); } catch (e) { return; }
+  if (!r.width && !r.height) return;
+  var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  var layer = document.createElement('div');
+  layer.className = 'vb-layer';
+  for (var i = 0; i < n; i++) {
+    var d = document.createElement('i');
+    d.className = 'vb-dot';
+    // Spread over a full circle with jitter, so it reads as a pop rather than
+    // a fan. Distance varies too, otherwise it looks like a clock face.
+    var ang = (Math.PI * 2 * i / n) + (Math.random() - 0.5) * 0.6;
+    var dist = (opts.spread || 70) * (0.55 + Math.random() * 0.75);
+    d.style.left = cx + 'px';
+    d.style.top = cy + 'px';
+    d.style.background = colors[i % colors.length];
+    d.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+    d.style.setProperty('--dy', (Math.sin(ang) * dist - 14) + 'px');
+    d.style.animationDelay = (Math.random() * 60) + 'ms';
+    if (Math.random() < 0.4) d.style.borderRadius = '2px';
+    layer.appendChild(d);
+  }
+  document.body.appendChild(layer);
+  setTimeout(function () { layer.remove(); }, 1100);
+}
+window.burst = burst;
+
+function ripple(el, ev) {
+  if (_reduceMotion || !el) return;
+  try {
+    var r = el.getBoundingClientRect();
+    var x = ev && ev.clientX != null ? ev.clientX - r.left : r.width / 2;
+    var y = ev && ev.clientY != null ? ev.clientY - r.top : r.height / 2;
+    var s = Math.max(r.width, r.height) * 2.2;
+    var i = document.createElement('span');
+    i.className = 'vb-ripple';
+    i.style.width = i.style.height = s + 'px';
+    i.style.left = (x - s / 2) + 'px';
+    i.style.top = (y - s / 2) + 'px';
+    el.appendChild(i);
+    setTimeout(function () { i.remove(); }, 620);
+  } catch (e) {}
+}
+window.ripple = ripple;
+
+// Patterns rather than raw durations, so "right" and "wrong" feel like
+// different events rather than the same nudge at different lengths.
+var BUZZ = { tap: [7], good: [10, 40, 16], bad: [26, 60, 26], big: [12, 40, 12, 40, 26] };
+function buzz(kind) {
+  if (!navigator.vibrate) return;
+  try { navigator.vibrate(BUZZ[kind] || BUZZ.tap); } catch (e) {}
+}
+window.buzz = buzz;
+
 function celebrate(title,sub){
   const ov=document.getElementById('celebrate');
   document.getElementById('celebrate-title').textContent=title;
@@ -5917,7 +6042,7 @@ function renderAchievements(){
       (reached&&!done?'<button class="ach-claim" data-claim="'+key+'" data-label="'+milestoneLabel(m)+'">Claim achievement</button>':'')+
       '</div>';
   }).join('');
-  mEl.querySelectorAll('[data-claim]').forEach(function(b){b.addEventListener('click',function(){setClaimed(b.dataset.claim);logActivity(ICONS.trophy,'Unlocked',b.dataset.label);celebrate('Achievement Unlocked!',b.dataset.label);if(window.Wallet){const m=parseInt(b.dataset.claim.split(':')[1],10)||1;Wallet.awardDiscs(Math.min(50,m*2),{reason:b.dataset.label});}renderAchievements();});});
+  mEl.querySelectorAll('[data-claim]').forEach(function(b){b.addEventListener('click',function(){setClaimed(b.dataset.claim);logActivity(ICONS.trophy,'Unlocked',b.dataset.label);celebrate('Achievement Unlocked!',b.dataset.label);if(window.Wallet)Wallet.awardGame('achievement',{reason:b.dataset.label});renderAchievements();});});
   const doneCount=MILESTONES.filter(function(m){return claimed['albums:'+m];}).length;
   document.getElementById('ach-summary').textContent=count+' albums rated \u00b7 '+doneCount+' milestones claimed';
   renderCompletionistAchievements();
@@ -5968,7 +6093,7 @@ function drawCompCard(a,claimed){
   const btn=card.querySelector('[data-claim]');
   const mb=card.querySelector('[data-missing]');
   if(mb)mb.addEventListener('click',function(){openMissing(mb.dataset.missing);});
-  if(btn)btn.addEventListener('click',function(){setClaimed(key);logActivity(ICONS.trophy,'Unlocked',a.name+' Completionist');celebrate('\u{1F3C6} '+a.name+' Completionist','You\u2019ve rated every studio album.');if(window.Wallet)Wallet.awardDiscs(30,{reason:'Completionist'});drawCompCard(a,loadClaimed());});
+  if(btn)btn.addEventListener('click',function(){setClaimed(key);logActivity(ICONS.trophy,'Unlocked',a.name+' Completionist');celebrate('\u{1F3C6} '+a.name+' Completionist','You\u2019ve rated every studio album.');if(window.Wallet)Wallet.awardGame('achievement',{reason:'Completionist'});drawCompCard(a,loadClaimed());});
 }
 
 (function(){
@@ -7374,7 +7499,7 @@ window.handleGrooveLink=handleGrooveLink;
   document.getElementById('t-pick-b').addEventListener('click',function(){choose('b');});
 
   let championAlbum=null;
-  function champion(al){championAlbum=al;showV('win');document.getElementById('t-win-img').src=al.art||'';document.getElementById('t-win-name').textContent=al.name;document.getElementById('t-win-artist').textContent=al.artist||'';if(typeof celebrate==='function')celebrate('\u{1F3C6} Tournament winner',al.name);if(typeof logActivity==='function')logActivity(ICONS.crown,'Crowned champion',al.name);if(window.Wallet)Wallet.awardDiscs(10,{reason:'Tournament win'});}
+  function champion(al){championAlbum=al;showV('win');document.getElementById('t-win-img').src=al.art||'';document.getElementById('t-win-name').textContent=al.name;document.getElementById('t-win-artist').textContent=al.artist||'';if(typeof celebrate==='function')celebrate('\u{1F3C6} Tournament winner',al.name);if(typeof logActivity==='function')logActivity(ICONS.crown,'Crowned champion',al.name);if(window.Wallet)Wallet.awardGame('tournament',{reason:'Tournament win'});}
   document.getElementById('tourney-again').addEventListener('click',function(){showV('setup');});
   document.getElementById('tourney-rate').addEventListener('click',function(){if(championAlbum){close();openAlbum(championAlbum);}});
 })();
@@ -8887,13 +9012,70 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   // Discs for lore are awarded by a trigger on lore_answers, so there is
   // nothing to add here — just pull the new balance and show it.
+  /* Finishing a game. The client names the game and never the number — the
+     server owns both the amount and the daily cap, exactly as wallet_buy takes
+     a key and never a price.
+
+     This replaces an awardDiscs() that took an `amount`, threw it away, read
+     the wallet back with wallet_state() and then toasted the number anyway.
+     Every minigame had been showing a payout that was never written. A reward
+     that disappears on refresh is worse than no reward, and it is the sort of
+     thing only a user with an unchanging balance would ever notice.
+
+     `capped` comes back true when you have already had today's allowance, and
+     the toast says so rather than claiming a payout that did not happen. */
+  async function awardGame(game, opts) {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return { earned: 0 };
+    const res = await rpc('wallet_award_game', { p_game: game });
+    if (res.error) {
+      if (window.reportIssue) reportIssue('wallet_award_game failed', { game: game, error: res.error });
+      return { earned: 0 };
+    }
+    const w = res.data || {};
+    const before = state.discs;
+    applyWallet(w);
+    if (w.earned > 0 && w.discs != null && w.discs === before) {
+      if (window.reportIssue) reportIssue('game award did not move the balance', { game: game, before: before });
+    }
+    if (w.earned > 0) {
+      toast('+' + w.earned + ' Discs' + (opts && opts.reason ? (' — ' + opts.reason) : ''));
+      spawnDiscParticle(w.earned);
+      if (navigator.vibrate) { try { navigator.vibrate([8, 40, 14]); } catch (e) {} }
+    } else if (w.capped) {
+      toast('That’s today’s Discs for this one — play for the love of it');
+    }
+    return w;
+  }
+
+  /* For rewards Postgres has already granted by trigger — lore answers, and
+     any future trigger award. Nothing is asked for; the wallet is re-read and
+     the toast reports the difference that actually landed. So when the daily
+     lore cap is reached the toast simply doesn't appear, rather than promising
+     two discs that were never granted. */
+  async function syncAward(reason) {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return 0;
+    const before = state.discs;
+    const res = await rpc('wallet_state');
+    if (res.error || !res.data) return 0;
+    applyWallet(res.data);
+    const gained = (state.discs || 0) - (before || 0);
+    if (gained > 0) {
+      toast('+' + gained + ' Discs' + (reason ? (' — ' + reason) : ''));
+      spawnDiscParticle(gained);
+      if (navigator.vibrate) { try { navigator.vibrate([8, 40, 14]); } catch (e) {} }
+    }
+    return gained;
+  }
+
+  // Kept so nothing calls into a hole if a site is missed, but it no longer
+  // pretends. Anything still reaching this is a bug worth seeing.
   async function awardDiscs(amount, opts) {
+    if (window.reportIssue) {
+      reportIssue('awardDiscs called — should be awardGame', { amount: amount, reason: opts && opts.reason });
+    }
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
     const res = await rpc('wallet_state');
-    if (res.error || !res.data) return;
-    applyWallet(res.data);
-    toast('+' + amount + ' Discs' + (opts && opts.reason ? (' — ' + opts.reason) : ''));
-    spawnDiscParticle(amount);
+    if (!res.error && res.data) applyWallet(res.data);
   }
 
   async function buyTheme(key) {
@@ -8942,7 +9124,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       if (typeof window.renderStats === 'function') window.renderStats();
       return state;
     },
-    load: load, get: get, recordRating: recordRating, awardDiscs: awardDiscs,
+    load: load, get: get, recordRating: recordRating,
+    awardGame: awardGame, syncAward: syncAward, awardDiscs: awardDiscs,
     buyTheme: buyTheme, equipTheme: equipTheme, buyBanner: buyBanner, equipBanner: equipBanner,
     applyTheme: applyTheme, THEMES: THEMES, BANNERS: BANNERS,
   };
@@ -10030,14 +10213,20 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     ewSaveDaily();
     ewRenderAll();
 
+    /* The win already has confetti. What this game was missing is the other
+       five guesses — the ones that actually make up a session. A guess with
+       greens in it should feel different from one with none, at the moment
+       you submit it, not at the end. */
+    if (window.buzz) {
+      var exact = (scored.marks || []).filter(function (m) { return m === 'exact'; }).length;
+      buzz(ewState.won ? 'big' : (exact ? 'good' : 'bad'));
+    }
+
     if (ewState.done && ewState.won) {
       if (typeof celebrate === 'function') celebrate('Earworm solved', ewState.display + ' — in ' + ewState.rows.length);
-      if (ewState.mode === 'daily' && window.Wallet) {
-        // Fewer guesses pays more; a hint halves it.
-        var pay = Math.max(8, 50 - (ewState.rows.length - 1) * 7);
-        if (ewState.hinted) pay = Math.round(pay / 2);
-        Wallet.awardDiscs(pay, { reason: 'Earworm' });
-      }
+      // The payout used to be computed here and thrown away — the client
+      // cannot be trusted with an amount, so wallet_award_game decides it.
+      if (ewState.mode === 'daily' && window.Wallet) Wallet.awardGame('earworm', { reason: 'Earworm' });
       if (typeof logActivity === 'function' && window.ICONS) logActivity(ICONS.trophy, 'Solved Earworm', ewState.display);
     }
   }
@@ -10698,13 +10887,16 @@ function playDismissAnimation(gateEl, callback) {
     refreshLeft();
     updateCardStatus();
 
+    // Six guesses is six moments, and five of them used to be silent.
+    if (window.buzz) buzz(won ? 'big' : 'bad');
+
     if (st.done) {
       elInput.disabled = true;
       showResult(won);
       if (won) {
         if (typeof celebrate === 'function') celebrate('Daily Drop solved', baseName(guess.name) + ' — in ' + st.guesses.length);
         /* Fewer guesses, bigger payout; six is still worth something. */
-        if (window.Wallet) Wallet.awardDiscs(Math.max(10, 60 - (st.guesses.length - 1) * 8), { reason: 'Daily Drop' });
+        if (window.Wallet) Wallet.awardGame('drop', { reason: 'Daily Drop' });
         if (typeof logActivity === 'function' && window.ICONS) logActivity(ICONS.trophy, 'Solved the Daily Drop', baseName(guess.name));
       }
     }
@@ -12452,8 +12644,30 @@ window.track = function (name, props) {
     var n = answeredToday();
     if (!n) { el.style.display = 'none'; return; }
     el.style.display = '';
-    el.textContent = n + ' today';
-    if (bump) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+    // A run is worth naming. Three is where a session stops being a glance.
+    el.textContent = (n >= 3 ? '🔥 ' : '') + n + ' today';
+    if (bump) {
+      // Every fifth answer gets the heavier beat. The same small bump forever
+      // stops registering after about four of them, and the whole number that
+      // matters here is whether somebody answers a second question.
+      var milestone = n > 0 && n % 5 === 0;
+      el.classList.remove('bump', 'milestone');
+      void el.offsetWidth;
+      el.classList.add(milestone ? 'milestone' : 'bump');
+      if (milestone) {
+        if (window.burst) burst(el, { count: 18, spread: 95 });
+        if (window.buzz) buzz('big');
+      }
+    }
+  }
+
+  // Tap feedback for a chosen option: the ripple confirms the tap landed, the
+  // burst says it counted for something. Both are no-ops under
+  // prefers-reduced-motion.
+  function pulse(btn, ev) {
+    if (window.ripple) ripple(btn, ev);
+    if (window.burst) burst(btn, { count: 9, spread: 54 });
+    if (window.buzz) buzz('good');
   }
 
   // ---- what to put in front of someone today ------------------------------
@@ -12571,7 +12785,6 @@ window.track = function (name, props) {
           '<textarea class="td-note" rows="2" placeholder="Optional. A line is plenty."></textarea>' +
           '<button class="td-note-save" type="button">Save</button>' +
         '</div>' +
-        '<button class="td-next" type="button">Next →</button>' +
       '</div></div>';
   }
 
@@ -12579,7 +12792,7 @@ window.track = function (name, props) {
     return '<div class="td-card td-revisit" data-meta="' + esc2(JSON.stringify(d.item)) + '">' +
       cardHead('Worth another spin', d.line) + itemStrip(d.item) +
       '<div class="td-row"><button class="td-go" type="button">Open it</button>' +
-      '<button class="td-next" type="button">Next →</button></div></div>';
+      '<button class="td-dismiss" type="button">Not now</button></div></div>';
   }
 
   function gameCard() {
@@ -12593,7 +12806,7 @@ window.track = function (name, props) {
       cardHead('Something to play', g.blurb) +
       '<div class="td-game-nm">' + g.name + '</div>' +
       '<div class="td-row"><button class="td-go" type="button">Play</button>' +
-      '<button class="td-next" type="button">Next →</button></div></div>';
+      '<button class="td-dismiss" type="button">Not now</button></div></div>';
   }
 
   function quietCard() {
@@ -12659,11 +12872,8 @@ window.track = function (name, props) {
     var card = slot.querySelector('.td-card');
     if (!card) return;
 
-    var nextBtn = slot.querySelector('.td-next');
-    if (nextBtn) nextBtn.addEventListener('click', function () {
-      if (typeof stopAuto === 'function') stopAuto();
-      advance();
-    });
+    var dismiss = slot.querySelector('.td-dismiss');
+    if (dismiss) dismiss.addEventListener('click', function () { advance(); });
 
     var go = slot.querySelector('.td-go');
     if (go) go.addEventListener('click', function () {
@@ -12715,13 +12925,13 @@ window.track = function (name, props) {
       }
       sizeToSlot();
       paintCount(true);
-      if (window.Wallet && Wallet.awardDiscs) Wallet.awardDiscs(2, { reason: 'lore' });
+      if (window.Wallet && Wallet.syncAward) Wallet.syncAward('lore');
       after.addEventListener('pointerenter', stopAuto);
       autoTimer = setTimeout(function () { autoTimer = null; advance(); }, AUTO_MS);
     }
 
     slot.querySelectorAll('.td-opt').forEach(function (btn) {
-      btn.addEventListener('click', async function () {
+      btn.addEventListener('click', async function (ev) {
         var val = btn.dataset.opt;
 
         if (val === '__other') {
@@ -12734,16 +12944,35 @@ window.track = function (name, props) {
         }
 
         var skipped = val === '__skip';
+
+        /* A skip is instant and optimistic. It used to await the round trip
+           before moving, which made the one action meaning "I don't want to
+           think about this" the slowest thing on the card — you tapped past
+           something and then sat looking at it for another 300ms. The write
+           still happens; it just happens behind you, and only a failure is
+           worth hearing about. */
+        if (skipped) {
+          if (window.track) track('question_skipped', { q: d.q.id, choice: null });
+          saveAnswer(d.item, d.q, null, { skipped: true }).then(function (r) {
+            if (r && r.error && window.reportIssue) {
+              reportIssue('skip was not saved', { error: r.error, q: d.q.id });
+            }
+          });
+          advance();
+          return;
+        }
+
         slot.querySelectorAll('.td-opt').forEach(function (b) { b.disabled = true; });
         btn.classList.add('chosen');
-        var res = await saveAnswer(d.item, d.q, skipped ? null : val, { skipped: skipped });
+        pulse(btn, ev);
+        var res = await saveAnswer(d.item, d.q, val, { skipped: false });
         if (res.error) {
           slot.querySelectorAll('.td-opt').forEach(function (b) { b.disabled = false; });
           btn.classList.remove('chosen');
+          if (window.reportIssue) reportIssue('answer was not saved', { error: res.error, q: d.q.id });
           return;
         }
-        if (window.track) track(skipped ? 'question_skipped' : 'question_answered', { q: d.q.id, choice: skipped ? null : val });
-        if (skipped) { advance(); return; }
+        if (window.track) track('question_answered', { q: d.q.id, choice: val });
         settle(val);
       });
     });
@@ -12875,42 +13104,16 @@ window.track = function (name, props) {
     }).join('');
   }
 
-  // Scroll or swipe to move on. A gentle scroll still scrolls the page; only a
-  // decisive one takes the card, and the lock stops a single flick from
-  // burning through three questions at once.
-  function wireSwipe() {
-    var host = stackEl();
-    if (!host) return;
-    var acc = 0, lock = 0;
-
-    host.addEventListener('wheel', function (e) {
-      if (!host.querySelector('.td-live')) return;
-      if (Date.now() < lock) { e.preventDefault(); return; }
-      if (e.deltaY <= 0) { acc = 0; return; }
-      acc += e.deltaY;
-      if (acc > 90) {
-        acc = 0;
-        lock = Date.now() + 700;
-        e.preventDefault();
-        advance();
-      }
-    }, { passive: false });
-
-    var y0 = null;
-    host.addEventListener('touchstart', function (e) {
-      y0 = e.touches && e.touches[0] ? e.touches[0].clientY : null;
-    }, { passive: true });
-    host.addEventListener('touchend', function (e) {
-      if (y0 == null || !host.querySelector('.td-live')) return;
-      var end = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : y0;
-      var dy = y0 - end;
-      y0 = null;
-      if (dy > 55 && Date.now() >= lock) { lock = Date.now() + 700; advance(); }
-    }, { passive: true });
-  }
+  /* Scroll-and-swipe-to-advance is gone, deliberately.
+     It hijacked the page's own scroll — Today sits above Liner Notes on Home,
+     so scrolling down to reach the year grid burned through questions on the
+     way. A gesture that both moves the page and consumes content cannot be
+     made unambiguous, and preventDefault on a wheel event to steal a scroll is
+     the kind of thing that feels broken rather than clever.
+     Advancing is now only ever something you asked for: answer it, or say
+     "Not this one". */
 
   function wireLore() {
-    wireSwipe();
     // Home is rendered by the markup on first paint, so build the stack here
     // rather than waiting for a tab change that may never come.
     renderToday();
