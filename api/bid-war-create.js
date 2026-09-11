@@ -31,10 +31,16 @@
 // so the number that decides a war is the same number you can query and
 // check. They cannot drift apart.
 import { spotifyToken, valueAlbum } from './_streams.js';
+import { valueMarket, discogsToken } from './_discogs.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
 const STALE_DAYS = 14;
+// Market prices move with what is actually for sale that week, where a stream
+// total only goes up and a fortnight of drift is nothing. Different data,
+// different shelf life.
+const MARKET_STALE_DAYS = 3;
 const NEEDED = 5;
+const MODES = ['streams', 'market'];
 
 function svcHeaders(key, extra) {
   return Object.assign({
@@ -70,7 +76,18 @@ export default async function handler(req, res) {
   if (!opponentId) { res.status(400).json({ error: 'No opponent given' }); return; }
   if (opponentId === userId) { res.status(400).json({ error: 'You cannot challenge yourself' }); return; }
 
+  const mode = (body && body.mode) || 'streams';
+  if (MODES.indexOf(mode) === -1) { res.status(400).json({ error: 'Unknown mode' }); return; }
+
+  const dgToken = mode === 'market' ? discogsToken() : null;
+  if (mode === 'market' && !dgToken) {
+    res.status(500).json({ error: 'Market wars are not configured: missing DISCOGS_TOKEN' });
+    return;
+  }
+
   try {
+    // Spotify is still needed in both modes: the pool comes from The Crate and
+    // market mode looks records up by their real name and artist.
     const token = await spotifyToken();
     if (!token) { res.status(502).json({ error: 'Could not reach Spotify to read tracklists' }); return; }
 
@@ -85,20 +102,41 @@ export default async function handler(req, res) {
 
     const ids = pool.map(function (p) { return p.album_id; });
     const idList = ids.map(function (i) { return '"' + i + '"'; }).join(',');
-    const cacheRes = await fetch(SUPABASE_URL
-      + '/rest/v1/album_plays?select=album_id,plays,fetched_at,source&album_id=in.(' + idList + ')',
-      { headers: svcHeaders(SERVICE) });
+
+    // Each mode caches into its own table with its own shelf life.
     const cached = {};
-    const cacheRows = await cacheRes.json();
-    if (Array.isArray(cacheRows)) {
-      const cutoff = Date.now() - STALE_DAYS * 86400000;
-      cacheRows.forEach(function (r) {
-        // ignore anything cached by the old Last.fm valuation
-        if (r.plays && r.source === 'kworb' && new Date(r.fetched_at).getTime() > cutoff) {
-          cached[r.album_id] = r.plays;
-        }
-      });
-    }
+    // Currency per album, for market mode. Filled from the cache or from a
+    // live lookup — a cached price without its currency is just a number.
+    // Declared here rather than beside `chosen`, because the cache loop below
+    // writes to it and a `const` read above its declaration is a dead-zone
+    // error, not a hoisted undefined.
+    const marketCur = {};
+    const cacheTable = mode === 'market' ? 'album_market' : 'album_plays';
+    const cacheCols = mode === 'market'
+      ? 'album_id,price_minor,currency,fetched_at,source'
+      : 'album_id,plays,fetched_at,source';
+    try {
+      const cacheRes = await fetch(SUPABASE_URL
+        + '/rest/v1/' + cacheTable + '?select=' + cacheCols + '&album_id=in.(' + idList + ')',
+        { headers: svcHeaders(SERVICE) });
+      const cacheRows = await cacheRes.json();
+      if (Array.isArray(cacheRows)) {
+        const days = mode === 'market' ? MARKET_STALE_DAYS : STALE_DAYS;
+        const cutoff = Date.now() - days * 86400000;
+        cacheRows.forEach(function (r) {
+          const fresh = new Date(r.fetched_at).getTime() > cutoff;
+          if (mode === 'market') {
+            if (r.price_minor && r.source === 'discogs' && fresh) {
+              cached[r.album_id] = r.price_minor;
+              marketCur[r.album_id] = r.currency || 'USD';
+            }
+          } else {
+            // ignore anything cached by the old Last.fm valuation
+            if (r.plays && r.source === 'kworb' && fresh) cached[r.album_id] = r.plays;
+          }
+        });
+      }
+    } catch (e) { /* a cold cache is slow, not broken */ }
 
     const chosen = [];
     const toCache = [];
@@ -106,36 +144,55 @@ export default async function handler(req, res) {
     const rejected = [];
     for (let i = 0; i < pool.length && chosen.length < NEEDED; i++) {
       const p = pool[i];
-      let streams = cached[p.album_id];
-      if (!streams) {
-        const v = await valueAlbum(p.album_id, token, artistCache);
-        if (v.ok) {
-          streams = v.total;
+      let value = cached[p.album_id];
+      if (!value) {
+        if (mode === 'market') {
+          const v = await valueMarket(p.name, p.artist, dgToken);
+          if (v.ok) {
+            value = v.price_minor;
+            marketCur[p.album_id] = v.currency;
+            toCache.push({
+              album_id: p.album_id, name: p.name, artist: p.artist,
+              release_id: v.release_id, price_minor: v.price_minor, currency: v.currency,
+              have: v.have, want: v.want, rating_avg: v.rating_avg, rating_count: v.rating_count,
+              source: 'discogs', fetched_at: new Date().toISOString(),
+            });
+          } else {
+            rejected.push({ album: p.name, reason: v.reason });
+          }
         } else {
-          // Rejected albums are worth logging: a run of these is how a
-          // broken kworb layout announces itself instead of quietly
-          // producing nonsense totals.
-          rejected.push({ album: p.name, reason: v.reason, matched: v.matched, of: v.tracks });
-        }
-        if (streams) {
-          toCache.push({
-            album_id: p.album_id, name: p.name, artist: p.artist,
-            plays: streams, source: 'kworb', fetched_at: new Date().toISOString(),
-          });
+          const v = await valueAlbum(p.album_id, token, artistCache);
+          if (v.ok) {
+            value = v.total;
+            toCache.push({
+              album_id: p.album_id, name: p.name, artist: p.artist,
+              plays: value, source: 'kworb', fetched_at: new Date().toISOString(),
+            });
+          } else {
+            // Rejected albums are worth logging: a run of these is how a
+            // broken kworb layout announces itself instead of quietly
+            // producing nonsense totals.
+            rejected.push({ album: p.name, reason: v.reason, matched: v.matched, of: v.tracks });
+          }
         }
       }
-      if (streams) {
-        chosen.push({
+      if (value) {
+        const rec = {
           album_id: p.album_id, name: p.name, artist: p.artist,
-          art: p.art || '', value: streams,
-        });
+          art: p.art || '', value: value,
+        };
+        // Market values need their currency to render — Discogs answers in
+        // whatever the release is priced in, and "12.50" with no symbol is not
+        // a price. Carried on the record so the client never has to guess.
+        if (mode === 'market') rec.cur = marketCur[p.album_id] || 'USD';
+        chosen.push(rec);
       }
     }
 
     if (toCache.length) {
       // Best effort: a failed cache write must not fail the war.
       try {
-        await fetch(SUPABASE_URL + '/rest/v1/album_plays', {
+        await fetch(SUPABASE_URL + '/rest/v1/' + cacheTable, {
           method: 'POST',
           headers: svcHeaders(SERVICE, { Prefer: 'resolution=merge-duplicates,return=minimal' }),
           body: JSON.stringify(toCache),
@@ -145,7 +202,9 @@ export default async function handler(req, res) {
 
     if (chosen.length < NEEDED) {
       res.status(400).json({
-        error: 'Could not get stream counts for enough records — try again in a moment',
+        error: mode === 'market'
+          ? 'Could not price enough records on Discogs — try again in a moment'
+          : 'Could not get stream counts for enough records — try again in a moment',
         rejected: rejected.slice(0, 8),
       });
       return;
@@ -153,7 +212,7 @@ export default async function handler(req, res) {
 
     const mk = await fetch(SUPABASE_URL + '/rest/v1/rpc/bid_war_create_from', {
       method: 'POST', headers: svcHeaders(SERVICE),
-      body: JSON.stringify({ p_initiator: userId, p_opponent: opponentId, p_records: chosen }),
+      body: JSON.stringify({ p_initiator: userId, p_opponent: opponentId, p_records: chosen, p_mode: mode }),
     });
     const war = await mk.json();
     if (!mk.ok) {

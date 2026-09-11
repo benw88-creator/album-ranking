@@ -2821,6 +2821,10 @@ body.entering-done #artist-hero {
 .war-rec-meta { flex: 1; min-width: 0; }
 .war-rec-nm { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .war-rec-ar { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* What the record is worth, on the bidding board rather than only at the
+   reveal. Gold and monospaced so it reads as the number you are bidding
+   against, not as more metadata. */
+.war-rec-val { font: 700 13px/1 var(--font-mono); color: var(--gold); margin-top: 5px; }
 .war-stepper { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .war-stepper button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface-3); color: var(--text); font-size: 17px; line-height: 1; cursor: pointer; transition: background 0.14s, transform 0.1s; }
 .war-stepper button:hover:not(:disabled) { background: var(--surface-4); }
@@ -3764,7 +3768,7 @@ window.ICONS = {
   <!-- ============================ BID WARS ============================ -->
   <section id="view-wars" style="display:none; margin-top:32px;">
     <div class="section-head"><h2><span data-icon="trophy"></span> Bid Wars</h2><button class="btn-primary" id="war-new-btn" style="margin-left:auto;">Start a war</button></div>
-    <p class="reco-note">Five records, 100 chips, bid blind. Win a record and you get its streams. Most streams wins.</p>
+    <p class="reco-note">Five records, 100 chips. You both see what they&rsquo;re worth &mdash; only the bids are blind. Outbid them on a record and you take its value. Most value wins.</p>
     <div id="war-challenges"></div>
     <div id="war-active"></div>
     <div id="war-history"></div>
@@ -4375,6 +4379,11 @@ window.ICONS = {
   <div class="modal-panel">
     <button class="modal-close" id="war-new-close" aria-label="Close">&times;</button>
     <div class="modal-head"><span class="mh-emoji" data-icon="trophy"></span><div><h2>Start a war</h2><p>Pick someone you follow. They&rsquo;ll get a challenge.</p></div></div>
+    <div class="hl-mode" id="war-mode" style="margin-bottom:12px;">
+      <button data-war-mode="streams" class="active">Streams</button>
+      <button data-war-mode="market">Market</button>
+    </div>
+    <p class="reco-note" id="war-mode-blurb" style="margin-bottom:12px;"></p>
     <input id="war-opp-search" class="g-input" type="text" placeholder="Search people you follow&hellip;" autocomplete="off" style="margin-bottom:10px;">
     <div id="war-opp-list" style="max-height:44vh; overflow-y:auto;"></div>
     <div id="war-new-error" class="war-err"></div>
@@ -11232,7 +11241,7 @@ function playDismissAnimation(gateEl, callback) {
       var r = await fetch('/api/bid-war-create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify({ opponent_id: opponentId }),
+        body: JSON.stringify({ opponent_id: opponentId, mode: _mode }),
       });
       var d = await r.json();
       if (!r.ok) return { error: { message: (d && d.error) || 'Could not start that war.' } };
@@ -11264,9 +11273,11 @@ function playDismissAnimation(gateEl, callback) {
     return w.winner_id === me().id ? 'won' : 'lost';
   }
 
-  // Play counts are the unit now, so they need to read as counts. Anything
-  // under a million keeps its separators; above that, one decimal is plenty
-  // and keeps the reveal from turning into a wall of digits.
+  /* Two modes, two units, and they cannot share a formatter: £12.50 rendered
+     through the streams formatter reads as "1,250". Every value that reaches
+     the screen goes through fmtVal with the war's own mode. */
+  var _mode = 'streams';   // the mode being chosen in the new-war modal
+
   function fmtPlays(n) {
     n = Number(n) || 0;
     if (n >= 1e9) return (n / 1e9).toFixed(2).replace(/\.?0+$/, '') + 'B';
@@ -11274,6 +11285,24 @@ function playDismissAnimation(gateEl, callback) {
     if (n >= 1e4) return Math.round(n / 1e3) + 'K';
     return n.toLocaleString('en-GB');
   }
+
+  var CUR = { USD: '$', GBP: '£', EUR: '€', JPY: '¥', AUD: 'A$', CAD: 'C$' };
+  // Market values are stored in minor units so a bigint column can hold
+  // £2.19 without truncating it to 2.
+  function fmtMoney(minor, cur) {
+    var v = (Number(minor) || 0) / 100;
+    var sym = CUR[cur || 'USD'] || ((cur || '') + ' ');
+    return sym + (v >= 100 ? Math.round(v).toLocaleString('en-GB') : v.toFixed(2));
+  }
+
+  function fmtVal(n, w, rec) {
+    var m = (w && w.mode) || 'streams';
+    if (m === 'market') return fmtMoney(n, rec && rec.cur);
+    return fmtPlays(n);
+  }
+  // The noun each mode uses, so the copy is not stuck saying "plays" about a
+  // war measured in money.
+  function unitOf(w) { return ((w && w.mode) === 'market') ? 'value' : 'plays'; }
   function esc2(s) { return window.esc ? esc(s) : String(s == null ? '' : s); }
 
   // ---- section ------------------------------------------------------------
@@ -11342,7 +11371,7 @@ function playDismissAnimation(gateEl, callback) {
       hist.innerHTML = '<h3 class="prof-section-title">Settled</h3>' +
         done.map(function (w) {
           var oc = outcome(w);
-          var sub = fmtPlays(myTotal(w)) + " &ndash; " + fmtPlays(theirTotal(w)) + " plays";
+          var sub = fmtVal(myTotal(w), w) + " &ndash; " + fmtVal(theirTotal(w), w) + " " + unitOf(w);
           return card(w, oc === 'won' ? 'Won' : oc === 'lost' ? 'Lost' : 'Draw', oc, sub);
         }).join('');
     }
@@ -11436,14 +11465,23 @@ function playDismissAnimation(gateEl, callback) {
 
   function showBidding(w) {
     setPane('bidding');
-    document.getElementById('war-sub').textContent = 'Five records, ' + w.chips + ' chips. Bid blind.';
+    /* The values are on the board now. They were never really secret —
+       /api/album-streams is public and returns the same number, so hiding them
+       only handicapped whoever did not think to look. Open, this is a
+       simultaneous allocation game: you both know what everything is worth,
+       and the question is where the other one will commit. The bids are still
+       sealed, which is where the tension actually was. */
+    document.getElementById('war-sub').textContent =
+      'Five records, ' + w.chips + ' chips. You both see the ' + unitOf(w) + ' — only the bids are blind.';
     _bids = {};
     var recs = w.records || [];
     document.getElementById('war-board').innerHTML = recs.map(function (r) {
       return '<div class="war-rec" data-rec="' + esc2(r.album_id) + '">' +
         '<img src="' + esc2(r.art || '') + '" alt="" loading="lazy">' +
         '<div class="war-rec-meta"><div class="war-rec-nm">' + esc2(r.name) + '</div>' +
-        '<div class="war-rec-ar">' + esc2(r.artist) + '</div></div>' +
+        '<div class="war-rec-ar">' + esc2(r.artist) + '</div>' +
+        (r.value != null ? '<div class="war-rec-val">' + fmtVal(r.value, w, r) + '</div>' : '') +
+        '</div>' +
         '<div class="war-stepper">' +
           '<button type="button" data-step="-1" aria-label="Bid less">&minus;</button>' +
           '<input type="number" inputmode="numeric" value="0" min="0" max="' + w.chips + '" data-input="' + esc2(r.album_id) + '">' +
@@ -11577,7 +11615,7 @@ function playDismissAnimation(gateEl, callback) {
           '<span style="color:var(--text-faint);">/</span>' +
           '<span class="war-rev-bid' + (theirBid > myBid ? ' high' : '') + '">' + theirBid + '</span>' +
         '</div>' +
-        '<div class="war-rev-val">' + fmtPlays(r.value) + '</div></div>';
+        '<div class="war-rev-val">' + fmtVal(r.value, w, r) + '</div></div>';
     }).join('');
 
     var rows = host.querySelectorAll('.war-rev');
@@ -11588,16 +11626,16 @@ function playDismissAnimation(gateEl, callback) {
         var r = recs[i];
         if (r.won_by === w.initiator_id) { if (iAmInit) runMine += Number(r.value) || 0; else runTheirs += Number(r.value) || 0; }
         else if (r.won_by === w.opponent_id) { if (iAmInit) runTheirs += Number(r.value) || 0; else runMine += Number(r.value) || 0; }
-        document.getElementById('war-score-me-num').textContent = fmtPlays(runMine);
-        document.getElementById('war-score-them-num').textContent = fmtPlays(runTheirs);
+        document.getElementById('war-score-me-num').textContent = fmtVal(runMine, w);
+        document.getElementById('war-score-them-num').textContent = fmtVal(runTheirs, w);
         document.getElementById('war-score-me').classList.toggle('lead', runMine > runTheirs);
         document.getElementById('war-score-them').classList.toggle('lead', runTheirs > runMine);
       }, 320 + i * 460);
     });
 
     setTimeout(function () {
-      document.getElementById('war-score-me-num').textContent = fmtPlays(mineTotal);
-      document.getElementById('war-score-them-num').textContent = fmtPlays(theirsTotal);
+      document.getElementById('war-score-me-num').textContent = fmtVal(mineTotal, w);
+      document.getElementById('war-score-them-num').textContent = fmtVal(theirsTotal, w);
       var payout = oc === 'won' ? 30 : oc === 'draw' ? 15 : 8;
       var tail = oc === 'won' ? '' : (oc === 'draw' ? ' each' : ' for turning up');
       verdict.innerHTML = (oc === 'won' ? 'You took it' : (oc === 'lost' ? nameOf(other(w)) + ' took it' : 'Dead even')) +
@@ -11605,7 +11643,7 @@ function playDismissAnimation(gateEl, callback) {
       verdict.classList.add('in');
       if (window.Wallet && Wallet.refresh) Wallet.refresh();
       if (oc === 'won' && typeof window.celebrate === 'function') {
-        window.celebrate('You won the war', 'Took ' + fmtPlays(mineTotal) + ' plays against ' + fmtPlays(theirsTotal) + '. Plus 30 Discs.');
+        window.celebrate('You won the war', 'Took ' + fmtVal(mineTotal, w) + ' against ' + fmtVal(theirsTotal, w) + '. Plus 30 Discs.');
       }
     }, 320 + rows.length * 460 + 260);
   }
@@ -11667,6 +11705,29 @@ function playDismissAnimation(gateEl, callback) {
     _wired = true;
     var nb = document.getElementById('war-new-btn');
     if (nb) nb.addEventListener('click', openNew);
+
+    /* Mode is chosen before the opponent, because it changes what the game is
+       rather than decorating it. Streams are power-law distributed, so one
+       record on the board is usually worth more than the other four together
+       and the whole game is taking that one. Prices bunch up, so market wars
+       are five close decisions instead of one big one. */
+    var wm = document.getElementById('war-mode');
+    var blurb = document.getElementById('war-mode-blurb');
+    function paintMode() {
+      if (wm) wm.querySelectorAll('button').forEach(function (b) {
+        b.classList.toggle('active', b.dataset.warMode === _mode);
+      });
+      if (blurb) blurb.textContent = _mode === 'market'
+        ? 'Records are worth what a copy costs on Discogs. Prices sit close together, so it is five tight calls.'
+        : 'Records are worth their total Spotify streams. One is usually worth more than the other four together.';
+    }
+    if (wm) wm.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-war-mode]');
+      if (!b) return;
+      _mode = b.dataset.warMode;
+      paintMode();
+    });
+    paintMode();
     var card = document.getElementById('war-card');
     if (card) card.addEventListener('click', function () {
       if (window.goToView) goToView('wars');
