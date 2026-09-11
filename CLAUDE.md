@@ -161,6 +161,43 @@ alongside a sink. Keep that in mind before raising any number here.
   award in the game; the pass brought everything else up to parity rather than chasing them.
   Changing them means replacing the whole of `bid_war_submit`.
 
+## The Draw
+
+A case-opening reel bought with Discs (`..._20260911230000_the_draw.sql`). Own modal, own
+module near the bottom of `index.html`.
+
+**It is not gambling, and the distance is load-bearing:**
+
+- Discs **cannot be bought**. Earned only, no purchase path, and `terms.html` already says so.
+- Nothing it awards has cash value or leaves the app.
+- **The odds are published in the UI**, read from the same `spin_items` rows the server draws
+  from, so the disclosed numbers cannot drift from the real ones. Apple requires disclosed
+  odds for anything loot-box shaped (guideline 3.1.1).
+
+**If a way to buy Discs for money is ever added, this becomes a regulated gambling product in
+the UK and elsewhere. Take advice before doing that.**
+
+`wallet_spin()` charges, rolls weighted, grants and returns. **The browser is told what it won
+and never asked** — the animation is theatre played out after the result already exists, the
+same relationship the Bid War reveal has with `bid_war_submit`. Duplicates pay their shop
+price back in Discs, which is the only thing keeping the rare tiers worth landing on once you
+own them.
+
+The motion, since it is the whole feature and is easy to ruin:
+
+- One strip, one transform, one transition. No per-frame JS, no per-tile animation — it holds
+  60fps on a phone.
+- 70 tiles with the prize at index 62. **Landing on tile 62 rather than tile 3 is what makes
+  it read as spun rather than picked.**
+- Filler is drawn by the real weights, so a legendary is not advertised on every spin and
+  landing on one never feels owed.
+- The stop is **jittered a few pixels off centre**. Stopping perfectly centred twice running
+  reads as mechanical.
+- `cubic-bezier(.12,.72,.12,1)` — long, late deceleration. Linear feels like a slot machine
+  cheating; too soft and it never felt like it was moving.
+- `TILE` in the module must match the tile width plus margins in the CSS. They are two
+  numbers that have to agree and nothing enforces it.
+
 ### The pin trigger's escape hatch must be `current_user`, not the JWT
 
 Fixed in `..._20260909160000_fix_economy_pin.sql`. Worth reading before touching any pin
