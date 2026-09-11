@@ -2996,6 +2996,53 @@ body.entering-done #artist-hero {
 .td-opt:active:not(:disabled) { transform: scale(0.96); }
 .td-opt { position: relative; overflow: hidden; }
 
+/* ---- Higher or Lower ------------------------------------------------- */
+.hl-mode { display: inline-flex; gap: 4px; background: var(--surface-2); border-radius: 999px; padding: 4px; }
+.hl-mode button {
+  border: none; background: none; color: var(--text-dim); cursor: pointer;
+  font: 600 13px var(--font-body); border-radius: 999px; padding: 7px 16px;
+}
+.hl-mode button.active { background: var(--gold); color: #1a1508; }
+.hl-score-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; }
+.hl-score {
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 8px 18px; text-align: center; min-width: 74px;
+}
+.hl-score span { display: block; font: 700 26px/1 var(--font-mono); color: var(--gold); }
+.hl-score.alt span { color: var(--text-dim); }
+.hl-score small { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
+.hl-board { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: start; }
+.hl-side { background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 14px; text-align: center; }
+.hl-art { width: 100%; max-width: 150px; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--surface-3); }
+.hl-nm { font-weight: 700; font-size: 14px; margin-top: 10px; line-height: 1.3; }
+.hl-ar { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.hl-val { font: 700 20px/1 var(--font-mono); color: var(--gold); margin-top: 10px; min-height: 22px; }
+.hl-val.hl-hidden { color: var(--text-faint); }
+.hl-val.reveal { animation: hlReveal .45s var(--ease); }
+@keyframes hlReveal { 0% { opacity: 0; transform: translateY(-8px) scale(.85); } 100% { opacity: 1; transform: none; } }
+.hl-vs { align-self: center; font: 700 13px var(--font-mono); color: var(--text-faint); text-transform: uppercase; }
+.hl-choice { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.hl-btn {
+  border: 1px solid var(--border-strong); background: var(--surface-3); color: var(--text);
+  border-radius: 999px; padding: 10px 14px; font: 600 13px var(--font-body); cursor: pointer;
+  position: relative; overflow: hidden;
+  transition: background .14s, border-color .14s, transform .1s var(--ease);
+}
+.hl-btn:hover:not(:disabled) { border-color: var(--gold-dim); background: var(--surface); }
+.hl-btn:active:not(:disabled) { transform: scale(.96); }
+.hl-btn:disabled { opacity: .45; cursor: default; }
+.hl-side.right-correct { border-color: var(--green, #4fb477); }
+.hl-side.right-wrong { border-color: var(--red); }
+.hl-verdict { text-align: center; margin-top: 14px; min-height: 22px; font-weight: 600; font-size: 14px; }
+.hl-verdict.good { color: var(--green, #4fb477); }
+.hl-verdict.bad { color: var(--red); }
+.hl-over-score { font: 700 44px/1 var(--font-mono); color: var(--gold); text-align: center; margin: 10px 0; }
+@media (max-width: 560px) {
+  .hl-board { grid-template-columns: 1fr; }
+  .hl-vs { justify-self: center; }
+  .hl-art { max-width: 110px; }
+}
+
 /* ---- shared feedback: burst, ripple ---------------------------------
    Fixed layer, pointer-events none, so a burst can never sit between a
    finger and the thing it is celebrating. */
@@ -3686,6 +3733,13 @@ window.ICONS = {
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="year"></div>
       </div>
+      <div class="game-card" id="hl-card">
+        <div class="gc-emoji" data-icon="fire"></div>
+        <h3>Higher or Lower</h3>
+        <p>Your own records, head to head. More streams, or higher rated? Keep the run alive.</p>
+        <div class="gc-go">Play &rarr;</div>
+        <div class="gc-best" id="hl-card-status"></div>
+      </div>
       <div class="game-card" id="tourney-card">
         <div class="gc-emoji"><svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M5 2.5h6v3.2a3 3 0 0 1-6 0V2.5Z"/><path d="M5 3.3H3.2a1.6 1.6 0 0 0 0 3.2c.4 0 .8-.1 1.1-.4M11 3.3h1.8a1.6 1.6 0 0 1 0 3.2c-.4 0-.8-.1-1.1-.4"/><path d="M8 8.7v2.1M5.6 13.5h4.8M6.4 11v1.3a1.6 1.6 0 0 0 0 1.2M9.6 11v1.3a1.6 1.6 0 0 1 0 1.2"/></svg></div>
         <h3>Album Tournament</h3>
@@ -3951,6 +4005,67 @@ window.ICONS = {
 </div>
 
 <!-- ============================ EARWORM ============================ -->
+<!-- ===================== HIGHER OR LOWER =====================
+     Two records side by side, one number showing. Higher or lower — get it
+     right and the right-hand record slides left and a new one arrives, so the
+     run is a chain rather than a set of rounds. There is no round limit; you
+     play until you are wrong, which is what makes a score worth telling
+     somebody.
+
+     Drawn only from albums you have rated, deliberately. A higher-or-lower on
+     the global charts is a trivia game about strangers' music; on your own
+     crate it is a question about how well you know the things you chose. -->
+<div class="modal hl-modal" id="hl-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="hl-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="fire"></span>
+      <div><h2>Higher or Lower</h2><p id="hl-sub">Your crate, head to head.</p></div></div>
+
+    <div id="hl-start">
+      <div class="hl-mode" id="hl-mode">
+        <button data-hl-mode="streams" class="active">Streams</button>
+        <button data-hl-mode="rating">Your ratings</button>
+      </div>
+      <p class="reco-note" id="hl-blurb"></p>
+      <button class="btn-primary" id="hl-go" style="margin-top:12px;">Start the run</button>
+      <div id="hl-load" class="reco-note" style="display:none;margin-top:12px;"></div>
+    </div>
+
+    <div id="hl-play" style="display:none;">
+      <div class="hl-score-row">
+        <div class="hl-score"><span id="hl-score">0</span><small>run</small></div>
+        <div class="hl-score alt"><span id="hl-best">0</span><small>best</small></div>
+      </div>
+      <div class="hl-board">
+        <div class="hl-side" id="hl-left">
+          <img class="hl-art" id="hl-left-art" alt="">
+          <div class="hl-nm" id="hl-left-nm"></div>
+          <div class="hl-ar" id="hl-left-ar"></div>
+          <div class="hl-val" id="hl-left-val"></div>
+        </div>
+        <div class="hl-vs">vs</div>
+        <div class="hl-side" id="hl-right">
+          <img class="hl-art" id="hl-right-art" alt="">
+          <div class="hl-nm" id="hl-right-nm"></div>
+          <div class="hl-ar" id="hl-right-ar"></div>
+          <div class="hl-val hl-hidden" id="hl-right-val">?</div>
+          <div class="hl-choice">
+            <button class="hl-btn" id="hl-higher">Higher ↑</button>
+            <button class="hl-btn" id="hl-lower">Lower ↓</button>
+          </div>
+        </div>
+      </div>
+      <div class="hl-verdict" id="hl-verdict"></div>
+    </div>
+
+    <div id="hl-over" style="display:none;">
+      <div class="hl-over-score" id="hl-over-score"></div>
+      <p class="reco-note" id="hl-over-sub"></p>
+      <button class="btn-primary" id="hl-again" style="margin-top:12px;">Go again</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal ew-modal" id="ew-modal">
   <div class="modal-panel">
     <button class="modal-close" id="ew-close" aria-label="Close">&times;</button>
@@ -5561,7 +5676,14 @@ function renderAuthArea(connected){
   function closeGame(){modal.classList.remove('open');clearInterval(_liveTimerInt);}
   document.getElementById('g-close').addEventListener('click',closeGame);
   modal.addEventListener('click',function(e){if(e.target===modal)closeGame();});
-  document.getElementById('games-grid').addEventListener('click',function(e){const card=e.target.closest('.game-card');if(!card)return;openGame(card.dataset.game);});
+  // Only the cards that actually belong to this harness. The specials — Daily
+  // Drop, Earworm, Tournament, Bid Wars, the leaderboard, Higher or Lower —
+  // carry no data-game and open their own modals from their own listeners.
+  // Without the guard every click on one of those also reached openGame(undefined)
+  // and threw on META[undefined].emoji: invisible, because the card's own
+  // listener had already opened the right thing, but a real uncaught error
+  // into client_errors on every single play.
+  document.getElementById('games-grid').addEventListener('click',function(e){const card=e.target.closest('.game-card');if(!card||!card.dataset.game)return;openGame(card.dataset.game);});
 
   function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
   function nTitle(s){return String(s||'').toLowerCase().replace(/\(.*?\)|\[.*?\]/g,' ').replace(/\b(deluxe|edition|remaster|remastered|expanded|version|explicit|the|ep|lp|anniversary)\b/g,' ').replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');}
@@ -11915,6 +12037,266 @@ async function renderAdminStats() {
 }
 window.renderAdminStats = renderAdminStats;
 </script>
+<!-- ================================================================
+     HIGHER OR LOWER
+     ================================================================
+     The pool is your own rated albums and nothing else. A higher-or-lower on
+     the global charts is trivia about strangers' records; on your own crate it
+     asks how well you know the things you chose, which is the only version of
+     this game that belongs in this app.
+
+     Two modes, and they are not the same game:
+
+       Streams  — total plays, from the same valuation Bid Wars uses. Power-law
+                  distributed, so the gaps are enormous and the skill is
+                  knowing which of your records the world actually listens to.
+       Ratings  — your own scores out of 100. Clustered, so the gaps are small
+                  and the skill is remembering what you thought. Needs no
+                  network at all, which makes it the mode that works on a train.
+
+     Streams mode pre-fetches its whole pool in one batched request before the
+     first round. Fetching per round would put a second of dead air between
+     every guess, and a chain game lives or dies on rhythm.
+     ================================================================ -->
+<script>
+(function () {
+  var modal = document.getElementById('hl-modal');
+  if (!modal) return;
+
+  var POOL_TARGET = 12;   // how many we ask the batch endpoint to value
+  var MIN_PLAYABLE = 6;   // below this there is no game worth starting
+  var BEST_KEY = 'crate_hl_best';
+
+  var mode = 'streams';
+  var pool = [], left = null, right = null, score = 0, busy = false;
+
+  function el(id) { return document.getElementById(id); }
+  function albums() { try { return window.loadAlbums ? loadAlbums() : {}; } catch (e) { return {}; } }
+  function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+  function bests() { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || {}; } catch (e) { return {}; } }
+  function best() { return bests()[mode] || 0; }
+  function setBest(n) {
+    var b = bests();
+    if (n > (b[mode] || 0)) { b[mode] = n; try { localStorage.setItem(BEST_KEY, JSON.stringify(b)); } catch (e) {} }
+  }
+
+  // Streams read as "1.2bn"; ratings are just the number out of 100.
+  function fmt(v) {
+    if (mode === 'rating') return String(Math.round(v));
+    if (v >= 1e9) return (v / 1e9).toFixed(v >= 1e10 ? 0 : 1) + 'bn';
+    if (v >= 1e6) return (v / 1e6).toFixed(v >= 1e8 ? 0 : 1) + 'm';
+    if (v >= 1e3) return Math.round(v / 1e3) + 'k';
+    return String(Math.round(v));
+  }
+
+  function rated() {
+    var al = albums(), out = [];
+    Object.keys(al).forEach(function (k) {
+      var a = al[k];
+      if (!a || !a.id || !a.name) return;
+      out.push(a);
+    });
+    return out;
+  }
+
+  function paintCard() {
+    var s = el('hl-card-status');
+    if (!s) return;
+    var b = bests();
+    var parts = [];
+    if (b.streams) parts.push('Streams ' + b.streams);
+    if (b.rating) parts.push('Ratings ' + b.rating);
+    s.textContent = parts.length ? 'Best — ' + parts.join(' · ') : '';
+  }
+
+  function setMode(m) {
+    mode = m;
+    el('hl-mode').querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.hlMode === m);
+    });
+    var n = rated().length;
+    var scored = rated().filter(function (a) { return a.score != null; }).length;
+    el('hl-blurb').textContent = m === 'streams'
+      ? 'Which of your records has more plays? Drawn from the ' + n + ' album' + (n === 1 ? '' : 's') + ' in your crate.'
+      : 'Which did you score higher? ' + scored + ' of your albums have a rating.';
+    el('hl-best').textContent = best();
+  }
+
+  function show(view) {
+    ['hl-start', 'hl-play', 'hl-over'].forEach(function (v) {
+      el(v).style.display = (v === view) ? 'block' : 'none';
+    });
+  }
+
+  function open() {
+    modal.classList.add('open');
+    setMode(mode);
+    show('hl-start');
+    el('hl-load').style.display = 'none';
+  }
+  function close() { modal.classList.remove('open'); }
+
+  async function buildPool() {
+    var src = shuffle(rated());
+
+    if (mode === 'rating') {
+      // Everything needed is already on the device.
+      return src.filter(function (a) { return a.score != null; })
+                .map(function (a) { return { a: a, v: a.score }; });
+    }
+
+    var picks = src.slice(0, POOL_TARGET);
+    if (!picks.length) return [];
+    var load = el('hl-load');
+    load.style.display = 'block';
+    load.textContent = 'Counting plays for ' + picks.length + ' records…';
+    try {
+      var r = await fetch('/api/album-streams?albums=' + encodeURIComponent(picks.map(function (a) { return a.id; }).join(',')));
+      var j = await r.json();
+      var byId = {};
+      (j.results || []).forEach(function (x) { byId[x.album_id] = x; });
+      // An album kworb could not match is dropped rather than valued at zero —
+      // a zero would be an answer, and a wrong one.
+      return picks.map(function (a) {
+        var v = byId[a.id];
+        return (v && v.ok && v.total > 0) ? { a: a, v: v.total } : null;
+      }).filter(Boolean);
+    } catch (e) {
+      return [];
+    } finally {
+      load.style.display = 'none';
+    }
+  }
+
+  function paintSide(side, entry, hideValue) {
+    el('hl-' + side + '-art').src = entry.a.art || '';
+    el('hl-' + side + '-nm').textContent = entry.a.name;
+    el('hl-' + side + '-ar').textContent = entry.a.artist || '';
+    var v = el('hl-' + side + '-val');
+    v.classList.remove('reveal');
+    if (hideValue) { v.textContent = '?'; v.classList.add('hl-hidden'); }
+    else { v.textContent = fmt(entry.v); v.classList.remove('hl-hidden'); }
+  }
+
+  function nextRight() {
+    // Never the record already on the left, and never one with an identical
+    // value — a coin flip you cannot win is not a round.
+    var options = pool.filter(function (p) { return p !== left && p !== right; });
+    if (!options.length) { options = pool.filter(function (p) { return p !== left; }); }
+    return options[Math.floor(Math.random() * options.length)] || null;
+  }
+
+  function round() {
+    busy = false;
+    el('hl-verdict').textContent = '';
+    el('hl-verdict').className = 'hl-verdict';
+    el('hl-right').className = 'hl-side';
+    paintSide('left', left, false);
+    paintSide('right', right, true);
+    el('hl-higher').disabled = false;
+    el('hl-lower').disabled = false;
+    el('hl-score').textContent = score;
+    el('hl-best').textContent = Math.max(best(), score);
+  }
+
+  async function start() {
+    show('hl-play');
+    score = 0;
+    pool = await buildPool();
+    if (pool.length < MIN_PLAYABLE) {
+      show('hl-start');
+      el('hl-load').style.display = 'block';
+      el('hl-load').textContent = mode === 'streams'
+        ? 'Not enough of your records could be counted — rate a few more and try again.'
+        : 'Rate at least ' + MIN_PLAYABLE + ' albums and this opens up.';
+      return;
+    }
+    left = pool[Math.floor(Math.random() * pool.length)];
+    right = nextRight();
+    round();
+  }
+
+  function answer(saidHigher) {
+    if (busy || !left || !right) return;
+    busy = true;
+    el('hl-higher').disabled = true;
+    el('hl-lower').disabled = true;
+
+    var v = el('hl-right-val');
+    v.textContent = fmt(right.v);
+    v.classList.remove('hl-hidden');
+    v.classList.add('reveal');
+
+    // A tie goes to the player. Ratings especially collide constantly, and
+    // losing a run to two albums you scored 84 would feel like a cheat.
+    var correct = right.v === left.v || (saidHigher ? right.v > left.v : right.v < left.v);
+    var verdict = el('hl-verdict');
+    var side = el('hl-right');
+
+    if (correct) {
+      score++;
+      side.classList.add('right-correct');
+      verdict.textContent = right.v === left.v ? 'Dead level — we’ll allow it' : 'Right';
+      verdict.className = 'hl-verdict good';
+      if (window.burst) burst(side, { count: 12, spread: 80 });
+      if (window.buzz) buzz('good');
+      el('hl-score').textContent = score;
+      setTimeout(function () {
+        left = right;
+        right = nextRight();
+        if (!right) { over(); return; }
+        round();
+      }, 950);
+    } else {
+      side.classList.add('right-wrong');
+      verdict.textContent = 'No — that’s ' + fmt(right.v) + ' against ' + fmt(left.v);
+      verdict.className = 'hl-verdict bad';
+      if (window.buzz) buzz('bad');
+      setTimeout(over, 1400);
+    }
+  }
+
+  function over() {
+    var wasBest = score > best();
+    setBest(score);
+    paintCard();
+    show('hl-over');
+    el('hl-over-score').textContent = score;
+    el('hl-over-sub').textContent = score === 0
+      ? 'Straight out. It happens.'
+      : (wasBest ? 'A new best. Previous runs are now history.'
+                 : 'Best is ' + best() + '. Close-ish.');
+    if (wasBest && score >= 3 && typeof celebrate === 'function') {
+      celebrate('New best run', score + ' in a row');
+    }
+    // Five in a row is the bar. Below that it is a warm-up, and paying for a
+    // warm-up makes the payout mean nothing.
+    if (score >= 5 && window.Wallet && Wallet.awardGame) {
+      Wallet.awardGame('higherlower', { reason: 'Higher or Lower' });
+    }
+    if (window.track) track('higherlower_run', { mode: mode, score: score });
+  }
+
+  el('hl-mode').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-hl-mode]');
+    if (b) setMode(b.dataset.hlMode);
+  });
+  el('hl-go').addEventListener('click', start);
+  el('hl-again').addEventListener('click', function () { show('hl-start'); setMode(mode); });
+  el('hl-higher').addEventListener('click', function (ev) { if (window.ripple) ripple(this, ev); answer(true); });
+  el('hl-lower').addEventListener('click', function (ev) { if (window.ripple) ripple(this, ev); answer(false); });
+  el('hl-close').addEventListener('click', close);
+  modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+
+  var card = document.getElementById('hl-card');
+  if (card) card.addEventListener('click', open);
+
+  paintCard();
+  window.openHigherLower = open;
+})();
+</script>
+
 <!-- ================================================================
      LISTENING HISTORY — import, store, read
      ================================================================
