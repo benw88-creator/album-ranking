@@ -3037,6 +3037,65 @@ body.entering-done #artist-hero {
 .td-opt:active:not(:disabled) { transform: scale(0.96); }
 .td-opt { position: relative; overflow: hidden; }
 
+/* ---- The Draw --------------------------------------------------------
+   A case-opening reel. The whole thing is one long horizontal strip and a
+   single transform: no per-tile animation, no JS running per frame, so it
+   stays at 60fps on a phone. The deceleration curve is the feature — a linear
+   stop feels mechanical, and a stop that is too soft feels rigged.
+
+   The strip is duplicated tiles with the real prize placed at a known index.
+   The result already exists before any of this moves; the reel is a rendering
+   of something the server decided. */
+.draw-window {
+  position: relative; overflow: hidden; border-radius: 16px;
+  border: 1px solid var(--border-strong); background: var(--surface);
+  height: 168px; margin: 6px 0 18px;
+  /* Fades the strip out at both edges so tiles arrive from nowhere rather
+     than visibly popping in at a hard border. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.draw-strip { display: flex; align-items: center; height: 100%; will-change: transform; }
+.draw-tile {
+  flex: 0 0 120px; height: 138px; margin: 0 5px; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 8px; text-align: center;
+}
+.draw-tile .dt-chip { width: 46px; height: 46px; border-radius: 10px; }
+.draw-tile .dt-nm { font: 600 11px/1.25 var(--font-body); color: var(--text-dim); }
+.draw-tile.t-uncommon  { border-color: rgba(94,184,255,0.45); }
+.draw-tile.t-rare      { border-color: rgba(216,124,255,0.5); }
+.draw-tile.t-legendary { border-color: var(--gold); box-shadow: inset 0 0 24px var(--gold-dim); }
+
+/* The marker. A single hairline down the middle — the thing the strip stops
+   against, so the landing reads as exact rather than approximate. */
+.draw-needle {
+  position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px;
+  background: linear-gradient(180deg, transparent, var(--gold) 18%, var(--gold) 82%, transparent);
+  z-index: 2; pointer-events: none;
+}
+.draw-window.landed .draw-needle { animation: drawPing .5s var(--ease); }
+@keyframes drawPing { 0% { box-shadow: 0 0 0 0 var(--gold-glow); } 100% { box-shadow: 0 0 0 26px transparent; } }
+
+.draw-result { text-align: center; min-height: 74px; }
+.draw-result .dr-label { font: 700 26px/1.1 var(--font-display); color: var(--gold); }
+.draw-result .dr-sub { font-size: 13px; color: var(--text-dim); margin-top: 5px; }
+.draw-result.in { animation: drawIn .5s var(--ease); }
+@keyframes drawIn { 0% { opacity: 0; transform: translateY(10px) scale(.94); } 100% { opacity: 1; transform: none; } }
+
+.draw-cost { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.draw-odds { margin-top: 16px; }
+.draw-odds table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.draw-odds td { padding: 6px 4px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+.draw-odds td:last-child { text-align: right; font-family: var(--font-mono); color: var(--text); }
+.draw-odds summary { cursor: pointer; font-size: 12px; color: var(--text-dim); }
+
+@media (prefers-reduced-motion: reduce) {
+  .draw-strip { transition: none !important; }
+  .draw-window.landed .draw-needle, .draw-result.in { animation: none !important; }
+}
+
 /* ---- album banner picker --------------------------------------------- */
 .bp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; margin-top: 12px; }
 .bp-item {
@@ -3787,6 +3846,12 @@ window.ICONS = {
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="year"></div>
       </div>
+      <div class="game-card" id="draw-card" style="border-color: var(--gold); background: linear-gradient(150deg, var(--gold-dim), var(--surface) 60%);">
+        <div class="gc-emoji" data-icon="disc"></div>
+        <h3>The Draw</h3>
+        <p>Spend 250 Discs, spin the strip, see what falls out. Odds on the page.</p>
+        <div class="gc-go">Open one &rarr;</div>
+      </div>
       <div class="game-card" id="hl-card">
         <div class="gc-emoji" data-icon="fire"></div>
         <h3>Higher or Lower</h3>
@@ -4060,6 +4125,38 @@ window.ICONS = {
 </div>
 
 <!-- ============================ EARWORM ============================ -->
+<!-- ========================= THE DRAW =========================
+     Pay Discs, the strip runs, it lands on one. The odds are on the page
+     rather than buried, because anything loot-box shaped needs disclosed odds
+     for App Store review and because hiding them would be the wrong call
+     anyway. -->
+<div class="modal" id="draw-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="draw-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="disc"></span>
+      <div><h2>The Draw</h2><p>Spend Discs. See what falls out.</p></div></div>
+
+    <div class="draw-window" id="draw-window">
+      <div class="draw-needle"></div>
+      <div class="draw-strip" id="draw-strip"></div>
+    </div>
+
+    <div class="draw-result" id="draw-result"></div>
+
+    <div class="draw-cost">
+      <button class="btn-primary" id="draw-go">Open for 250 Discs</button>
+      <span class="reco-note" id="draw-balance"></span>
+    </div>
+
+    <div class="draw-odds">
+      <details>
+        <summary>Odds</summary>
+        <div id="draw-odds-body"></div>
+      </details>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== HIGHER OR LOWER =====================
      Two records side by side, one number showing. Higher or lower — get it
      right and the right-hand record slides left and a new one arrives, so the
@@ -9346,6 +9443,16 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     return { ok: true, data: res.data };
   }
 
+  /* One spin of The Draw. The server charges, picks, grants and returns —
+     the client is told what it won and never asked. A browser that chose its
+     own prize would be a browser that always chose the legendary. */
+  async function spin() {
+    const res = await rpc('wallet_spin');
+    if (res.error) return { error: res.error };
+    applyWallet(res.data);
+    return { data: res.data };
+  }
+
   async function buyTheme(key) {
     if (!THEMES[key]) return { error: 'Unknown theme' };
     const res = await rpc('wallet_buy', { p_kind: 'theme', p_key: key });
@@ -9394,9 +9501,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     },
     load: load, get: get, recordRating: recordRating,
     awardGame: awardGame, syncAward: syncAward, awardDiscs: awardDiscs,
-    dailyLogin: dailyLogin, claimAlbumBanner: claimAlbumBanner,
+    dailyLogin: dailyLogin, claimAlbumBanner: claimAlbumBanner, spin: spin,
     buyTheme: buyTheme, equipTheme: equipTheme, buyBanner: buyBanner, equipBanner: equipBanner,
     applyTheme: applyTheme, THEMES: THEMES, BANNERS: BANNERS,
+    SWATCH: SWATCH, BANNER_SWATCH: BANNER_SWATCH,
   };
 
   // ---- Shop UI ------------------------------------------------------------
@@ -12254,6 +12362,221 @@ async function renderAdminStats() {
 }
 window.renderAdminStats = renderAdminStats;
 </script>
+<!-- ================================================================
+     THE DRAW — the reel
+     ================================================================
+     The result exists before anything moves. `wallet_spin()` picks, grants and
+     returns; this module's only job is to make the arrival of a number already
+     decided feel like it is being decided now. That is the same relationship
+     the Bid War reveal has with bid_war_submit.
+
+     How the motion works, since it is the whole feature:
+
+       * One strip, one transform, one transition. No per-frame JS and no
+         per-tile animation, so it holds 60fps on a phone.
+       * The strip is ~70 tiles of weighted filler with the real prize dropped
+         in near the end, and it always travels a long way — landing on tile 62
+         rather than tile 3 is what makes it feel spun rather than picked.
+       * The landing point is jittered a few pixels off dead centre. Stopping
+         perfectly centred every time reads as mechanical; stopping just past
+         or just short reads as physical.
+       * cubic-bezier(.12,.72,.12,1) — a long, late deceleration. Linear feels
+         like a slot machine cheating; too soft and it feels like it was never
+         moving.
+     ================================================================ -->
+<script>
+(function () {
+  var modal = document.getElementById('draw-modal');
+  if (!modal) return;
+
+  var COST = 250;
+  var TILE = 130;        // 120px wide + 2×5px margin, must match the CSS
+  var STRIP_LEN = 70;
+  var WIN_INDEX = 62;    // far enough in that it reads as a real run
+  var SPIN_MS = 5200;
+
+  var items = null, busy = false;
+
+  function el(id) { return document.getElementById(id); }
+  function W() { return window.Wallet; }
+
+  // Odds come from the same table the server draws from, so the published
+  // numbers cannot drift from the real ones.
+  async function loadItems(force) {
+    if (items && !force) return items;
+    try {
+      var r = await Cloud.client().from('spin_items').select('key,kind,label,amount,ref,weight,tier');
+      items = r.data || [];
+    } catch (e) { items = []; }
+    return items;
+  }
+
+  function swatchFor(it) {
+    var w = W();
+    if (it.kind === 'theme' && w && w.SWATCH && w.SWATCH[it.ref]) return w.SWATCH[it.ref];
+    if (it.kind === 'banner' && w && w.BANNER_SWATCH && w.BANNER_SWATCH[it.ref]) return w.BANNER_SWATCH[it.ref];
+    if (it.kind === 'banner_pick') return 'linear-gradient(135deg, var(--gold), var(--accent-2))';
+    return 'linear-gradient(135deg, var(--surface-4), var(--gold-dim))';
+  }
+
+  function tileHTML(it) {
+    return '<div class="draw-tile t-' + esc(it.tier || 'common') + '">' +
+      '<span class="dt-chip" style="background:' + swatchFor(it) + '"></span>' +
+      '<span class="dt-nm">' + esc(it.label) + '</span></div>';
+  }
+
+  // Filler is drawn by weight, so the strip flying past looks like the real
+  // distribution — mostly Discs, the odd rare one. A uniform strip would
+  // advertise a legendary on every spin and make landing on one feel owed.
+  function weightedPick(pool) {
+    var total = pool.reduce(function (s, i) { return s + (i.weight || 1); }, 0);
+    var r = Math.random() * total, acc = 0;
+    for (var i = 0; i < pool.length; i++) {
+      acc += pool[i].weight || 1;
+      if (r <= acc) return pool[i];
+    }
+    return pool[pool.length - 1];
+  }
+
+  function buildStrip(pool, winner) {
+    var out = [];
+    for (var i = 0; i < STRIP_LEN; i++) {
+      out.push(i === WIN_INDEX ? winner : weightedPick(pool));
+    }
+    return out;
+  }
+
+  function resetStrip() {
+    var strip = el('draw-strip');
+    strip.style.transition = 'none';
+    strip.style.transform = 'translate3d(0,0,0)';
+    el('draw-window').classList.remove('landed');
+    el('draw-result').className = 'draw-result';
+    el('draw-result').innerHTML = '';
+  }
+
+  function paintBalance() {
+    var st = W() && W().get ? W().get() : null;
+    if (!st) return;
+    el('draw-balance').textContent = st.is_admin
+      ? 'Admin — free spins'
+      : (st.discs || 0) + ' Discs';
+    el('draw-go').disabled = !st.is_admin && (st.discs || 0) < COST;
+  }
+
+  async function paintOdds() {
+    var pool = await loadItems();
+    var total = pool.reduce(function (s, i) { return s + i.weight; }, 0) || 1;
+    el('draw-odds-body').innerHTML = '<table>' +
+      pool.slice().sort(function (a, b) { return b.weight - a.weight; }).map(function (i) {
+        return '<tr><td>' + esc(i.label) + '</td><td>' +
+          (i.weight / total * 100).toFixed(1) + '%</td></tr>';
+      }).join('') + '</table>' +
+      '<p class="reco-note" style="margin-top:8px;">Discs are earned only and cannot be bought. ' +
+      'Nothing here has cash value or leaves VINALL.</p>';
+  }
+
+  async function open() {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { Cloud.openAuth(); return; }
+    modal.classList.add('open');
+    resetStrip();
+    var pool = await loadItems();
+    // A resting strip so the window is never empty before the first spin.
+    el('draw-strip').innerHTML = buildStrip(pool, weightedPick(pool)).slice(0, 20).map(tileHTML).join('');
+    paintBalance();
+    paintOdds();
+  }
+  function close() { if (!busy) modal.classList.remove('open'); }
+
+  async function spin() {
+    if (busy) return;
+    var pool = await loadItems();
+    if (!pool.length) return;
+
+    busy = true;
+    el('draw-go').disabled = true;
+    resetStrip();
+
+    var res = await W().spin();
+    if (res.error) {
+      busy = false;
+      paintBalance();
+      el('draw-result').innerHTML = '<div class="dr-sub">' + esc(res.error) + '</div>';
+      if (window.reportIssue) reportIssue('wallet_spin failed', { error: res.error });
+      return;
+    }
+    var won = res.data;
+    var winner = pool.filter(function (i) { return i.key === won.key; })[0] ||
+                 { label: won.label, tier: won.tier, kind: won.kind, ref: won.ref, weight: 1 };
+
+    var strip = el('draw-strip');
+    strip.innerHTML = buildStrip(pool, winner).map(tileHTML).join('');
+
+    // Land the winning tile under the needle, minus a few pixels of jitter so
+    // it never stops perfectly centred twice running.
+    var windowW = el('draw-window').offsetWidth;
+    var jitter = (Math.random() * 2 - 1) * (TILE * 0.28);
+    var target = (WIN_INDEX * TILE) + (TILE / 2) - (windowW / 2) + jitter;
+
+    // Force the browser to take the reset transform before the real one, or
+    // the two collapse into a single style recalculation and nothing moves.
+    void strip.offsetWidth;
+    strip.style.transition = 'transform ' + SPIN_MS + 'ms cubic-bezier(.12,.72,.12,1)';
+    strip.style.transform = 'translate3d(' + (-target) + 'px,0,0)';
+
+    setTimeout(function () {
+      busy = false;
+      el('draw-window').classList.add('landed');
+      var r = el('draw-result');
+      r.className = 'draw-result in';
+      r.innerHTML = '<div class="dr-label">' + esc(won.label) + '</div>' +
+        '<div class="dr-sub">' + esc(
+          won.kind === 'discs' ? '+' + won.gained + ' Discs'
+          : won.duplicate ? 'Already yours — ' + won.gained + ' Discs instead'
+          : won.kind === 'banner_pick' ? 'Pick any album as your banner, on your profile'
+          : 'Unlocked — equip it in the Shop') + '</div>';
+
+      applyFeedback(won);
+      paintBalance();
+      if (typeof window.renderBannerPick === 'function') window.renderBannerPick();
+    }, SPIN_MS + 40);
+  }
+
+  // The payoff is scaled to the tier, so a legendary does not land with the
+  // same weight as 80 Discs. Everything here degrades to nothing under
+  // prefers-reduced-motion.
+  function applyFeedback(won) {
+    var wnd = el('draw-window');
+    if (won.tier === 'legendary') {
+      if (window.burst) burst(wnd, { count: 40, spread: 230 });
+      if (window.buzz) buzz('big');
+      if (typeof window.celebrate === 'function') {
+        window.celebrate('✨ ' + won.label, won.kind === 'banner_pick'
+          ? 'Seven-day reward, out of the machine. Pick your album.'
+          : 'The rarest thing in the box.');
+      }
+    } else if (won.tier === 'rare') {
+      if (window.burst) burst(wnd, { count: 24, spread: 160 });
+      if (window.buzz) buzz('big');
+    } else if (won.tier === 'uncommon') {
+      if (window.burst) burst(wnd, { count: 14, spread: 110 });
+      if (window.buzz) buzz('good');
+    } else {
+      if (window.burst) burst(wnd, { count: 8, spread: 70 });
+      if (window.buzz) buzz('tap');
+    }
+  }
+
+  el('draw-go').addEventListener('click', spin);
+  el('draw-close').addEventListener('click', close);
+  modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+
+  var card = document.getElementById('draw-card');
+  if (card) card.addEventListener('click', open);
+  window.openDraw = open;
+})();
+</script>
+
 <!-- ================================================================
      ALBUM BANNER — the seven-day login reward
      ================================================================
