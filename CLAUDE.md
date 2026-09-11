@@ -10,7 +10,10 @@ Zero-config Vercel deployment — there is no build step and no `package.json`.
 - `api/*.js` — Vercel serverless functions, auto-detected from the folder:
   - `app-token.js` — mints an app-level token (Client Credentials); this is how **every**
     catalogue request is authorised, for guests and signed-in users alike
-  - `bid-war-create.js`, `album-streams.js`, `_streams.js` — Bid War valuation
+  - `bid-war-create.js` — Bid War creation, both modes
+  - `album-streams.js`, `_streams.js` — stream valuation (kworb). `?albums=a,b,c`
+    batches up to 12, sharing one artist cache across the batch
+  - `album-market.js`, `_discogs.js` — market valuation (Discogs)
   - `delete-account.js` — in-app account deletion
 
 **There is no Spotify user login.** Accounts are Supabase email/password. `api/login.js` and
@@ -47,6 +50,10 @@ Never leave uncommitted work sitting on one machine.
 Set in Vercel → Project → Settings → Environment Variables. Not in the repo.
 
 - `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` — used only by `/api/app-token`
+- `DISCOGS_TOKEN` — a personal access token from Discogs → Settings → Developers,
+  generated instantly with no OAuth flow. Market-mode Bid Wars and
+  `/api/album-market` return a 500 saying so until it is set; nothing else is
+  affected.
 
 `REDIRECT_URI` is no longer read by anything and can be deleted from Vercel. It only mattered
 to the removed OAuth routes. Preview deploys therefore work fully, since `/api/app-token`
@@ -97,6 +104,28 @@ a theme or banner is still a client write, because the trigger reverts anything 
 Do not reintroduce a client-side balance. The previous version computed discs in the browser
 and posted the result, and its "daily cap" was an in-memory variable — both were trivially
 bypassed from the console, and nothing can be sold on top of that.
+
+### Minigame payouts were fake until `..._20260911100000_game_awards.sql`
+
+`Wallet.awardDiscs(amount)` read like it granted discs. It took the amount, threw it away,
+read the wallet back with `wallet_state()` — a read-only select — and toasted the number
+anyway. No server function awarded it, and after the economy went server-side no client write
+could. **Earworm, Daily Drop, the Tournament, achievement claims and Completionist all showed
+rewards that were never written.** Only Bid Wars, ratings and lore ever paid out.
+
+`wallet_award_game(p_game)` replaces it: **the client names the game and never a number**, the
+way `wallet_buy` takes a key and never a price. These games run entirely in the browser so a
+win cannot be verified — same posture as `wallet_record_rating`, which you can call without
+rating anything — so the defence is the same, a hard daily cap per game (`game_awards_date`
+and `game_awards`, both pinned by the trigger; without that, resetting your own counters
+client-side farms the caps). Adding a game means adding a `when` to the case *and* nothing
+else.
+
+Lore keeps its trigger and uses `Wallet.syncAward()`, which re-reads and toasts the difference
+that actually landed, so nothing is promised once the daily cap is hit.
+
+**A reward that vanishes on refresh is worse than no reward.** Before adding feel to a game,
+check the feel is attached to something real.
 
 ### The pin trigger's escape hatch must be `current_user`, not the JWT
 
@@ -204,11 +233,88 @@ Design decisions worth not undoing:
   resolution, when revealing them is the whole point.
 - **Bids are sealed** by the SELECT policy on `bid_war_bids`: your own row always, your
   opponent's only once `status = 'resolved'`.
+- **Values are not sealed, as of `..._20260911170000_war_modes_open_values.sql`.** They
+  never really were: `/api/album-streams` is public and read-only by design, and returns
+  exactly the number a war stores, so a player could always look up all five records on
+  their own board before bidding. Hiding a number that is one request away is a handicap on
+  whoever did not think to check, not a defence — and Higher or Lower made that obvious by
+  putting the same data in front of everyone.
+
+  So `bid_war_create_from` keeps `value` in `records` instead of stripping it, and the
+  bidding board shows it. **The game is better for it**: both players see all five and
+  spread 100 chips blind to each other, which is a simultaneous allocation game — Colonel
+  Blotto — where the skill is reading where the opponent will commit rather than knowing
+  more about streaming numbers. `bid_war_values` keeps its RLS-on-no-policies isolation and
+  stays authoritative at resolution, and `bid_war_submit` overwrites `records` from it, so
+  a tampered blob still cannot change a result.
 - **It is async by design.** With a user base this small, anything needing both players
   online at once would never actually get played.
 - Play counts are power-law distributed, unlike ratings, so one record on the board is
   usually worth more than the other four combined. That makes wars more lopsided but the
   bidding sharper: spotting and winning the big one is most of the game.
+
+### War modes
+
+`bid_wars.mode` is `streams` | `market`, chosen before the opponent because it changes what
+the game is rather than decorating it.
+
+- **streams** — total Spotify streams, via kworb. Power-law distributed, so one record is
+  usually worth more than the other four together and the whole game is taking that one.
+- **market** — what a copy costs on Discogs, in `lowest_price`. Prices bunch up, so a market
+  war is five tight calls instead of one big one.
+
+Market mode is the only place a second external service is allowed, and Discogs earned it by
+having a **real documented API** — token auth, rate-limit headers, a 429 when you cross the
+line. That is a contract. AOTY, RateYourMusic and Metacritic have no API at all, sit behind
+bot protection, and their scores are aggregated third-party critic content. One scrape
+(kworb) is enough for any app.
+
+Things that cost time to discover and should not be rediscovered:
+
+- **Community stats are on a `/releases/{id}`, never on a `/masters/{id}`.** A master returns
+  no `community` object whatsoever.
+- **Discogs 403s any request without a User-Agent.** It looks exactly like an auth failure.
+- Stats are per-pressing, so a famous album's have/want/rating counts fragment across every
+  version of it. `_discogs.js` takes the master's `main_release` as a proxy rather than
+  summing every version, which is fine *here*: a war value has to be identical for both
+  players and unguessable, not accurate. Nobody knows the "true" market price of a record.
+  That licence does not extend to stream totals, where a wrong figure reads as a bug — which
+  is why that valuation has a match threshold and a debug endpoint and this one doesn't.
+- **Price, not the Discogs rating.** `community.rating.average` clusters between about 3.7
+  and 4.6 because collectors rate everything highly, which is unplayable as a war value.
+  `lowest_price` has real spread.
+- **Prices are stored in minor units** (pence/cents) because `bid_war_values.value` is
+  `bigint` and £2.19 would truncate to 2. `album_market` carries the currency alongside, and
+  each record carries `cur` so the client can render a symbol rather than a bare number.
+- `album_market` caches for **3 days**, not 14 like `album_plays`: an asking price moves with
+  what is actually for sale that week, where a stream total only goes up.
+
+Client-side, every value goes through `fmtVal(n, war, rec)` rather than `fmtPlays`. £12.50
+rendered through the streams formatter reads as "1,250".
+
+## Higher or Lower
+
+Own modal, own module, near the bottom of `index.html`. Two records from your own crate, one
+value showing, and the run continues until you are wrong — no round limit, because a score is
+only worth telling somebody if there was no ceiling on it.
+
+**The pool is your rated albums and nothing else**, deliberately. Higher-or-lower on the
+global charts is trivia about strangers' records; on your own crate it asks how well you know
+the things you chose.
+
+Two modes that are different games, not a setting:
+
+- **Streams** — the same valuation Bid Wars uses. Power-law, so gaps are enormous and the
+  skill is knowing which of your records the world actually listens to.
+- **Your ratings** — your own scores out of 100. Clustered, so gaps are tiny and the skill is
+  remembering what you thought. **Needs no network at all**, which makes it the mode that
+  works on a train and the mode that works on day one.
+
+Streams mode pre-fetches its whole pool in one batched `?albums=` request before the first
+round. Per-round fetching puts a second of dead air between guesses and a chain game lives on
+rhythm. An album kworb cannot match is dropped rather than valued at zero — a zero is an
+answer and a wrong one. Ties go to the player, because ratings collide constantly and losing
+a run to two albums you both scored 84 would feel like a cheat.
 
 ## Groove roles
 
@@ -394,6 +500,22 @@ Added so the site can be wrapped without failing review for the obvious reasons.
 `STORE-SUBMISSION.md` holds the prepared App Privacy, Data Safety and
 age-rating answers, drafted listing copy, and the shortlist of things only Ben
 can do.
+
+## Feedback primitives
+
+`burst(el, opts)`, `ripple(el, ev)` and `buzz(kind)` are global, defined next to
+`celebrate()`, and used by Today and every game — so a correct guess in Earworm feels like one
+in Daily Drop feels like answering a question. Before them each surface invented its own
+feedback or had none, and the ones with none were the ones nobody played twice.
+
+All three **no-op entirely under `prefers-reduced-motion`**, by doing nothing rather than
+doing something smaller. `buzz` is silent on iOS Safari, which has no vibration API, so
+nothing may depend on it firing.
+
+The lesson worth keeping: the wins already had eighty pieces of confetti. **What was missing
+was the five guesses before them**, which were completely silent — and those are what a
+session actually consists of. Put feedback on the frequent small moments before the rare big
+one.
 
 ## Analytics and safety
 
