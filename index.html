@@ -3064,9 +3064,74 @@ body.entering-done #artist-hero {
 }
 .draw-tile .dt-chip { width: 46px; height: 46px; border-radius: 10px; }
 .draw-tile .dt-nm { font: 600 11px/1.25 var(--font-body); color: var(--text-dim); }
-.draw-tile.t-uncommon  { border-color: rgba(94,184,255,0.45); }
-.draw-tile.t-rare      { border-color: rgba(216,124,255,0.5); }
-.draw-tile.t-legendary { border-color: var(--gold); box-shadow: inset 0 0 24px var(--gold-dim); }
+/* Tier reads as colour, not just a border. A strip of identical grey tiles
+   gives the eye nothing to track while it is moving — the colours are what
+   make the speed visible and what makes something rare flashing past
+   register before it has gone. */
+.draw-tile.t-common {
+  background: linear-gradient(165deg, rgba(255,255,255,0.04), var(--surface-2) 70%);
+}
+.draw-tile.t-uncommon {
+  border-color: rgba(94,184,255,0.5);
+  background: linear-gradient(165deg, rgba(94,184,255,0.20), var(--surface-2) 72%);
+}
+.draw-tile.t-rare {
+  border-color: rgba(200,124,255,0.6);
+  background: linear-gradient(165deg, rgba(200,124,255,0.26), var(--surface-2) 72%);
+  box-shadow: inset 0 0 20px rgba(200,124,255,0.13);
+}
+.draw-tile.t-legendary {
+  border-color: var(--gold);
+  background: linear-gradient(165deg, var(--gold-glow), rgba(255,120,60,0.16) 45%, var(--surface-2) 80%);
+  box-shadow: inset 0 0 26px var(--gold-dim);
+}
+/* Only the legendaries shimmer, so the eye catches one going past. */
+.draw-tile.t-legendary .dt-chip { animation: dtShine 1.8s ease-in-out infinite; }
+@keyframes dtShine { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.5); } }
+
+/* While it runs. The sweep is a single moving highlight rather than
+   per-tile motion blur, which would cost a repaint on seventy elements. */
+.draw-window.spinning { border-color: var(--gold); }
+.draw-window.spinning::after {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--gold-glow), transparent);
+  animation: drawSweep 1.1s linear infinite;
+}
+@keyframes drawSweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.draw-window.spinning .draw-needle { animation: needlePulse .55s ease-in-out infinite alternate; }
+@keyframes needlePulse { from { opacity: .55; } to { opacity: 1; box-shadow: 0 0 14px var(--gold); } }
+
+/* The landing. Scaled by tier, because a legendary arriving with the same
+   weight as 80 Discs is the fastest way to make both feel like nothing. */
+.draw-window.hit-uncommon  { animation: drawShake .35s var(--ease); }
+.draw-window.hit-rare      { animation: drawShake .5s var(--ease); box-shadow: 0 0 40px rgba(200,124,255,0.45); }
+.draw-window.hit-legendary { animation: drawShakeBig .7s var(--ease); box-shadow: 0 0 70px var(--gold-glow); }
+@keyframes drawShake {
+  0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); }
+}
+@keyframes drawShakeBig {
+  0%,100% { transform: translate(0,0) scale(1); }
+  15% { transform: translate(-9px,2px) scale(1.015); }
+  40% { transform: translate(8px,-2px) scale(1.02); }
+  70% { transform: translate(-4px,1px) scale(1.01); }
+}
+
+.draw-result.tier-uncommon .dr-label  { color: #7ec8ff; }
+.draw-result.tier-rare .dr-label      { color: #d08cff; text-shadow: 0 0 22px rgba(200,124,255,0.55); }
+.draw-result.tier-legendary .dr-label {
+  background: linear-gradient(90deg, var(--gold), #fff1c2, var(--accent-2), var(--gold));
+  background-size: 300% 100%; -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  animation: drawShimmer 2.4s linear infinite; font-size: 32px;
+}
+@keyframes drawShimmer { to { background-position: 300% 0; } }
+
+/* The button has to answer the tap instantly. Five seconds of reel with a
+   button that did nothing on press made the whole thing feel unplugged. */
+#draw-go.arming { animation: drawArm .45s var(--ease); }
+@keyframes drawArm {
+  0% { transform: scale(1); } 35% { transform: scale(.93); } 100% { transform: scale(1); }
+}
 
 /* The marker. A single hairline down the middle — the thing the strip stops
    against, so the landing reads as exact rather than approximate. */
@@ -3093,8 +3158,51 @@ body.entering-done #artist-hero {
 
 @media (prefers-reduced-motion: reduce) {
   .draw-strip { transition: none !important; }
-  .draw-window.landed .draw-needle, .draw-result.in { animation: none !important; }
+  .draw-window.landed .draw-needle, .draw-result.in,
+  .draw-window.spinning::after, .draw-window.spinning .draw-needle,
+  .draw-window.hit-uncommon, .draw-window.hit-rare, .draw-window.hit-legendary,
+  .draw-tile.t-legendary .dt-chip, .draw-result.tier-legendary .dr-label,
+  #draw-go.arming { animation: none !important; }
 }
+
+/* ---- Rewards ladder --------------------------------------------------- */
+.rw-ladder { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 16px 0 26px; }
+.rw-day {
+  position: relative; text-align: center; padding: 14px 6px;
+  border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2);
+  transition: border-color .2s var(--ease), transform .2s var(--ease);
+}
+.rw-day .rw-d { font: 700 10px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--text-faint); }
+.rw-day .rw-amt { font: 700 24px/1.1 var(--font-mono); color: var(--text); margin-top: 8px; }
+.rw-day .rw-unit { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .06em; }
+.rw-day .rw-prize { color: var(--gold); margin-top: 6px; }
+.rw-day.done { border-color: var(--gold-dim); background: linear-gradient(160deg, var(--gold-dim), var(--surface-2) 70%); }
+.rw-day.done .rw-amt { color: var(--gold); }
+.rw-day .rw-tick { position: absolute; top: 6px; right: 8px; color: var(--gold); font-size: 12px; }
+.rw-day.today { border-color: var(--gold); transform: translateY(-3px); box-shadow: 0 6px 20px var(--gold-dim); }
+.rw-day.grand { border-color: var(--accent-2-dim); background: linear-gradient(160deg, var(--accent-2-dim), var(--surface-2) 70%); }
+.rw-day.grand .rw-amt { font-size: 13px; line-height: 1.3; color: var(--text); }
+@media (max-width: 640px) {
+  .rw-ladder { grid-template-columns: repeat(4, 1fr); }
+  .rw-day .rw-amt { font-size: 19px; }
+}
+
+.rw-grand {
+  border: 1px solid var(--gold-dim); border-radius: 16px; padding: 20px;
+  background: linear-gradient(150deg, var(--gold-dim), var(--surface) 65%); margin-bottom: 22px;
+}
+.rw-grand h3 { font-family: var(--font-display); font-size: 22px; margin-bottom: 6px; }
+.rw-other { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 26px; }
+.rw-card {
+  border: 1px solid var(--border); border-radius: 14px; padding: 16px; background: var(--surface-2);
+  cursor: pointer; transition: border-color .18s, transform .18s var(--ease);
+}
+.rw-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+.rw-card h3 { font-family: var(--font-display); font-size: 18px; margin-bottom: 5px; }
+.rw-card p { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
+.rw-rates table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rw-rates td { padding: 9px 4px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+.rw-rates td:last-child { text-align: right; font-family: var(--font-mono); color: var(--gold); white-space: nowrap; }
 
 /* ---- album banner picker --------------------------------------------- */
 .bp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; margin-top: 12px; }
@@ -3618,6 +3726,7 @@ window.ICONS = {
     <button data-mode="songs">Songs</button>
     <button data-mode="games">Games</button>
     <button data-mode="wars">Bid Wars</button>
+    <button data-mode="rewards">Rewards</button>
     <button data-mode="achievements" class="nav-icon-btn" aria-label="Achievements" title="Achievements"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="6.5" r="4"/><path d="M5.2 9.8 4 14l4-1.6 4 1.6-1.2-4.2"/></svg></button>
     <button class="activity-toggle nav-icon-btn" id="notif-toggle" title="Notifications" aria-label="Notifications"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 2.2c-1.8 0-3.1 1.4-3.1 3.4v2c0 .8-.3 1.6-.9 2.3l-.5.6h9l-.5-.6c-.6-.7-.9-1.5-.9-2.3v-2c0-2-1.3-3.4-3.1-3.4Z"/><path d="M6.3 11.8a1.8 1.8 0 0 0 3.4 0"/></svg><span class="dot" id="notif-dot" style="display:none;"></span></button>
     <button class="activity-toggle nav-icon-btn" id="activity-toggle" title="Recent activity" aria-label="Recent activity"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.6 1.5"/></svg><span class="dot"></span></button>
@@ -3887,6 +3996,17 @@ window.ICONS = {
     <div id="war-challenges"></div>
     <div id="war-active"></div>
     <div id="war-history"></div>
+  </section>
+
+  <!-- ============================ REWARDS ============================
+       The seven-day ladder, laid out. Every reward in the app used to be
+       invisible until you had already earned it — the album banner in
+       particular only appeared once you owned a pick, so nothing anywhere
+       told a new player it existed. A ladder you can see is the reason to
+       come back on day two. -->
+  <section id="view-rewards" style="display:none; margin-top:32px;">
+    <div class="section-head"><h2><span data-icon="disc"></span> Rewards</h2><span class="muted" id="rw-streak"></span></div>
+    <div id="rewards-body"></div>
   </section>
 
   <!-- ============================ ACHIEVEMENTS ============================ -->
@@ -5405,6 +5525,7 @@ const views = {
   songs: document.getElementById('view-songs'),
   games: document.getElementById('view-games'),
   wars: document.getElementById('view-wars'),
+  rewards: document.getElementById('view-rewards'),
   achievements: document.getElementById('view-achievements'),
   profile: document.getElementById('view-profile'),
   people: document.getElementById('view-people'),
@@ -5437,6 +5558,7 @@ function setMode(mode, fromCode) {
   if (mode === 'achievements' && window.renderAchievements) window.renderAchievements();
   if (mode === 'profile' && window.renderProfile) window.renderProfile();
   if (mode === 'profile' && window.renderLore) window.renderLore();
+  if (mode === 'rewards' && window.renderRewards) window.renderRewards();
   if (mode === 'profile' && window.renderBannerPick) window.renderBannerPick();
   if (mode === 'profile' && window.renderListeningImport) window.renderListeningImport();
   if (mode === 'profile' && window.renderAdminStats) window.renderAdminStats();
@@ -12450,7 +12572,7 @@ window.renderAdminStats = renderAdminStats;
     var strip = el('draw-strip');
     strip.style.transition = 'none';
     strip.style.transform = 'translate3d(0,0,0)';
-    el('draw-window').classList.remove('landed');
+    el('draw-window').className = 'draw-window';
     el('draw-result').className = 'draw-result';
     el('draw-result').innerHTML = '';
   }
@@ -12493,13 +12615,24 @@ window.renderAdminStats = renderAdminStats;
     var pool = await loadItems();
     if (!pool.length) return;
 
+    /* Answer the tap before anything else happens. The round trip and five
+       seconds of reel used to start with the button sitting there inert,
+       which made the whole thing feel like it had not registered the press. */
     busy = true;
-    el('draw-go').disabled = true;
+    var go = el('draw-go');
+    go.classList.remove('arming'); void go.offsetWidth; go.classList.add('arming');
+    if (window.ripple) ripple(go);
+    if (window.buzz) buzz('tap');
+    go.disabled = true;
+    go.textContent = 'Spinning…';
     resetStrip();
+    el('draw-window').classList.add('spinning');
 
     var res = await W().spin();
     if (res.error) {
       busy = false;
+      el('draw-window').classList.remove('spinning');
+      go.textContent = 'Open for ' + COST + ' Discs';
       paintBalance();
       el('draw-result').innerHTML = '<div class="dr-sub">' + esc(res.error) + '</div>';
       if (window.reportIssue) reportIssue('wallet_spin failed', { error: res.error });
@@ -12526,9 +12659,12 @@ window.renderAdminStats = renderAdminStats;
 
     setTimeout(function () {
       busy = false;
-      el('draw-window').classList.add('landed');
+      var wnd = el('draw-window');
+      wnd.classList.remove('spinning');
+      wnd.classList.add('landed', 'hit-' + (won.tier || 'common'));
+      go.textContent = 'Open another';
       var r = el('draw-result');
-      r.className = 'draw-result in';
+      r.className = 'draw-result in tier-' + (won.tier || 'common');
       r.innerHTML = '<div class="dr-label">' + esc(won.label) + '</div>' +
         '<div class="dr-sub">' + esc(
           won.kind === 'discs' ? '+' + won.gained + ' Discs'
@@ -12574,6 +12710,122 @@ window.renderAdminStats = renderAdminStats;
   var card = document.getElementById('draw-card');
   if (card) card.addEventListener('click', open);
   window.openDraw = open;
+})();
+</script>
+
+<!-- ================================================================
+     REWARDS — the seven-day ladder
+     ================================================================
+     Every reward here was previously invisible until it had already been
+     earned. The album banner was the worst of it: the picker only rendered
+     once you owned a pick, so nothing in the app told a new player the reward
+     existed at all. A reward nobody can see is a reward that motivates
+     nobody — the ladder is the reason to come back tomorrow, so it has to be
+     legible on day one.
+     ================================================================ -->
+<script>
+(function () {
+  // Mirrors wallet_daily_login(): 25 + 12 per day, capped at 100. If that
+  // formula changes in SQL it has to change here too — this is display only,
+  // the server is what actually pays.
+  function payFor(day) { return Math.min(25 + (day - 1) * 12, 100); }
+
+  async function renderRewards() {
+    var host = document.getElementById('rewards-body');
+    if (!host) return;
+    var head = document.getElementById('rw-streak');
+
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) {
+      if (head) head.textContent = '';
+      host.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.disc +
+        '</span><h3>Rewards</h3><p>Log in and every day you come back pays.</p>' +
+        '<button class="btn-primary" id="rw-login" style="margin-top:8px;">Log in</button></div>';
+      var b = document.getElementById('rw-login');
+      if (b) b.addEventListener('click', function () { Cloud.openAuth(); });
+      return;
+    }
+
+    var st = (window.Wallet && Wallet.get) ? Wallet.get() : null;
+    if (!st) return;
+
+    var streak = st.login_streak || 0;
+    // Position in the current week of seven. Day 7 shows as 7, not 0.
+    var inWeek = streak % 7 === 0 && streak > 0 ? 7 : streak % 7;
+    if (head) head.textContent = streak ? streak + ' day' + (streak === 1 ? '' : 's') + ' running' : '';
+
+    var days = '';
+    for (var d = 1; d <= 7; d++) {
+      var done = d <= inWeek;
+      var today = d === inWeek;
+      days += '<div class="rw-day' + (done ? ' done' : '') + (today ? ' today' : '') + (d === 7 ? ' grand' : '') + '">' +
+        '<div class="rw-d">Day ' + d + '</div>' +
+        (d === 7
+          ? '<div class="rw-prize">' + ICONS.disc + '</div><div class="rw-amt">Album<br>banner</div>'
+          : '<div class="rw-amt">' + payFor(d) + '</div><div class="rw-unit">Discs</div>') +
+        (done ? '<div class="rw-tick">✓</div>' : '') +
+      '</div>';
+    }
+
+    host.innerHTML =
+      '<p class="reco-note">Open VINALL and the day pays. Miss a day and it starts again ' +
+      'from the beginning — seven in a row is the whole point.</p>' +
+      '<div class="rw-ladder">' + days + '</div>' +
+      '<div class="rw-grand">' +
+        '<h3>The album banner</h3>' +
+        '<p class="reco-note">Seven days running and you pick any record from your crate. ' +
+        'Its cover becomes your profile header, and it is yours to keep — every one is ' +
+        'different, so it is the one reward that never runs out.' +
+        (st.banner_picks > 0
+          ? ' <b>You have ' + st.banner_picks + ' to claim right now.</b>'
+          : '') + '</p>' +
+        (st.banner_picks > 0
+          ? '<button class="btn-primary" id="rw-claim">Pick your album</button>'
+          : '<p class="reco-note" style="opacity:.7;">' +
+            (inWeek ? (7 - inWeek) + ' more day' + (7 - inWeek === 1 ? '' : 's') + ' to go.'
+                    : 'Come back tomorrow to start the run.') + '</p>') +
+      '</div>' +
+      '<div class="rw-other">' +
+        '<div class="rw-card" id="rw-draw"><h3>The Draw</h3>' +
+          '<p>250 Discs a spin. Discs, banners, themes — or the album banner, straight out of the machine. Odds on the page.</p>' +
+          '<div class="gc-go">Open one &rarr;</div></div>' +
+        '<div class="rw-card" id="rw-shop"><h3>The Shop</h3>' +
+          '<p>Spend what you have earned on themes and banners. You hold ' +
+          (st.is_admin ? '∞' : (st.discs || 0)) + ' Discs.</p>' +
+          '<div class="gc-go">Browse &rarr;</div></div>' +
+      '</div>' +
+      '<div class="rw-rates">' +
+        '<h3 class="prof-section-title">Everything that pays</h3>' +
+        '<table>' +
+          '<tr><td>Rating an album or song</td><td>8 &times; 10 a day</td></tr>' +
+          '<tr><td>Answering a question on Today</td><td>5 &times; 20 a day</td></tr>' +
+          '<tr><td>Solving the Daily Drop</td><td>75</td></tr>' +
+          '<tr><td>Solving Earworm</td><td>50 &times; 3 a day</td></tr>' +
+          '<tr><td>A run of 5+ on Higher or Lower</td><td>40 &times; 3 a day</td></tr>' +
+          '<tr><td>Winning a Tournament</td><td>40 &times; 2 a day</td></tr>' +
+          '<tr><td>Claiming an achievement</td><td>40 &times; 5 a day</td></tr>' +
+          '<tr><td>Winning a Bid War</td><td>30 &mdash; 8 for losing, 15 each for a draw</td></tr>' +
+        '</table>' +
+      '</div>';
+
+    var claim = document.getElementById('rw-claim');
+    if (claim) claim.addEventListener('click', function () {
+      goToView('profile');
+      if (window.renderProfile) renderProfile();
+      if (window.renderBannerPick) renderBannerPick();
+      setTimeout(function () {
+        var el = document.getElementById('banner-pick');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 180);
+    });
+    var dr = document.getElementById('rw-draw');
+    if (dr) dr.addEventListener('click', function () { if (window.openDraw) openDraw(); });
+    var sh = document.getElementById('rw-shop');
+    if (sh) sh.addEventListener('click', function () {
+      var b = document.getElementById('shop-open-discs');
+      if (b && b.click) b.click();
+    });
+  }
+  window.renderRewards = renderRewards;
 })();
 </script>
 
