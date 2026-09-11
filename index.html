@@ -90,6 +90,43 @@
   --accent-2-dim:  rgba(255,61,127,0.16);
   --font-display:  'Instrument Serif', serif;
 }
+/* Two more to spend Discs on. Inflating what you earn without adding
+   anything to buy just brings forward the day Discs stop mattering. */
+[data-theme="vhs"] {
+  --bg:            #07100d;
+  --surface:       #0e1a16;
+  --surface-2:     #14241e;
+  --surface-3:     #1c2f28;
+  --surface-4:     #253c33;
+  --text:          #e8fff4;
+  --text-dim:      #86b3a1;
+  --text-faint:    #527267;
+  --border:        rgba(210,255,235,0.09);
+  --border-strong: rgba(210,255,235,0.19);
+  --gold:          #3dffab;
+  --gold-glow:     rgba(61,255,171,0.26);
+  --gold-dim:      rgba(61,255,171,0.13);
+  --accent-2:      #ff4fa3;
+  --accent-2-dim:  rgba(255,79,163,0.16);
+}
+[data-theme="bone"] {
+  --bg:            #141310;
+  --surface:       #1e1c18;
+  --surface-2:     #272420;
+  --surface-3:     #332f29;
+  --surface-4:     #423d35;
+  --text:          #f6f1e7;
+  --text-dim:      #b3a996;
+  --text-faint:    #7d7566;
+  --border:        rgba(246,241,231,0.10);
+  --border-strong: rgba(246,241,231,0.2);
+  --gold:          #e6dcc4;
+  --gold-glow:     rgba(230,220,196,0.22);
+  --gold-dim:      rgba(230,220,196,0.12);
+  --accent-2:      #b8705a;
+  --accent-2-dim:  rgba(184,112,90,0.18);
+  --font-display:  'Instrument Serif', serif;
+}
 [data-theme="neon"] {
   --bg:            #0a0616;
   --surface:       #140c26;
@@ -3000,6 +3037,19 @@ body.entering-done #artist-hero {
 .td-opt:active:not(:disabled) { transform: scale(0.96); }
 .td-opt { position: relative; overflow: hidden; }
 
+/* ---- album banner picker --------------------------------------------- */
+.bp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; margin-top: 12px; }
+.bp-item {
+  background: none; border: 1px solid var(--border); border-radius: 12px; padding: 6px;
+  cursor: pointer; color: var(--text-dim); font: 600 11px var(--font-body); text-align: center;
+  transition: border-color .16s, transform .12s var(--ease);
+}
+.bp-item img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; display: block; background: var(--surface-3); }
+.bp-item span { display: block; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-item:hover:not(:disabled) { border-color: var(--gold); transform: translateY(-2px); }
+.bp-item:disabled { opacity: .4; cursor: default; }
+.bp-item.picked { border-color: var(--gold); opacity: 1; }
+
 /* ---- Higher or Lower ------------------------------------------------- */
 .hl-mode { display: inline-flex; gap: 4px; background: var(--surface-2); border-radius: 999px; padding: 4px; }
 .hl-mode button {
@@ -3790,6 +3840,7 @@ window.ICONS = {
     <div class="section-head" style="margin-top:34px;"><h2>Your Music Lore</h2><span class="muted" id="lore-count"></span></div>
     <p class="reco-note">Everything you&rsquo;ve said about your records.</p>
     <div id="lore-list"></div>
+    <div id="banner-pick"></div>
     <div id="listening-import"></div>
     <div id="admin-stats"></div>
   </section>
@@ -5289,6 +5340,7 @@ function setMode(mode, fromCode) {
   if (mode === 'achievements' && window.renderAchievements) window.renderAchievements();
   if (mode === 'profile' && window.renderProfile) window.renderProfile();
   if (mode === 'profile' && window.renderLore) window.renderLore();
+  if (mode === 'profile' && window.renderBannerPick) window.renderBannerPick();
   if (mode === 'profile' && window.renderListeningImport) window.renderListeningImport();
   if (mode === 'profile' && window.renderAdminStats) window.renderAdminStats();
   if (mode === 'people' && window.renderPeople) window.renderPeople();
@@ -6624,6 +6676,10 @@ const Cloud=(function(){
     user=u;refreshUI();await pullAndMerge();
     backfillRatingsOnce();
     if(window.Wallet)try{await Wallet.load();}catch(e){}
+    // Claim the day's login reward. Server-side once-per-day, so calling it on
+    // every authed load is safe; it is deliberately not awaited into the
+    // render path, since a slow round trip must not hold up the app drawing.
+    if(window.Wallet&&Wallet.dailyLogin)Wallet.dailyLogin().catch(function(){});
     try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderRecommendations();renderArtistHero();if(window.renderToday)renderToday(true);if(window.renderDiary)renderDiary();}if(currentMode==='profile'&&window.renderProfile)renderProfile();}catch(e){}
     flashSaved();
   }
@@ -7093,8 +7149,22 @@ async function drawProfile(host,prof,isOwner){
   }
 
 
-  const bannerDef=window.Wallet&&prof.active_banner&&Wallet.BANNERS[prof.active_banner];
-  const bannerStyle=bannerDef?' style="background:'+bannerDef.gradient+'; border-radius:var(--radius); padding:20px;"':'';
+  /* Banners are either a named gradient from the shop, or an album cover
+     claimed with a seven-day login streak — those are keyed `album:<url>`, so
+     they are not in BANNERS and need their own branch. The cover is blurred
+     and darkened behind a gradient: at full strength a 640px cover behind the
+     header makes every piece of text on top of it unreadable. */
+  const ab=prof.active_banner||'';
+  const isAlbumBanner=ab.indexOf('album:')===0;
+  const bannerDef=!isAlbumBanner&&window.Wallet&&ab&&Wallet.BANNERS[ab];
+  let bannerStyle='';
+  if(isAlbumBanner){
+    const url=ab.slice(6);
+    bannerStyle=' style="background-image:linear-gradient(to bottom, rgba(10,9,8,0.62), rgba(10,9,8,0.88)), url(\''+esc(url)+'\');'+
+      'background-size:cover; background-position:center; border-radius:var(--radius); padding:20px;"';
+  } else if(bannerDef){
+    bannerStyle=' style="background:'+bannerDef.gradient+'; border-radius:var(--radius); padding:20px;"';
+  }
   host.innerHTML=
     favBannerHtml+
     '<div class="prof-head"'+bannerStyle+'>'+
@@ -8946,6 +9016,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     sundown:  { name: 'Sundown',  cost: 150, desc: 'Plum dusk, hot orange, pink neon edge.' },
     cassette: { name: 'Cassette', cost: 150, desc: 'Deep graphite with turquoise and blue.' },
     citrus:   { name: 'Citrus',   cost: 250, desc: 'Espresso dark, blood orange and lime.' },
+    vhs:      { name: 'VHS Tracking', cost: 300, desc: 'Bottle-green black with phosphor green and hot pink.' },
+    bone:     { name: 'Bone China',   cost: 300, desc: 'Warm off-white on soot. Quiet, and the only pale one.' },
     neon:     { name: 'Neon Vault', cost: 350, desc: 'Indigo black, magenta and cyan. Loud.' },
   };
   const SWATCH = {
@@ -8953,6 +9025,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     sundown:  'linear-gradient(135deg,#1a0a14 20%,#ff8a3d 60%,#ff3d7f)',
     cassette: 'linear-gradient(135deg,#0b0d10 20%,#12e0c8 60%,#5eb8ff)',
     citrus:   'linear-gradient(135deg,#12100a 20%,#ff9f1c 60%,#c6ff3d)',
+    vhs:      'linear-gradient(135deg,#07100d 20%,#3dffab 60%,#ff4fa3)',
+    bone:     'linear-gradient(135deg,#141310 20%,#e6dcc4 60%,#b8705a)',
     neon:     'linear-gradient(135deg,#0a0616 20%,#ff3d9a 60%,#22e3ff)',
   };
   const BANNERS = {
@@ -8960,6 +9034,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     aurora: { name: 'Aurora',    cost: 100, desc: 'A cool blue-to-gold wash behind your header.', gradient: 'linear-gradient(120deg, rgba(94,184,255,0.28), rgba(245,200,66,0.16))' },
     ember:  { name: 'Ember',     cost: 100, desc: 'Warm orange-red, low and moody.', gradient: 'linear-gradient(120deg, rgba(232,118,63,0.30), rgba(226,75,74,0.16))' },
     mono:   { name: 'Mono Fade', cost: 80,  desc: 'A quiet fade to nothing — subtle depth.', gradient: 'linear-gradient(120deg, rgba(255,255,255,0.10), transparent)' },
+    tape:   { name: 'Tape Loop', cost: 140, desc: 'Phosphor green bleeding into black.', gradient: 'linear-gradient(120deg, rgba(61,255,171,0.24), rgba(255,79,163,0.12))' },
+    dusk:   { name: 'Dusk',      cost: 140, desc: 'The last twenty minutes of light.', gradient: 'linear-gradient(120deg, rgba(120,90,190,0.28), rgba(255,150,90,0.14))' },
+    static: { name: 'Static',    cost: 180, desc: 'Snow on a dead channel.', gradient: 'repeating-linear-gradient(115deg, rgba(255,255,255,0.09) 0 2px, transparent 2px 5px)' },
   };
   // The real banner gradients above are deliberately subtle overlays meant to
   // sit on top of a full profile page. At 44px swatch-chip size with nothing
@@ -8970,6 +9047,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     aurora: 'linear-gradient(135deg, #5eb8ff, #F5C842)',
     ember:  'linear-gradient(135deg, #e8763f, #e24b4a)',
     mono:   'linear-gradient(135deg, #6b6154, #d9cdbe)',
+    tape:   'linear-gradient(135deg, #3dffab, #ff4fa3)',
+    dusk:   'linear-gradient(135deg, #785abe, #ff965a)',
+    static: 'repeating-linear-gradient(115deg, #d9d9d9 0 3px, #2a2a2a 3px 7px)',
   };
   const STREAK_MILESTONES = [7, 30, 100, 365];
   const DAILY_RATING_CAP = 5;
@@ -8979,6 +9059,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     discs: 0, streak_current: 0, streak_best: 0, streak_last_date: null,
     streak_freezes: 1, owned_themes: ['classic'], active_theme: 'classic',
     owned_banners: [], active_banner: null, is_admin: false,
+    login_streak: 0, login_best: 0, banner_picks: 0,
   };
   let loaded = false;
   let ratingsToday = 0, ratingsTodayDate = null;
@@ -9076,6 +9157,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
           active_theme: prof.active_theme || 'classic',
           owned_banners: prof.owned_banners || [],
           active_banner: prof.active_banner || null,
+          login_streak: prof.login_streak || 0,
+          login_best: prof.login_best || 0,
+          banner_picks: prof.banner_picks || 0,
           is_admin: !!prof.is_admin,
         };
       }
@@ -9098,6 +9182,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (w.streak_freezes != null) state.streak_freezes = w.streak_freezes;
     if (w.owned_themes) state.owned_themes = w.owned_themes;
     if (w.owned_banners) state.owned_banners = w.owned_banners;
+    if (w.active_banner !== undefined) state.active_banner = w.active_banner;
+    if (w.login_streak != null) state.login_streak = w.login_streak;
+    if (w.login_best != null) state.login_best = w.login_best;
+    if (w.banner_picks != null) state.banner_picks = w.banner_picks;
     updateShopButton();
     if (typeof window.renderStats === 'function') window.renderStats();
   }
@@ -9178,6 +9266,40 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     return w;
   }
 
+  /* The daily login reward. Safe to call on every load: the server returns
+     `claimed_already` and changes nothing if you have had today's.
+
+     10 Discs on day one rising to 40 by day seven, then flat — deliberately
+     plateaued, because this rewards opening the app rather than using it, and
+     that is a weaker thing to reward than the rating streak sitting next to
+     it. What keeps a long streak interesting is the album banner every seventh
+     day, not an ever-growing pile for turning up. */
+  async function dailyLogin() {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return null;
+    const res = await rpc('wallet_daily_login');
+    if (res.error) {
+      // Silent for the user, loud for the admin panel: this runs on every
+      // load, so a broken one would otherwise never be noticed.
+      if (window.reportIssue) reportIssue('wallet_daily_login failed', { error: res.error });
+      return null;
+    }
+    const w = res.data || {};
+    applyWallet(w);
+    if (w.claimed_already) return w;
+
+    if (w.earned > 0) {
+      toast('+' + w.earned + ' Discs — day ' + w.login_streak);
+      spawnDiscParticle(w.earned);
+      if (window.buzz) buzz('good');
+    }
+    if (w.banner_pick && typeof window.celebrate === 'function') {
+      window.celebrate('Seven days straight',
+        'Pick any album and its cover becomes your profile banner.');
+      if (window.buzz) buzz('big');
+    }
+    return w;
+  }
+
   /* For rewards Postgres has already granted by trigger — lore answers, and
      any future trigger award. Nothing is asked for; the wallet is re-read and
      the toast reports the difference that actually landed. So when the daily
@@ -9207,6 +9329,21 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
     const res = await rpc('wallet_state');
     if (!res.error && res.data) applyWallet(res.data);
+  }
+
+  /* Spend one seven-day entitlement on an album cover as a banner. The URL is
+     re-checked server-side against Spotify's image CDN — without that this is
+     an arbitrary image embed on a public profile, which is a moderation
+     problem and a tracking-pixel problem at once. */
+  async function claimAlbumBanner(art, label) {
+    const res = await rpc('wallet_claim_album_banner', { p_art: art, p_label: label || null });
+    if (res.error) return { error: res.error };
+    applyWallet(res.data);
+    if (window.burst) burst(document.body, { count: 20, spread: 140 });
+    if (window.buzz) buzz('big');
+    toast('Banner set — ' + (label || 'your album'));
+    if (typeof window.renderProfile === 'function') window.renderProfile();
+    return { ok: true, data: res.data };
   }
 
   async function buyTheme(key) {
@@ -9257,6 +9394,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     },
     load: load, get: get, recordRating: recordRating,
     awardGame: awardGame, syncAward: syncAward, awardDiscs: awardDiscs,
+    dailyLogin: dailyLogin, claimAlbumBanner: claimAlbumBanner,
     buyTheme: buyTheme, equipTheme: equipTheme, buyBanner: buyBanner, equipBanner: equipBanner,
     applyTheme: applyTheme, THEMES: THEMES, BANNERS: BANNERS,
   };
@@ -9264,9 +9402,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   // ---- Shop UI ------------------------------------------------------------
   function shopItemRow(kind, key, item, swatchBg, owned, active) {
     let action;
+    // Keys used to be short literals from THEMES/BANNERS; album banners put a
+    // URL in here, so it gets escaped into the attribute like any other
+    // untrusted-shaped value.
+    const k = window.esc ? esc(key) : key;
     if (active) action = '<button class="btn-mini" disabled>Equipped</button>';
-    else if (owned) action = '<button class="btn-mini" data-equip-' + kind + '="' + key + '">Equip</button>';
-    else action = '<button class="btn-primary" style="padding:9px 16px;font-size:13px;" data-buy-' + kind + '="' + key + '" ' + ((get().discs < item.cost && !get().is_admin) ? 'disabled' : '') + '>Buy</button>';
+    else if (owned) action = '<button class="btn-mini" data-equip-' + kind + '="' + k + '">Equip</button>';
+    else action = '<button class="btn-primary" style="padding:9px 16px;font-size:13px;" data-buy-' + kind + '="' + k + '" ' + ((get().discs < item.cost && !get().is_admin) ? 'disabled' : '') + '>Buy</button>';
     return '<div class="shop-item">' +
       '<div class="shop-swatch" style="background:' + swatchBg + '"></div>' +
       '<div class="shop-item-info">' +
@@ -9290,9 +9432,23 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       return shopItemRow('banner', key, BANNERS[key], BANNER_SWATCH[key], owned, active);
     }).join('');
 
+    /* Album banners earned with a seven-day streak are keyed `album:<url>`,
+       so they are not in BANNERS and would otherwise vanish from the shop the
+       moment you equipped something else — owned but unreachable. Listed here
+       from owned_banners instead, with the cover itself as the swatch. */
+    const albumRows = (w.owned_banners || []).filter(function (k) {
+      return String(k).indexOf('album:') === 0;
+    }).map(function (key) {
+      const url = key.slice(6);
+      const def = { name: 'Album banner', cost: 0, desc: 'Earned with a seven-day streak.' };
+      return shopItemRow('banner', key, def, 'url(\'' + url + '\') center/cover', true,
+                         (w.active_banner || '') === key);
+    }).join('');
+
     list.innerHTML =
       '<div class="shop-section-title">Themes</div>' + themeRows +
-      '<div class="shop-section-title">Profile banners</div>' + bannerRows;
+      '<div class="shop-section-title">Profile banners</div>' + bannerRows +
+      (albumRows ? '<div class="shop-section-title">Your albums</div>' + albumRows : '');
 
     list.querySelectorAll('[data-buy-theme]').forEach(function (b) {
       b.addEventListener('click', async function () {
@@ -12098,6 +12254,78 @@ async function renderAdminStats() {
 }
 window.renderAdminStats = renderAdminStats;
 </script>
+<!-- ================================================================
+     ALBUM BANNER — the seven-day login reward
+     ================================================================
+     Seven consecutive days of opening VINALL earns one album banner: pick a
+     record and its cover becomes your profile header.
+
+     The pick comes from your own crate rather than a Spotify search, for three
+     reasons. It is instant with no network. Every cover in there is already an
+     i.scdn.co URL, which is exactly what the server will accept. And "an album
+     of your choice" means more when the choice is made from records you
+     actually put there.
+
+     This is also the sink that makes the inflation safe: every claim is a
+     different object, so unlike five themes and six banners it cannot be
+     finished.
+     ================================================================ -->
+<script>
+(function () {
+  function W() { return window.Wallet; }
+
+  async function renderBannerPick() {
+    var host = document.getElementById('banner-pick');
+    if (!host) return;
+    host.innerHTML = '';
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn() || !W()) return;
+
+    // Same guard every section inside view-profile needs: this view is also
+    // how you look at somebody else's profile.
+    var viewing = new URLSearchParams(location.search).get('u');
+    if (viewing && viewing !== Cloud.getUser().id) return;
+
+    var st = W().get ? W().get() : null;
+    if (!st || !(st.banner_picks > 0)) return;
+
+    var al = {};
+    try { al = window.loadAlbums ? loadAlbums() : {}; } catch (e) {}
+    var picks = Object.keys(al).map(function (k) { return al[k]; })
+      .filter(function (a) { return a && a.art && /^https:\/\/i\.scdn\.co\/image\//.test(a.art); })
+      .sort(function (a, b) { return (b.score || 0) - (a.score || 0); })
+      .slice(0, 24);
+
+    host.innerHTML =
+      '<div class="section-head" style="margin-top:34px;"><h2>Your album banner</h2>' +
+      '<span class="muted">' + st.banner_picks + ' to claim</span></div>' +
+      (picks.length
+        ? '<p class="reco-note">Seven days straight. Pick a record — its cover becomes your profile header, and it is yours to keep.</p>' +
+          '<div class="bp-grid">' + picks.map(function (a) {
+            return '<button class="bp-item" type="button" data-art="' + esc(a.art) + '" data-nm="' + esc(a.name) + '">' +
+              '<img src="' + esc(a.art) + '" alt="" loading="lazy">' +
+              '<span>' + esc(a.name) + '</span></button>';
+          }).join('') + '</div>'
+        : '<p class="reco-note">Rate an album and you can turn its cover into your banner.</p>');
+
+    host.querySelectorAll('.bp-item').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        host.querySelectorAll('.bp-item').forEach(function (x) { x.disabled = true; });
+        b.classList.add('picked');
+        var r = await W().claimAlbumBanner(b.dataset.art, b.dataset.nm);
+        if (r && r.error) {
+          host.querySelectorAll('.bp-item').forEach(function (x) { x.disabled = false; });
+          b.classList.remove('picked');
+          if (window.reportIssue) reportIssue('claimAlbumBanner failed', { error: r.error });
+          return;
+        }
+        renderBannerPick();
+      });
+    });
+  }
+  window.renderBannerPick = renderBannerPick;
+})();
+</script>
+
 <!-- ================================================================
      HIGHER OR LOWER
      ================================================================
