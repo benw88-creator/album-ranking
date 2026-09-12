@@ -2987,6 +2987,60 @@ body.entering-done #artist-hero {
 /* Undo, and the line that shows why the card is about to move. Pausing it is
    a style change on animation-play-state, which is why it's an animation and
    not a transition. */
+/* ---- profile: what they have done -------------------------------------- */
+.done-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 10px; margin-top: 10px; }
+.done-tile {
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px;
+  padding: 14px 12px; text-align: center;
+  transition: border-color .18s var(--ease), transform .18s var(--ease);
+}
+.done-tile:hover { border-color: var(--gold-dim); transform: translateY(-2px); }
+.dt-v { font: 700 26px/1 var(--font-mono); color: var(--gold); }
+.dt-k { font-size: 12px; font-weight: 600; margin-top: 6px; }
+.dt-s { font-size: 10px; color: var(--text-faint); margin-top: 3px; }
+
+/* ---- completionist: the albums you have actually done ------------------ */
+.comp-done { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0 4px; align-items: center; }
+.comp-done img {
+  width: 26px; height: 26px; border-radius: 5px; object-fit: cover;
+  background: var(--surface-3); border: 1px solid var(--border);
+}
+.comp-more { font: 700 10px var(--font-mono); color: var(--text-faint); padding-left: 2px; }
+
+/* ---- locked minigames -------------------------------------------------- */
+.game-card { position: relative; }
+.game-card.locked { opacity: .42; filter: saturate(.25); cursor: not-allowed; }
+.game-card.locked .gc-go { visibility: hidden; }
+.gc-lock {
+  position: absolute; inset: auto 12px 12px 12px; text-align: center;
+  font: 700 10px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text); background: rgba(0,0,0,.55); border: 1px solid var(--border-strong);
+  border-radius: 999px; padding: 7px 10px; backdrop-filter: blur(2px);
+}
+.game-card.shake { animation: lockShake .4s var(--ease); }
+@keyframes lockShake {
+  0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); }
+  50% { transform: translateX(5px); } 80% { transform: translateX(-3px); }
+}
+/* The unlock itself. Gold sweeps across the card once, so passing a gate is
+   an event rather than a thing that silently stopped being greyed out. */
+.game-card.just-unlocked { animation: unlockPop .9s var(--ease); overflow: hidden; }
+.game-card.just-unlocked::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 20%, var(--gold-glow) 50%, transparent 80%);
+  animation: unlockSweep 1.1s var(--ease) 2;
+}
+@keyframes unlockPop {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 var(--gold-glow); }
+  35% { transform: scale(1.06); box-shadow: 0 0 0 14px transparent; }
+  100% { transform: scale(1); }
+}
+@keyframes unlockSweep { from { transform: translateX(-110%); } to { transform: translateX(110%); } }
+@media (prefers-reduced-motion: reduce) {
+  .game-card.shake, .game-card.just-unlocked,
+  .game-card.just-unlocked::after { animation: none !important; }
+}
+
 /* ---- level tile ------------------------------------------------------- */
 .stat-level { min-width: 132px; }
 .lvl-bar {
@@ -5653,6 +5707,9 @@ function setMode(mode, fromCode) {
   if (mode === 'albums') renderAlbums();
   if (mode === 'songs') renderSongs();
   if (mode === 'games' && window.renderGameBests) window.renderGameBests();
+  // Repaint on entry so a gate passed while rating is announced the next time
+  // you look at the grid, rather than silently being open.
+  if (mode === 'games' && window.paintUnlocks) window.paintUnlocks(true);
   if (mode === 'wars' && window.renderWars) window.renderWars();
   if (mode === 'achievements' && window.renderAchievements) window.renderAchievements();
   if (mode === 'profile' && window.renderProfile) window.renderProfile();
@@ -6559,6 +6616,16 @@ function renderAchievements(){
 }
 window.renderAchievements=renderAchievements;
 
+/* Completionist.
+
+   Three things were wrong. Every artist needed its own "Check progress" click,
+   so with thirty artists you had thirty buttons before you could see anything.
+   The order was arbitrary, so a finished track sat below one you had barely
+   started. And a completed card said 12/12 without ever showing you the twelve
+   \u2014 the reward for finishing was a number.
+
+   Now: sorted so the nearly-done float up, the first few load their tracklists
+   by themselves, and a finished card shows the covers. */
 function renderCompletionistAchievements(){
   const el=document.getElementById('ach-completionist');
   const albums=Object.values(loadAlbums());
@@ -6567,8 +6634,48 @@ function renderCompletionistAchievements(){
   const artists=Object.values(byArtist);
   if(!artists.length){el.innerHTML='<p class="reco-note">No artists yet \u2014 rate an album to start a Completionist track.</p>';return;}
   const claimed=loadClaimed();
+
+  // Known progress first, highest first; then unknown, most-rated first,
+  // because those are the ones most likely to be close.
+  function knownPct(a){
+    const list=_studioMem[a.id]||_spCacheRead('studio:'+a.id);
+    if(!list||!list.length)return null;
+    const bases={};a.rated.forEach(function(r){bases[baseAlbumTitle(r.name)]=true;});
+    const n=list.map(function(s){return baseAlbumTitle(s.name);}).filter(Boolean);
+    if(!n.length)return null;
+    return n.filter(function(b){return bases[b];}).length/n.length;
+  }
+  artists.forEach(function(a){a._pct=knownPct(a);});
+  artists.sort(function(x,y){
+    if(x._pct==null&&y._pct==null)return y.rated.length-x.rated.length;
+    if(x._pct==null)return 1;
+    if(y._pct==null)return -1;
+    return y._pct-x._pct;
+  });
+
+  const nDone=artists.filter(function(a){return a._pct!=null&&a._pct>=1;}).length;
+  const nKnown=artists.filter(function(a){return a._pct!=null;}).length;
+  const note=document.getElementById('ach-comp-note');
+  if(note)note.textContent=nKnown
+    ? nDone+' of '+nKnown+' artists complete'+(nKnown<artists.length?' \u00b7 '+(artists.length-nKnown)+' not checked yet':'')
+    : 'Rate every studio album by an artist to unlock their Completionist badge.';
+
   el.innerHTML=artists.map(function(a){return'<div class="ach" id="compach-'+a.id+'"></div>';}).join('');
   artists.forEach(function(a){drawCompCard(a,claimed);});
+
+  /* Load the first few tracklists without being asked. Sequential and capped:
+     each one is a Spotify call, and firing thirty at once would rate-limit the
+     token every other surface shares. */
+  const needed=artists.filter(function(a){
+    return !(_studioMem[a.id]||_spCacheRead('studio:'+a.id));
+  }).slice(0,6);
+  (function next(i){
+    if(i>=needed.length)return;
+    fetchStudioAlbums(needed[i].id,true)
+      .then(function(){drawCompCard(needed[i],loadClaimed());})
+      .catch(function(){})
+      .then(function(){setTimeout(function(){next(i+1);},220);});
+  })(0);
 }
 
 function drawCompCard(a,claimed){
@@ -6595,6 +6702,15 @@ function drawCompCard(a,claimed){
     '<div><div class="ach-name">'+esc(a.name)+' Completionist</div><div class="ach-sub">Rate every studio album</div></div></div>'+
     '<div class="ach-bar"><div class="ach-bar-fill" style="width:'+pct+'%"></div></div>'+
     '<div class="ach-prog"><span>'+have+' / '+Y+'</span><span>'+pct+'%</span></div>'+
+    // The albums you actually did. A finished track used to say 12/12 and show
+    // you nothing — the reward for completing a discography was a fraction.
+    (have?'<div class="comp-done" title="'+esc(a.name)+' albums you have rated">'+
+      studioList.filter(function(s){return ratedBases[baseAlbumTitle(s.name)];})
+        .slice(0,14)
+        .map(function(s){return'<img src="'+esc((s.images&&s.images[0]&&s.images[0].url)||s.art||'')+'" alt="'+esc(s.name)+'" title="'+esc(s.name)+'" loading="lazy" onerror="this.style.visibility=\'hidden\'">';})
+        .join('')+
+      (have>14?'<span class="comp-more">+'+(have-14)+'</span>':'')+
+    '</div>':'')+
     (complete&&!done?'<button class="ach-claim" data-claim="'+key+'" data-label="'+esc(a.name)+' Completionist">Claim achievement</button>':'')+
     (!complete?'<button class="ach-claim" style="background:var(--surface-3);color:var(--text);" data-missing="'+esc(a.id)+'">See what’s missing</button>':'');
   // Stash the actual album objects so the modal can show covers and open them,
@@ -7449,6 +7565,49 @@ async function drawProfile(host,prof,isOwner){
   function albumSlot(t,i){if(t)return'<div class="top3-slot" data-slot="'+i+'"><img src="'+esc(t.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div class="rank">#'+(i+1)+'</div></div>';return'<div class="top3-slot" data-slot="'+i+'">'+(isOwner?'+ pick #'+(i+1):'\u2014')+'</div>';}
   const slots=[0,1,2].map(function(i){return albumSlot(top3[i],i);}).join('');
   function songRows(arr,emptyMsg){if(!arr.length)return'<div class="reco-note">'+emptyMsg+'</div>';return'<div class="song-mini-list">'+arr.map(function(s,i){return'<div class="song-mini"><span class="song-mini-rank">'+(i+1)+'</span><img src="'+esc(s.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div><div class="song-mini-name">'+esc(s.name)+'</div><div class="song-mini-artist">'+esc(s.artist||'')+'</div></div></div>';}).join('')+'</div>';}
+  /* Everything this person has actually done, in one block.
+
+     The header used to carry four numbers — followers, following, albums,
+     average — and nothing else surfaced anywhere. Streaks, levels, lore, the
+     Completionist tracks, the diary: all tracked, none of it shown. A profile
+     that does not show what you have built is a profile with no reason to
+     visit it.
+
+     Public numbers come from the profiles row, so they work for anybody.
+     Lore and diary counts are local-only and owner-only, because RLS keeps
+     other people's out of reach — as it should. */
+  let doneHtml='';
+  {
+    const lv=prof.level||1;
+    const compDone=(function(){
+      try{
+        const claimed=loadClaimed()||{};
+        return Object.keys(claimed).filter(function(k){return k.indexOf('comp:')===0;}).length;
+      }catch(e){return 0;}
+    })();
+    const tiles=[
+      {v:lv,                          k:'Level',        sub:(prof.lifetime_xp||0).toLocaleString()+' XP'},
+      {v:prof.streak_best||0,         k:'Best streak',  sub:'rating days in a row'},
+      {v:prof.login_best||0,          k:'Longest run',  sub:'days opened in a row'},
+      {v:(prof.owned_themes||[]).length+(prof.owned_banners||[]).length, k:'Cosmetics', sub:'themes and banners'}
+    ];
+    if(isOwner){
+      let nLore=0,nDiary=0;
+      try{nLore=(window.VinallLore&&VinallLore.count)?VinallLore.count():0;}catch(e){}
+      try{nDiary=Object.keys(JSON.parse(localStorage.getItem('crate_liner_v1')||'{}')).length;}catch(e){}
+      tiles.push({v:prof.discs||0,k:'Discs',sub:'to spend'});
+      if(nLore)tiles.push({v:nLore,k:'Lore answers',sub:'things you have said'});
+      if(nDiary)tiles.push({v:nDiary,k:'Diary entries',sub:'days written'});
+      if(compDone)tiles.push({v:compDone,k:'Completionist',sub:'discographies finished'});
+      tiles.push({v:lists.length,k:'Lists',sub:'made'});
+    }
+    doneHtml='<div class="prof-section-title" style="margin-top:26px;">'+(isOwner?'What you’ve done':'What they’ve done')+'</div>'+
+      '<div class="done-grid">'+tiles.map(function(t){
+        return '<div class="done-tile"><div class="dt-v">'+esc(String(t.v))+'</div>'+
+          '<div class="dt-k">'+esc(t.k)+'</div><div class="dt-s">'+esc(t.sub)+'</div></div>';
+      }).join('')+'</div>';
+  }
+
   const shareUrl=location.origin+location.pathname+'?u='+prof.id;
   let actionBtn='';
   if(isOwner){actionBtn='<div style="display:flex;flex-direction:column;gap:8px;"><button class="btn-primary" id="prof-edit">Edit profile</button><button class="btn-mini" id="prof-share">Copy share link</button></div>';}
@@ -7503,9 +7662,12 @@ async function drawProfile(host,prof,isOwner){
           '<div class="prof-stat clickable" id="stat-followers"><b>'+counts.followers+'</b><span>followers</span></div>'+
           '<div class="prof-stat clickable" id="stat-following"><b>'+counts.following+'</b><span>following</span></div>'+
           '<div class="prof-stat"><b>'+nAlbums+'</b><span>albums</span></div>'+
-          (nAlbums?'<div class="prof-stat"><b>'+avg+'</b><span>avg</span></div>':'')+' </div>'+
+          '<div class="prof-stat"><b>'+nSongs+'</b><span>songs</span></div>'+
+          (nAlbums?'<div class="prof-stat"><b>'+avg+'</b><span>avg</span></div>':'')+
+          '<div class="prof-stat"><b>'+(prof.level||1)+'</b><span>level</span></div>'+' </div>'+
       '</div>'+actionBtn+
     '</div>'+
+    doneHtml+
     '<div class="prof-section-title">Top 3 albums</div>'+
     '<div class="top3" id="prof-top3">'+slots+'</div>'+
     ((topNow.length||isOwner)?'<div class="prof-section-title">Top 5 songs right now</div>'+songRows(topNow,isOwner?'Pick your current rotation in Edit profile.':'Nothing here yet.'):'')+
@@ -12654,6 +12816,136 @@ async function renderAdminStats() {
 window.renderAdminStats = renderAdminStats;
 </script>
 <!-- ================================================================
+     MINIGAME UNLOCKS
+     ================================================================
+     Everything was available on the first visit, which sounds generous and is
+     not: a brand-new account has nothing rated, so most of these games open
+     onto an empty pool and fail. Worse, a grid of eleven identical cards gives
+     a new person no idea which one to press.
+
+     Gating them on albums rated fixes both. It stops a game opening onto
+     nothing, it makes the grid a ladder instead of a wall, and rating albums —
+     the thing the whole app is actually for — becomes the way through it.
+
+     The thresholds are low on purpose. This is a nudge toward rating a few
+     records, not a paywall: everything is open by 25, which is one sitting.
+     ================================================================ -->
+<script>
+(function () {
+  var GATES = {
+    'drop-card':        { need: 0,  label: 'Daily Drop' },
+    'ew-card':          { need: 3,  label: 'Earworm' },
+    'cover':            { need: 5,  label: 'Guess the Cover' },
+    'hl-card':          { need: 8,  label: 'Higher or Lower' },
+    'tracklist':        { need: 10, label: 'Guess from Tracklist' },
+    'year':             { need: 12, label: 'Guess the Year' },
+    'tourney-card':     { need: 15, label: 'Album Tournament' },
+    'coverx':           { need: 20, label: 'Cover EXTREME' },
+    'war-card':         { need: 25, label: 'Bid Wars' }
+  };
+  var SEEN_KEY = 'crate_unlocks_seen';
+
+  function ratedCount() {
+    try {
+      var al = window.loadAlbums ? loadAlbums() : {};
+      return Object.keys(al).filter(function (k) { return al[k] && al[k].score != null; }).length;
+    } catch (e) { return 0; }
+  }
+
+  function seen() { try { return JSON.parse(localStorage.getItem(SEEN_KEY)) || {}; } catch (e) { return {}; } }
+  function markSeen(map) { try { localStorage.setItem(SEEN_KEY, JSON.stringify(map)); } catch (e) {} }
+
+  function cardFor(key) {
+    return document.getElementById(key) || document.querySelector('.game-card[data-game="' + key + '"]');
+  }
+
+  /* Paint the grid, and announce anything that has just opened.
+
+     The announcement is the point. A gate that silently disappears is a gate
+     nobody noticed they passed — the unlock has to arrive as an event, which
+     is why the newly-open card is marked and celebrated rather than simply
+     becoming clickable. */
+  function paintUnlocks(announce) {
+    var n = ratedCount();
+    var was = seen(), now = {}, fresh = [];
+
+    Object.keys(GATES).forEach(function (key) {
+      var g = GATES[key], card = cardFor(key);
+      if (!card) return;
+      var open = n >= g.need;
+      card.classList.toggle('locked', !open);
+
+      var tag = card.querySelector('.gc-lock');
+      if (!open) {
+        if (!tag) {
+          tag = document.createElement('div');
+          tag.className = 'gc-lock';
+          card.appendChild(tag);
+        }
+        tag.textContent = 'Rate ' + (g.need - n) + ' more album' + (g.need - n === 1 ? '' : 's');
+      } else if (tag) {
+        tag.remove();
+      }
+
+      if (open) {
+        now[key] = 1;
+        if (announce && !was[key]) fresh.push({ key: key, card: card, label: g.label });
+      }
+    });
+
+    markSeen(now);
+
+    // One at a time, spaced out — three unlocks firing together is three
+    // celebrations nobody reads.
+    fresh.forEach(function (f, i) {
+      setTimeout(function () {
+        f.card.classList.add('just-unlocked');
+        setTimeout(function () { f.card.classList.remove('just-unlocked'); }, 2400);
+        if (window.burst) burst(f.card, { count: 30, spread: 180 });
+        if (window.buzz) buzz('big');
+        if (typeof window.celebrate === 'function') {
+          window.celebrate('Unlocked — ' + f.label, 'Rated ' + n + ' albums. Go and play it.');
+        }
+      }, i * 2600);
+    });
+
+    var head = document.querySelector('#view-games .section-head .muted');
+    if (head) {
+      var locked = Object.keys(GATES).filter(function (k) { return n < GATES[k].need && cardFor(k); }).length;
+      head.textContent = locked
+        ? n + ' albums rated — ' + locked + ' still locked'
+        : 'All unlocked. ' + n + ' albums rated.';
+    }
+    return n;
+  }
+
+  // A locked card must not open the game behind it. Capture phase, so this
+  // runs before the grid delegate and each card's own listener.
+  document.addEventListener('click', function (e) {
+    var card = e.target.closest && e.target.closest('.game-card.locked');
+    if (!card) return;
+    e.stopPropagation();
+    e.preventDefault();
+    card.classList.remove('shake');
+    void card.offsetWidth;
+    card.classList.add('shake');
+    if (window.buzz) buzz('bad');
+  }, true);
+
+  // Seed the baseline silently on first run, so an existing crate does not
+  // fire nine celebrations at once the first time this ships.
+  function init() {
+    var first = !localStorage.getItem(SEEN_KEY);
+    paintUnlocks(!first);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+
+  window.paintUnlocks = paintUnlocks;
+})();
+</script>
+
+<!-- ================================================================
      THE DRAW — the reel
      ================================================================
      The result exists before anything moves. `wallet_spin()` picks, grants and
@@ -14808,7 +15100,12 @@ window.track = function (name, props) {
 
   window.renderToday = renderToday;
   window.renderLore = renderLore;
-  window.VinallLore = { load: loadLore, save: saveAnswer, questions: QUESTIONS };
+  // Answers actually given, skips excluded — the profile counts things you
+  // said, not questions you waved away.
+  function loreCount() {
+    return (_loreList || []).filter(function (r) { return r && !r.skipped && r.choice; }).length;
+  }
+  window.VinallLore = { load: loadLore, save: saveAnswer, questions: QUESTIONS, count: loreCount };
 })();
 </script>
 </body>
