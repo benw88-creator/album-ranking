@@ -637,6 +637,28 @@ Added so the site can be wrapped without failing review for the obvious reasons.
 age-rating answers, drafted listing copy, and the shortlist of things only Ben
 can do.
 
+## Colour
+
+The app used to have two accents — `--gold` and `--accent-2` — on near-black grey, so every
+surface looked like every other surface. **That is what "dull" was: not a lack of saturation
+but a lack of difference.**
+
+- **Five fixed hues**: `--c-cyan`, `--c-violet`, `--c-pink`, `--c-lime`, `--c-blue` (plus
+  `-dim` variants). **Deliberately not themed**, exactly like `--red`/`--yellow`/`--green` —
+  they mean the same thing under every skin, so a section keeps its identity when somebody
+  equips Neon Vault.
+- Use them for **identity and for telling one number from another, never decoratively.** A
+  palette applied at random is noise with more steps.
+- **`--section`** is the current tab's hue. `setMode` writes `body[data-section]`, the CSS
+  maps that to a hue, and the page background and every `.section-head` read from it — so the
+  whole page changes temperature between tabs rather than just an accent.
+- The **body background** is four radial washes in different hues and corners, all under 6%.
+  It should be felt, not seen: anything stronger fights the album artwork, which is the real
+  colour in this app.
+- The **stats row** and the **minigames grid** assign hues by `nth-child`, not per-element
+  classes, so both keep working whatever they contain that day. Wallet and level tiles stay
+  gold because those carry meaning and are not part of a rotation.
+
 ## Feedback primitives
 
 `burst(el, opts)`, `ripple(el, ev)` and `buzz(kind)` are global, defined next to

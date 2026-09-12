@@ -708,7 +708,12 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
 .stats > .stat:nth-child(6n+5) { --tile: var(--c-pink); }
 .stats > .stat:nth-child(6n+6) { --tile: var(--accent-2); }
 .stats > .stat { --tile: var(--gold); }
-.stats > .stat .s-val { color: var(--tile); }
+/* Two different stat components exist and they do not share class names:
+   the crate row uses .s-val, the Liner Notes row uses .stat-value. Both are
+   `.stat` inside `.stats`, so both get coloured here. "Most felt" sets its own
+   inline colour from the mood and keeps it — inline wins, which is correct. */
+.stats > .stat .s-val,
+.stats > .stat .stat-value { color: var(--tile); }
 .stats > .stat::after { background: linear-gradient(90deg, transparent, var(--tile), transparent); }
 .stats > .stat::before {
   content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
