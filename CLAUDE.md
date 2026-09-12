@@ -208,8 +208,15 @@ The motion, since it is the whole feature and is easy to ruin:
   60fps on a phone.
 - 70 tiles with the prize at index 62. **Landing on tile 62 rather than tile 3 is what makes
   it read as spun rather than picked.**
-- Filler is drawn by the real weights, so a legendary is not advertised on every spin and
-  landing on one never feels owed.
+- **Every rarity goes past on every spin**, via `SEED_PLAN` — one of each tier dropped at
+  fixed positions, clustered toward the end so the run gets visibly more valuable as it
+  slows. Left to pure weighting the strip is 95% grey, because a legendary is a 1-in-100
+  tile, and most spins showed nothing to react to on the way down. This is theatre and it is
+  honest theatre: **what goes past has no bearing on what you get**, which the server decided
+  before the strip was built. `SEED_PLAN` never writes at or past `WIN_INDEX`.
+- Each rarity owns a vibrant colour — cyan, violet, gold — driving the tile, the result text,
+  the landing glow and the window border. **Common stays grey on purpose**: a strip where
+  everything glows is a strip where nothing does.
 - The stop is **jittered a few pixels off centre**. Stopping perfectly centred twice running
   reads as mechanical.
 - `cubic-bezier(.12,.72,.12,1)` — long, late deceleration. Linear feels like a slot machine
@@ -323,20 +330,29 @@ Design decisions worth not undoing:
   resolution, when revealing them is the whole point.
 - **Bids are sealed** by the SELECT policy on `bid_war_bids`: your own row always, your
   opponent's only once `status = 'resolved'`.
-- **Values are not sealed, as of `..._20260911170000_war_modes_open_values.sql`.** They
-  never really were: `/api/album-streams` is public and read-only by design, and returns
-  exactly the number a war stores, so a player could always look up all five records on
-  their own board before bidding. Hiding a number that is one request away is a handicap on
-  whoever did not think to check, not a defence — and Higher or Lower made that obvious by
-  putting the same data in front of everyone.
+- **Values are sealed, and the leak that made that meaningless is closed**
+  (`..._20260912090000_reseal_war_values.sql`). This reverses
+  `..._20260911170000_war_modes_open_values.sql`, and the round trip is worth understanding
+  before anyone opens them again.
 
-  So `bid_war_create_from` keeps `value` in `records` instead of stripping it, and the
-  bidding board shows it. **The game is better for it**: both players see all five and
-  spread 100 chips blind to each other, which is a simultaneous allocation game — Colonel
-  Blotto — where the skill is reading where the opponent will commit rather than knowing
-  more about streaming numbers. `bid_war_values` keeps its RLS-on-no-policies isolation and
-  stays authoritative at resolution, and `bid_war_submit` overwrites `records` from it, so
-  a tampered blob still cannot change a result.
+  They were opened because `/api/album-streams` was public and returned exactly the figure a
+  war stores — so a player could price all five records on their own board before bidding,
+  and the seal only held against whoever did not think to check the network tab. **That
+  reasoning was right about the leak and wrong about the remedy.** Opening them turned the
+  game into pure chip allocation and removed what it was for: backing your own read of which
+  record the world actually listens to.
+
+  So both halves move together. `bid_war_create_from` strips `value` from `records` again,
+  and `/api/album-streams` now **requires a Supabase JWT** and refuses any album sitting on
+  one of the caller's own pending boards, via `my_sealed_albums()` — which returns ids only,
+  never values, and never sees anybody else's wars. Sealing without closing the endpoint
+  would just restore hidden-from-you-and-one-request-away.
+
+  The bidding board omits the value **unconditionally** rather than checking whether the
+  field is present, so wars created during the open window are covered with no data
+  migration. Higher or Lower and the kworb health button both send the session token now; an
+  album that overlaps a live board comes back `sealed` and is dropped from the pool like any
+  other unpriceable record.
 - **It is async by design.** With a user base this small, anything needing both players
   online at once would never actually get played.
 - Play counts are power-law distributed, unlike ratings, so one record on the board is
@@ -344,6 +360,11 @@ Design decisions worth not undoing:
   bidding sharper: spotting and winning the big one is most of the game.
 
 ### War modes
+
+**Market mode is parked, not deleted.** The picker in `war-new-modal` is `display:none` and
+every war is created as `streams`. The `mode` column, `_discogs.js`, `/api/album-market`, the
+`album_market` cache and the per-mode formatter are all still in place and still work —
+bringing it back is removing one style rule. Keep it that way rather than ripping it out.
 
 `bid_wars.mode` is `streams` | `market`, chosen before the opponent because it changes what
 the game is rather than decorating it.
