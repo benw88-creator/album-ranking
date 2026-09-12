@@ -511,13 +511,29 @@ Pieces:
   `renderToday()` and `renderDiary()`; `renderToday()` no-ops when the stack is already
   built for the day, so re-entering Home is cheap.
 - **Answering advances the card by itself**, after 2.2s, with a draining line so the movement
-  is expected rather than startling and an **Undo** beside the confirmation. Undo really
-  deletes the `lore_answers` row — safe because `award_lore_disc` fires on INSERT only and
-  is capped at 20 discs a day, so answer/undo/answer cannot earn more than answering twenty
-  different questions would. Any engagement with the confirmation panel (hovering it, tapping
-  Undo, reaching for "Add a note") cancels the timer: if you are still working on the card it
-  must not move. Waiting for a second deliberate tap after every answer is what made this
-  feel like a form.
+  is expected rather than startling. Waiting for a second deliberate tap after every answer is
+  what made this feel like a form. It is now a toggle — **Auto**, beside Refresh, remembered
+  in `localStorage` under `crate_today_auto`. With it off there is no timer and no drain line
+  (a countdown to nothing happening is worse than no countdown) and a **Next** button appears
+  instead.
+
+  **It never worked with a mouse, for a reason worth remembering.** The timer was cancelled on
+  the confirmation panel's `pointerenter` — and that panel renders *directly under the
+  cursor*, because you have just clicked an answer button inside the same card. So the event
+  fired the instant the panel appeared and killed the timer before it could tick. It worked on
+  a phone, where there is no hover, and never worked on a desktop. **The arrival of an element
+  under a stationary cursor is not a signal about anything**; engagement now means
+  `pointermove` across the panel, or reaching for the note field.
+
+- **Undo lives in the header**, next to Refresh — not on the card. With auto-advance on, the
+  card you want to take back has already slid away by the time you want to take it back, which
+  makes the card the one place the button cannot be. It undoes the last answer wherever you
+  are: if that card is still live it restores its options, and if it has gone the answer is
+  simply deleted and the question returns to the pool on the next rebuild. Undo really deletes
+  the `lore_answers` row — safe because `award_lore_disc` fires on INSERT only and is capped at
+  20 discs a day, so answer/undo/answer cannot earn more than answering twenty different
+  questions would. Its confirmation rides in the header hint because **`toast` is local to the
+  Wallet module, not global.**
 - **Today** — an endless stack, not a page. One card is live and
   the next rides up over the top of it; the one you dealt with recedes behind rather than
   flying off. Cards are absolutely positioned, so `#today-stream` has its height set in JS
