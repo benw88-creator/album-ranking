@@ -2987,6 +2987,45 @@ body.entering-done #artist-hero {
 /* Undo, and the line that shows why the card is about to move. Pausing it is
    a style change on animation-play-state, which is why it's an animation and
    not a transition. */
+/* ---- level tile ------------------------------------------------------- */
+.stat-level { min-width: 132px; }
+.lvl-bar {
+  height: 4px; border-radius: 3px; background: var(--surface-4);
+  overflow: hidden; margin-top: 7px;
+}
+.lvl-bar i {
+  display: block; height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--accent-2));
+  transition: width .7s var(--ease);
+}
+.lvl-sub { font-size: 10px; color: var(--text-faint); margin-top: 5px; font-family: var(--font-mono); }
+
+/* A level-up is the one moment worth stopping the page for. */
+.lvl-pop {
+  position: fixed; left: 50%; top: 38%; transform: translate(-50%,-50%) scale(.7);
+  z-index: 9999; pointer-events: none; text-align: center; opacity: 0;
+  animation: lvlPop 2.2s var(--ease) forwards;
+}
+.lvl-pop .lp-k { font: 700 11px/1 var(--font-mono); letter-spacing: .24em; text-transform: uppercase; color: var(--gold); }
+.lvl-pop .lp-n {
+  font: 700 84px/1 var(--font-display); margin-top: 6px;
+  background: linear-gradient(90deg, var(--gold), #fff3c9, var(--accent-2), var(--gold));
+  background-size: 300% 100%; -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  animation: drawShimmer 2.2s linear infinite;
+}
+@keyframes lvlPop {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.7); }
+  14%  { opacity: 1; transform: translate(-50%,-50%) scale(1.08); }
+  24%  { transform: translate(-50%,-50%) scale(1); }
+  78%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-58%) scale(.96); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lvl-bar i { transition: none; }
+  .lvl-pop, .lvl-pop .lp-n { animation: none !important; opacity: 1; }
+}
+
 .today-auto {
   display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
   font-size: 12px; color: var(--text-dim); user-select: none;
@@ -3162,6 +3201,33 @@ body.entering-done #artist-hero {
 }
 
 /* ---- Rewards ladder --------------------------------------------------- */
+.rw-claim-box {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  border: 1px solid var(--gold); border-radius: 16px; padding: 16px 18px; margin-bottom: 18px;
+  background: linear-gradient(120deg, var(--gold-dim), var(--surface) 70%);
+}
+.rw-claim-box.done { border-color: var(--border); background: var(--surface-2); }
+.rw-claim-copy { flex: 1; min-width: 180px; font-size: 14px; }
+.rw-claim-done { flex: 1; font-size: 14px; color: var(--text-dim); }
+/* Unclaimed, it should be hard to walk past. */
+.rw-claim-btn { animation: claimPulse 1.9s var(--ease) infinite; }
+@keyframes claimPulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 var(--gold-glow); }
+  50%      { transform: scale(1.045); box-shadow: 0 0 0 12px transparent; }
+}
+/* The nav dot. A manual claim people forget about is worse than an automatic
+   one, so it has to advertise itself from wherever you are. */
+#modes button.has-dot { position: relative; }
+#modes button.has-dot::after {
+  content: ''; position: absolute; top: 6px; right: 4px;
+  width: 7px; height: 7px; border-radius: 50%; background: var(--gold);
+  box-shadow: 0 0 0 0 var(--gold-glow); animation: navDot 1.8s ease-out infinite;
+}
+@keyframes navDot { to { box-shadow: 0 0 0 9px transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  .rw-claim-btn, #modes button.has-dot::after { animation: none !important; }
+}
+
 .rw-ladder { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 16px 0 26px; }
 .rw-day {
   position: relative; text-align: center; padding: 14px 6px;
@@ -3725,8 +3791,12 @@ window.ICONS = {
     <button data-mode="crate" class="nav-icon-btn"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>The Crate</button>
     <button data-mode="albums">Albums</button>
     <button data-mode="songs">Songs</button>
-    <button data-mode="games">Games</button>
-    <button data-mode="wars">Bid Wars</button>
+    <button data-mode="games">Minigames</button>
+    <!-- Bid Wars lost its tab and lives in the Minigames grid instead. It is a
+         thing you occasionally start with one friend, not a place you visit —
+         and at this scale a nav item leading to an empty list reads as a dead
+         app. view-wars and goToView('wars') are untouched. -->
+    <button data-mode="draw">The Draw</button>
     <button data-mode="rewards">Rewards</button>
     <button data-mode="achievements" class="nav-icon-btn" aria-label="Achievements" title="Achievements"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="6.5" r="4"/><path d="M5.2 9.8 4 14l4-1.6 4 1.6-1.2-4.2"/></svg></button>
     <button class="activity-toggle nav-icon-btn" id="notif-toggle" title="Notifications" aria-label="Notifications"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 2.2c-1.8 0-3.1 1.4-3.1 3.4v2c0 .8-.3 1.6-.9 2.3l-.5.6h9l-.5-.6c-.6-.7-.9-1.5-.9-2.3v-2c0-2-1.3-3.4-3.1-3.4Z"/><path d="M6.3 11.8a1.8 1.8 0 0 0 3.4 0"/></svg><span class="dot" id="notif-dot" style="display:none;"></span></button>
@@ -4008,6 +4078,34 @@ window.ICONS = {
     <div id="war-history"></div>
   </section>
 
+  <!-- ============================ THE DRAW ============================
+       Promoted out of the Minigames grid into its own tab. It is the only
+       place Discs are spent, so burying it two clicks deep behind a grid of
+       word games meant the currency had no visible destination. -->
+  <section id="view-draw" style="display:none; margin-top:32px;">
+    <div class="section-head"><h2><span data-icon="disc"></span> The Draw</h2>
+      <span class="muted" id="draw-balance"></span></div>
+    <p class="reco-note">Spend Discs. See what falls out.</p>
+
+    <div class="draw-window" id="draw-window">
+      <div class="draw-needle"></div>
+      <div class="draw-strip" id="draw-strip"></div>
+    </div>
+
+    <div class="draw-result" id="draw-result"></div>
+
+    <div class="draw-cost">
+      <button class="btn-primary" id="draw-go">Open for 250 Discs</button>
+    </div>
+
+    <div class="draw-odds">
+      <details>
+        <summary>Odds</summary>
+        <div id="draw-odds-body"></div>
+      </details>
+    </div>
+  </section>
+
   <!-- ============================ REWARDS ============================
        The seven-day ladder, laid out. Every reward in the app used to be
        invisible until you had already earned it — the album banner in
@@ -4260,33 +4358,6 @@ window.ICONS = {
      rather than buried, because anything loot-box shaped needs disclosed odds
      for App Store review and because hiding them would be the wrong call
      anyway. -->
-<div class="modal" id="draw-modal">
-  <div class="modal-panel">
-    <button class="modal-close" id="draw-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji" data-icon="disc"></span>
-      <div><h2>The Draw</h2><p>Spend Discs. See what falls out.</p></div></div>
-
-    <div class="draw-window" id="draw-window">
-      <div class="draw-needle"></div>
-      <div class="draw-strip" id="draw-strip"></div>
-    </div>
-
-    <div class="draw-result" id="draw-result"></div>
-
-    <div class="draw-cost">
-      <button class="btn-primary" id="draw-go">Open for 250 Discs</button>
-      <span class="reco-note" id="draw-balance"></span>
-    </div>
-
-    <div class="draw-odds">
-      <details>
-        <summary>Odds</summary>
-        <div id="draw-odds-body"></div>
-      </details>
-    </div>
-  </div>
-</div>
-
 <!-- ===================== HIGHER OR LOWER =====================
      Two records side by side, one number showing. Higher or lower — get it
      right and the right-hand record slides left and a new one arrives, so the
@@ -5539,6 +5610,7 @@ const views = {
   songs: document.getElementById('view-songs'),
   games: document.getElementById('view-games'),
   wars: document.getElementById('view-wars'),
+  draw: document.getElementById('view-draw'),
   rewards: document.getElementById('view-rewards'),
   achievements: document.getElementById('view-achievements'),
   profile: document.getElementById('view-profile'),
@@ -5572,6 +5644,7 @@ function setMode(mode, fromCode) {
   if (mode === 'achievements' && window.renderAchievements) window.renderAchievements();
   if (mode === 'profile' && window.renderProfile) window.renderProfile();
   if (mode === 'profile' && window.renderLore) window.renderLore();
+  if (mode === 'draw' && window.renderDrawTab) window.renderDrawTab();
   if (mode === 'rewards' && window.renderRewards) window.renderRewards();
   if (mode === 'profile' && window.renderBannerPick) window.renderBannerPick();
   if (mode === 'profile' && window.renderListeningImport) window.renderListeningImport();
@@ -5831,7 +5904,15 @@ function renderStats(){
   let walletTiles='';
   if(window.Wallet&&loggedIn){
     const w=Wallet.get();
+    // Level first, and wider than the rest. It is the only number here that
+    // never goes down, which makes it the one that reads as progress rather
+    // than as a balance.
+    const lv=Wallet.levelInfo?Wallet.levelInfo():null;
     walletTiles=
+      (lv?'<div class="stat stat-wallet stat-level" id="stat-level" title="'+lv.into+' / '+lv.step+' XP to level '+(lv.level+1)+'">'+
+        '<div class="s-label">◈ Level</div><div class="s-val">'+lv.level+'</div>'+
+        '<div class="lvl-bar"><i style="width:'+lv.pct+'%"></i></div>'+
+        '<div class="lvl-sub">'+lv.into.toLocaleString()+' / '+lv.step.toLocaleString()+' XP</div></div>':'')+
       '<div class="stat stat-wallet" id="stat-streak"><div class="s-label">\u{1F525} Streak</div><div class="s-val">'+(w.streak_current||0)+'</div></div>'+
       // An admin spends without limit, but the real balance is shown next to
       // the ∞ rather than replaced by it. Hiding the number behind a symbol is
@@ -6909,10 +6990,10 @@ const Cloud=(function(){
     user=u;refreshUI();await pullAndMerge();
     backfillRatingsOnce();
     if(window.Wallet)try{await Wallet.load();}catch(e){}
-    // Claim the day's login reward. Server-side once-per-day, so calling it on
-    // every authed load is safe; it is deliberately not awaited into the
-    // render path, since a slow round trip must not hold up the app drawing.
-    if(window.Wallet&&Wallet.dailyLogin)Wallet.dailyLogin().catch(function(){});
+    // The day's reward is NOT claimed automatically. Discs that arrive while
+    // you are looking elsewhere are Discs you never saw arrive — the press is
+    // the whole moment. Rewards shows the button; this only lights the nav.
+    if(window.markRewardsDot)markRewardsDot();
     try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderRecommendations();renderArtistHero();if(window.renderToday)renderToday(true);if(window.renderDiary)renderDiary();}if(currentMode==='profile'&&window.renderProfile)renderProfile();}catch(e){}
     flashSaved();
   }
@@ -9293,7 +9374,43 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     streak_freezes: 1, owned_themes: ['classic'], active_theme: 'classic',
     owned_banners: [], active_banner: null, is_admin: false,
     login_streak: 0, login_best: 0, banner_picks: 0,
+    lifetime_xp: 0, level: 1,
   };
+
+  /* The level curve, mirrored from xp_step() in
+     ..._20260912140000_levels_and_xp.sql. Duplicated deliberately so a
+     progress bar costs no round trip — but it is display only, and **if the
+     SQL changes this must change with it**, same arrangement as payFor() on
+     the Rewards page. The server is what decides your level. */
+  function xpStep(level) { return Math.max(1, Math.round(80 * Math.pow(Math.max(level, 1), 1.35))); }
+  function xpFloor(level) {
+    var total = 0;
+    for (var i = 1; i < Math.max(level, 1); i++) total += xpStep(i);
+    return total;
+  }
+  /* Hand-built rather than reusing celebrate(): a level-up should not look
+     like every other toast. Big numeral, shimmer, confetti, a heavier buzz —
+     and it leaves by itself rather than needing dismissal, because it is news
+     and not a decision. */
+  function levelUp(level) {
+    try {
+      var pop = document.createElement('div');
+      pop.className = 'lvl-pop';
+      pop.innerHTML = '<div class="lp-k">Level up</div><div class="lp-n">' + level + '</div>';
+      document.body.appendChild(pop);
+      if (window.burst) burst(document.body, { count: 46, spread: 260 });
+      if (window.buzz) buzz('big');
+      setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 2400);
+    } catch (e) {}
+  }
+
+  function levelInfo() {
+    var lv = state.level || 1;
+    var floor = xpFloor(lv), step = xpStep(lv);
+    var into = Math.max(0, (state.lifetime_xp || 0) - floor);
+    return { level: lv, into: into, step: step,
+             pct: Math.max(0, Math.min(100, Math.round(into / step * 100))) };
+  }
   let loaded = false;
   let ratingsToday = 0, ratingsTodayDate = null;
 
@@ -9393,6 +9510,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
           login_streak: prof.login_streak || 0,
           login_best: prof.login_best || 0,
           banner_picks: prof.banner_picks || 0,
+          lifetime_xp: prof.lifetime_xp || 0,
+          level: prof.level || 1,
           is_admin: !!prof.is_admin,
         };
       }
@@ -9419,6 +9538,15 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (w.login_streak != null) state.login_streak = w.login_streak;
     if (w.login_best != null) state.login_best = w.login_best;
     if (w.banner_picks != null) state.banner_picks = w.banner_picks;
+    if (w.lifetime_xp != null) state.lifetime_xp = w.lifetime_xp;
+    /* Every award path funnels through here, so this is the one place a level
+       change can be noticed — rather than each of the eight things that grant
+       Discs having to remember to check. */
+    if (w.level != null) {
+      var wasLevel = state.level;
+      state.level = w.level;
+      if (wasLevel && w.level > wasLevel) levelUp(w.level);
+    }
     updateShopButton();
     if (typeof window.renderStats === 'function') window.renderStats();
   }
@@ -9638,6 +9766,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     load: load, get: get, recordRating: recordRating,
     awardGame: awardGame, syncAward: syncAward, awardDiscs: awardDiscs,
     dailyLogin: dailyLogin, claimAlbumBanner: claimAlbumBanner, spin: spin,
+    levelInfo: levelInfo,
     buyTheme: buyTheme, equipTheme: equipTheme, buyBanner: buyBanner, equipBanner: equipBanner,
     applyTheme: applyTheme, THEMES: THEMES, BANNERS: BANNERS,
     SWATCH: SWATCH, BANNER_SWATCH: BANNER_SWATCH,
@@ -12535,8 +12664,11 @@ window.renderAdminStats = renderAdminStats;
      ================================================================ -->
 <script>
 (function () {
-  var modal = document.getElementById('draw-modal');
-  if (!modal) return;
+  // A tab now, not a modal. The only place Discs are spent should not be two
+  // clicks deep behind a grid of word games — a currency with no visible
+  // destination is a currency nobody counts.
+  var section = document.getElementById('view-draw');
+  if (!section) return;
 
   var COST = 250;
   var TILE = 130;        // 120px wide + 2×5px margin, must match the CSS
@@ -12652,9 +12784,15 @@ window.renderAdminStats = renderAdminStats;
       'Nothing here has cash value or leaves VINALL.</p>';
   }
 
-  async function open() {
-    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { Cloud.openAuth(); return; }
-    modal.classList.add('open');
+  // Draws the tab. setMode('draw') calls this; openDraw() navigates here.
+  async function render() {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) {
+      el('draw-balance').textContent = '';
+      el('draw-go').disabled = true;
+      el('draw-result').innerHTML = '<div class="dr-sub">Log in to spend Discs.</div>';
+      return;
+    }
+    if (busy) return;                    // never reset a strip mid-flight
     resetStrip();
     var pool = await loadItems();
     // A resting strip so the window is never empty before the first spin.
@@ -12662,7 +12800,7 @@ window.renderAdminStats = renderAdminStats;
     paintBalance();
     paintOdds();
   }
-  function close() { if (!busy) modal.classList.remove('open'); }
+  function open() { if (window.goToView) goToView('draw'); }
 
   async function spin() {
     if (busy) return;
@@ -12758,12 +12896,11 @@ window.renderAdminStats = renderAdminStats;
   }
 
   el('draw-go').addEventListener('click', spin);
-  el('draw-close').addEventListener('click', close);
-  modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
 
   var card = document.getElementById('draw-card');
   if (card) card.addEventListener('click', open);
   window.openDraw = open;
+  window.renderDrawTab = render;
 })();
 </script>
 
@@ -12820,8 +12957,31 @@ window.renderAdminStats = renderAdminStats;
       '</div>';
     }
 
+    /* The claim. It used to fire on load, which meant the Discs were already
+       in your balance before you looked — the single most rewarding second in
+       the app happened off screen. Now you press it.
+
+       `claimed` is inferred from the stored login date rather than asked for,
+       so the page paints immediately instead of waiting on a round trip. The
+       server is still the authority: press it twice and the second returns
+       claimed_already and changes nothing. */
+    // UTC, because wallet_daily_login() rolls the day in UTC. Comparing
+    // against a local date would hand somebody a second claim, or withhold one
+    // for hours, depending on which side of midnight their timezone sits.
+    var lastUtc = st.login_last_date ? String(st.login_last_date).slice(0, 10) : null;
+    var claimedToday = lastUtc === new Date().toISOString().slice(0, 10);
+    var nextDay = claimedToday ? inWeek : (inWeek % 7) + 1;
+    var nextPay = nextDay === 7 ? null : payFor(nextDay);
+
     host.innerHTML =
-      '<p class="reco-note">Open VINALL and the day pays. Miss a day and it starts again ' +
+      '<div class="rw-claim-box' + (claimedToday ? ' done' : '') + '">' +
+        (claimedToday
+          ? '<div class="rw-claim-done">✓ Day ' + inWeek + ' claimed. Come back tomorrow.</div>'
+          : '<div class="rw-claim-copy"><b>Day ' + nextDay + ' is waiting</b>' +
+            (nextDay === 7 ? ' — the album banner.' : ' — ' + nextPay + ' Discs.') + '</div>' +
+            '<button class="btn-primary rw-claim-btn" id="rw-claim-day">Claim</button>') +
+      '</div>' +
+      '<p class="reco-note">Open VINALL and claim the day. Miss a day and it starts again ' +
       'from the beginning — seven in a row is the whole point.</p>' +
       '<div class="rw-ladder">' + days + '</div>' +
       '<div class="rw-grand">' +
@@ -12861,6 +13021,17 @@ window.renderAdminStats = renderAdminStats;
         '</table>' +
       '</div>';
 
+    var claimDay = document.getElementById('rw-claim-day');
+    if (claimDay) claimDay.addEventListener('click', async function () {
+      claimDay.disabled = true;
+      claimDay.textContent = '…';
+      if (window.ripple) ripple(claimDay);
+      var w = await Wallet.dailyLogin();
+      if (!w) { claimDay.disabled = false; claimDay.textContent = 'Claim'; return; }
+      renderRewards();
+      if (window.markRewardsDot) markRewardsDot();
+    });
+
     var claim = document.getElementById('rw-claim');
     if (claim) claim.addEventListener('click', function () {
       goToView('profile');
@@ -12879,6 +13050,21 @@ window.renderAdminStats = renderAdminStats;
       if (b && b.click) b.click();
     });
   }
+  /* A dot on the Rewards tab when there is something to take. The reward has
+     to advertise itself from wherever you are, or a manual claim just means
+     people forget — which is worse than the automatic version it replaced. */
+  function markRewardsDot() {
+    var btn = document.querySelector('#modes button[data-mode="rewards"]');
+    if (!btn) return;
+    var st = (window.Wallet && Wallet.get) ? Wallet.get() : null;
+    var on = false;
+    if (st && window.Cloud && Cloud.isOn && Cloud.isOn()) {
+      var last = st.login_last_date ? String(st.login_last_date).slice(0, 10) : null;
+      on = last !== new Date().toISOString().slice(0, 10) || (st.banner_picks || 0) > 0;
+    }
+    btn.classList.toggle('has-dot', !!on);
+  }
+  window.markRewardsDot = markRewardsDot;
   window.renderRewards = renderRewards;
 })();
 </script>
