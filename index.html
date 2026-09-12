@@ -2997,17 +2997,6 @@ body.entering-done #artist-hero {
 .today-auto input { accent-color: var(--gold); width: 13px; height: 13px; margin: 0; cursor: pointer; }
 .today-auto:has(input:checked) { border-color: var(--gold-dim); color: var(--gold); }
 
-.td-drain {
-  height: 2px; margin: 0 0 14px; border-radius: 2px;
-  background: var(--surface-4); overflow: hidden;
-}
-.td-drain-fill {
-  display: block; height: 100%; width: 100%;
-  background: var(--gold); transform-origin: left center; transform: scaleX(0);
-}
-.td-drain-fill.run { animation: tdDrain 2.2s linear forwards; }
-@keyframes tdDrain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
-
 .td-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 20px; margin-bottom: 14px;
@@ -14096,7 +14085,6 @@ window.track = function (name, props) {
       '<div class="td-after" style="display:none;">' +
         // Undo moved to the header, next to Refresh — see #today-undo.
         '<div class="td-saved"><span class="td-tick">✓</span> <span class="td-saved-txt"></span></div>' +
-        '<div class="td-drain"><span class="td-drain-fill"></span></div>' +
         '<button class="td-note-btn" type="button">Add a note</button>' +
         '<div class="td-note-wrap" style="display:none;">' +
           '<textarea class="td-note" rows="2" placeholder="Optional. A line is plenty."></textarea>' +
@@ -14281,13 +14269,14 @@ window.track = function (name, props) {
        Engagement now means engagement: moving the pointer across the panel,
        or reaching for the note field. Its mere arrival under a stationary
        cursor is not a signal about anything. */
-    var AUTO_MS = 2200;
+    // Long enough for the tick to land and be read, short enough that it feels
+    // like a consequence of answering rather than a wait. 2.2s was a pause you
+    // noticed; this is a beat.
+    var AUTO_MS = 1150;
     var autoTimer = null;
 
     function stopAuto() {
       if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
-      var bar = slot.querySelector('.td-drain-fill');
-      if (bar) bar.style.animationPlayState = 'paused';
     }
 
     function sizeToSlot() {
@@ -14302,13 +14291,6 @@ window.track = function (name, props) {
       var after = slot.querySelector('.td-after');
       after.querySelector('.td-saved-txt').textContent = choice;
       after.style.display = 'block';
-      var bar = after.querySelector('.td-drain-fill');
-      if (bar) {
-        bar.style.animationPlayState = '';
-        bar.classList.remove('run');
-        void bar.offsetWidth;
-        bar.classList.add('run');
-      }
       sizeToSlot();
       paintCount(true);
       if (window.Wallet && Wallet.syncAward) Wallet.syncAward('lore');
@@ -14318,18 +14300,24 @@ window.track = function (name, props) {
 
       var nextBtn = slot.querySelector('.td-next');
       if (!autoOn()) {
-        // Manual mode: no timer, no drain line, and the Next button is how you
-        // move on. Leaving the drain running with nothing behind it would be a
-        // countdown to nothing happening.
-        if (bar) bar.classList.remove('run');
         if (nextBtn) nextBtn.style.display = '';
         return;
       }
       if (nextBtn) nextBtn.style.display = 'none';
 
-      // Deliberate movement over the panel, not its arrival under a still
-      // cursor. `once` so a single twitch stops it and we stop listening.
-      after.addEventListener('pointermove', stopAuto, { once: true });
+      /* You answer, the tick lands, it slides. That is the whole behaviour.
+
+         There used to be a draining progress bar and the pause cancelled on
+         hover, then on pointer movement. Both were wrong for the same reason:
+         the confirmation panel renders under your cursor, so "the pointer is
+         over it" and "the pointer moved across it" are both true immediately
+         and by accident. The card simply never advanced with a mouse.
+
+         Only a click inside the panel stops it now, because a click is the
+         only thing here that is unambiguously intent — and the only reason to
+         stay is to reach "Add a note". No bar, because a countdown asks you to
+         watch a clock instead of reading the card. */
+      after.addEventListener('click', stopAuto);
       autoTimer = setTimeout(function () { autoTimer = null; advance(); }, AUTO_MS);
     }
 
