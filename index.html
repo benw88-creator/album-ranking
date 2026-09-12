@@ -2987,16 +2987,16 @@ body.entering-done #artist-hero {
 /* Undo, and the line that shows why the card is about to move. Pausing it is
    a style change on animation-play-state, which is why it's an animation and
    not a transition. */
-.td-undo {
-  margin-left: auto; flex-shrink: 0;
-  background: transparent; border: 1px solid var(--border-strong);
-  color: var(--text-dim); cursor: pointer;
-  font: 700 10px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase;
-  padding: 7px 11px; border-radius: 999px;
-  transition: color 0.15s, border-color 0.15s;
+.today-auto {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: 12px; color: var(--text-dim); user-select: none;
+  border: 1px solid var(--border); border-radius: 999px; padding: 5px 11px 5px 8px;
+  transition: border-color .16s, color .16s;
 }
-.td-undo:hover:not(:disabled) { color: var(--text); border-color: var(--text-dim); }
-.td-undo:disabled { opacity: 0.5; cursor: default; }
+.today-auto:hover { border-color: var(--text-dim); color: var(--text); }
+.today-auto input { accent-color: var(--gold); width: 13px; height: 13px; margin: 0; cursor: pointer; }
+.today-auto:has(input:checked) { border-color: var(--gold-dim); color: var(--gold); }
+
 .td-drain {
   height: 2px; margin: 0 0 14px; border-radius: 2px;
   background: var(--surface-4); overflow: hidden;
@@ -3332,6 +3332,11 @@ body.entering-done #artist-hero {
   100% { transform: scale(1) rotate(0); opacity: 1; }
 }
 .td-saved-txt { font-weight: 600; }
+.td-next {
+  display: block; margin: 12px 0 0 auto; background: none; border: none;
+  color: var(--gold); font: 600 13px var(--font-body); cursor: pointer; padding: 4px 2px;
+}
+.td-next:hover { text-decoration: underline; text-underline-offset: 3px; }
 .td-note-btn {
   background: none; border: none; color: var(--text-dim); font-size: 13px;
   cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px;
@@ -3761,7 +3766,16 @@ window.ICONS = {
         </div>
         <div class="today-head-right">
           <span class="today-count" id="today-count" style="display:none;"></span>
-          <span class="today-hint">Tap an answer &mdash; it moves on by itself</span>
+          <span class="today-hint" id="today-hint">Tap an answer &mdash; it moves on by itself</span>
+          <!-- Undo lives up here rather than on the card. With auto-advance on,
+               the card you want to take back has already gone by the time you
+               want to take it back, so an in-card button is the one place it
+               cannot be. -->
+          <button class="btn-mini" id="today-undo" style="display:none;">Undo</button>
+          <label class="today-auto" id="today-auto-wrap" title="Move to the next card by itself after you answer">
+            <input type="checkbox" id="today-auto" checked>
+            <span>Auto</span>
+          </label>
           <button class="btn-mini" id="today-refresh">Refresh</button>
         </div>
       </div>
@@ -14080,14 +14094,17 @@ window.track = function (name, props) {
         '<button class="td-other-save" type="button">Save</button>' +
       '</div>' +
       '<div class="td-after" style="display:none;">' +
-        '<div class="td-saved"><span class="td-tick">✓</span> <span class="td-saved-txt"></span>' +
-          '<button class="td-undo" type="button">Undo</button></div>' +
+        // Undo moved to the header, next to Refresh — see #today-undo.
+        '<div class="td-saved"><span class="td-tick">✓</span> <span class="td-saved-txt"></span></div>' +
         '<div class="td-drain"><span class="td-drain-fill"></span></div>' +
         '<button class="td-note-btn" type="button">Add a note</button>' +
         '<div class="td-note-wrap" style="display:none;">' +
           '<textarea class="td-note" rows="2" placeholder="Optional. A line is plenty."></textarea>' +
           '<button class="td-note-save" type="button">Save</button>' +
         '</div>' +
+        // Only shown when Auto is off — with it on, the card moves by itself
+        // and a Next button is a button that beats the timer by a second.
+        '<button class="td-next" type="button" style="display:none;">Next &rarr;</button>' +
       '</div></div>';
   }
 
@@ -14157,7 +14174,63 @@ window.track = function (name, props) {
     return el;
   }
 
+  /* Auto-advance, and the header Undo.
+     Both live at module level rather than per card: the toggle has to outlive
+     any one card, and Undo has to work after the card it refers to has already
+     slid away — which with auto-advance on is most of the time. */
+  var AUTO_KEY = 'crate_today_auto';
+  function autoOn() {
+    try { return localStorage.getItem(AUTO_KEY) !== '0'; } catch (e) { return true; }
+  }
+  function setAuto(on) {
+    try { localStorage.setItem(AUTO_KEY, on ? '1' : '0'); } catch (e) {}
+    var hint = document.getElementById('today-hint');
+    if (hint) hint.textContent = on
+      ? 'Tap an answer — it moves on by itself'
+      : 'Tap an answer, then Next when you are ready';
+  }
+
+  var _undoItem = null, _undoQ = null, _undoRestore = null;
+
+  function setUndoable(item, q) {
+    _undoItem = item; _undoQ = q;
+    var b = document.getElementById('today-undo');
+    if (b) { b.style.display = ''; b.disabled = false; b.textContent = 'Undo'; }
+  }
+  function clearUndoable() {
+    _undoItem = null; _undoQ = null; _undoRestore = null;
+    var b = document.getElementById('today-undo');
+    if (b) b.style.display = 'none';
+  }
+
+  async function undoLast() {
+    if (!_undoItem || !_undoQ) return;
+    var b = document.getElementById('today-undo');
+    if (b) { b.disabled = true; b.textContent = '…'; }
+    var item = _undoItem, q = _undoQ, restore = _undoRestore;
+    await removeAnswer(item, q);
+    paintCount(false);
+    // If that card is still on screen, put its options back. If it has already
+    // gone, the answer is simply deleted and the question returns to the pool
+    // on the next rebuild — there is no sensible way to slide a card backwards.
+    var restored = false;
+    try { restored = !!(restore && restore()); } catch (e) {}
+    if (!restored) {
+      // `toast` is local to the Wallet module, not global, so the header hint
+      // carries the confirmation instead — and puts itself back after.
+      var hint = document.getElementById('today-hint');
+      if (hint) {
+        var was = hint.textContent;
+        hint.textContent = 'Answer removed';
+        setTimeout(function () { hint.textContent = was; }, 2200);
+      }
+    }
+    clearUndoable();
+  }
+
   function advance() {
+    // A new card means the previous answer is no longer the thing Undo means.
+    clearUndoable();
     _qi++;
     if (_qi >= _queue.length) {
       // Endless: the finders re-run, and anything just answered drops out.
@@ -14193,11 +14266,21 @@ window.track = function (name, props) {
 
     if (entry.t !== 'ask' || !d) return;
 
-    // Answering moves you on by itself. Waiting for a second deliberate tap
-    // after every answer is what made this feel like a form; the drain line
-    // is there so the movement is expected rather than startling, and Undo
-    // is the escape hatch. Any engagement with the panel cancels the timer —
-    // if you have reached for "Add a note" you are not done with this card.
+    /* Answering moves you on by itself, if you want it to. Waiting for a
+       second deliberate tap after every answer is what made this feel like a
+       form; the drain line is there so the movement is expected rather than
+       startling.
+
+       This was broken on desktop, and the reason is worth keeping: the
+       confirmation panel used to cancel the timer on `pointerenter`, and it
+       appears directly under the cursor — you have just clicked an answer
+       button inside that same card. So `pointerenter` fired the instant the
+       panel rendered and killed the timer before it could tick. It worked on
+       a phone, where there is no hover, and never worked with a mouse.
+
+       Engagement now means engagement: moving the pointer across the panel,
+       or reaching for the note field. Its mere arrival under a stationary
+       cursor is not a signal about anything. */
     var AUTO_MS = 2200;
     var autoTimer = null;
 
@@ -14229,7 +14312,24 @@ window.track = function (name, props) {
       sizeToSlot();
       paintCount(true);
       if (window.Wallet && Wallet.syncAward) Wallet.syncAward('lore');
-      after.addEventListener('pointerenter', stopAuto);
+
+      // The card is answered, so the header Undo now has something to undo.
+      setUndoable(d.item, d.q);
+
+      var nextBtn = slot.querySelector('.td-next');
+      if (!autoOn()) {
+        // Manual mode: no timer, no drain line, and the Next button is how you
+        // move on. Leaving the drain running with nothing behind it would be a
+        // countdown to nothing happening.
+        if (bar) bar.classList.remove('run');
+        if (nextBtn) nextBtn.style.display = '';
+        return;
+      }
+      if (nextBtn) nextBtn.style.display = 'none';
+
+      // Deliberate movement over the panel, not its arrival under a still
+      // cursor. `once` so a single twitch stops it and we stop listening.
+      after.addEventListener('pointermove', stopAuto, { once: true });
       autoTimer = setTimeout(function () { autoTimer = null; advance(); }, AUTO_MS);
     }
 
@@ -14297,24 +14397,27 @@ window.track = function (name, props) {
       settle(txt);
     });
 
-    var undoBtn = slot.querySelector('.td-undo');
-    if (undoBtn) undoBtn.addEventListener('click', async function () {
+    // Manual mode's way forward. Wired here rather than in settle so it works
+    // whether or not settle has run yet.
+    var nb = slot.querySelector('.td-next');
+    if (nb) nb.addEventListener('click', function () { stopAuto(); advance(); });
+
+    // Undo is wired once, on the header button, rather than per card.
+    // `_undoRestore` lets it put this card back if it is still the live one.
+    _undoRestore = function () {
       stopAuto();
-      undoBtn.disabled = true;
-      undoBtn.textContent = '…';
-      await removeAnswer(d.item, d.q);
-      undoBtn.disabled = false;
-      undoBtn.textContent = 'Undo';
-      slot.querySelector('.td-after').style.display = 'none';
+      var after = slot.querySelector('.td-after');
+      if (!after || after.style.display === 'none') return false;
+      after.style.display = 'none';
       var opts = slot.querySelector('.td-opts');
       opts.style.display = '';
       opts.querySelectorAll('.td-opt').forEach(function (b) {
         b.disabled = false;
         b.classList.remove('chosen');
       });
-      paintCount(false);
       sizeToSlot();
-    });
+      return true;
+    };
 
     var noteBtn = slot.querySelector('.td-note-btn');
     if (noteBtn) noteBtn.addEventListener('click', function () {
@@ -14426,6 +14529,16 @@ window.track = function (name, props) {
       rb.textContent = 'Looking…';
       renderToday(true).then(function () { rb.disabled = false; rb.textContent = 'Refresh'; });
     });
+
+    var ub = document.getElementById('today-undo');
+    if (ub) ub.addEventListener('click', undoLast);
+
+    var ab = document.getElementById('today-auto');
+    if (ab) {
+      ab.checked = autoOn();
+      setAuto(ab.checked);                  // paints the hint to match
+      ab.addEventListener('change', function () { setAuto(ab.checked); });
+    }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireLore);
   else wireLore();
