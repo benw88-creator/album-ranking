@@ -3292,6 +3292,18 @@ body.entering-done #artist-hero {
   padding: 8px 18px; text-align: center; min-width: 74px;
 }
 .hl-score span { display: block; font: 700 26px/1 var(--font-mono); color: var(--gold); }
+/* The multiplier climbs through three colours, so its value is legible at a
+   glance without reading the number. */
+.hl-mult { transition: color .3s var(--ease); }
+.hl-mult.warm { color: #ff9f43 !important; }
+.hl-mult.hot  { color: #ff4d6d !important; text-shadow: 0 0 18px rgba(255,77,109,.55); }
+.hl-mult.bump { animation: multBump .55s var(--ease); }
+@keyframes multBump {
+  0% { transform: scale(1); } 35% { transform: scale(1.5); } 100% { transform: scale(1); }
+}
+.mult-tile { min-width: 92px; }
+.hl-gain { color: var(--gold); font-family: var(--font-mono); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .hl-mult.bump { animation: none; } }
 .hl-score.alt span { color: var(--text-dim); }
 .hl-score small { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
 .hl-board { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: start; }
@@ -4386,7 +4398,8 @@ window.ICONS = {
 
     <div id="hl-play" style="display:none;">
       <div class="hl-score-row">
-        <div class="hl-score"><span id="hl-score">0</span><small>run</small></div>
+        <div class="hl-score"><span id="hl-score">0</span><small>points</small></div>
+        <div class="hl-score mult-tile"><span class="hl-mult" id="hl-mult">×1</span><small id="hl-streak">0 in a row</small></div>
         <div class="hl-score alt"><span id="hl-best">0</span><small>best</small></div>
       </div>
       <div class="hl-board">
@@ -13172,7 +13185,9 @@ window.renderAdminStats = renderAdminStats;
   var BEST_KEY = 'crate_hl_best';
 
   var mode = 'streams';
-  var pool = [], left = null, right = null, score = 0, busy = false;
+  // `score` is the streak — how many in a row, and what drives both the
+  // multiplier and the difficulty. `points` is what the run was worth.
+  var pool = [], left = null, right = null, score = 0, points = 0, busy = false;
 
   function el(id) { return document.getElementById(id); }
   function albums() { try { return window.loadAlbums ? loadAlbums() : {}; } catch (e) { return {}; } }
@@ -13289,12 +13304,72 @@ window.renderAdminStats = renderAdminStats;
     else { v.textContent = fmt(entry.v); v.classList.remove('hl-hidden'); }
   }
 
+  /* Difficulty is the gap between the two values, and it closes as you go.
+
+     A random opponent is easy almost every round, because the values are
+     power-law distributed — most pairs are an order of magnitude apart and you
+     barely have to think. So instead of picking at random, each round picks
+     the record whose value sits closest to a target *ratio* of the current
+     one, and that ratio walks toward 1 as the run grows:
+
+       round 1   →  ~8x apart      obvious
+       round 5   →  ~3x apart      a moment's thought
+       round 10  →  ~1.8x apart    genuinely close
+       round 20+ →  ~1.2x apart    a real read
+
+     It never reaches 1, because an unwinnable coin flip is not a round. */
+  function targetRatio() {
+    return 1.15 + 7 * Math.pow(0.86, score);
+  }
+
   function nextRight() {
-    // Never the record already on the left, and never one with an identical
-    // value — a coin flip you cannot win is not a round.
     var options = pool.filter(function (p) { return p !== left && p !== right; });
-    if (!options.length) { options = pool.filter(function (p) { return p !== left; }); }
-    return options[Math.floor(Math.random() * options.length)] || null;
+    if (!options.length) options = pool.filter(function (p) { return p !== left; });
+    if (!options.length) return null;
+    if (!left) return options[Math.floor(Math.random() * options.length)];
+
+    var want = targetRatio();
+    // Score each candidate by how close its ratio to the current record is to
+    // the ratio we are after, in log space so 2x-above and 2x-below are
+    // treated as equally close.
+    var lv = Math.max(1, left.v);
+    var scored = options.map(function (p) {
+      var ratio = Math.max(p.v, 1) / lv;
+      if (ratio < 1) ratio = 1 / ratio;
+      return { p: p, d: Math.abs(Math.log(ratio) - Math.log(want)) };
+    }).sort(function (a, b) { return a.d - b.d; });
+
+    // Out of the three closest, pick one at random — otherwise the same pool
+    // produces the same sequence every run.
+    var top = scored.slice(0, Math.min(3, scored.length));
+    return top[Math.floor(Math.random() * top.length)].p;
+  }
+
+  /* The multiplier. Every correct answer is worth more than the last, so a run
+     of ten is worth far more than ten runs of one — which is the only thing
+     that makes a chain game a chain rather than a series. Rounds up every
+     three, and the score is the sum of what each round was worth. */
+  function multFor(streak) { return 1 + Math.floor(streak / 3) * 0.5; }
+
+  function paintScore() {
+    el('hl-score').textContent = points;
+    el('hl-best').textContent = Math.max(best(), points);
+    var m = el('hl-mult');
+    if (m) {
+      var mult = multFor(score);
+      m.textContent = '×' + (mult % 1 ? mult.toFixed(1) : mult);
+      m.className = 'hl-mult' + (mult >= 3 ? ' hot' : mult >= 2 ? ' warm' : '');
+    }
+    var s = el('hl-streak');
+    if (s) s.textContent = score + ' in a row';
+  }
+
+  function flashMult(mult) {
+    var m = el('hl-mult');
+    if (!m) return;
+    m.classList.remove('bump');
+    void m.offsetWidth;
+    m.classList.add('bump');
   }
 
   function round() {
@@ -13306,13 +13381,12 @@ window.renderAdminStats = renderAdminStats;
     paintSide('right', right, true);
     el('hl-higher').disabled = false;
     el('hl-lower').disabled = false;
-    el('hl-score').textContent = score;
-    el('hl-best').textContent = Math.max(best(), score);
+    paintScore();
   }
 
   async function start() {
     show('hl-play');
-    score = 0;
+    score = 0; points = 0;
     pool = await buildPool();
     if (pool.length < MIN_PLAYABLE) {
       show('hl-start');
@@ -13345,13 +13419,26 @@ window.renderAdminStats = renderAdminStats;
     var side = el('hl-right');
 
     if (correct) {
+      var mult = multFor(score);
+      points += Math.round(10 * mult);
       score++;
+      var nextMult = multFor(score);
       side.classList.add('right-correct');
-      verdict.textContent = right.v === left.v ? 'Dead level — we’ll allow it' : 'Right';
+      verdict.innerHTML = (right.v === left.v ? 'Dead level — we’ll allow it' : 'Right') +
+        ' <span class="hl-gain">+' + Math.round(10 * mult) + '</span>';
       verdict.className = 'hl-verdict good';
-      if (window.burst) burst(side, { count: 12, spread: 80 });
-      if (window.buzz) buzz('good');
-      el('hl-score').textContent = score;
+      // A multiplier stepping up is the moment worth marking, not every
+      // correct answer — otherwise the loud thing happens every round and
+      // stops being loud.
+      if (nextMult > mult) {
+        flashMult(nextMult);
+        if (window.burst) burst(side, { count: 26, spread: 150 });
+        if (window.buzz) buzz('big');
+      } else {
+        if (window.burst) burst(side, { count: 12, spread: 80 });
+        if (window.buzz) buzz('good');
+      }
+      paintScore();
       setTimeout(function () {
         left = right;
         right = nextRight();
@@ -13368,24 +13455,26 @@ window.renderAdminStats = renderAdminStats;
   }
 
   function over() {
-    var wasBest = score > best();
-    setBest(score);
+    // The best is the points total now, not the streak — the streak is the
+    // input, the points are what the run was actually worth.
+    var wasBest = points > best();
+    setBest(points);
     paintCard();
     show('hl-over');
-    el('hl-over-score').textContent = score;
+    el('hl-over-score').textContent = points;
     el('hl-over-sub').textContent = score === 0
       ? 'Straight out. It happens.'
-      : (wasBest ? 'A new best. Previous runs are now history.'
-                 : 'Best is ' + best() + '. Close-ish.');
+      : score + ' in a row, up to ×' + multFor(Math.max(score - 1, 0)) + '. ' +
+        (wasBest ? 'A new best.' : 'Best is ' + best() + '.');
     if (wasBest && score >= 3 && typeof celebrate === 'function') {
-      celebrate('New best run', score + ' in a row');
+      celebrate('New best run', points + ' points, ' + score + ' in a row');
     }
     // Five in a row is the bar. Below that it is a warm-up, and paying for a
     // warm-up makes the payout mean nothing.
     if (score >= 5 && window.Wallet && Wallet.awardGame) {
       Wallet.awardGame('higherlower', { reason: 'Higher or Lower' });
     }
-    if (window.track) track('higherlower_run', { mode: mode, score: score });
+    if (window.track) track('higherlower_run', { mode: mode, score: score, points: points });
   }
 
   el('hl-mode').addEventListener('click', function (e) {
