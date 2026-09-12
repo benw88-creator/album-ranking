@@ -105,15 +105,9 @@ export default async function handler(req, res) {
 
     // Each mode caches into its own table with its own shelf life.
     const cached = {};
-    // Currency per album, for market mode. Filled from the cache or from a
-    // live lookup — a cached price without its currency is just a number.
-    // Declared here rather than beside `chosen`, because the cache loop below
-    // writes to it and a `const` read above its declaration is a dead-zone
-    // error, not a hoisted undefined.
-    const marketCur = {};
     const cacheTable = mode === 'market' ? 'album_market' : 'album_plays';
     const cacheCols = mode === 'market'
-      ? 'album_id,price_minor,currency,fetched_at,source'
+      ? 'album_id,score,price_minor,currency,fetched_at,source'
       : 'album_id,plays,fetched_at,source';
     try {
       const cacheRes = await fetch(SUPABASE_URL
@@ -126,9 +120,8 @@ export default async function handler(req, res) {
         cacheRows.forEach(function (r) {
           const fresh = new Date(r.fetched_at).getTime() > cutoff;
           if (mode === 'market') {
-            if (r.price_minor && r.source === 'discogs' && fresh) {
-              cached[r.album_id] = r.price_minor;
-              marketCur[r.album_id] = r.currency || 'USD';
+            if (r.score && r.source === 'discogs' && fresh) {
+              cached[r.album_id] = r.score;
             }
           } else {
             // ignore anything cached by the old Last.fm valuation
@@ -149,11 +142,10 @@ export default async function handler(req, res) {
         if (mode === 'market') {
           const v = await valueMarket(p.name, p.artist, dgToken);
           if (v.ok) {
-            value = v.price_minor;
-            marketCur[p.album_id] = v.currency;
+            value = v.score;
             toCache.push({
               album_id: p.album_id, name: p.name, artist: p.artist,
-              release_id: v.release_id, price_minor: v.price_minor, currency: v.currency,
+              release_id: v.release_id, price_minor: v.price_minor, currency: v.currency, score: v.score,
               have: v.have, want: v.want, rating_avg: v.rating_avg, rating_count: v.rating_count,
               source: 'discogs', fetched_at: new Date().toISOString(),
             });
@@ -181,10 +173,8 @@ export default async function handler(req, res) {
           album_id: p.album_id, name: p.name, artist: p.artist,
           art: p.art || '', value: value,
         };
-        // Market values need their currency to render — Discogs answers in
-        // whatever the release is priced in, and "12.50" with no symbol is not
-        // a price. Carried on the record so the client never has to guess.
-        if (mode === 'market') rec.cur = marketCur[p.album_id] || 'USD';
+        // No currency any more: market mode is a score out of 100, not a
+        // price, so there is nothing to denominate.
         chosen.push(rec);
       }
     }

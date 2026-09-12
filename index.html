@@ -4799,11 +4799,11 @@ window.ICONS = {
          is created as `streams`; the server, the mode column, _discogs.js and
          /api/album-market are all still in place, so bringing it back is
          removing the `display:none` and nothing else. -->
-    <div class="hl-mode" id="war-mode" style="margin-bottom:12px; display:none;">
+    <div class="hl-mode" id="war-mode" style="margin-bottom:12px;">
       <button data-war-mode="streams" class="active">Streams</button>
-      <button data-war-mode="market">Market</button>
+      <button data-war-mode="market">Score</button>
     </div>
-    <p class="reco-note" id="war-mode-blurb" style="margin-bottom:12px; display:none;"></p>
+    <p class="reco-note" id="war-mode-blurb" style="margin-bottom:12px;"></p>
     <input id="war-opp-search" class="g-input" type="text" placeholder="Search people you follow&hellip;" autocomplete="off" style="margin-bottom:10px;">
     <div id="war-opp-list" style="max-height:44vh; overflow-y:auto;"></div>
     <div id="war-new-error" class="war-err"></div>
@@ -11992,23 +11992,17 @@ function playDismissAnimation(gateEl, callback) {
     return n.toLocaleString('en-GB');
   }
 
-  var CUR = { USD: '$', GBP: '£', EUR: '€', JPY: '¥', AUD: 'A$', CAD: 'C$' };
-  // Market values are stored in minor units so a bigint column can hold
-  // £2.19 without truncating it to 2.
-  function fmtMoney(minor, cur) {
-    var v = (Number(minor) || 0) / 100;
-    var sym = CUR[cur || 'USD'] || ((cur || '') + ' ');
-    return sym + (v >= 100 ? Math.round(v).toLocaleString('en-GB') : v.toFixed(2));
-  }
-
-  function fmtVal(n, w, rec) {
+  /* Market mode is a score out of 100 now, not a price — Discogs' community
+     rating, weighted by how many people gave it. See scoreFromCommunity() in
+     api/_discogs.js for why the raw average does not work. */
+  function fmtVal(n, w) {
     var m = (w && w.mode) || 'streams';
-    if (m === 'market') return fmtMoney(n, rec && rec.cur);
+    if (m === 'market') return String(Math.round(Number(n) || 0));
     return fmtPlays(n);
   }
   // The noun each mode uses, so the copy is not stuck saying "plays" about a
-  // war measured in money.
-  function unitOf(w) { return ((w && w.mode) === 'market') ? 'value' : 'plays'; }
+  // war measured in standing.
+  function unitOf(w) { return ((w && w.mode) === 'market') ? 'points' : 'plays'; }
   function esc2(s) { return window.esc ? esc(s) : String(s == null ? '' : s); }
 
   // ---- section ------------------------------------------------------------
@@ -12327,7 +12321,7 @@ function playDismissAnimation(gateEl, callback) {
           '<span style="color:var(--text-faint);">/</span>' +
           '<span class="war-rev-bid' + (theirBid > myBid ? ' high' : '') + '">' + theirBid + '</span>' +
         '</div>' +
-        '<div class="war-rev-val">' + fmtVal(r.value, w, r) + '</div></div>';
+        '<div class="war-rev-val">' + fmtVal(r.value, w) + '</div></div>';
     }).join('');
 
     var rows = host.querySelectorAll('.war-rev');
@@ -12430,7 +12424,7 @@ function playDismissAnimation(gateEl, callback) {
         b.classList.toggle('active', b.dataset.warMode === _mode);
       });
       if (blurb) blurb.textContent = _mode === 'market'
-        ? 'Records are worth what a copy costs on Discogs. Prices sit close together, so it is five tight calls.'
+        ? 'Records are worth their standing out of 100 — the Discogs community rating, weighted by how many people gave it.'
         : 'Records are worth their total Spotify streams. One is usually worth more than the other four together.';
     }
     if (wm) wm.addEventListener('click', function (e) {
