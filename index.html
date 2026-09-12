@@ -52,6 +52,33 @@
   --red:          #e24b4a;
   --yellow:       #efb927;
   --green:        #4fb477;
+
+  /* ---- the hue set ----------------------------------------------------
+     The app had exactly two accents — gold and one warm secondary — on a
+     near-black grey, which is why every screen read the same and the whole
+     thing looked flat. These are five fixed hues, deliberately NOT themed:
+     like the score colours above they mean the same thing under every skin,
+     so a section keeps its identity when you equip Neon Vault.
+
+     They are used for section identity and for telling one number apart
+     from another, never decoratively — a palette applied at random is just
+     noise with more steps. */
+  --c-cyan:    #2fd4ff;
+  --c-violet:  #b47bff;
+  --c-pink:    #ff5fa8;
+  --c-lime:    #9ae64b;
+  --c-blue:    #5e9bff;
+  --c-cyan-dim:   rgba(47,212,255,0.13);
+  --c-violet-dim: rgba(180,123,255,0.13);
+  --c-pink-dim:   rgba(255,95,168,0.13);
+  --c-lime-dim:   rgba(154,230,75,0.13);
+  --c-blue-dim:   rgba(94,155,255,0.13);
+
+  /* The current section's hue. Repainted by setMode via body[data-section],
+     so any component can pick it up with var(--section) and belong to
+     whatever page it happens to be on. */
+  --section:      var(--gold);
+  --section-dim:  var(--gold-dim);
   --font-display: 'Instrument Sans', sans-serif;
   --font-body:    'IBM Plex Sans', sans-serif;
   --font-mono:    'IBM Plex Mono', ui-monospace, Consolas, monospace;
@@ -206,11 +233,52 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
-  /* subtle warm noise texture feel */
-  background-image: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(245,200,66,0.04) 0%, transparent 70%);
+  /* The ground. One faint gold wash used to be the only colour on the page,
+     which is most of why it read as grey — a flat near-black behind flat
+     near-black cards. Four washes instead, in different hues and corners, so
+     the background has somewhere to go. The section hue joins in, which means
+     the whole page shifts temperature as you move between tabs rather than
+     the accent alone changing.
+
+     All of them are under 6% opacity: this should be felt rather than seen,
+     and anything stronger fights the album artwork, which is the real colour
+     in this app. */
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%,   var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 50% 40% at 0% 18%,   var(--c-violet-dim) 0%, transparent 70%),
+    radial-gradient(ellipse 46% 34% at 100% 42%, var(--c-cyan-dim) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 30% at 30% 100%, var(--accent-2-dim) 0%, transparent 72%);
   background-attachment: fixed;
   transition: background-color 0.6s ease, color 0.4s ease;
 }
+
+/* ---- section identity --------------------------------------------------
+   Each tab owns a hue. It is not decoration: with eleven surfaces that all
+   used the same gold on the same grey, there was no way to tell at a glance
+   which part of the app you were in. */
+body[data-section="home"]         { --section: var(--gold);      --section-dim: var(--gold-dim); }
+body[data-section="crate"]        { --section: var(--c-cyan);    --section-dim: var(--c-cyan-dim); }
+body[data-section="albums"]       { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
+body[data-section="songs"]        { --section: var(--c-pink);    --section-dim: var(--c-pink-dim); }
+body[data-section="games"]        { --section: var(--c-lime);    --section-dim: var(--c-lime-dim); }
+body[data-section="draw"]         { --section: var(--gold);      --section-dim: var(--gold-dim); }
+body[data-section="rewards"]      { --section: var(--accent-2);  --section-dim: var(--accent-2-dim); }
+body[data-section="achievements"] { --section: var(--c-blue);    --section-dim: var(--c-blue-dim); }
+body[data-section="wars"]         { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
+body[data-section="people"]       { --section: var(--c-blue);    --section-dim: var(--c-blue-dim); }
+body[data-section="grooves"]      { --section: var(--c-lime);    --section-dim: var(--c-lime-dim); }
+body[data-section="profile"]      { --section: var(--c-pink);    --section-dim: var(--c-pink-dim); }
+
+/* A section heading now carries its own colour and sits on a rule that
+   fades out of it, so the top of every page announces where you are. */
+.section-head h2 { position: relative; }
+.section-head h2 [data-icon], .section-head h2 svg { color: var(--section); }
+.section-head::after {
+  content: ''; display: block; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: linear-gradient(90deg, var(--section), transparent 42%);
+  opacity: .55;
+}
+.section-head { position: relative; padding-bottom: 10px; }
 /* Equipping a Shop theme swaps CSS variables instantly by default — these
    make that swap read as a considered fade across the whole page instead
    of a jarring snap. Scoped to container-level surfaces, not everything,
@@ -627,6 +695,30 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
   transition: opacity 0.2s;
 }
 .stat:hover::after { opacity: 0.4; }
+
+/* The stats row is the first thing on the first screen, and it was eight
+   identical grey boxes with eight identical gold numbers — the single biggest
+   reason the app read as monochrome. Each tile now owns a hue, which also
+   makes them individually findable rather than a wall you scan. nth-child so
+   this holds however many tiles the row happens to have that day. */
+.stats > .stat:nth-child(6n+1) { --tile: var(--gold); }
+.stats > .stat:nth-child(6n+2) { --tile: var(--c-cyan); }
+.stats > .stat:nth-child(6n+3) { --tile: var(--c-violet); }
+.stats > .stat:nth-child(6n+4) { --tile: var(--c-lime); }
+.stats > .stat:nth-child(6n+5) { --tile: var(--c-pink); }
+.stats > .stat:nth-child(6n+6) { --tile: var(--accent-2); }
+.stats > .stat { --tile: var(--gold); }
+.stats > .stat .s-val { color: var(--tile); }
+.stats > .stat::after { background: linear-gradient(90deg, transparent, var(--tile), transparent); }
+.stats > .stat::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(ellipse 120% 80% at 50% 120%, color-mix(in srgb, var(--tile) 14%, transparent), transparent 70%);
+  opacity: .9;
+}
+/* The wallet tiles keep gold and the level bar keeps its own gradient —
+   those two carry meaning, so they are not part of the rotation. */
+.stats > .stat-wallet { --tile: var(--gold); }
+.stats > .stat-level .s-val { color: var(--gold); }
 .stat .s-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; }
 .stat .s-val {
   font-family: var(--font-display);
@@ -3006,6 +3098,29 @@ body.entering-done #artist-hero {
   background: var(--surface-3); border: 1px solid var(--border);
 }
 .comp-more { font: 700 10px var(--font-mono); color: var(--text-faint); padding-left: 2px; }
+
+/* ---- the minigames grid ------------------------------------------------
+   Eleven cards that were all the same grey with the same gold arrow. Each
+   one now carries a hue on its icon, its hover border and a wash behind it,
+   so the grid reads as a set of different things rather than a list. */
+.games-grid > .game-card:nth-child(8n+1) { --tile: var(--gold); }
+.games-grid > .game-card:nth-child(8n+2) { --tile: var(--c-cyan); }
+.games-grid > .game-card:nth-child(8n+3) { --tile: var(--c-violet); }
+.games-grid > .game-card:nth-child(8n+4) { --tile: var(--c-lime); }
+.games-grid > .game-card:nth-child(8n+5) { --tile: var(--c-pink); }
+.games-grid > .game-card:nth-child(8n+6) { --tile: var(--accent-2); }
+.games-grid > .game-card:nth-child(8n+7) { --tile: var(--c-blue); }
+.games-grid > .game-card:nth-child(8n+8) { --tile: var(--green); }
+.games-grid > .game-card { --tile: var(--gold); position: relative; overflow: hidden; }
+.games-grid > .game-card .gc-emoji { color: var(--tile); }
+.games-grid > .game-card .gc-go { color: var(--tile); }
+.games-grid > .game-card::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: radial-gradient(ellipse 110% 70% at 12% 0%, color-mix(in srgb, var(--tile) 15%, transparent), transparent 66%);
+}
+.games-grid > .game-card:hover { border-color: var(--tile); }
+/* A locked card has no business advertising a colour. */
+.games-grid > .game-card.locked::before { opacity: .25; }
 
 /* ---- locked minigames -------------------------------------------------- */
 .game-card { position: relative; }
@@ -5692,6 +5807,9 @@ function setMode(mode, fromCode) {
   if (!fromCode && mode !== currentMode && window.pushViewHistory) window.pushViewHistory(mode);
   currentMode = mode;
   Object.keys(views).forEach(function (k) { views[k].style.display = (k === mode) ? 'block' : 'none'; });
+  // Repaints --section, which the background washes and every section heading
+  // read from. One attribute, and the whole page changes temperature.
+  document.body.dataset.section = mode;
   document.querySelectorAll('#modes button').forEach(function (b) { b.classList.toggle('active', b.dataset.mode === mode); });
   if (window.positionNavIndicator) window.positionNavIndicator();
   if (mode === 'home' || mode === 'albums' || mode === 'songs') lastListMode = mode;
