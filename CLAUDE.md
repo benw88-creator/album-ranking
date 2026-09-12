@@ -517,13 +517,22 @@ Pieces:
   (a countdown to nothing happening is worse than no countdown) and a **Next** button appears
   instead.
 
-  **It never worked with a mouse, for a reason worth remembering.** The timer was cancelled on
-  the confirmation panel's `pointerenter` — and that panel renders *directly under the
-  cursor*, because you have just clicked an answer button inside the same card. So the event
-  fired the instant the panel appeared and killed the timer before it could tick. It worked on
-  a phone, where there is no hover, and never worked on a desktop. **The arrival of an element
-  under a stationary cursor is not a signal about anything**; engagement now means
-  `pointermove` across the panel, or reaching for the note field.
+  **It never worked with a mouse, and it took two goes to fix — the lesson is in the second
+  attempt.** The timer was cancelled on the confirmation panel's `pointerenter`, and that panel
+  renders *directly under the cursor*, because you have just clicked an answer button inside
+  the same card. The event fired the instant the panel appeared. Swapping it for `pointermove`
+  was the same mistake one step along: any twitch of the hand cancelled it, which with a mouse
+  is always.
+
+  **Only a click inside the panel stops it now.** A click is the one thing there that is
+  unambiguously intent, and the only reason to stay on a settled card is to reach "Add a
+  note" — itself a click. Neither the presence nor the motion of a pointer over an element
+  that appeared underneath it means anything at all.
+
+  There was also a draining progress bar. It is gone: it asked you to watch a clock instead of
+  reading the card, and once the pause stopped being cancellable it had nothing left to
+  communicate. `AUTO_MS` is 1150 rather than 2200, so the slide reads as a consequence of
+  answering rather than a wait.
 
 - **Undo lives in the header**, next to Refresh — not on the card. With auto-advance on, the
   card you want to take back has already slid away by the time you want to take it back, which
