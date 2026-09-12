@@ -3068,23 +3068,30 @@ body.entering-done #artist-hero {
    gives the eye nothing to track while it is moving — the colours are what
    make the speed visible and what makes something rare flashing past
    register before it has gone. */
+/* Each rarity owns a colour, loudly — except common, which stays grey so the
+   others have something to be brighter than. A strip where everything glows
+   is a strip where nothing does. */
 .draw-tile.t-common {
-  background: linear-gradient(165deg, rgba(255,255,255,0.04), var(--surface-2) 70%);
+  background: linear-gradient(165deg, rgba(255,255,255,0.05), var(--surface-2) 70%);
 }
 .draw-tile.t-uncommon {
-  border-color: rgba(94,184,255,0.5);
-  background: linear-gradient(165deg, rgba(94,184,255,0.20), var(--surface-2) 72%);
+  border-color: #2fe0ff;
+  background: linear-gradient(165deg, rgba(47,224,255,0.34), rgba(47,224,255,0.08) 60%, var(--surface-2) 88%);
+  box-shadow: inset 0 0 22px rgba(47,224,255,0.22), 0 0 12px rgba(47,224,255,0.18);
 }
+.draw-tile.t-uncommon .dt-nm { color: #a8f2ff; }
 .draw-tile.t-rare {
-  border-color: rgba(200,124,255,0.6);
-  background: linear-gradient(165deg, rgba(200,124,255,0.26), var(--surface-2) 72%);
-  box-shadow: inset 0 0 20px rgba(200,124,255,0.13);
+  border-color: #c46bff;
+  background: linear-gradient(165deg, rgba(196,107,255,0.40), rgba(196,107,255,0.10) 60%, var(--surface-2) 88%);
+  box-shadow: inset 0 0 26px rgba(196,107,255,0.28), 0 0 18px rgba(196,107,255,0.26);
 }
+.draw-tile.t-rare .dt-nm { color: #e9c6ff; }
 .draw-tile.t-legendary {
-  border-color: var(--gold);
-  background: linear-gradient(165deg, var(--gold-glow), rgba(255,120,60,0.16) 45%, var(--surface-2) 80%);
-  box-shadow: inset 0 0 26px var(--gold-dim);
+  border-color: #ffd24a;
+  background: linear-gradient(165deg, rgba(255,210,74,0.46), rgba(255,110,60,0.22) 50%, var(--surface-2) 90%);
+  box-shadow: inset 0 0 30px rgba(255,210,74,0.34), 0 0 26px rgba(255,190,60,0.42);
 }
+.draw-tile.t-legendary .dt-nm { color: #fff0bd; }
 /* Only the legendaries shimmer, so the eye catches one going past. */
 .draw-tile.t-legendary .dt-chip { animation: dtShine 1.8s ease-in-out infinite; }
 @keyframes dtShine { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.5); } }
@@ -3103,9 +3110,9 @@ body.entering-done #artist-hero {
 
 /* The landing. Scaled by tier, because a legendary arriving with the same
    weight as 80 Discs is the fastest way to make both feel like nothing. */
-.draw-window.hit-uncommon  { animation: drawShake .35s var(--ease); }
-.draw-window.hit-rare      { animation: drawShake .5s var(--ease); box-shadow: 0 0 40px rgba(200,124,255,0.45); }
-.draw-window.hit-legendary { animation: drawShakeBig .7s var(--ease); box-shadow: 0 0 70px var(--gold-glow); }
+.draw-window.hit-uncommon  { animation: drawShake .35s var(--ease); box-shadow: 0 0 34px rgba(47,224,255,0.45); border-color: #2fe0ff; }
+.draw-window.hit-rare      { animation: drawShake .5s var(--ease);  box-shadow: 0 0 50px rgba(196,107,255,0.55); border-color: #c46bff; }
+.draw-window.hit-legendary { animation: drawShakeBig .7s var(--ease); box-shadow: 0 0 80px rgba(255,200,70,0.6); border-color: #ffd24a; }
 @keyframes drawShake {
   0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); }
 }
@@ -3116,8 +3123,8 @@ body.entering-done #artist-hero {
   70% { transform: translate(-4px,1px) scale(1.01); }
 }
 
-.draw-result.tier-uncommon .dr-label  { color: #7ec8ff; }
-.draw-result.tier-rare .dr-label      { color: #d08cff; text-shadow: 0 0 22px rgba(200,124,255,0.55); }
+.draw-result.tier-uncommon .dr-label  { color: #2fe0ff; text-shadow: 0 0 22px rgba(47,224,255,0.55); }
+.draw-result.tier-rare .dr-label      { color: #c46bff; text-shadow: 0 0 26px rgba(196,107,255,0.65); }
 .draw-result.tier-legendary .dr-label {
   background: linear-gradient(90deg, var(--gold), #fff1c2, var(--accent-2), var(--gold));
   background-size: 300% 100%; -webkit-background-clip: text; background-clip: text;
@@ -4647,11 +4654,15 @@ window.ICONS = {
   <div class="modal-panel">
     <button class="modal-close" id="war-new-close" aria-label="Close">&times;</button>
     <div class="modal-head"><span class="mh-emoji" data-icon="trophy"></span><div><h2>Start a war</h2><p>Pick someone you follow. They&rsquo;ll get a challenge.</p></div></div>
-    <div class="hl-mode" id="war-mode" style="margin-bottom:12px;">
+    <!-- Market mode is parked, not deleted. The picker is hidden and every war
+         is created as `streams`; the server, the mode column, _discogs.js and
+         /api/album-market are all still in place, so bringing it back is
+         removing the `display:none` and nothing else. -->
+    <div class="hl-mode" id="war-mode" style="margin-bottom:12px; display:none;">
       <button data-war-mode="streams" class="active">Streams</button>
       <button data-war-mode="market">Market</button>
     </div>
-    <p class="reco-note" id="war-mode-blurb" style="margin-bottom:12px;"></p>
+    <p class="reco-note" id="war-mode-blurb" style="margin-bottom:12px; display:none;"></p>
     <input id="war-opp-search" class="g-input" type="text" placeholder="Search people you follow&hellip;" autocomplete="off" style="margin-bottom:10px;">
     <div id="war-opp-list" style="max-height:44vh; overflow-y:auto;"></div>
     <div id="war-new-error" class="war-err"></div>
@@ -11662,7 +11673,9 @@ function playDismissAnimation(gateEl, callback) {
   /* Two modes, two units, and they cannot share a formatter: £12.50 rendered
      through the streams formatter reads as "1,250". Every value that reaches
      the screen goes through fmtVal with the war's own mode. */
-  var _mode = 'streams';   // the mode being chosen in the new-war modal
+  // Market mode is parked — every war is created as `streams` until the
+  // picker in war-new-modal is unhidden. Everything behind it still works.
+  var _mode = 'streams';
 
   function fmtPlays(n) {
     n = Number(n) || 0;
@@ -11851,14 +11864,16 @@ function playDismissAnimation(gateEl, callback) {
 
   function showBidding(w) {
     setPane('bidding');
-    /* The values are on the board now. They were never really secret —
-       /api/album-streams is public and returns the same number, so hiding them
-       only handicapped whoever did not think to look. Open, this is a
-       simultaneous allocation game: you both know what everything is worth,
-       and the question is where the other one will commit. The bids are still
-       sealed, which is where the tension actually was. */
+    /* Values are hidden again, and this time actually hidden.
+       Showing them turned the game into pure chip allocation and took away
+       the thing it was for: backing your own read of which record is worth
+       most. The previous argument for opening them was that
+       /api/album-streams leaked the same numbers anyway — so that endpoint is
+       now authenticated and refuses any album sitting on one of your own
+       pending boards. Seal plus leak was the worst of both; this is the seal
+       without the leak. */
     document.getElementById('war-sub').textContent =
-      'Five records, ' + w.chips + ' chips. You both see the ' + unitOf(w) + ' — only the bids are blind.';
+      'Five records, ' + w.chips + ' chips. Nobody sees what they are worth until it resolves.';
     _bids = {};
     var recs = w.records || [];
     document.getElementById('war-board').innerHTML = recs.map(function (r) {
@@ -11866,7 +11881,11 @@ function playDismissAnimation(gateEl, callback) {
         '<img src="' + esc2(r.art || '') + '" alt="" loading="lazy">' +
         '<div class="war-rec-meta"><div class="war-rec-nm">' + esc2(r.name) + '</div>' +
         '<div class="war-rec-ar">' + esc2(r.artist) + '</div>' +
-        (r.value != null ? '<div class="war-rec-val">' + fmtVal(r.value, w, r) + '</div>' : '') +
+        // No value on the bidding board. It reappears at the reveal, which is
+        // the whole point of the reveal. Old wars created while values were
+        // open still carry one in `records`, so this has to be a hard omission
+        // rather than a conditional on the field being present.
+        '' +
         '</div>' +
         '<div class="war-stepper">' +
           '<button type="button" data-step="-1" aria-label="Bid less">&minus;</button>' +
@@ -12451,7 +12470,12 @@ async function renderAdminStats() {
       var p = PROBES[i];
       var r = null;
       try {
-        var resp = await fetch('/api/album-streams?q=' + encodeURIComponent(p.q) + '&debug=1');
+        // The endpoint is authenticated now — it used to be public, which
+        // quietly unsealed every Bid War board.
+        var _s = await Cloud.client().auth.getSession();
+        var _t = _s && _s.data && _s.data.session && _s.data.session.access_token;
+        var resp = await fetch('/api/album-streams?q=' + encodeURIComponent(p.q) + '&debug=1',
+          { headers: { Authorization: 'Bearer ' + _t } });
         r = await resp.json();
       } catch (e) { r = { error: String((e && e.message) || e) }; }
       rows.push({ p: p, r: r || {} });
@@ -12547,9 +12571,6 @@ window.renderAdminStats = renderAdminStats;
       '<span class="dt-nm">' + esc(it.label) + '</span></div>';
   }
 
-  // Filler is drawn by weight, so the strip flying past looks like the real
-  // distribution — mostly Discs, the odd rare one. A uniform strip would
-  // advertise a legendary on every spin and make landing on one feel owed.
   function weightedPick(pool) {
     var total = pool.reduce(function (s, i) { return s + (i.weight || 1); }, 0);
     var r = Math.random() * total, acc = 0;
@@ -12560,11 +12581,41 @@ window.renderAdminStats = renderAdminStats;
     return pool[pool.length - 1];
   }
 
+  function pickOfTier(pool, tier) {
+    var of = pool.filter(function (i) { return i.tier === tier; });
+    return of.length ? of[Math.floor(Math.random() * of.length)] : null;
+  }
+
+  /* Every rarity goes past, every spin.
+
+     Left to pure weighting the strip is 95% grey — a legendary is a 1-in-100
+     tile, so most spins show you nothing but Discs and there is nothing to
+     react to on the way down. Seeding one of each tier at fixed positions
+     means you always see the full ladder go by, and clustering the rare ones
+     toward the end means the run gets visibly more valuable as it slows.
+
+     This is theatre and it is honest theatre: what goes past has no bearing on
+     what you get, which the server decided before any of this was built. The
+     strip is a rendering of the possible, not a hint at the actual. */
+  var SEED_PLAN = [
+    { at: 10, tier: 'uncommon' }, { at: 18, tier: 'rare' },
+    { at: 26, tier: 'legendary' }, { at: 33, tier: 'uncommon' },
+    { at: 40, tier: 'rare' }, { at: 46, tier: 'legendary' },
+    { at: 52, tier: 'rare' }, { at: 57, tier: 'legendary' },
+    { at: 60, tier: 'rare' }
+  ];
+
   function buildStrip(pool, winner) {
     var out = [];
     for (var i = 0; i < STRIP_LEN; i++) {
-      out.push(i === WIN_INDEX ? winner : weightedPick(pool));
+      out.push(weightedPick(pool));
     }
+    SEED_PLAN.forEach(function (s) {
+      if (s.at >= WIN_INDEX) return;          // never disturb the landing
+      var it = pickOfTier(pool, s.tier);
+      if (it) out[s.at] = it;
+    });
+    out[WIN_INDEX] = winner;
     return out;
   }
 
@@ -13016,7 +13067,13 @@ window.renderAdminStats = renderAdminStats;
     load.style.display = 'block';
     load.textContent = 'Counting plays for ' + picks.length + ' records…';
     try {
-      var r = await fetch('/api/album-streams?albums=' + encodeURIComponent(picks.map(function (a) { return a.id; }).join(',')));
+      // Authenticated, and records on one of your own live Bid War boards come
+      // back `sealed` and get dropped from the pool like any other album that
+      // cannot be priced.
+      var sess = await Cloud.client().auth.getSession();
+      var tok = sess && sess.data && sess.data.session && sess.data.session.access_token;
+      var r = await fetch('/api/album-streams?albums=' + encodeURIComponent(picks.map(function (a) { return a.id; }).join(',')),
+        { headers: { Authorization: 'Bearer ' + tok } });
       var j = await r.json();
       var byId = {};
       (j.results || []).forEach(function (x) { byId[x.album_id] = x; });
