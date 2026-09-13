@@ -1123,6 +1123,23 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
   color: var(--text-faint); margin: 18px 0 2px;
 }
 .shop-section-title:first-child { margin-top: 0; }
+/* Collapsible sections. Inside a <summary> the title is inline, so its own
+   block margins are neutralised and the row spaces itself. */
+.shop-sec > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  cursor: pointer; list-style: none; padding: 12px 2px; border-bottom: 1px solid var(--border);
+}
+.shop-sec > summary::-webkit-details-marker { display: none; }
+.shop-sec > summary .shop-section-title { margin: 0; }
+.shop-sec > summary:hover .shop-section-title { color: var(--gold); }
+.shop-sec .ss-n {
+  font: 700 11px/1 var(--font-mono); color: var(--text-faint);
+  border: 1px solid var(--border); border-radius: 999px; padding: 4px 8px;
+}
+/* The list is a flex column with a gap, so an open section needs its own
+   spacing rather than inheriting the parent's. */
+.shop-sec[open] > summary { border-bottom-color: var(--gold-dim); margin-bottom: 10px; }
+.shop-sec[open] .shop-item + .shop-item { margin-top: 10px; }
 .shop-item {
   display: flex; align-items: center; gap: 14px;
   padding: 14px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
@@ -3159,6 +3176,22 @@ body.entering-done #artist-hero {
 .col-price small { font-size: 10px; color: var(--text-faint); font-weight: 400; }
 .col-unpriced { color: var(--text-faint); font-weight: 400; font-size: 11px; }
 .col-buy, .col-sell { flex-shrink: 0; }
+/* Mythic album picks. The box only exists while you hold one, which is the
+   whole reason it can be this loud — it is not chrome on the page, it is an
+   entitlement about to expire into a record. */
+.col-picks-box {
+  border: 1px solid #ff2d6f; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px;
+  font-size: 13px; line-height: 1.5;
+  background: linear-gradient(120deg, rgba(255,45,111,0.16), var(--surface) 70%);
+}
+.col-picks-box b { color: #ff6f9c; }
+.col-pick { flex-shrink: 0; border-color: #ff2d6f !important; color: #ff6f9c !important; }
+/* Not a button: a picked record has no sell path at all, so an affordance
+   that looks pressable would be a lie. */
+.col-kept {
+  display: inline-block; flex-shrink: 0; opacity: .75; cursor: default;
+  border-color: #ff2d6f !important; color: #ff6f9c !important;
+}
 .col-search { margin-bottom: 14px; max-width: 460px; }
 /* Errors sit inside the card and wrap, rather than spilling raw Postgres text
    across the page as unwrapped red. */
@@ -3376,44 +3409,55 @@ body.entering-done #artist-hero {
    gives the eye nothing to track while it is moving — the colours are what
    make the speed visible and what makes something rare flashing past
    register before it has gone. */
-/* Five rarities, named as a crate-digger's ladder rather than a loot box's:
-   Bargain Bin, B-Side, Deep Cut, White Label, Holy Grail. Each owns a colour
-   loudly — except Bargain Bin, which stays grey so the others have something
-   to be brighter than. A strip where everything glows is a strip where nothing
-   does. */
-.draw-tile.t-bargain {
+/* Five rarities: Common, Rare, Epic, Legendary, Mythic. Names everybody can
+   already rank on sight, which is most of what a rarity is for — the previous
+   set read better and nobody could tell you whether a White Label beat a Deep
+   Cut.
+
+   Each owns a colour loudly except Common, which stays grey so the others have
+   something to be brighter than. A strip where everything glows is a strip
+   where nothing does.
+
+   Mythic is the one that had to be invented rather than promoted: gold was
+   already the top of the old ladder, so Legendary keeps it and Mythic goes
+   prismatic — magenta bleeding through a moving rainbow. It is the only tile
+   on the strip that is not one colour, which is what makes it readable at
+   speed. */
+.draw-tile.t-common {
   background: linear-gradient(165deg, rgba(255,255,255,0.05), var(--surface-2) 70%);
 }
-.draw-tile.t-bside {
+.draw-tile.t-rare {
   border-color: #2fe0ff;
   background: linear-gradient(165deg, rgba(47,224,255,0.34), rgba(47,224,255,0.08) 60%, var(--surface-2) 88%);
   box-shadow: inset 0 0 22px rgba(47,224,255,0.22), 0 0 12px rgba(47,224,255,0.18);
 }
-.draw-tile.t-bside .dt-nm { color: #a8f2ff; }
-.draw-tile.t-deepcut {
+.draw-tile.t-rare .dt-nm { color: #a8f2ff; }
+.draw-tile.t-epic {
   border-color: #c46bff;
   background: linear-gradient(165deg, rgba(196,107,255,0.40), rgba(196,107,255,0.10) 60%, var(--surface-2) 88%);
   box-shadow: inset 0 0 26px rgba(196,107,255,0.28), 0 0 18px rgba(196,107,255,0.26);
 }
-.draw-tile.t-deepcut .dt-nm { color: #e9c6ff; }
-/* White Label is literally a blank promo pressing, so it is the one that is
-   actually white — and against gold that reads as a different thing entirely
-   rather than a paler version of it. */
-.draw-tile.t-whitelabel {
-  border-color: #f2f0ff;
-  background: linear-gradient(165deg, rgba(242,240,255,0.40), rgba(200,205,255,0.12) 55%, var(--surface-2) 88%);
-  box-shadow: inset 0 0 28px rgba(242,240,255,0.30), 0 0 22px rgba(220,225,255,0.35);
-}
-.draw-tile.t-whitelabel .dt-nm { color: #ffffff; }
-.draw-tile.t-grail {
+.draw-tile.t-epic .dt-nm { color: #e9c6ff; }
+.draw-tile.t-legendary {
   border-color: #ffd24a;
   background: linear-gradient(165deg, rgba(255,210,74,0.50), rgba(255,110,60,0.26) 50%, var(--surface-2) 90%);
   box-shadow: inset 0 0 34px rgba(255,210,74,0.38), 0 0 30px rgba(255,190,60,0.48);
 }
-.draw-tile.t-grail .dt-nm { color: #fff0bd; }
+.draw-tile.t-legendary .dt-nm { color: #fff0bd; }
+.draw-tile.t-mythic {
+  border-color: #ff2d6f;
+  background:
+    linear-gradient(165deg, rgba(255,45,111,0.52), rgba(120,60,255,0.30) 45%, var(--surface-2) 92%),
+    linear-gradient(90deg, #ff2d6f, #ffd24a, #3dffab, #22e3ff, #b16bff, #ff2d6f);
+  background-size: 100% 100%, 300% 100%;
+  animation: dtPrism 3.2s linear infinite;
+  box-shadow: inset 0 0 38px rgba(255,45,111,0.42), 0 0 36px rgba(255,45,111,0.55);
+}
+.draw-tile.t-mythic .dt-nm { color: #ffffff; text-shadow: 0 0 10px rgba(255,45,111,0.9); }
+@keyframes dtPrism { to { background-position: 0 0, 300% 0; } }
 /* Only the top two shimmer, so the eye catches one going past. */
-.draw-tile.t-grail .dt-chip,
-.draw-tile.t-whitelabel .dt-chip { animation: dtShine 1.8s ease-in-out infinite; }
+.draw-tile.t-mythic .dt-chip,
+.draw-tile.t-legendary .dt-chip { animation: dtShine 1.8s ease-in-out infinite; }
 @keyframes dtShine { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.5); } }
 
 /* While it runs. The sweep is a single moving highlight rather than
@@ -3428,12 +3472,12 @@ body.entering-done #artist-hero {
 .draw-window.spinning .draw-needle { animation: needlePulse .55s ease-in-out infinite alternate; }
 @keyframes needlePulse { from { opacity: .55; } to { opacity: 1; box-shadow: 0 0 14px var(--gold); } }
 
-/* The landing. Scaled by tier, because a Holy Grail arriving with the same
-   weight as 80 Discs is the fastest way to make both feel like nothing. */
-.draw-window.hit-bside      { animation: drawShake .35s var(--ease); box-shadow: 0 0 34px rgba(47,224,255,0.45); border-color: #2fe0ff; }
-.draw-window.hit-deepcut    { animation: drawShake .5s var(--ease);  box-shadow: 0 0 50px rgba(196,107,255,0.55); border-color: #c46bff; }
-.draw-window.hit-whitelabel { animation: drawShake .6s var(--ease);  box-shadow: 0 0 64px rgba(232,235,255,0.6);  border-color: #f2f0ff; }
-.draw-window.hit-grail      { animation: drawShakeBig .75s var(--ease); box-shadow: 0 0 92px rgba(255,200,70,0.65); border-color: #ffd24a; }
+/* The landing. Scaled by tier, because a Mythic arriving with the same weight
+   as 400 Discs is the fastest way to make both feel like nothing. */
+.draw-window.hit-rare      { animation: drawShake .35s var(--ease); box-shadow: 0 0 34px rgba(47,224,255,0.45); border-color: #2fe0ff; }
+.draw-window.hit-epic      { animation: drawShake .5s var(--ease);  box-shadow: 0 0 50px rgba(196,107,255,0.55); border-color: #c46bff; }
+.draw-window.hit-legendary { animation: drawShake .6s var(--ease);  box-shadow: 0 0 70px rgba(255,200,70,0.62);  border-color: #ffd24a; }
+.draw-window.hit-mythic    { animation: drawShakeBig .85s var(--ease); box-shadow: 0 0 110px rgba(255,45,111,0.75); border-color: #ff2d6f; }
 @keyframes drawShake {
   0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); }
 }
@@ -3448,21 +3492,27 @@ body.entering-done #artist-hero {
   font: 700 10px/1 var(--font-mono); letter-spacing: .26em; text-transform: uppercase;
   color: var(--text-faint); margin-bottom: 6px;
 }
-.draw-result.tier-bside .dr-label   { color: #2fe0ff; text-shadow: 0 0 22px rgba(47,224,255,0.55); }
-.draw-result.tier-bside .dr-tier    { color: #2fe0ff; }
-.draw-result.tier-deepcut .dr-label { color: #c46bff; text-shadow: 0 0 26px rgba(196,107,255,0.65); }
-.draw-result.tier-deepcut .dr-tier  { color: #c46bff; }
-.draw-result.tier-whitelabel .dr-label {
-  color: #ffffff; text-shadow: 0 0 30px rgba(226,230,255,0.8); font-size: 30px;
-}
-.draw-result.tier-whitelabel .dr-tier { color: #f2f0ff; }
-.draw-result.tier-grail .dr-label {
+.draw-result.tier-rare .dr-label { color: #2fe0ff; text-shadow: 0 0 22px rgba(47,224,255,0.55); }
+.draw-result.tier-rare .dr-tier  { color: #2fe0ff; }
+.draw-result.tier-epic .dr-label { color: #c46bff; text-shadow: 0 0 26px rgba(196,107,255,0.65); }
+.draw-result.tier-epic .dr-tier  { color: #c46bff; }
+.draw-result.tier-legendary .dr-label {
   background: linear-gradient(90deg, var(--gold), #fff1c2, var(--accent-2), var(--gold));
   background-size: 300% 100%; -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
-  animation: drawShimmer 2.4s linear infinite; font-size: 34px;
+  animation: drawShimmer 2.4s linear infinite; font-size: 30px;
 }
-.draw-result.tier-grail .dr-tier { color: var(--gold); }
+.draw-result.tier-legendary .dr-tier { color: var(--gold); }
+/* Mythic runs the full spectrum rather than gold's two-tone. Legendary already
+   owns the shimmer, so the top of the ladder has to differ in kind and not
+   just in brightness. */
+.draw-result.tier-mythic .dr-label {
+  background: linear-gradient(90deg, #ff2d6f, #ffd24a, #3dffab, #22e3ff, #b16bff, #ff2d6f);
+  background-size: 300% 100%; -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  animation: drawShimmer 1.6s linear infinite; font-size: 36px;
+}
+.draw-result.tier-mythic .dr-tier { color: #ff2d6f; }
 @keyframes drawShimmer { to { background-position: 300% 0; } }
 
 /* The button has to answer the tap instantly. Five seconds of reel with a
@@ -3489,33 +3539,110 @@ body.entering-done #artist-hero {
 @keyframes drawIn { 0% { opacity: 0; transform: translateY(10px) scale(.94); } 100% { opacity: 1; transform: none; } }
 
 .draw-cost { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
-.odds-tier { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
-.ot-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
-.ot-nm { font: 700 12px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
-.ot-pc { font: 700 16px var(--font-mono); }
-.odds-tier.tier-grail      { border-color: #ffd24a; } .odds-tier.tier-grail .ot-nm,
-.odds-tier.tier-grail .ot-pc { color: #ffd24a; }
-.odds-tier.tier-whitelabel { border-color: #f2f0ff; } .odds-tier.tier-whitelabel .ot-nm,
-.odds-tier.tier-whitelabel .ot-pc { color: #ffffff; }
-.odds-tier.tier-deepcut    { border-color: rgba(196,107,255,.6); } .odds-tier.tier-deepcut .ot-nm,
-.odds-tier.tier-deepcut .ot-pc { color: #c46bff; }
-.odds-tier.tier-bside      { border-color: rgba(47,224,255,.55); } .odds-tier.tier-bside .ot-nm,
-.odds-tier.tier-bside .ot-pc { color: #2fe0ff; }
-.odds-tier.tier-bargain .ot-nm, .odds-tier.tier-bargain .ot-pc { color: var(--text-dim); }
-
-.draw-odds { margin-top: 16px; }
-.draw-odds table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.draw-odds td { padding: 6px 4px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
-.draw-odds td:last-child { text-align: right; font-family: var(--font-mono); color: var(--text); }
-.draw-odds summary { cursor: pointer; font-size: 12px; color: var(--text-dim); }
+/* Balance only — the explanatory paragraph and the odds table that used to sit
+   above and below the reel are both gone. */
+.draw-bal-line { text-align: center; margin: 0 0 10px; font-size: 13px; }
 
 @media (prefers-reduced-motion: reduce) {
   .draw-strip { transition: none !important; }
   .draw-window.landed .draw-needle, .draw-result.in,
   .draw-window.spinning::after, .draw-window.spinning .draw-needle,
-  .draw-window.hit-bside, .draw-window.hit-deepcut, .draw-window.hit-whitelabel, .draw-window.hit-grail,
-  .draw-tile.t-grail .dt-chip, .draw-tile.t-whitelabel .dt-chip, .draw-result.tier-grail .dr-label,
+  .draw-window.hit-rare, .draw-window.hit-epic, .draw-window.hit-legendary, .draw-window.hit-mythic,
+  .draw-tile.t-mythic, .draw-tile.t-mythic .dt-chip, .draw-tile.t-legendary .dt-chip,
+  .draw-result.tier-legendary .dr-label, .draw-result.tier-mythic .dr-label,
   #draw-go.arming { animation: none !important; }
+  /* The prism tile has no static colour of its own once the animation stops,
+     so it needs one rather than falling back to a frozen gradient position. */
+  .draw-tile.t-mythic { background: linear-gradient(165deg, rgba(255,45,111,0.5), var(--surface-2) 85%); }
+  .draw-result.tier-mythic .dr-label { -webkit-text-fill-color: #ff2d6f; color: #ff2d6f; }
+  .draw-result.tier-legendary .dr-label { -webkit-text-fill-color: var(--gold); color: var(--gold); }
+}
+
+/* ---- Producer tags, name flair, avatar frames --------------------------
+   Three cosmetics that attach to an account rather than to the page. The Shop
+   sold nothing but wallpaper before these: themes and banners both change what
+   is *behind* you, and neither says anything about you.
+
+   A producer tag is the loudest of the three on purpose. It is a stamped chip
+   under your name — the thing at the front of a beat that tells you who made
+   it — so it renders in mono, uppercase, tracked out, with a hard edge. It is
+   the only cosmetic whose content is words. */
+.tagline { margin-top: 7px; }
+.tag-chip {
+  display: inline-block; padding: 5px 11px; border-radius: 5px;
+  font: 700 11px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase;
+  border: 1px solid var(--gold); color: var(--gold);
+  background: linear-gradient(120deg, var(--gold-dim), transparent);
+  /* Real tags are longer than a username and must not push the header wide. */
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  vertical-align: middle;
+}
+.tag-chip.mythic { border-color: #ff2d6f; color: #ff6f9c; background: linear-gradient(120deg, rgba(255,45,111,0.22), transparent); }
+
+/* Name flair. Each is a paint job on the username and nothing else — no size
+   change, no layout change, so a flair can never move the header around. The
+   gradient ones need a fallback colour set first: -webkit-text-fill-color is
+   unsupported nowhere that matters, but a clipped background with no fill
+   colour renders as invisible text if it ever is. */
+.fl-foil, .fl-chrome, .fl-holo, .fl-bleed {
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  background-size: 250% 100%;
+}
+.fl-foil   { background-image: linear-gradient(95deg, #8a6b1f, var(--gold), #fff4cc, var(--gold), #8a6b1f); }
+.fl-chrome { background-image: linear-gradient(95deg, #6f7480, #e9edf5, #ffffff, #9aa2b1, #6f7480); }
+.fl-holo   { background-image: linear-gradient(95deg, #ff2d6f, #ffd24a, #3dffab, #22e3ff, #b16bff, #ff2d6f);
+             animation: flShift 3.4s linear infinite; }
+.fl-bleed  { background-image: linear-gradient(180deg, #ff5b4d, #b3201a 78%); }
+.fl-phosphor { color: #3dffab; text-shadow: 0 0 12px rgba(61,255,171,0.75), 0 0 30px rgba(61,255,171,0.35); }
+.fl-ember    { color: #ff8a3d; text-shadow: 0 0 14px rgba(255,138,61,0.7); animation: flEmber 2.6s ease-in-out infinite; }
+@keyframes flShift { to { background-position: 250% 0; } }
+@keyframes flEmber { 0%,100% { text-shadow: 0 0 10px rgba(255,138,61,0.55); } 50% { text-shadow: 0 0 22px rgba(255,138,61,0.95); } }
+
+/* Avatar frames. The ring is drawn on a wrapper rather than on the <img>,
+   because the avatar already uses its own border and box-shadow for the
+   default look and stacking a second ring onto the same element fights it. */
+.pa-wrap { position: relative; flex-shrink: 0; line-height: 0; }
+.pa-wrap::before {
+  content: ''; position: absolute; inset: -9px; border-radius: 50%; pointer-events: none;
+}
+.pa-wrap.fr-gold::before    { border: 3px solid var(--gold); box-shadow: 0 0 18px var(--gold-glow); }
+.pa-wrap.fr-groove::before  { border: 2px solid rgba(255,255,255,0.30);
+  background: repeating-radial-gradient(circle, transparent 0 3px, rgba(255,255,255,0.10) 3px 4px); }
+.pa-wrap.fr-splice::before  { border: 3px dashed #3dffab; box-shadow: 0 0 16px rgba(61,255,171,0.4); }
+.pa-wrap.fr-spindle::before { border: 3px solid transparent;
+  background: conic-gradient(var(--gold), transparent 30%, var(--gold) 60%, transparent 90%, var(--gold)) border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: frSpin 6s linear infinite; }
+/* Card Sleeve is the odd one: a square around a circle, which is what a paper
+   sleeve actually looks like against a record. Drawn as a border rather than a
+   filled panel behind the avatar — a filled ::before would need z-index:-1 to
+   sit behind its own wrapper, and that only works while nothing up the tree
+   creates a stacking context. The profile header takes a background image when
+   an album banner is equipped, so that bet is one this cannot afford. */
+.pa-wrap.fr-sleeve::before {
+  inset: -12px; border-radius: 8px;
+  border: 2px solid var(--border-strong);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+}
+@keyframes frSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .fl-holo, .fl-ember, .pa-wrap.fr-spindle::before { animation: none !important; }
+}
+
+/* Shop preview swatches for the three new kinds. A tag has no colour of its
+   own, so its swatch shows the first characters of the tag itself — the words
+   are the product. */
+.shop-swatch.sw-tag {
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  font: 700 8px/1.1 var(--font-mono); letter-spacing: .06em; padding: 3px;
+  color: var(--gold); background: linear-gradient(120deg, var(--gold-dim), var(--surface-3));
+  overflow: hidden;
+}
+.shop-swatch.sw-flair, .shop-swatch.sw-frame {
+  display: flex; align-items: center; justify-content: center;
+  font: 700 15px/1 var(--font-display); background: var(--surface-3);
 }
 
 /* ---- Rewards ladder --------------------------------------------------- */
@@ -4394,7 +4521,7 @@ window.ICONS = {
       <div class="game-card" id="draw-card" style="border-color: var(--gold); background: linear-gradient(150deg, var(--gold-dim), var(--surface) 60%);">
         <div class="gc-emoji" data-icon="disc"></div>
         <h3>The Draw</h3>
-        <p>Spend 1,000 Discs, spin the strip, see what falls out. Odds on the page.</p>
+        <p>2,000 Discs, one spin. Mythic pays 100,000 Discs, three free records, or a producer tag.</p>
         <div class="gc-go">Open one &rarr;</div>
       </div>
       <div class="game-card" id="hl-card">
@@ -4466,10 +4593,16 @@ window.ICONS = {
     <!-- The Draw's own pane. Kept as static markup rather than rendered into
          col-body, because the reel module holds references to these ids and
          rebuilding them under it mid-spin would drop the strip. -->
+    <!-- No copy and no odds table. Both are gone deliberately: the reel says
+         what the reel is, and a paragraph above it explaining the paragraph
+         below it was the only thing between opening the tab and pulling the
+         handle. `spin_items` is still publicly readable and the server still
+         draws from those exact rows, so the numbers have not stopped being
+         true — they have stopped being printed. If VINALL ever goes to the App
+         Store, guideline 3.1.1 wants disclosed odds for anything loot-box
+         shaped, and the panel comes back before submission. -->
     <div id="col-draw" style="display:none;">
-      <p class="reco-note">1,000 Discs a spin. Holy Grail at 5% &mdash; the album banner
-        and 20,000 Discs only come from there.
-        <span class="muted" id="draw-balance"></span></p>
+      <p class="draw-bal-line"><span class="muted" id="draw-balance"></span></p>
 
       <div class="draw-window" id="draw-window">
         <div class="draw-needle"></div>
@@ -4479,14 +4612,7 @@ window.ICONS = {
       <div class="draw-result" id="draw-result"></div>
 
       <div class="draw-cost">
-        <button class="btn-primary" id="draw-go">Open for 1,000 Discs</button>
-      </div>
-
-      <div class="draw-odds">
-        <details>
-          <summary>Odds</summary>
-          <div id="draw-odds-body"></div>
-        </details>
+        <button class="btn-primary" id="draw-go">Open for 2,000 Discs</button>
       </div>
     </div>
   </section>
@@ -7923,7 +8049,7 @@ async function drawProfile(host,prof,isOwner){
       {v:lv,                          k:'Level',        sub:(prof.lifetime_xp||0).toLocaleString()+' XP'},
       {v:prof.streak_best||0,         k:'Best streak',  sub:'rating days in a row'},
       {v:prof.login_best||0,          k:'Longest run',  sub:'days opened in a row'},
-      {v:(prof.owned_themes||[]).length+(prof.owned_banners||[]).length, k:'Cosmetics', sub:'themes and banners'}
+      {v:(prof.owned_themes||[]).length+(prof.owned_banners||[]).length+(prof.owned_tags||[]).length+(prof.owned_flairs||[]).length+(prof.owned_frames||[]).length, k:'Cosmetics', sub:'tags, flair, frames, themes, banners'}
     ];
     if(isOwner){
       let nLore=0,nDiary=0;
@@ -7985,12 +8111,33 @@ async function drawProfile(host,prof,isOwner){
   } else if(bannerDef){
     bannerStyle=' style="background:'+bannerDef.gradient+'; border-radius:var(--radius); padding:20px;"';
   }
+  /* The three account cosmetics: a producer tag under the name, a flair on the
+     name itself, and a frame around the avatar. All three come straight off
+     the profile row, which fetchProfile selects with `*`, so somebody else's
+     profile shows theirs without any extra request.
+
+     The tag is validated against the TAGS map rather than printed as stored.
+     It cannot currently be anything else — the pin trigger only accepts a key
+     the account owns, and owning one means buying or drawing it — but a
+     profile header is the one place in this app where a stored string is
+     rendered at size, and "it can only be a known key" is exactly the
+     assumption that stops being true when somebody adds an admin grant. An
+     unknown key renders as nothing. */
+  const TAGDEF = (window.Wallet && prof.active_tag) ? Wallet.TAGS[prof.active_tag] : null;
+  const tagHtml = TAGDEF
+    ? '<div class="tagline"><span class="tag-chip">'+esc(TAGDEF.name)+'</span></div>' : '';
+  const flairCls = (window.Wallet && prof.active_flair && Wallet.FLAIRS[prof.active_flair])
+    ? ' fl-'+prof.active_flair : '';
+  const frameCls = (window.Wallet && prof.active_frame && Wallet.FRAMES[prof.active_frame])
+    ? ' fr-'+prof.active_frame : '';
+
   host.innerHTML=
     favBannerHtml+
     '<div class="prof-head"'+bannerStyle+'>'+
-      '<img class="prof-avatar" src="'+esc(avatarSrc(av))+'" alt="">'+
+      '<span class="pa-wrap'+frameCls+'"><img class="prof-avatar" src="'+esc(avatarSrc(av))+'" alt=""></span>'+
       '<div style="flex:1;min-width:200px;">'+
-        '<div class="prof-name">'+esc(prof.username||'user')+badgeHtml(badges)+'</div>'+
+        '<div class="prof-name"><span class="'+(flairCls?flairCls.trim():'')+'">'+esc(prof.username||'user')+'</span>'+badgeHtml(badges)+'</div>'+
+        tagHtml+
         (prof.bio?'<div class="prof-bio">'+esc(prof.bio)+'</div>':(isOwner?'<div class="prof-bio" style="opacity:0.6;">No bio yet.</div>':''))+
         '<div class="prof-stats">'+
           '<div class="prof-stat clickable" id="stat-followers"><b>'+counts.followers+'</b><span>followers</span></div>'+
@@ -9874,6 +10021,107 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     dusk:   'linear-gradient(135deg, #785abe, #ff965a)',
     static: 'repeating-linear-gradient(115deg, #d9d9d9 0 3px, #2a2a2a 3px 7px)',
   };
+  /* ---- Producer tags -----------------------------------------------------
+
+     The Shop sold nothing but wallpaper: a theme changes the app and a banner
+     changes the strip behind your header, and neither of them says anything
+     about *you*. A producer tag does — it is the stamp at the front of a beat
+     that tells you who made it, and putting one under your username is the
+     cheapest possible way to make a profile read as somebody's.
+
+     These are NOT `profiles.badges`. That column already holds status markers
+     — CEO, OG, Beta Tester, Verified — which are awarded and mean something
+     about the account. Stacking bought items into the same array would make
+     "Verified" purchasable, which is the one thing a verification marker can
+     never be. Separate column, separate map, separate shop section.
+
+     Costs here are fallbacks only: every one is overwritten from `shop_items`
+     by loadPrices(), because the server charges from that table and a price on
+     screen that wallet_buy disagrees with is worse than no price at all. */
+  const TAGS = {
+    // The house's own. Cheapest in, so a new account can afford one the same
+    // week — a cosmetic nobody can reach is a cosmetic nobody knows exists.
+    crate:      { name: 'STRAIGHT OUT THE CRATE', cost: 600,  desc: 'The house tag. Where everything here came from.' },
+    needle:     { name: 'DROP THE NEEDLE',        cost: 600,  desc: 'Less talking, more record.' },
+    noskips:    { name: 'NO SKIPS',               cost: 900,  desc: 'A claim you have to be able to back.' },
+    dollarbin:  { name: 'DOLLAR BIN DIGGER',      cost: 900,  desc: 'The good stuff is at the bottom.' },
+    promo:      { name: 'PROMO USE ONLY',         cost: 1500, desc: 'Stamped on a record that was never for sale.' },
+    asintended: { name: 'MONO. AS INTENDED.',     cost: 2000, desc: 'For people who will tell you about the mixdown.' },
+    firstpress: { name: 'FIRST PRESS',            cost: 2000, desc: 'Before anybody else was listening.' },
+    // The real ones.
+    pluh:       { name: 'pluh',                   cost: 800,  desc: 'That is the whole tag.' },
+    lit:        { name: 'IT’S LIT',          cost: 800,  desc: 'Two words, whole era.' },
+    twentyone:  { name: '21',                     cost: 900,  desc: 'Nothing else needed.' },
+    mustard:    { name: 'MUSTARD ON THE BEAT',    cost: 1200, desc: 'You know exactly what is coming next.' },
+    pluto:      { name: 'PLUTO',                  cost: 1200, desc: 'Cold, far out, still orbiting.' },
+    sremm:      { name: 'SREMMLIFE!',             cost: 1400, desc: 'Shouted, never said.' },
+    maybach:    { name: 'M-M-M-MAYBACH MUSIC',    cost: 1600, desc: 'The stutter is the point.' },
+    biscuits:   { name: 'IT’S BISCUITS, IT’S GRAVY', cost: 1600, desc: 'A tag that describes breakfast and means business.' },
+    profit:     { name: 'I GOT TOO MUCH PROFIT',  cost: 1800, desc: 'Not a complaint.' },
+    carti:      { name: 'CASH CARTI B!TCH',       cost: 2000, desc: 'Arrives before the first bar does.' },
+    taykeith:   { name: 'TAY KEITH, FTNU',        cost: 2400, desc: 'Abbreviated, for the same reason radio does it.' },
+    pierre:     { name: 'YO PIERRE, YOU WANNA COME OUT HERE?', cost: 2800, desc: 'A question, permanently unanswered.' },
+    metro:      { name: 'IF YOUNG METRO DON’T TRUST YOU', cost: 3200, desc: 'The most expensive one, and it is not close.' },
+  };
+
+  /* ---- Name flair --------------------------------------------------------
+     A paint job on your username and nothing else. No size change and no
+     layout change, deliberately: a cosmetic that moves the profile header
+     around is a cosmetic that breaks somebody else's page. */
+  const FLAIRS = {
+    foil:     { name: 'Gold Foil',    cost: 900,  desc: 'Your name pressed into the sleeve.' },
+    chrome:   { name: 'Chrome',       cost: 900,  desc: 'Mirror-polished, like a 12″ label.' },
+    phosphor: { name: 'Phosphor',     cost: 1200, desc: 'Green-screen burn-in.' },
+    ember:    { name: 'Ember',        cost: 1200, desc: 'Warm, and it breathes.' },
+    bleed:    { name: 'Ink Bleed',    cost: 1600, desc: 'Red spreading through cheap paper.' },
+    holo:     { name: 'Holographic',  cost: 2400, desc: 'Never the same colour twice.' },
+  };
+  const FLAIR_SWATCH = {
+    foil:     'linear-gradient(135deg,#8a6b1f,#F5C842 55%,#fff4cc)',
+    chrome:   'linear-gradient(135deg,#6f7480,#e9edf5 55%,#ffffff)',
+    phosphor: 'linear-gradient(135deg,#07100d,#3dffab)',
+    ember:    'linear-gradient(135deg,#3a1505,#ff8a3d)',
+    bleed:    'linear-gradient(180deg,#ff5b4d,#b3201a)',
+    holo:     'linear-gradient(135deg,#ff2d6f,#ffd24a,#3dffab,#22e3ff,#b16bff)',
+  };
+
+  /* ---- Avatar frames ----------------------------------------------------- */
+  const FRAMES = {
+    sleeve:  { name: 'Card Sleeve', cost: 700,  desc: 'A square paper sleeve behind a round record.' },
+    groove:  { name: 'Groove',      cost: 900,  desc: 'Concentric rings, cut from the outside in.' },
+    gold:    { name: 'Gold Ring',   cost: 1200, desc: 'One solid band. Nothing clever.' },
+    splice:  { name: 'Splice',      cost: 1400, desc: 'Tape marked up for the edit.' },
+    spindle: { name: 'Spindle',     cost: 1600, desc: 'It turns, slowly, forever.' },
+  };
+  const FRAME_SWATCH = {
+    sleeve:  'linear-gradient(150deg,#3a3733,#1a1917)',
+    groove:  'repeating-radial-gradient(circle,#2a2a2e 0 3px,#4a4a52 3px 4px)',
+    gold:    'radial-gradient(circle,#1a1713 45%,#F5C842 46%,#F5C842 62%,#1a1713 63%)',
+    splice:  'repeating-linear-gradient(45deg,#3dffab 0 5px,#0b1a14 5px 10px)',
+    spindle: 'conic-gradient(#F5C842,#2a2622 30%,#F5C842 60%,#2a2622 90%,#F5C842)',
+  };
+
+  /* ---- Boosts ------------------------------------------------------------
+     The only repeatable things in the Shop, and the reason it has a floor.
+     Every cosmetic can be finished; an account that owns all of them has
+     nowhere left to put Discs, and a currency with nowhere to go stops being a
+     currency. These can be bought again and again, so they never run out.
+
+     Both top up an entitlement that already exists rather than inventing a new
+     one, which is what keeps them safe: wallet_buy adds to `streak_freezes` or
+     `banner_picks`, both of which are pinned against client writes and already
+     spent through paths the server owns. Nothing here raises a daily cap —
+     caps are the anti-forgery defence for the minigames, not a balance lever,
+     and selling a way around one would sell a way to forge awards. */
+  const BOOSTS = {
+    freeze:     { name: 'Streak Freeze',     cost: 1200, desc: 'Covers one missed day of your rating streak. Stacks — buy as many as you like.' },
+    bannerpick: { name: 'Album Banner Pick', cost: 3000, desc: 'One album banner claim now, instead of waiting out seven days.' },
+  };
+  const BOOST_SWATCH = {
+    freeze:     'linear-gradient(135deg,#0b1d2a,#5eb8ff)',
+    bannerpick: 'linear-gradient(135deg,#F5C842,#ff7a4d)',
+  };
+
   const STREAK_MILESTONES = [7, 30, 100, 365];
   const DAILY_RATING_CAP = 5;
   const DISCS_PER_RATING = 3;
@@ -9882,7 +10130,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     discs: 0, streak_current: 0, streak_best: 0, streak_last_date: null,
     streak_freezes: 1, owned_themes: ['classic'], active_theme: 'classic',
     owned_banners: [], active_banner: null, is_admin: false,
-    login_streak: 0, login_best: 0, banner_picks: 0,
+    owned_tags: [], active_tag: null,
+    owned_flairs: [], active_flair: null,
+    owned_frames: [], active_frame: null,
+    login_streak: 0, login_best: 0, banner_picks: 0, album_picks: 0,
     lifetime_xp: 0, level: 1,
   };
 
@@ -10009,13 +10260,18 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      not exist. Every number here is now read from the same table the server
      charges from, so the two cannot disagree again.
 
-     shop_items has a public read policy for exactly this. */
+     shop_items has a public read policy for exactly this.
+
+     Keyed by `kind` rather than branched on, so adding a sixth kind of thing
+     to sell means adding one line here and not editing an expression. */
+  const MAPS = { theme: THEMES, banner: BANNERS, tag: TAGS, flair: FLAIRS, frame: FRAMES, boost: BOOSTS };
+
   async function loadPrices() {
     if (!window.Cloud || !Cloud.client || !Cloud.client()) return;
     try {
       var r = await Cloud.client().from('shop_items').select('kind,key,cost');
       (r.data || []).forEach(function (row) {
-        var map = row.kind === 'theme' ? THEMES : row.kind === 'banner' ? BANNERS : null;
+        var map = MAPS[row.kind];
         if (map && map[row.key]) map[row.key].cost = row.cost;
       });
     } catch (e) { /* keep whatever the maps say rather than showing nothing */ }
@@ -10041,9 +10297,16 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
           active_theme: prof.active_theme || 'classic',
           owned_banners: prof.owned_banners || [],
           active_banner: prof.active_banner || null,
+          owned_tags: prof.owned_tags || [],
+          active_tag: prof.active_tag || null,
+          owned_flairs: prof.owned_flairs || [],
+          active_flair: prof.active_flair || null,
+          owned_frames: prof.owned_frames || [],
+          active_frame: prof.active_frame || null,
           login_streak: prof.login_streak || 0,
           login_best: prof.login_best || 0,
           banner_picks: prof.banner_picks || 0,
+          album_picks: prof.album_picks || 0,
           lifetime_xp: prof.lifetime_xp || 0,
           level: prof.level || 1,
           is_admin: !!prof.is_admin,
@@ -10069,9 +10332,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (w.owned_themes) state.owned_themes = w.owned_themes;
     if (w.owned_banners) state.owned_banners = w.owned_banners;
     if (w.active_banner !== undefined) state.active_banner = w.active_banner;
+    if (w.owned_tags) state.owned_tags = w.owned_tags;
+    if (w.owned_flairs) state.owned_flairs = w.owned_flairs;
+    if (w.owned_frames) state.owned_frames = w.owned_frames;
     if (w.login_streak != null) state.login_streak = w.login_streak;
     if (w.login_best != null) state.login_best = w.login_best;
     if (w.banner_picks != null) state.banner_picks = w.banner_picks;
+    if (w.album_picks != null) state.album_picks = w.album_picks;
     if (w.lifetime_xp != null) state.lifetime_xp = w.lifetime_xp;
     /* Every award path funnels through here, so this is the one place a level
        change can be noticed — rather than each of the eight things that grant
@@ -10243,11 +10510,21 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   /* One spin of The Draw. The server charges, picks, grants and returns —
      the client is told what it won and never asked. A browser that chose its
-     own prize would be a browser that always drew a Holy Grail. */
+     own prize would be a browser that always drew a Mythic. */
   async function spin() {
     const res = await rpc('wallet_spin');
     if (res.error) return { error: res.error };
     applyWallet(res.data);
+    /* Equip a first one automatically. Winning a producer tag and seeing
+       nothing change anywhere is how a prize turns into a line of text — and
+       the Shop is two taps away from the reel, so "go and put it on" is a step
+       most people will not take on the spin they won it. Only when the slot is
+       empty: overwriting something you chose would be worse than doing
+       nothing. */
+    const d = res.data || {};
+    if (d.ref && !d.duplicate && OWN_KEY[d.kind] && !state[ACT_KEY[d.kind]]) {
+      try { await equipCosmetic(d.kind, d.ref); } catch (e) {}
+    }
     return { data: res.data };
   }
 
@@ -10287,6 +10564,53 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     return { ok: true };
   }
 
+  /* Tags, flair and frames are three copies of the same shape, so they share
+     one pair of functions rather than six near-identical ones. Themes and
+     banners keep their own because a theme also repaints the app and a banner
+     has the `album:` special case — generalising those would have meant
+     branching inside the generic version, which is the same code with more
+     steps.
+
+     'none' is a real choice for all three: equipping nothing has to be
+     reachable, or the first tag you buy is permanent. */
+  const OWN_KEY = { tag: 'owned_tags', flair: 'owned_flairs', frame: 'owned_frames' };
+  const ACT_KEY = { tag: 'active_tag', flair: 'active_flair', frame: 'active_frame' };
+
+  async function buyCosmetic(kind, key) {
+    if (!MAPS[kind] || !MAPS[kind][key]) return { error: 'Unknown item' };
+    const res = await rpc('wallet_buy', { p_kind: kind, p_key: key });
+    if (res.error) return { error: res.error };
+    applyWallet(res.data);
+    return { ok: true };
+  }
+
+  async function equipCosmetic(kind, key) {
+    if (!OWN_KEY[kind]) return { error: 'Not equippable' };
+    if (!loaded) await load();
+    if (!state.is_admin && key !== 'none' && (state[OWN_KEY[kind]] || []).indexOf(key) === -1) {
+      return { error: 'Not owned' };
+    }
+    const val = key === 'none' ? null : key;
+    state[ACT_KEY[kind]] = val;
+    const fields = {};
+    fields[ACT_KEY[kind]] = val;
+    await persist(fields);
+    if (typeof window.renderProfile === 'function') window.renderProfile();
+    return { ok: true };
+  }
+
+  /* Boosts own nothing, so there is no equip half and no ownership check —
+     buying one is the whole interaction. The server folds it straight into
+     streak_freezes or banner_picks. */
+  async function buyBoost(key) {
+    if (!BOOSTS[key]) return { error: 'Unknown boost' };
+    const res = await rpc('wallet_buy', { p_kind: 'boost', p_key: key });
+    if (res.error) return { error: res.error };
+    applyWallet(res.data);
+    if (typeof window.renderBannerPick === 'function') window.renderBannerPick();
+    return { ok: true };
+  }
+
   function get() { return state; }
 
   window.Wallet = {
@@ -10302,12 +10626,15 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     dailyLogin: dailyLogin, claimAlbumBanner: claimAlbumBanner, spin: spin,
     levelInfo: levelInfo,
     buyTheme: buyTheme, equipTheme: equipTheme, buyBanner: buyBanner, equipBanner: equipBanner,
+    buyCosmetic: buyCosmetic, equipCosmetic: equipCosmetic, buyBoost: buyBoost,
     applyTheme: applyTheme, THEMES: THEMES, BANNERS: BANNERS,
+    TAGS: TAGS, FLAIRS: FLAIRS, FRAMES: FRAMES, BOOSTS: BOOSTS,
     SWATCH: SWATCH, BANNER_SWATCH: BANNER_SWATCH,
+    FLAIR_SWATCH: FLAIR_SWATCH, FRAME_SWATCH: FRAME_SWATCH,
   };
 
   // ---- Shop UI ------------------------------------------------------------
-  function shopItemRow(kind, key, item, swatchBg, owned, active) {
+  function shopItemRow(kind, key, item, swatchBg, owned, active, swatchClass, swatchText) {
     let action;
     // Keys used to be short literals from THEMES/BANNERS; album banners put a
     // URL in here, so it gets escaped into the attribute like any other
@@ -10317,7 +10644,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     else if (owned) action = '<button class="btn-mini" data-equip-' + kind + '="' + k + '">Equip</button>';
     else action = '<button class="btn-primary" style="padding:9px 16px;font-size:13px;" data-buy-' + kind + '="' + k + '" ' + ((get().discs < item.cost && !get().is_admin) ? 'disabled' : '') + '>Buy</button>';
     return '<div class="shop-item">' +
-      '<div class="shop-swatch" style="background:' + swatchBg + '"></div>' +
+      '<div class="shop-swatch' + (swatchClass ? ' ' + swatchClass : '') +
+        '" style="background:' + swatchBg + '">' +
+        (swatchText ? esc(String(swatchText).slice(0, 22)) : '') + '</div>' +
       '<div class="shop-item-info">' +
         '<div class="shop-item-name">' + item.name + (active ? ' ✓' : '') + '</div>' +
         '<div class="shop-item-desc">' + item.desc + '</div>' +
@@ -10362,10 +10691,104 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
                          (w.active_banner || '') === key);
     }).join('');
 
+    /* The three account cosmetics. One renderer for all of them, because they
+       differ only in which array holds ownership and what the swatch looks
+       like — and a 'none' row first, so equipping nothing stays reachable and
+       the first tag you buy is not permanent. */
+    function cosmeticRows(kind, map, swatches, swatchClass) {
+      const ownedList = w[OWN_KEY[kind]] || [];
+      const activeKey = w[ACT_KEY[kind]] || 'none';
+      const none = shopItemRow(kind, 'none',
+        { name: 'None', cost: 0, desc: 'Wear nothing.' },
+        'linear-gradient(135deg, var(--surface-2), var(--surface-4))',
+        true, activeKey === 'none');
+      return none + Object.keys(map).map(function (key) {
+        const swatch = swatches ? swatches[key]
+          : 'linear-gradient(120deg, var(--gold-dim), var(--surface-3))';
+        return shopItemRow(kind, key, map[key], swatch,
+                           w.is_admin || ownedList.indexOf(key) !== -1,
+                           activeKey === key, swatchClass,
+                           // A tag has no colour of its own. Its swatch shows
+                           // the words, because the words are the product.
+                           kind === 'tag' ? map[key].name : '');
+      }).join('');
+    }
+
+    const tagRows   = cosmeticRows('tag',   TAGS,   null,          'sw-tag');
+    const flairRows = cosmeticRows('flair', FLAIRS, FLAIR_SWATCH, 'sw-flair');
+    const frameRows = cosmeticRows('frame', FRAMES, FRAME_SWATCH, 'sw-frame');
+
+    /* Boosts, which are bought and never owned. The button says Buy every
+       time, and how many you already hold is on the row — an item you can buy
+       again needs to tell you where the last one went. */
+    const boostRows = Object.keys(BOOSTS).map(function (key) {
+      const held = key === 'freeze' ? (w.streak_freezes || 0) : (w.banner_picks || 0);
+      const def = {
+        name: BOOSTS[key].name, cost: BOOSTS[key].cost,
+        desc: BOOSTS[key].desc + (held ? ' <b>You hold ' + held + '.</b>' : ''),
+      };
+      return shopItemRow('boost', key, def, BOOST_SWATCH[key], false, false);
+    }).join('');
+
+    /* Sections collapse. The Shop went from thirteen rows to nearly fifty when
+       tags, flair, frames and boosts arrived, and fifty rows in a 92vh modal
+       buries the Motion setting underneath all of them — which matters,
+       because Motion is the one control in here a logged-out visitor can use.
+       Only the first section is open; everything else is one tap and the modal
+       stays the height of a modal.
+
+       Which one is open is not remembered between opens, deliberately: it is a
+       shop, and it should reset to its front window rather than to wherever
+       you were rummaging last time. */
+    function sec(title, rows, count, open) {
+      return '<details class="shop-sec"' + (open ? ' open' : '') + '>' +
+        '<summary><span class="shop-section-title">' + title + '</span>' +
+        '<span class="ss-n">' + count + '</span></summary>' + rows + '</details>';
+    }
+    const albumCount = (w.owned_banners || []).filter(function (k) {
+      return String(k).indexOf('album:') === 0;
+    }).length;
+
     list.innerHTML =
-      '<div class="shop-section-title">Themes</div>' + themeRows +
-      '<div class="shop-section-title">Profile banners</div>' + bannerRows +
-      (albumRows ? '<div class="shop-section-title">Your albums</div>' + albumRows : '');
+      sec('Producer tags', tagRows, Object.keys(TAGS).length, true) +
+      sec('Name flair', flairRows, Object.keys(FLAIRS).length) +
+      sec('Avatar frames', frameRows, Object.keys(FRAMES).length) +
+      sec('Boosts', boostRows, Object.keys(BOOSTS).length) +
+      sec('Themes', themeRows, Object.keys(THEMES).length) +
+      sec('Profile banners', bannerRows, Object.keys(BANNERS).length) +
+      (albumRows ? sec('Your albums', albumRows, albumCount) : '');
+
+    // Tags, flair and frames share one pair of handlers, keyed off the kind in
+    // the attribute name — six near-identical blocks was the alternative.
+    ['tag', 'flair', 'frame'].forEach(function (kind) {
+      list.querySelectorAll('[data-buy-' + kind + ']').forEach(function (b) {
+        b.addEventListener('click', async function () {
+          b.disabled = true;
+          const key = b.dataset['buy' + kind.charAt(0).toUpperCase() + kind.slice(1)];
+          const res = await buyCosmetic(kind, key);
+          if (res.error) { toast(res.error); b.disabled = false; return; }
+          await equipCosmetic(kind, key);
+          renderShop();
+          if (typeof window.renderStats === 'function') window.renderStats();
+        });
+      });
+      list.querySelectorAll('[data-equip-' + kind + ']').forEach(function (b) {
+        b.addEventListener('click', async function () {
+          await equipCosmetic(kind, b.dataset['equip' + kind.charAt(0).toUpperCase() + kind.slice(1)]);
+          renderShop();
+        });
+      });
+    });
+    list.querySelectorAll('[data-buy-boost]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        b.disabled = true;
+        const res = await buyBoost(b.dataset.buyBoost);
+        if (res.error) { toast(res.error); b.disabled = false; return; }
+        toast('Added to your account');
+        renderShop();
+        if (typeof window.renderStats === 'function') window.renderStats();
+      });
+    });
 
     list.querySelectorAll('[data-buy-theme]').forEach(function (b) {
       b.addEventListener('click', async function () {
@@ -13510,7 +13933,7 @@ window.renderAdminStats = renderAdminStats;
     if (_mine && !force) return _mine;
     try {
       var r = await sb().from('collection')
-        .select('album_id,name,artist,art,price,bought_at')
+        .select('album_id,name,artist,art,price,bought_at,via_pick')
         .eq('user_id', uid()).order('price', { ascending: false });
       _mine = r.data || [];
     } catch (e) { _mine = []; }
@@ -13538,12 +13961,36 @@ window.renderAdminStats = renderAdminStats;
     if (!h) return;
     if (!on()) { h.textContent = ''; return; }
     var w = worthOf(_mine);
-    h.textContent = _mine ? n(w) + ' Discs across ' + _mine.length + ' record' + (_mine.length === 1 ? '' : 's') : '';
+    // Album picks ride along in the header rather than only in the Market,
+    // because a Mythic won on the Draw tab is otherwise invisible from every
+    // other tab of the same view — and an entitlement you have forgotten about
+    // is an entitlement that never gets spent.
+    var picks = (window.Wallet && Wallet.get) ? (Wallet.get().album_picks || 0) : 0;
+    h.textContent = (_mine ? n(w) + ' Discs across ' + _mine.length + ' record' + (_mine.length === 1 ? '' : 's') : '') +
+      (picks > 0 ? (_mine ? ' · ' : '') + picks + ' free pick' + (picks === 1 ? '' : 's') : '');
   }
 
   function card(a, opts) {
     opts = opts || {};
     var afford = opts.afford;
+    /* A record claimed with a Mythic album pick cannot be sold — collection_sell
+       refuses it. Three free records refunded at 70% would be ~17,500 Discs of
+       arbitrage, which on its own flips The Draw from a sink to a faucet. So
+       the card says so rather than offering a button that raises an error. */
+    var action;
+    if (opts.owned && a.via_pick) {
+      action = '<span class="btn-mini col-kept" title="Won in The Draw. Yours to keep.">Mythic pick</span>';
+    } else if (opts.owned) {
+      action = '<button class="btn-mini col-sell" data-sell="' + esc(a.album_id) + '">Sell ' + n(Math.floor(a.price * 0.7)) + '</button>';
+    } else {
+      action = '<button class="' + (afford === false ? 'btn-mini' : 'btn-primary') + ' col-buy" data-buy="' + esc(a.album_id) + '"' +
+        (afford === false ? ' disabled title="Not enough Discs"' : '') + '>' +
+        (a.price == null ? 'Price it' : 'Buy') + '</button>' +
+        // The pick button only exists while you hold one, and it is offered
+        // even on a record you could afford — spending a pick on something
+        // cheap is your call to make badly.
+        (opts.picks ? '<button class="btn-mini col-pick" data-pick="' + esc(a.album_id) + '">Use a pick</button>' : '');
+    }
     return '<div class="col-rec' + (opts.owned ? ' owned' : '') + '" data-rec="' + esc(a.album_id) + '">' +
       '<img src="' + esc(a.art || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
       '<div class="col-meta"><div class="col-nm">' + esc(a.name) + '</div>' +
@@ -13551,12 +13998,7 @@ window.renderAdminStats = renderAdminStats;
       (a.price != null
         ? '<div class="col-price">' + n(a.price) + ' <small>Discs</small></div>'
         : '<div class="col-price col-unpriced">price on request</div>') +
-      '</div>' +
-      (opts.owned
-        ? '<button class="btn-mini col-sell" data-sell="' + esc(a.album_id) + '">Sell ' + n(Math.floor(a.price * 0.7)) + '</button>'
-        : '<button class="' + (afford === false ? 'btn-mini' : 'btn-primary') + ' col-buy" data-buy="' + esc(a.album_id) + '"' +
-          (afford === false ? ' disabled title="Not enough Discs"' : '') + '>' +
-          (a.price == null ? 'Price it' : 'Buy') + '</button>') +
+      '</div>' + action +
     '</div>';
   }
 
@@ -13626,11 +14068,17 @@ window.renderAdminStats = renderAdminStats;
       (await loadMine()).forEach(function (a) { owned[a.album_id] = true; });
       var discs = (window.Wallet && Wallet.get) ? (Wallet.get().discs || 0) : 0;
       var admin = (window.Wallet && Wallet.get) ? Wallet.get().is_admin : false;
+      var picks = (window.Wallet && Wallet.get) ? (Wallet.get().album_picks || 0) : 0;
       if (!items.length) {
         body.innerHTML = '<div class="reco-note">Nothing in the crate to buy yet — rate some albums first.</div>';
         return;
       }
       body.innerHTML =
+        (picks > 0
+          ? '<div class="col-picks-box"><b>' + picks + ' album pick' + (picks === 1 ? '' : 's') +
+            '</b> — take any record here for nothing, whatever it costs. ' +
+            'Search for one if it is not in the crate. A picked record is yours to keep and cannot be sold.</div>'
+          : '') +
         '<p class="reco-note">' +
         (_results ? 'Search results — tap Price it to value one. ' : 'Priced by total Spotify streams. ') +
         'You hold ' + (admin ? '∞' : n(discs)) + ' Discs. Selling a record returns 70%.' +
@@ -13638,6 +14086,9 @@ window.renderAdminStats = renderAdminStats;
         '<div class="col-grid">' + items.map(function (a) {
           return card(a, {
             owned: !!owned[a.album_id],
+            // A pick still has to go through pricing, so it is only offered on
+            // a record that already has a price. "Price it" first, then pick.
+            picks: picks > 0 && !owned[a.album_id] && a.price != null,
             afford: admin || a.price == null || discs >= a.price
           });
         }).join('') + '</div>';
@@ -13679,12 +14130,24 @@ window.renderAdminStats = renderAdminStats;
     body.querySelectorAll('[data-buy]').forEach(function (b) {
       b.addEventListener('click', function () { buy(b, b.dataset.buy); });
     });
+    body.querySelectorAll('[data-pick]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var rec = (_results || []).concat(_market || [])
+          .filter(function (x) { return x.album_id === b.dataset.pick; })[0] || {};
+        // The only confirm in this module. A pick is a Mythic prize with three
+        // uses and no way back — spending one by mis-tapping a card is a
+        // different kind of mistake from overpaying for a record.
+        if (!confirm('Use one album pick on ' + (rec.name || 'this record') +
+                     '? It is worth ' + n(rec.price || 0) + ' Discs, and a picked record cannot be sold.')) return;
+        buy(b, b.dataset.pick, true);
+      });
+    });
     body.querySelectorAll('[data-sell]').forEach(function (b) {
       b.addEventListener('click', function () { sell(b, b.dataset.sell); });
     });
   }
 
-  async function buy(btn, albumId) {
+  async function buy(btn, albumId, usePick) {
     if (busy) return;
     busy = true;
     var was = btn.textContent;
@@ -13701,7 +14164,11 @@ window.renderAdminStats = renderAdminStats;
       var r = await fetch('/api/collection-buy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
-        body: JSON.stringify({ album_id: albumId, name: item.name, artist: item.artist, art: item.art }),
+        // `pick` only chooses which server function is called. Whether the
+        // caller actually has a pick to spend is decided in
+        // collection_claim_pick_from, never here.
+        body: JSON.stringify({ album_id: albumId, name: item.name, artist: item.artist,
+                               art: item.art, pick: !!usePick }),
       });
       j = await r.json();
       if (!r.ok) throw new Error((j && j.error) || 'Could not buy that');
@@ -13719,6 +14186,7 @@ window.renderAdminStats = renderAdminStats;
         ? 'The Collection is not switched on yet.'
         : /costs .* Discs/i.test(raw) ? raw
         : /already own/i.test(raw) ? 'You already own that one.'
+        : /no album picks/i.test(raw) ? 'You have no album picks left.'
         : /cannot be priced|not enough of its tracks/i.test(raw)
           ? 'That record cannot be priced — too few of its tracks matched.'
         : 'That did not go through. Try again in a moment.';
@@ -13857,7 +14325,15 @@ window.renderAdminStats = renderAdminStats;
   var section = document.getElementById('col-draw');
   if (!section) return;
 
-  var COST = 1000;
+  /* 2,000, up from 1,000, because the prize pool doubled in value when Mythic
+     arrived. The pool's expected return is ~1,788 Discs a spin even for
+     somebody who owns every cosmetic and therefore converts every duplicate
+     back to Discs, so the Draw stays a net sink — which is the only reason the
+     inflation in the earning rates is safe. Change one and you must change the
+     other; the sum is written out in ..._20260913180000_mythic_tags_and_shop.
+     This mirrors v_cost in wallet_spin() and is display only — the server is
+     what charges. */
+  var COST = 2000;
   var TILE = 130;        // 120px wide + 2×5px margin, must match the CSS
   var STRIP_LEN = 70;
   var WIN_INDEX = 62;    // far enough in that it reads as a real run
@@ -13868,8 +14344,9 @@ window.renderAdminStats = renderAdminStats;
   function el(id) { return document.getElementById(id); }
   function W() { return window.Wallet; }
 
-  // Odds come from the same table the server draws from, so the published
-  // numbers cannot drift from the real ones.
+  // The strip is built from the same table the server draws from, so what goes
+  // past is at least the real set of possible prizes even though the odds
+  // panel that used to publish the weights is gone.
   async function loadItems(force) {
     if (items && !force) return items;
     try {
@@ -13883,12 +14360,20 @@ window.renderAdminStats = renderAdminStats;
     var w = W();
     if (it.kind === 'theme' && w && w.SWATCH && w.SWATCH[it.ref]) return w.SWATCH[it.ref];
     if (it.kind === 'banner' && w && w.BANNER_SWATCH && w.BANNER_SWATCH[it.ref]) return w.BANNER_SWATCH[it.ref];
+    if (it.kind === 'frame' && w && w.FRAME_SWATCH && w.FRAME_SWATCH[it.ref]) return w.FRAME_SWATCH[it.ref];
+    if (it.kind === 'flair' && w && w.FLAIR_SWATCH && w.FLAIR_SWATCH[it.ref]) return w.FLAIR_SWATCH[it.ref];
     if (it.kind === 'banner_pick') return 'linear-gradient(135deg, var(--gold), var(--accent-2))';
+    // The two Mythic non-Disc prizes have no single ref to draw a swatch from —
+    // a producer tag is whichever one you do not own yet, and album picks are
+    // records you have not chosen. Both get the prism instead.
+    if (it.kind === 'tag' || it.kind === 'picks') {
+      return 'linear-gradient(135deg,#ff2d6f,#ffd24a,#3dffab,#22e3ff,#b16bff)';
+    }
     return 'linear-gradient(135deg, var(--surface-4), var(--gold-dim))';
   }
 
   function tileHTML(it) {
-    return '<div class="draw-tile t-' + esc(it.tier || 'bargain') + '">' +
+    return '<div class="draw-tile t-' + esc(it.tier || 'common') + '">' +
       '<span class="dt-chip" style="background:' + swatchFor(it) + '"></span>' +
       '<span class="dt-nm">' + esc(it.label) + '</span></div>';
   }
@@ -13910,32 +14395,32 @@ window.renderAdminStats = renderAdminStats;
 
   /* Every rarity goes past, every spin.
 
-     Left to pure weighting the strip is mostly Bargain Bin — a Holy Grail is a
-     1-in-20 tile, so most spins show little worth reacting to on the way down.
-     Seeding one of each tier at fixed positions means you always see the full
-     ladder go by, and clustering the rare ones
+     Left to pure weighting the strip is mostly Common — a Mythic is a 1-in-10
+     tile and its best prize is 1-in-167, so most spins would show little worth
+     reacting to on the way down. Seeding one of each tier at fixed positions
+     means you always see the full ladder go by, and clustering the rare ones
      toward the end means the run gets visibly more valuable as it slows.
 
      This is theatre and it is honest theatre: what goes past has no bearing on
      what you get, which the server decided before any of this was built. The
      strip is a rendering of the possible, not a hint at the actual. */
-  // Display names, so the reel and the odds table say the same thing and the
-  // tier keys stay short in the database.
+  // Display names, so the reel and the result say the same thing and the tier
+  // keys stay short in the database.
   var TIERS = {
-    bargain:    'Bargain Bin',
-    bside:      'B-Side',
-    deepcut:    'Deep Cut',
-    whitelabel: 'White Label',
-    grail:      'Holy Grail'
+    common:    'Common',
+    rare:      'Rare',
+    epic:      'Epic',
+    legendary: 'Legendary',
+    mythic:    'Mythic'
   };
-  function tierName(t) { return TIERS[t] || 'Bargain Bin'; }
+  function tierName(t) { return TIERS[t] || 'Common'; }
 
   var SEED_PLAN = [
-    { at: 10, tier: 'bside' }, { at: 18, tier: 'deepcut' },
-    { at: 26, tier: 'grail' }, { at: 33, tier: 'bside' },
-    { at: 40, tier: 'deepcut' }, { at: 46, tier: 'whitelabel' },
-    { at: 52, tier: 'deepcut' }, { at: 57, tier: 'grail' },
-    { at: 60, tier: 'whitelabel' }
+    { at: 10, tier: 'rare' }, { at: 18, tier: 'epic' },
+    { at: 26, tier: 'mythic' }, { at: 33, tier: 'rare' },
+    { at: 40, tier: 'epic' }, { at: 46, tier: 'legendary' },
+    { at: 52, tier: 'epic' }, { at: 57, tier: 'mythic' },
+    { at: 60, tier: 'legendary' }
   ];
 
   function buildStrip(pool, winner) {
@@ -13970,34 +14455,19 @@ window.renderAdminStats = renderAdminStats;
     el('draw-go').disabled = !st.is_admin && (st.discs || 0) < COST;
   }
 
-  /* Odds, grouped by tier. A flat list of fourteen prizes is a list nobody
-     reads; the number people actually want is "how often do I get a Holy
-     Grail", so the tier total leads and the individual prizes sit under it.
-     Still read from the same rows the server draws from, so the published
-     figures cannot drift from the real ones. */
-  var TIER_ORDER = ['grail', 'whitelabel', 'deepcut', 'bside', 'bargain'];
+  /* The odds panel that used to live here is gone at the owner's request,
+     along with the paragraph above the reel. Nothing about the machine
+     changed: `spin_items` still has a public select policy, the server still
+     walks those exact weights, and the tier percentages are written down in
+     ..._20260913180000_mythic_tags_and_shop.sql. The disclosure moved out of
+     the UI; it did not stop being true.
 
-  async function paintOdds() {
-    var pool = await loadItems();
-    var total = pool.reduce(function (s, i) { return s + i.weight; }, 0) || 1;
-    var byTier = {};
-    pool.forEach(function (i) { (byTier[i.tier] = byTier[i.tier] || []).push(i); });
-
-    el('draw-odds-body').innerHTML = TIER_ORDER.filter(function (t) { return byTier[t]; })
-      .map(function (t) {
-        var items = byTier[t].slice().sort(function (a, b) { return b.weight - a.weight; });
-        var sum = items.reduce(function (s, i) { return s + i.weight; }, 0);
-        return '<div class="odds-tier tier-' + t + '">' +
-          '<div class="ot-head"><span class="ot-nm">' + esc(tierName(t)) + '</span>' +
-          '<span class="ot-pc">' + (sum / total * 100).toFixed(0) + '%</span></div>' +
-          '<table>' + items.map(function (i) {
-            return '<tr><td>' + esc(i.label) + '</td><td>' +
-              (i.weight / total * 100).toFixed(1) + '%</td></tr>';
-          }).join('') + '</table></div>';
-      }).join('') +
-      '<p class="reco-note" style="margin-top:10px;">Discs are earned only and cannot be bought. ' +
-      'Nothing here has cash value or leaves VINALL.</p>';
-  }
+     Two things to know before this stays gone for good. Apple's guideline
+     3.1.1 requires published odds for anything loot-box shaped, so an App
+     Store submission needs it back — the rendering below is deliberately easy
+     to restore, it read from `loadItems()` and nothing else. And if a way to
+     buy Discs for money is ever added, published odds stop being a courtesy
+     and become a legal requirement in the UK and elsewhere. */
 
   // Draws the Draw pane inside Collection. The Collection tab bar calls this.
   async function render() {
@@ -14013,7 +14483,6 @@ window.renderAdminStats = renderAdminStats;
     // A resting strip so the window is never empty before the first spin.
     el('draw-strip').innerHTML = buildStrip(pool, weightedPick(pool)).slice(0, 20).map(tileHTML).join('');
     paintBalance();
-    paintOdds();
   }
   // Anything that used to link to the Draw tab now opens Collection on it.
   function open() { if (window.openCollectionDraw) window.openCollectionDraw(); }
@@ -14069,53 +14538,71 @@ window.renderAdminStats = renderAdminStats;
       busy = false;
       var wnd = el('draw-window');
       wnd.classList.remove('spinning');
-      wnd.classList.add('landed', 'hit-' + (won.tier || 'bargain'));
+      wnd.classList.add('landed', 'hit-' + (won.tier || 'common'));
       go.textContent = 'Open another';
       var r = el('draw-result');
-      r.className = 'draw-result in tier-' + (won.tier || 'bargain');
-      // The tier is named above the prize, because "Holy Grail" is the part
-      // worth reading and a Disc amount on its own says nothing about how
-      // lucky you just were.
+      r.className = 'draw-result in tier-' + (won.tier || 'common');
+      /* The tier is named above the prize, because "Mythic" is the part worth
+         reading and a Disc amount on its own says nothing about how lucky you
+         just were.
+
+         `granted` rather than `label` for the headline: a producer tag's tile
+         says "Producer tag" because which one you get is decided from what you
+         do not already own, and only the server knows that. The strip shows
+         the category and the result shows the thing. */
       r.innerHTML = '<div class="dr-tier">' + esc(tierName(won.tier)) + '</div>' +
-        '<div class="dr-label">' + esc(won.label) + '</div>' +
+        '<div class="dr-label">' + esc(won.granted || won.label) + '</div>' +
         '<div class="dr-sub">' + esc(
           won.kind === 'discs' ? '+' + (Number(won.gained) || 0).toLocaleString() + ' Discs'
           : won.duplicate ? 'Already yours — ' + (Number(won.gained) || 0).toLocaleString() + ' Discs instead'
           : won.kind === 'banner_pick' ? 'Pick any album as your banner, on your profile'
+          : won.kind === 'picks' ? 'Three records of your choice, free. Claim them in the Market.'
+          : won.kind === 'tag' ? 'A producer tag — wear it under your name in the Shop'
           : 'Unlocked — equip it in the Shop') + '</div>';
 
       applyFeedback(won);
       paintBalance();
       if (typeof window.renderBannerPick === 'function') window.renderBannerPick();
+      /* Deliberately NOT calling renderCollection() here, even though winning
+         album picks changes what the Market offers. The Draw is a pane inside
+         Collection, so that call re-enters render(), hits the `tab === 'draw'`
+         branch and runs resetStrip() — which would wipe the result you are
+         still looking at. The Market reads album_picks from Wallet state when
+         you switch to it, which applyWallet() has already updated. */
     }, SPIN_MS + 40);
   }
 
-  /* The payoff scales with the tier, so a Holy Grail does not land with the
-     same weight as 300 Discs. Five steps now rather than four, and the gap
-     between White Label and Holy Grail is deliberately wide — a 1-in-20 needs
-     to feel unmistakably different from a 1-in-10 or the top of the ladder is
-     just a slightly better middle. Everything here degrades to nothing under
+  /* The payoff scales with the tier, so a Mythic does not land with the same
+     weight as 400 Discs. The gap between Legendary and Mythic is deliberately
+     wide — a 1-in-10 tier carrying a 1-in-167 jackpot has to feel unmistakably
+     different from the tier below it, or the top of the ladder is just a
+     slightly better middle. Everything here degrades to nothing under
      prefers-reduced-motion. */
   function applyFeedback(won) {
     var wnd = el('draw-window');
-    if (won.tier === 'grail') {
-      if (window.burst) burst(wnd, { count: 60, spread: 280 });
+    var name = won.granted || won.label;
+    if (won.tier === 'mythic') {
+      if (window.burst) burst(wnd, { count: 80, spread: 320 });
       if (window.buzz) buzz('big');
       if (typeof window.celebrate === 'function') {
-        window.celebrate('🏆 Holy Grail — ' + won.label, won.kind === 'banner_pick'
-          ? 'Pick any album as your banner. One in twenty.'
-          : 'One in twenty. The top of the crate.');
+        window.celebrate('✦ MYTHIC — ' + name,
+          won.kind === 'picks' ? 'Three records of your choice, free. Go and take them.'
+          : won.kind === 'tag' ? 'A producer tag. Wear it under your name.'
+          : won.duplicate ? 'You had every tag already, so it paid out instead.'
+          : 'The top of the ladder.');
       }
-    } else if (won.tier === 'whitelabel') {
-      if (window.burst) burst(wnd, { count: 34, spread: 200 });
+    } else if (won.tier === 'legendary') {
+      if (window.burst) burst(wnd, { count: 42, spread: 220 });
       if (window.buzz) buzz('big');
       if (typeof window.celebrate === 'function') {
-        window.celebrate('White Label — ' + won.label, 'One in ten. Unmarked and worth knowing.');
+        window.celebrate('Legendary — ' + name, won.kind === 'banner_pick'
+          ? 'Pick any album as your banner.'
+          : 'One spin in seven lands here.');
       }
-    } else if (won.tier === 'deepcut') {
+    } else if (won.tier === 'epic') {
       if (window.burst) burst(wnd, { count: 22, spread: 150 });
       if (window.buzz) buzz('big');
-    } else if (won.tier === 'bside') {
+    } else if (won.tier === 'rare') {
       if (window.burst) burst(wnd, { count: 13, spread: 105 });
       if (window.buzz) buzz('good');
     } else {
@@ -14234,10 +14721,10 @@ window.renderAdminStats = renderAdminStats;
       '</div>' +
       '<div class="rw-other">' +
         '<div class="rw-card" id="rw-draw"><h3>The Draw</h3>' +
-          '<p>1,000 Discs a spin. Holy Grail at 5% — the album banner and 20,000 Discs only come from there. Odds on the page.</p>' +
+          '<p>2,000 Discs a spin. Mythic pays 100,000 Discs, three records of your choice, or a producer tag.</p>' +
           '<div class="gc-go">Open one &rarr;</div></div>' +
         '<div class="rw-card" id="rw-shop"><h3>The Shop</h3>' +
-          '<p>Spend what you have earned on themes and banners. You hold ' +
+          '<p>Producer tags, name flair, avatar frames, themes, banners and boosts. You hold ' +
           (st.is_admin ? '∞' : (st.discs || 0)) + ' Discs.</p>' +
           '<div class="gc-go">Browse &rarr;</div></div>' +
       '</div>' +

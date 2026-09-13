@@ -212,22 +212,123 @@ valuation, so knowing what a record is worth pays off in two different games.
   functions.
 - `collection` is in `delete_my_data()`. See the note there: missing that line is how
   `app_state` survived account deletion for weeks.
+- **Album picks** (`profiles.album_picks`, Mythic only, three at a time) claim any record for
+  nothing. `/api/collection-buy` takes `pick: true` and calls `collection_claim_pick_from`
+  instead of `collection_buy_from` — the route decides *which function*, never whether the
+  caller has a pick, which is checked in the function. The record is stored at its **real
+  price**, because a free record worth nothing would make the prize one you would not want,
+  and marked `via_pick` so it cannot be sold. See The Draw for why that restriction is
+  load-bearing rather than flavour.
+
+## The Shop
+
+Six kinds of thing now, five of them owned and one repeatable
+(`..._20260913180000_mythic_tags_and_shop.sql`). Prices live in `shop_items` and are read into
+the client maps by `loadPrices()` — **the `cost` written beside each item in `index.html` is a
+fallback, not the price.** They drifted apart once already when the 4x inflation moved the
+rows and not the duplicates, and the Shop offered Sundown at 150 while `wallet_buy` charged
+600.
+
+- **Producer tags** — a stamped chip under your username, `owned_tags` / `active_tag`. Twenty
+  of them: thirteen real producer tags and seven of the house's own, cheapest first so a new
+  account can reach one in its first week. **These are deliberately not `profiles.badges`.**
+  That column holds status markers — CEO, OG, Beta Tester, Verified — which are *awarded*.
+  Putting bought items in the same array would make Verified purchasable, which is the one
+  thing a verification marker can never be.
+- **Name flair** — a paint job on the username, `owned_flairs` / `active_flair`. No size
+  change and no layout change, deliberately: a cosmetic that moves the profile header around
+  is a cosmetic that breaks somebody else's page.
+- **Avatar frames** — `owned_frames` / `active_frame`, drawn on a `.pa-wrap` wrapper rather
+  than on the `<img>`, which already uses its own border and box-shadow. Card Sleeve is a
+  border rather than a filled panel behind the avatar: a filled `::before` needs `z-index:-1`
+  to sit behind its own wrapper, and that only holds while nothing up the tree creates a
+  stacking context — the profile header takes a background image when an album banner is
+  equipped.
+- **Boosts** — `kind = 'boost'`, bought and never owned, so they can be bought again and
+  again. **This is the Shop's floor.** Every cosmetic can be finished; an account that owns
+  all of them has nowhere left to put Discs, and a currency with nowhere to go stops being a
+  currency. Both boosts top up an entitlement that already exists (`streak_freezes`,
+  `banner_picks`) rather than inventing one. **Nothing here raises a daily cap** — caps are
+  the anti-forgery defence for the minigames, not a balance lever, and selling a way round one
+  would be selling a way to forge awards.
+- Themes and banners, unchanged.
+
+Tags, flair and frames are three copies of one shape, so they share `buyCosmetic` /
+`equipCosmetic` and one `cosmeticRows()` renderer keyed on `OWN_KEY` / `ACT_KEY`. Themes and
+banners keep their own pair because a theme also repaints the app and a banner has the
+`album:` special case.
+
+**Sections are `<details>`, only the first open.** Thirteen rows became nearly fifty, and fifty
+rows in a 92vh modal buries the Motion setting under all of them — which matters, because
+Motion is the one control in the Shop a logged-out visitor can actually use. Which section is
+open is not remembered between opens on purpose: a shop resets to its front window.
+
+**A first one is equipped automatically** when it comes out of The Draw and the slot is empty.
+Winning a producer tag and seeing nothing change anywhere is how a prize becomes a line of
+text. Only when the slot is empty — overwriting something you chose would be worse than doing
+nothing.
+
+The profile header validates `active_tag` against the `TAGS` map rather than printing what is
+stored. It cannot currently be anything else, since the pin trigger only accepts a key the
+account owns — but it is the one place in the app where a stored string is rendered at size,
+and "it can only be a known key" is exactly the assumption that stops being true the day
+somebody writes an admin grant.
 
 ## The Draw
 
-A case-opening reel bought with Discs (`..._20260911230000_the_draw.sql`). Own modal, own
-module near the bottom of `index.html`.
+A case-opening reel bought with Discs, a pane inside Collection
+(`..._20260911230000_the_draw.sql`, then `..._20260913140000_rarities_and_inflation.sql`,
+now `..._20260913180000_mythic_tags_and_shop.sql`). Own module near the bottom of
+`index.html`.
 
 **It is not gambling, and the distance is load-bearing:**
 
 - Discs **cannot be bought**. Earned only, no purchase path, and `terms.html` already says so.
 - Nothing it awards has cash value or leaves the app.
-- **The odds are published in the UI**, read from the same `spin_items` rows the server draws
-  from, so the disclosed numbers cannot drift from the real ones. Apple requires disclosed
-  odds for anything loot-box shaped (guideline 3.1.1).
 
 **If a way to buy Discs for money is ever added, this becomes a regulated gambling product in
-the UK and elsewhere. Take advice before doing that.**
+the UK and elsewhere. Take advice before doing that** — and published odds stop being a
+courtesy at that point and become a legal requirement.
+
+### The rarities, and the odds panel that used to publish them
+
+Five tiers, renamed for the third time and now named the way everybody else names them:
+**Common 30% / Rare 25% / Epic 20% / Legendary 15% / Mythic 10%**. Weights sum to 1000, so the
+percentages are exact rather than rounded.
+
+The previous set (Bargain Bin / B-Side / Deep Cut / White Label / Holy Grail) read better and
+**nobody could rank it on sight**, which is most of what a rarity name is for. Colour follows
+the same ladder: grey, cyan, violet, gold, and Mythic prismatic — Mythic had to differ *in
+kind* from Legendary rather than in brightness, because gold was already the top of the old
+ladder.
+
+**The on-page odds panel and the paragraph above the reel were both removed** at the owner's
+request. `spin_items` still has a public select policy and the server still walks those exact
+weights, so the numbers did not stop being true — they stopped being printed. Two things
+before that stays gone for good: Apple's guideline 3.1.1 wants published odds for anything
+loot-box shaped, so an App Store submission needs the panel back (it read from `loadItems()`
+and nothing else, so restoring it is small), and see the paragraph above about paid Discs.
+
+### Mythic, and why the spin costs 2,000
+
+Mythic is exactly three things: **100,000 Discs** (0.6% absolute — one spin in 167),
+**3 albums of your choice** (3.4%), and **a producer tag** (6%, a random one you do not own).
+
+The whole pool's expected return is **~1,788 Discs against a 2,000 cost**, computed for the
+worst case — somebody who owns every cosmetic and therefore converts every duplicate to Discs.
+That margin is the safety property, and it is the reason the earning rates can be as inflated
+as they are. **An economy whose only sink pays out more than it takes is not a sink, it is a
+printer.** Before changing any number in `spin_items` or `v_cost`, redo the sum; it is written
+out in full at the top of `..._20260913180000_mythic_tags_and_shop.sql`.
+
+That sum is also why **a record claimed with an album pick cannot be sold**. At the 70%
+refund, three free records are ~17,500 Discs of arbitrage, which on its own flips the pool
+from a sink to a faucet. `collection.via_pick` marks them and `collection_sell` refuses them.
+
+**The tag prize has no fixed `ref`.** It grants a random tag you do not own yet, drawn from the
+same `shop_items` rows you could buy, so the strip tile says "Producer tag" and only the result
+says which one — hence `granted` alongside `label` in what `wallet_spin` returns. Own them all
+and it pays its price back in Discs like any other duplicate.
 
 `wallet_spin()` charges, rolls weighted, grants and returns. **The browser is told what it won
 and never asked** — the animation is theatre played out after the result already exists, the
@@ -243,13 +344,18 @@ The motion, since it is the whole feature and is easy to ruin:
   it read as spun rather than picked.**
 - **Every rarity goes past on every spin**, via `SEED_PLAN` — one of each tier dropped at
   fixed positions, clustered toward the end so the run gets visibly more valuable as it
-  slows. Left to pure weighting the strip is 95% grey, because a legendary is a 1-in-100
-  tile, and most spins showed nothing to react to on the way down. This is theatre and it is
-  honest theatre: **what goes past has no bearing on what you get**, which the server decided
-  before the strip was built. `SEED_PLAN` never writes at or past `WIN_INDEX`.
-- Each rarity owns a vibrant colour — cyan, violet, gold — driving the tile, the result text,
-  the landing glow and the window border. **Common stays grey on purpose**: a strip where
-  everything glows is a strip where nothing does.
+  slows. Left to pure weighting the strip is mostly grey, and most spins showed nothing to
+  react to on the way down. This is theatre and it is honest theatre: **what goes past has no
+  bearing on what you get**, which the server decided before the strip was built. `SEED_PLAN`
+  never writes at or past `WIN_INDEX`.
+- Each rarity owns a vibrant colour — cyan, violet, gold, prismatic — driving the tile, the
+  result text, the landing glow and the window border. **Common stays grey on purpose**: a
+  strip where everything glows is a strip where nothing does.
+- **The result handler must not call `renderCollection()`.** The Draw is a pane inside
+  Collection, so that call re-enters `render()`, hits the `tab === 'draw'` branch and runs
+  `resetStrip()` — wiping the result you are still looking at. Winning album picks therefore
+  does not refresh the Market; the Market reads `album_picks` from Wallet state when you
+  switch to it, which `applyWallet()` has already updated.
 - The stop is **jittered a few pixels off centre**. Stopping perfectly centred twice running
   reads as mechanical.
 - `cubic-bezier(.12,.72,.12,1)` — long, late deceleration. Linear feels like a slot machine

@@ -5,10 +5,17 @@
 // the same reason wallet_buy takes a key and never a cost and why
 // bid_war_create_from is service-role only.
 //
-// Body: { album_id, name, artist, art }
+// Body: { album_id, name, artist, art, pick }
 //   name/artist/art are for display on the collection page. They are cosmetic
 //   and unverified; the album_id is what gets valued, and the value is the
 //   only thing that costs anything.
+//
+//   `pick: true` spends one of the album picks a Mythic draw grants, instead
+//   of Discs. It still goes through the same valuation — a picked record is
+//   stored at its real price, because a free record worth nothing would make
+//   "3 albums of your choice" a prize you would not want. The entitlement is
+//   checked server-side in collection_claim_pick_from; this route only decides
+//   which function to call, never whether the caller has a pick.
 
 import { spotifyToken, valueAlbum } from './_streams.js';
 
@@ -115,7 +122,8 @@ export default async function handler(req, res) {
     const price = priceFromStreams(streams);
     if (!price) { res.status(400).json({ error: 'That record has no stream count to price.' }); return; }
 
-    const buy = await fetch(SUPABASE_URL + '/rest/v1/rpc/collection_buy_from', {
+    const fn = body.pick ? 'collection_claim_pick_from' : 'collection_buy_from';
+    const buy = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + fn, {
       method: 'POST', headers: svcHeaders(SERVICE),
       body: JSON.stringify({
         p_user: userId, p_album_id: albumId,
