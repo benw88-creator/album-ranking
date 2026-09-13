@@ -184,7 +184,16 @@ Called **Discs** in the nav and the heading. The view id, the `views` entry in `
 `renderRewards` and every `rw-` class are all still `rewards` — renaming those buys nothing
 and walks straight into the `setMode` trap below.
 
-The seven-day login ladder, and two doors: The Draw and The Shop. That is the whole page.
+The seven-day login ladder, **The Draw itself**, and a door to The Shop. That is the whole page.
+
+**The Draw lives here and nowhere else.** It was a card in Minigames *and* a fourth tab in
+Collection, neither of which is the section named after the currency it spends — and it is not
+a minigame, it is the currency's other half. The reel's markup sits inside `view-rewards` as a
+**sibling of `#rewards-body`**, wrapped in `#draw-block`, because `renderRewards()` replaces
+`#rewards-body`'s innerHTML and the reel module holds live references to `#draw-window` and
+`#draw-strip` — rebuilding those underneath it mid-spin drops the strip on the floor. That is
+the same reason it was a sibling of `#col-body` before it moved. `#draw-block` exists so the
+heading and the reel hide together for a logged-out visitor, whose render returns early.
 
 **It used to explain itself and no longer does.** There was a paragraph above the ladder, a
 card describing the album banner, and a table listing every rate in the game. All of it was
@@ -297,6 +306,28 @@ valuation, so knowing what a record is worth pays off in two different games.
   and marked `via_pick` so it cannot be sold. See The Draw for why that restriction is
   load-bearing rather than flavour.
 
+## Settings
+
+A modal off the account menu (`openSettings`), holding **Motion**, a **clear-cached-data**
+button, **log out** and **delete account**, and the Privacy/Terms links.
+
+The line that decides what belongs here rather than in the Shop: **a preference or an account
+action, never a thing you own.** Motion was in the Shop only because the Shop was the one modal
+that existed, which made a display preference look like something you might have to buy — and
+it forced the Shop to open for logged-out visitors purely so they could reach it. The Shop needs
+an account again; Settings is the modal that opens for anybody, with the account group hidden
+when nobody is signed in.
+
+The gear is in the account dropdown when signed in and next to Log in when not, because Motion
+is exactly the control somebody should not have to sign up to reach.
+
+**Clear cached app data** sends the `vinall-sw-purge` message `sw.js` listens for, deletes every
+Cache Storage entry, and reloads with a cache-busted URL. It exists because the service worker
+is network-first but not never-stale, and when a stale shell does get served there is otherwise
+no way out from inside the app — "open the console and post a message" is not a fix a user can
+perform. The reload is cache-busted on purpose: the reason you pressed it is that a normal
+reload gave you the stale thing.
+
 ## The Shop
 
 Six kinds of thing now, five of them owned and one repeatable
@@ -356,6 +387,13 @@ because Motion is the one control in the Shop a logged-out visitor can actually 
 tags opened by default at first; nineteen rows unfolding on open put the scroll straight back,
 and picked a favourite besides. Which section is open is not remembered between opens on
 purpose: a shop resets to its front window.
+
+**A purchase keeps your place.** `renderShop()` rebuilds the whole list, so buying a tag used to
+collapse every section and throw you back to the shop front — you bought one thing and then had
+to walk back to where you were standing to buy the next. The open section titles and the panel's
+`scrollTop` are read at the top of the render and put back at the bottom, after the sections
+exist again so the scroll is not clamped against a collapsed list. Restoring is not the same as
+skipping the re-render: the row still has to redraw to say Equipped instead of Buy.
 
 **Buying draws a stamp, it does not throw confetti.** `stampBought()` sweeps a light across the
 row while the request is in flight, then draws a ring and a tick onto it and says *Purchased*.
@@ -756,12 +794,20 @@ Pieces:
 - All finders run on data the app already has (local album/song ratings and `crate_feed`).
   **None of them need Spotify**, which matters — see the Spotify note below.
 - **Today lives on Home.** It was its own first nav tab, alongside a separate Diary tab for
-  Liner Notes. Both are now sections of `view-home`, in the order: stats, Today, Liner Notes
-  (card, week strip, year grid, capped entries), recommendations, upcoming releases. The loop
-  only works if the asking and the looking-back are the same page — as two tabs they were two
-  separate visits, and the nav was up to nine items. `setMode('home')` calls both
-  `renderToday()` and `renderDiary()`; `renderToday()` no-ops when the stack is already
-  built for the day, so re-entering Home is cheap.
+  Liner Notes. Both became sections of `view-home`. The loop only works if the asking and the
+  looking-back are the same page — as two tabs they were two separate visits, and the nav was
+  up to nine items. `setMode('home')` calls both `renderToday()` and `renderDiary()`;
+  `renderToday()` no-ops when the stack is already built for the day, so re-entering Home is
+  cheap.
+- **Liner Notes is TEMPORARILY OFF.** Three switches, flip them together: `display:none` on
+  `.ln-card` and on `#fold-year` in the Home markup, and `DIARY_ON` in the Liner Notes module.
+  Nothing was deleted — the module, the entry modal, the schema and every `renderDiary()` call
+  site are intact, so this is a switch and not a migration. `renderDiary` stays **defined as a
+  no-op** rather than left undefined, because three call sites test `if (window.renderDiary)`
+  and one of them sits inside a `try` that swallows what it catches: a missing function there
+  would be silent, a no-op is honest. The render is stopped as well as the markup hidden,
+  because building a year grid nobody can see is a full pass over every entry on every Home
+  visit.
 - **Answering advances the card by itself**, after 2.2s, with a draining line so the movement
   is expected rather than startling. Waiting for a second deliberate tap after every answer is
   what made this feel like a form. It is now a toggle — **Auto**, beside Refresh, remembered
@@ -907,6 +953,14 @@ but a lack of difference.**
 - The **body background** is four radial washes in different hues and corners, all under 6%.
   It should be felt, not seen: anything stronger fights the album artwork, which is the real
   colour in this app.
+- The **stats row** on Home is: albums ranked, songs ranked, net worth, level, streak, Discs.
+  The two average-rating tiles were removed — an average of your own scores barely moves once
+  there are fifty of them, so they were the only numbers on the strip that never changed, and
+  a stat that never changes is furniture. **Net worth comes from `CollectionWorth`**, a cache
+  in the Collection module, never an RPC in `renderStats()`: that function runs on every
+  rating, every award and every view change. `get()` returns null until the single fetch lands
+  and then re-renders, and will not retry in a loop if it fails. Both buy paths and the sell
+  path return the new total in their own response, so the tile updates without a second trip.
 - The **stats row** and the **minigames grid** assign hues by `nth-child`, not per-element
   classes, so both keep working whatever they contain that day. Wallet and level tiles stay
   gold because those carry meaning and are not part of a rotation.

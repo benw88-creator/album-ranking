@@ -1118,6 +1118,29 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
 @media (max-width: 520px) {
   .motion-setting { flex-direction: column; align-items: flex-start; }
 }
+
+/* ---- Settings ----------------------------------------------------------
+   Rows share the Motion setting's shape rather than inventing a second one,
+   because Motion is the row everything else in here was grouped around. */
+.set-group { margin-bottom: 22px; }
+.set-group:last-child { margin-bottom: 0; }
+.set-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 14px 16px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.set-row + .set-row { margin-top: 8px; }
+.set-copy { min-width: 0; }
+.set-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.set-note { font-size: 12px; color: var(--text-dim); margin-top: 2px; line-height: 1.45; }
+.set-row .btn-mini { flex-shrink: 0; }
+.set-links { display: flex; gap: 16px; font-size: 13px; }
+.set-links a { color: var(--text-dim); }
+.set-links a:hover { color: var(--gold); }
+@media (max-width: 520px) {
+  .set-row { flex-direction: column; align-items: flex-start; }
+}
+
 .shop-section-title {
   font: 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--text-faint); margin: 18px 0 2px;
@@ -3579,9 +3602,6 @@ body.entering-done #artist-hero {
 @keyframes drawIn { 0% { opacity: 0; transform: translateY(10px) scale(.94); } 100% { opacity: 1; transform: none; } }
 
 .draw-cost { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
-/* Balance only — the explanatory paragraph and the odds table that used to sit
-   above and below the reel are both gone. */
-.draw-bal-line { text-align: center; margin: 0 0 10px; font-size: 13px; }
 
 @media (prefers-reduced-motion: reduce) {
   .draw-strip { transition: none !important; }
@@ -4398,8 +4418,15 @@ window.ICONS = {
          above it anyway, so the loop opened below the fold on a phone. -->
     <div id="stats-wrap"></div>
 
-    <!-- LINER NOTES — the look-back half of the same loop. -->
-    <div class="ln-card">
+    <!-- LINER NOTES — the look-back half of the same loop.
+
+         TEMPORARILY OFF. Hidden rather than deleted, and hidden in two places
+         only: this card and the #fold-year block below, both `display:none`,
+         with `DIARY_ON` in the Liner Notes module stopping the render. Turn all
+         three back on together. Nothing else was touched — the module, the
+         entry modal, the schema and every `renderDiary()` call site are intact,
+         so this is a switch and not a migration. -->
+    <div class="ln-card" style="display:none;">
       <div class="ln-card-head">
         <div>
           <div class="ln-card-eyebrow">Liner Notes</div>
@@ -4416,7 +4443,8 @@ window.ICONS = {
          none of them is worth scrolling past every single visit, so they fold.
          Open state is remembered, so somebody who lives in the year grid never
          has to open it twice. -->
-    <details class="home-fold" id="fold-year">
+    <!-- Off with the card above. See the note there. -->
+    <details class="home-fold" id="fold-year" style="display:none;">
       <summary><span class="hf-t">Your year</span><span class="hf-s">week, grid and every entry</span></summary>
 
     <div id="ln-stats"></div>
@@ -4609,12 +4637,8 @@ window.ICONS = {
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="year"></div>
       </div>
-      <div class="game-card" id="draw-card" style="border-color: var(--gold); background: linear-gradient(150deg, var(--gold-dim), var(--surface) 60%);">
-        <div class="gc-emoji" data-icon="disc"></div>
-        <h3>The Draw</h3>
-        <p>1,000 Discs, one spin. Mythic pays 100,000 Discs, three free records, or a producer tag.</p>
-        <div class="gc-go">Open one &rarr;</div>
-      </div>
+      <!-- The Draw's card was here. It lives on the Discs page only now: it
+           is not a minigame, it is the currency's other half. -->
       <div class="game-card" id="hl-card">
         <div class="gc-emoji" data-icon="fire"></div>
         <h3>Higher or Lower</h3>
@@ -4664,13 +4688,13 @@ window.ICONS = {
   <section id="view-collection" style="display:none; margin-top:32px;">
     <div class="section-head"><h2><span data-icon="disc"></span> Collection</h2>
       <span class="muted" id="col-worth"></span></div>
-    <!-- The Draw lives here rather than in a tab of its own. Both are "spend
-         Discs on records", and splitting them across two nav items made the
-         currency look like it had two unrelated homes. -->
+    <!-- The Draw used to be a fourth tab here, and a card in Minigames as
+         well. It is on the Discs page now and nowhere else: it is the only
+         place Discs are spent at random, and it was reachable from three
+         sections none of which were the one named after the currency. -->
     <div class="col-tabs" id="col-tabs">
       <button data-col-tab="mine" class="active">Yours</button>
       <button data-col-tab="market">The Market</button>
-      <button data-col-tab="draw">The Draw</button>
       <button data-col-tab="board">Standings</button>
     </div>
     <!-- Search is the difference between a shop with thirty things in it and a
@@ -4680,21 +4704,34 @@ window.ICONS = {
       <input id="col-q" class="g-input" type="text" placeholder="Search any album to price it&hellip;" autocomplete="off">
     </div>
     <div id="col-body"></div>
+  </section>
 
-    <!-- The Draw's own pane. Kept as static markup rather than rendered into
-         col-body, because the reel module holds references to these ids and
-         rebuilding them under it mid-spin would drop the strip. -->
-    <!-- No copy and no odds table. Both are gone deliberately: the reel says
-         what the reel is, and a paragraph above it explaining the paragraph
-         below it was the only thing between opening the tab and pulling the
-         handle. `spin_items` is still publicly readable and the server still
-         draws from those exact rows, so the numbers have not stopped being
-         true — they have stopped being printed. If VINALL ever goes to the App
-         Store, guideline 3.1.1 wants disclosed odds for anything loot-box
-         shaped, and the panel comes back before submission. -->
-    <div id="col-draw" style="display:none;">
-      <p class="draw-bal-line"><span class="muted" id="draw-balance"></span></p>
+  <!-- ============================ DISCS ============================
+       Where Discs come from and where they go: the seven-day ladder, then The
+       Draw, then the Shop. The view id stays `rewards` — renaming it buys
+       nothing and walks into the `views` map trap in setMode. -->
+  <section id="view-rewards" style="display:none; margin-top:32px;">
+    <div class="section-head"><h2><span data-icon="disc"></span> Discs</h2><span class="muted" id="rw-streak"></span></div>
+    <div id="rewards-body"></div>
 
+    <!-- The Draw. A sibling of #rewards-body rather than content inside it,
+         because renderRewards() replaces that element's innerHTML and the reel
+         module holds references to #draw-window and #draw-strip — rebuilding
+         them underneath it mid-spin would drop the strip on the floor. This is
+         the same reason it was a sibling of #col-body before it moved.
+
+         No copy and no odds table, deliberately: the reel says what the reel
+         is. `spin_items` is still publicly readable and the server still draws
+         from those exact rows, so the numbers have not stopped being true —
+         they have stopped being printed. An App Store submission needs the
+         panel back for guideline 3.1.1. -->
+    <!-- Wrapped so the whole block can be hidden in one move: renderRewards()
+         returns early for a logged-out visitor, which would otherwise leave a
+         heading over an empty reel. -->
+    <div id="draw-block" style="display:none;">
+    <div class="section-head" style="margin-top:30px;"><h2>The Draw</h2>
+      <span class="muted" id="draw-balance"></span></div>
+    <div id="col-draw">
       <div class="draw-window" id="draw-window">
         <div class="draw-needle"></div>
         <div class="draw-strip" id="draw-strip"></div>
@@ -4706,17 +4743,7 @@ window.ICONS = {
         <button class="btn-primary" id="draw-go">Open for 1,000 Discs</button>
       </div>
     </div>
-  </section>
-
-  <!-- ============================ REWARDS ============================
-       The seven-day ladder, laid out. Every reward in the app used to be
-       invisible until you had already earned it — the album banner in
-       particular only appeared once you owned a pick, so nothing anywhere
-       told a new player it existed. A ladder you can see is the reason to
-       come back on day two. -->
-  <section id="view-rewards" style="display:none; margin-top:32px;">
-    <div class="section-head"><h2><span data-icon="disc"></span> Discs</h2><span class="muted" id="rw-streak"></span></div>
-    <div id="rewards-body"></div>
+    </div>
   </section>
 
   <!-- ============================ ACHIEVEMENTS ============================ -->
@@ -5053,18 +5080,77 @@ window.ICONS = {
       <span class="shop-balance-val" id="shop-balance-val">0</span>
     </div>
     <div class="shop-list" id="shop-list"></div>
+    <!-- Motion moved to Settings. It was here only because the Shop was the
+         one modal that existed, which made a display preference look like
+         something you might have to buy. -->
+  </div>
+</div>
 
-    <div class="shop-section-title">Motion</div>
-    <div class="motion-setting">
-      <div class="motion-copy">
-        <div class="motion-name" id="motion-state">Following your system setting</div>
-        <div class="motion-note" id="motion-note"></div>
+<!-- ============================ SETTINGS ============================
+     Everything that is a preference rather than a thing you own. Opened from
+     the account menu, which is where people look for it.
+
+     Motion is first and is deliberately reachable while logged out — somebody
+     whose page feels dead because of a system animation preference should not
+     have to sign up to fix it. That was the one reason the Shop modal opened
+     for guests at all; now it is this modal's job. -->
+<div class="modal" id="settings-modal">
+  <div class="modal-panel" style="max-width:520px;">
+    <button class="modal-close" id="settings-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="edit"></span>
+      <div><h2>Settings</h2><p>Preferences, your data, and your account.</p></div></div>
+
+    <div class="set-group">
+      <div class="shop-section-title">Motion</div>
+      <div class="motion-setting">
+        <div class="motion-copy">
+          <div class="motion-name" id="motion-state">Following your system setting</div>
+          <div class="motion-note" id="motion-note"></div>
+        </div>
+        <div class="motion-choice" id="motion-choice">
+          <button data-motion-set="auto">Auto</button>
+          <button data-motion-set="full">Full</button>
+          <button data-motion-set="none">Reduced</button>
+        </div>
       </div>
-      <div class="motion-choice" id="motion-choice">
-        <button data-motion-set="auto">Auto</button>
-        <button data-motion-set="full">Full</button>
-        <button data-motion-set="none">Reduced</button>
+    </div>
+
+    <div class="set-group">
+      <div class="shop-section-title">Offline data</div>
+      <div class="set-row">
+        <div class="set-copy">
+          <div class="set-name">Clear cached app data</div>
+          <div class="set-note" id="set-cache-note">Drops the offline copy and reloads. Your ratings are safe &mdash; they live in your account.</div>
+        </div>
+        <button class="btn-mini" id="set-purge">Clear</button>
       </div>
+    </div>
+
+    <div class="set-group" id="set-account">
+      <div class="shop-section-title">Account</div>
+      <div class="set-row">
+        <div class="set-copy">
+          <div class="set-name" id="set-email">&nbsp;</div>
+          <div class="set-note">Signed in on this device.</div>
+        </div>
+        <button class="btn-mini" id="set-logout">Log out</button>
+      </div>
+      <div class="set-row">
+        <div class="set-copy">
+          <div class="set-name">Delete my account</div>
+          <div class="set-note">Removes your ratings, lore, lists, collection and profile. It cannot be undone.</div>
+        </div>
+        <button class="btn-mini" id="set-delete" style="color:var(--red);">Delete</button>
+      </div>
+    </div>
+
+    <div class="set-group">
+      <div class="shop-section-title">About</div>
+      <div class="set-links">
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+      </div>
+      <p class="set-note" style="margin-top:8px;">Artwork and catalogue data from Spotify.</p>
     </div>
   </div>
 </div>
@@ -6508,24 +6594,34 @@ function renderStats(){
   // but that also hid the Discs/Streak tiles for anyone logged in with zero
   // ratings so far, which is exactly a brand-new user's first impression.
   if(!albums.length&&!songs.length&&!loggedIn){wrap.innerHTML='';return;}
-  const aAvg=albums.length?Math.round(albums.reduce(function(s,a){return s+a.score;},0)/albums.length):0;
-  const sAvg=songs.length?(songs.reduce(function(s,x){return s+x.score;},0)/songs.length).toFixed(1):0;
   let coreTiles='';
   if(albums.length||songs.length){
+    /* The two average tiles are gone. An average of your own scores barely
+       moves once there are fifty of them, so it was the one number on this
+       strip that never changed — and a stat that never changes is furniture.
+       Net worth replaces both: it moves every time you buy or sell. */
     coreTiles=
       '<div class="stat"><div class="s-label">'+ICONS.disc+' Albums ranked</div><div class="s-val">'+albums.length+'</div></div>'+
-      '<div class="stat"><div class="s-label">'+ICONS.note+' Songs ranked</div><div class="s-val">'+songs.length+'</div></div>'+
-      '<div class="stat"><div class="s-label">'+ICONS.chart+' Avg album</div><div class="s-val" style="color:'+albumColor(aAvg)+'">'+aAvg+'</div></div>'+
-      '<div class="stat"><div class="s-label">'+ICONS.chart+' Avg song</div><div class="s-val" style="color:'+songColor(Math.round(sAvg))+'">'+sAvg+'</div></div>';
+      '<div class="stat"><div class="s-label">'+ICONS.note+' Songs ranked</div><div class="s-val">'+songs.length+'</div></div>';
   }
   let walletTiles='';
   if(window.Wallet&&loggedIn){
     const w=Wallet.get();
+    /* Net worth comes from the Collection module's cache, not from an RPC
+       here: renderStats runs on every rating, every award and every view
+       change, and a round trip on each of those would be absurd. Null means
+       "not fetched yet" — CollectionWorth.get() kicks off the one fetch and
+       re-renders when it lands, and will not retry in a loop if it fails. */
+    const nw=window.CollectionWorth?CollectionWorth.get():null;
+    walletTiles=
+      '<div class="stat stat-wallet" id="stat-worth" title="What your Collection is worth">' +
+        '<div class="s-label">◈ Net worth</div>' +
+        '<div class="s-val">'+(nw==null?'&mdash;':nw.toLocaleString('en-GB'))+'</div></div>';
     // Level first, and wider than the rest. It is the only number here that
     // never goes down, which makes it the one that reads as progress rather
     // than as a balance.
     const lv=Wallet.levelInfo?Wallet.levelInfo():null;
-    walletTiles=
+    walletTiles+=
       (lv?'<div class="stat stat-wallet stat-level" id="stat-level" title="'+lv.into+' / '+lv.step+' XP to level '+(lv.level+1)+'">'+
         '<div class="s-label">◈ Level</div><div class="s-val">'+lv.level+'</div>'+
         '<div class="lvl-bar"><i style="width:'+lv.pct+'%"></i></div>'+
@@ -6541,6 +6637,8 @@ function renderStats(){
   wrap.innerHTML='<div class="stats">'+coreTiles+walletTiles+'</div>';
   const discTile=document.getElementById('stat-discs');
   if(discTile)discTile.addEventListener('click',function(){if(window.openShop)openShop();});
+  const worthTile=document.getElementById('stat-worth');
+  if(worthTile)worthTile.addEventListener('click',function(){if(window.openCollectionMarket)openCollectionMarket();});
 }
 
 function esc(str){return String(str||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
@@ -7650,15 +7748,27 @@ const Cloud=(function(){
           '<button class="acct-menu-item" data-go="profile">'+ICONS.person+' My profile</button>'+
           '<button class="acct-menu-item" data-go="people">'+ICONS.people+' People</button>'+
           '<button class="acct-menu-item" data-go="grooves">'+ICONS.groove+' Grooves</button>'+
+          '<button class="acct-menu-item" id="acct-settings">\u2699 Settings</button>'+
           '<button class="acct-menu-item" id="acct-logout">\u21B3 Log out</button>'+
         '</div>';
-    }else{acct.innerHTML='<button id="login-open" class="btn-mini">'+ICONS.person+' Log in</button>';}
+    }else{
+      // Settings is reachable logged out too — Motion is in there, and that is
+      // the one control somebody should not have to sign up to reach.
+      acct.innerHTML='<button id="login-open" class="btn-mini">'+ICONS.person+' Log in</button>'+
+        '<button id="acct-settings" class="btn-mini" title="Settings" aria-label="Settings" style="margin-left:6px;">⚙</button>';
+    }
     el.insertBefore(acct,el.firstChild);
     const lo=document.getElementById('login-open');if(lo)lo.addEventListener('click',openAuth);
     const avb=document.getElementById('acct-avatar-btn');
     if(avb)avb.addEventListener('click',function(e){e.stopPropagation();document.getElementById('acct-menu').classList.toggle('open');});
     acct.querySelectorAll('.acct-menu-item[data-go]').forEach(function(b){b.addEventListener('click',function(){document.getElementById('acct-menu').classList.remove('open');if(location.search.indexOf('u=')!==-1)history.replaceState(null,'',location.pathname);window.goToView(b.dataset.go);});});
     const lg=document.getElementById('acct-logout');if(lg)lg.addEventListener('click',logout);
+    const stg=document.getElementById('acct-settings');
+    if(stg)stg.addEventListener('click',function(e){
+      e.stopPropagation();
+      const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');
+      if(window.openSettings)openSettings();
+    });
   }
   document.addEventListener('click',function(){const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');});
 
@@ -8028,7 +8138,7 @@ const Cloud=(function(){
     }catch(e){return null;}
   }
 
-  return{init:init,push:push,isOn:isOn,openAuth:openAuth,syncUI:refreshUI,
+  return{init:init,push:push,isOn:isOn,openAuth:openAuth,syncUI:refreshUI,logout:logout,
          getUser:getUser,client:client,fetchProfile:fetchProfile,saveProfile:saveProfile,uploadAvatar:uploadAvatar,
          findByUsername:findByUsername,follow:follow,unfollow:unfollow,isFollowing:isFollowing,
          followCounts:followCounts,followingList:followingList,followersList:followersList,fetchUserRatings:fetchUserRatings,
@@ -10843,6 +10953,20 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     document.getElementById('shop-balance-val').textContent = w.is_admin ? ('∞ ' + (w.discs || 0)) : w.discs;
     const list = document.getElementById('shop-list');
 
+    /* Which sections were open, and how far down the panel you were.
+
+       renderShop() rebuilds the whole list, so buying a tag collapsed every
+       section and threw you back to the shop front — you bought one thing and
+       had to find your way back to where you were standing to buy the next.
+       The open set and the scroll position are read here and put back at the
+       end. Restoring them is not the same as never re-rendering: the row still
+       has to redraw to show Equipped instead of Buy. */
+    const wasOpen = {};
+    list.querySelectorAll('details.shop-sec[open] > summary .shop-section-title')
+      .forEach(function (t) { wasOpen[t.textContent] = true; });
+    const panel = list.closest('.modal-panel');
+    const wasScroll = panel ? panel.scrollTop : 0;
+
     const themeRows = Object.keys(THEMES).map(function (key) {
       return shopItemRow('theme', key, THEMES[key], SWATCH[key], w.is_admin || w.owned_themes.indexOf(key) !== -1, w.active_theme === key);
     }).join('');
@@ -10912,7 +11036,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        shop, and it should reset to its front window rather than to wherever
        you were rummaging last time. */
     function sec(title, rows, count) {
-      return '<details class="shop-sec">' +
+      return '<details class="shop-sec"' + (wasOpen[title] ? ' open' : '') + '>' +
         '<summary><span class="shop-section-title">' + title + '</span>' +
         '<span class="ss-n">' + count + '</span></summary>' + rows + '</details>';
     }
@@ -10979,13 +11103,18 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     list.querySelectorAll('[data-equip-banner]').forEach(function (b) {
       b.addEventListener('click', async function () { await equipBanner(b.dataset.equipBanner); renderShop(); });
     });
+
+    // Put the view back. After the sections have been re-created, so the panel
+    // has its full height again and the scroll value is not clamped to a
+    // collapsed list.
+    if (panel) panel.scrollTop = wasScroll;
   }
 
   window.openShop = function () {
-    // Buying anything needs an account, but the Motion setting below the
-    // list does not — and someone whose page feels dead because of a system
-    // animation preference shouldn't have to sign up to fix it. Open either
-    // way; gate the items, not the modal.
+    /* The Shop needs an account now. It used to open for guests purely so they
+       could reach the Motion setting at the bottom — that setting lives in
+       Settings, which opens for anybody, so the Shop can go back to being a
+       shop. */
     const signedIn = !!(window.Cloud && Cloud.isOn && Cloud.isOn());
     if (signedIn) renderShop();
     else {
@@ -11004,6 +11133,31 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (closeBtn) closeBtn.addEventListener('click', function () { modal.classList.remove('open'); });
     if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('open'); });
     if (openBtn) openBtn.addEventListener('click', function () { window.openShop(); });
+  })();
+
+  /* ---- Settings ----------------------------------------------------------
+     Opened from the account menu. Everything here is a preference or an
+     account action — nothing you own and nothing you buy, which is the line
+     that decides whether something belongs here or in the Shop. */
+  window.openSettings = function () {
+    const signedIn = !!(window.Cloud && Cloud.isOn && Cloud.isOn());
+    const acct = document.getElementById('set-account');
+    if (acct) acct.style.display = signedIn ? '' : 'none';
+    const em = document.getElementById('set-email');
+    if (em && signedIn && Cloud.getUser) {
+      const u = Cloud.getUser();
+      em.textContent = (u && u.email) || 'Signed in';
+    }
+    document.getElementById('settings-modal').classList.add('open');
+  };
+
+  (function wireSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    if (!modal) return;
+    const close = function () { modal.classList.remove('open'); };
+    const closeBtn = document.getElementById('settings-close');
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
 
     // ---- Motion setting -------------------------------------------------
     const choice = document.getElementById('motion-choice');
@@ -11032,6 +11186,41 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       });
       paint();
     }
+
+    /* Clearing the offline copy. The service worker is network-first for
+       navigations, so this is rarely needed — but when a stale shell does get
+       served there is otherwise no way out of it from inside the app, and
+       "open the console and post a message" is not a fix a user can perform.
+       Same purge the escape hatch in sw.js listens for. */
+    const purge = document.getElementById('set-purge');
+    if (purge) purge.addEventListener('click', async function () {
+      purge.disabled = true;
+      purge.textContent = 'Clearing…';
+      try {
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage('vinall-sw-purge');
+        }
+        if (window.caches && caches.keys) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+        }
+      } catch (e) {}
+      // Cache-busted, because the point of pressing this is that the normal
+      // reload gave you the stale thing.
+      location.href = location.pathname + '?r=' + Date.now();
+    });
+
+    const out = document.getElementById('set-logout');
+    if (out) out.addEventListener('click', function () {
+      close();
+      if (window.Cloud && Cloud.logout) Cloud.logout();
+    });
+
+    const del = document.getElementById('set-delete');
+    if (del) del.addEventListener('click', function () {
+      close();
+      if (window.openDeleteAccount) openDeleteAccount();
+    });
   })();
 })();
 </script>
@@ -11580,8 +11769,20 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (seeAll) seeAll.addEventListener('click', function () { lnOpen(lnToday()); });
 
     window.openLinerNotes = lnOpen;
-    window.renderDiary = lnRenderEverything;
-    lnRenderEverything();
+    /* TEMPORARILY OFF. The two containers on Home are `display:none` and this
+       stops the render that would fill them — building a year grid nobody can
+       see costs a full pass over every entry on every Home visit.
+
+       `renderDiary` stays defined as a no-op rather than being left undefined,
+       because three call sites test `if (window.renderDiary)` and one of them
+       is inside a `try` that swallows what it catches. A missing function there
+       would be silent; a no-op is honest.
+
+       To restore: flip DIARY_ON, and remove `display:none` from `.ln-card` and
+       `#fold-year` in the Home markup. */
+    var DIARY_ON = false;
+    window.renderDiary = DIARY_ON ? lnRenderEverything : function () {};
+    if (DIARY_ON) lnRenderEverything();
   }
 
   // The composer needs the modal to be present; this script sits at the end
@@ -13540,6 +13741,7 @@ async function submitReport() {
   btn.disabled = false; btn.textContent = 'Send report';
 }
 
+window.openDeleteAccount = openDeleteAccount;
 function openDeleteAccount() {
   document.getElementById('del-confirm').value = '';
   document.getElementById('del-error').textContent = '';
@@ -14084,6 +14286,41 @@ window.renderAdminStats = renderAdminStats;
     return (list || []).reduce(function (s, x) { return s + (Number(x.price) || 0); }, 0);
   }
 
+  /* Net worth for the Home stats strip, cached here because that is where the
+     number already comes from.
+
+     renderStats() runs on every rating, every award and every view change, so
+     it cannot fetch — it reads `get()`, which returns null until the one
+     request lands and then re-renders. `_worthTried` stops a failed fetch
+     turning into a loop: renderStats would see null, ask again, fail, render,
+     see null. */
+  var _worth = null, _worthTried = false;
+
+  async function fetchWorth() {
+    if (!on()) return null;
+    try {
+      var r = await sb().rpc('collection_net_worth');
+      _worth = (r.data && Number(r.data.net_worth)) || 0;
+    } catch (e) { _worth = null; }
+    if (typeof window.renderStats === 'function') window.renderStats();
+    return _worth;
+  }
+
+  window.CollectionWorth = {
+    get: function () {
+      if (_worth == null && !_worthTried && on()) { _worthTried = true; fetchWorth(); }
+      return _worth;
+    },
+    // Called after anything that moves the shelf. Buying, selling, claiming a
+    // pick — all of them change a number that is on screen somewhere else.
+    refresh: function () { _worthTried = true; return fetchWorth(); },
+    set: function (v) {
+      if (v == null) return;
+      _worth = Number(v) || 0;
+      if (typeof window.renderStats === 'function') window.renderStats();
+    },
+  };
+
   function paintHeader() {
     var h = el('col-worth');
     if (!h) return;
@@ -14150,19 +14387,7 @@ window.renderAdminStats = renderAdminStats;
     // Search belongs to the Market and nowhere else.
     el('col-search').style.display = (tab === 'market') ? '' : 'none';
 
-    /* The Draw is a pane rather than something rendered into col-body: the
-       reel module holds references to #draw-window and #draw-strip, and
-       replacing them under it mid-spin would drop the strip on the floor. */
-    var drawPane = el('col-draw');
-    if (tab === 'draw') {
-      body.innerHTML = '';
-      body.style.display = 'none';
-      drawPane.style.display = '';
-      if (window.renderDrawTab) window.renderDrawTab();
-      return;
-    }
     body.style.display = '';
-    drawPane.style.display = 'none';
 
     if (tab === 'mine') {
       body.innerHTML = '<p class="reco-note">Loading your shelf…</p>';
@@ -14339,6 +14564,9 @@ window.renderAdminStats = renderAdminStats;
     if (window.Wallet && Wallet.refresh) Wallet.refresh();
     else if (window.Wallet && Wallet.load) Wallet.load();
     _mine = null; _market = null;
+    // Both buy paths return the new net worth, so the Home tile updates from
+    // this response rather than a second round trip.
+    if (window.CollectionWorth) CollectionWorth.set(j.net_worth);
     if (window.track) track('collection_buy', { price: j.price });
     setTimeout(function () { render(); }, 900);
   }
@@ -14365,6 +14593,7 @@ window.renderAdminStats = renderAdminStats;
     if (window.Wallet && Wallet.refresh) Wallet.refresh();
     else if (window.Wallet && Wallet.load) Wallet.load();
     _mine = null; _market = null;
+    if (window.CollectionWorth && r.data) CollectionWorth.set(r.data.net_worth);
     render();
   }
 
@@ -14412,13 +14641,6 @@ window.renderAdminStats = renderAdminStats;
     render();
   });
 
-  // Entry point for anything that used to navigate to the Draw's own tab —
-  // the Minigames card, and the Rewards page's Draw panel.
-  window.openCollectionDraw = function () {
-    tab = 'draw';
-    if (window.goToView) goToView('collection');
-    render();
-  };
   /* Where a free record gets spent. Day seven and both Draw pick prizes hand
      over an album_pick and then have to point somewhere — an entitlement whose
      destination you have to go looking for is an entitlement nobody spends. */
@@ -14618,8 +14840,18 @@ window.renderAdminStats = renderAdminStats;
     el('draw-strip').innerHTML = buildStrip(pool, weightedPick(pool)).slice(0, 20).map(tileHTML).join('');
     paintBalance();
   }
-  // Anything that used to link to the Draw tab now opens Collection on it.
-  function open() { if (window.openCollectionDraw) window.openCollectionDraw(); }
+  /* The reel lives on the Discs page and nowhere else, so opening it means
+     going there and scrolling to it. The scroll is what makes this worth a
+     function: the ladder is above the reel and on a phone the reel starts
+     below the fold, so landing on the view without moving looks like the link
+     did nothing. */
+  function open() {
+    if (window.goToView) goToView('rewards');
+    setTimeout(function () {
+      var w = el('draw-window');
+      if (w) w.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 160);
+  }
 
   async function spin() {
     if (busy) return;
@@ -14697,12 +14929,13 @@ window.renderAdminStats = renderAdminStats;
 
       applyFeedback(won);
       paintBalance();
-      /* Deliberately NOT calling renderCollection() here, even though winning
-         album picks changes what the Market offers. The Draw is a pane inside
-         Collection, so that call re-enters render(), hits the `tab === 'draw'`
-         branch and runs resetStrip() — which would wipe the result you are
-         still looking at. The Market reads album_picks from Wallet state when
-         you switch to it, which applyWallet() has already updated. */
+      /* Deliberately NOT calling renderRewards() here, even though winning
+         album picks changes what the page above says. renderRewards() would
+         redraw the ladder and the free-records strip while the result panel
+         under it is still being read, and the reel's own container is a
+         sibling of #rewards-body precisely so a re-render cannot touch the
+         strip. The Market reads album_picks from Wallet state when you switch
+         to it, which applyWallet() has already updated. */
     }, SPIN_MS + 40);
   }
 
@@ -14747,8 +14980,6 @@ window.renderAdminStats = renderAdminStats;
 
   el('draw-go').addEventListener('click', spin);
 
-  var card = document.getElementById('draw-card');
-  if (card) card.addEventListener('click', open);
   window.openDraw = open;
   window.renderDrawTab = render;
 })();
@@ -14780,9 +15011,13 @@ window.renderAdminStats = renderAdminStats;
     var host = document.getElementById('rewards-body');
     if (!host) return;
     var head = document.getElementById('rw-streak');
+    // The reel is a sibling, not part of `host`, so it is shown and hidden
+    // explicitly rather than falling out of the innerHTML below.
+    var drawBlock = document.getElementById('draw-block');
 
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) {
       if (head) head.textContent = '';
+      if (drawBlock) drawBlock.style.display = 'none';
       host.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.disc +
         '</span><h3>Discs</h3><p>Log in and every day you come back pays.</p>' +
         '<button class="btn-primary" id="rw-login" style="margin-top:8px;">Log in</button></div>';
@@ -14790,6 +15025,7 @@ window.renderAdminStats = renderAdminStats;
       if (b) b.addEventListener('click', function () { Cloud.openAuth(); });
       return;
     }
+    if (drawBlock) drawBlock.style.display = '';
 
     var st = (window.Wallet && Wallet.get) ? Wallet.get() : null;
     if (!st) return;
@@ -14861,14 +15097,17 @@ window.renderAdminStats = renderAdminStats;
           '</b> waiting' +
           '<button class="btn-mini" id="rw-go-picks">Go and pick</button></div>'
         : '') +
+      // No Draw card any more: the reel itself is directly below this element.
+      // A card linking to something already on screen is a link to nowhere.
       '<div class="rw-other">' +
-        '<div class="rw-card" id="rw-draw"><h3>The Draw</h3>' +
-          '<p>1,000 Discs a spin.</p>' +
-          '<div class="gc-go">Open one &rarr;</div></div>' +
         '<div class="rw-card" id="rw-shop"><h3>The Shop</h3>' +
           '<p>You hold ' + (st.is_admin ? '∞' : n(st.discs)) + ' Discs.</p>' +
           '<div class="gc-go">Browse &rarr;</div></div>' +
       '</div>';
+
+    // The reel is a sibling of this element, so it renders itself rather than
+    // being part of the innerHTML above.
+    if (window.renderDrawTab) window.renderDrawTab();
 
     /* Claiming from the tile. It stays pressed and says so rather than
        disappearing, because the tile is also the thing that tells you what you
@@ -14899,8 +15138,6 @@ window.renderAdminStats = renderAdminStats;
     if (gp) gp.addEventListener('click', function () {
       if (window.openCollectionMarket) openCollectionMarket();
     });
-    var dr = document.getElementById('rw-draw');
-    if (dr) dr.addEventListener('click', function () { if (window.openDraw) openDraw(); });
     var sh = document.getElementById('rw-shop');
     if (sh) sh.addEventListener('click', function () {
       var b = document.getElementById('shop-open-discs');
