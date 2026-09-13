@@ -34,12 +34,17 @@
 -- other and records become either free or unbuyable.
 
 -- ---------------------------------------------------------------- tiers
+-- Order matters here and it is easy to get wrong: `add constraint` validates
+-- against existing rows immediately, so the old common/uncommon/rare/legendary
+-- rows have to be gone BEFORE the new check exists, not after. Adding it first
+-- fails with 23514 every time.
 alter table public.spin_items drop constraint if exists spin_items_tier_check;
+
+delete from public.spin_items;
+
 alter table public.spin_items
   add constraint spin_items_tier_check
   check (tier in ('bargain', 'bside', 'deepcut', 'whitelabel', 'grail'));
-
-delete from public.spin_items;
 
 insert into public.spin_items (key, kind, label, amount, ref, weight, tier) values
   -- Bargain Bin — 350/1000
