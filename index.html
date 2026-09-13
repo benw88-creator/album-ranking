@@ -16187,75 +16187,156 @@ window.track = function (name, props) {
   function on() { return !!(window.Cloud && Cloud.isOn && Cloud.isOn()); }
   function esc2(s) { return window.esc ? esc(s) : String(s == null ? '' : s); }
 
-  // kinds: which item types a question suits.
-  // tone: keeps a day's questions from being all daft or all earnest.
+  /* ---- The question library ---------------------------------------------
+
+     Rewritten from scratch. The old set was abstract and asked you to describe
+     a feeling — "Where does this take you?", "What era of your life does this
+     belong to?" — which is a survey, and reads as one.
+
+     The rule now: **put somebody in a situation and make them take a side.**
+     Not one question here has a personality. The app never nudges you, never
+     says "be honest", never assumes what you are thinking. It states a
+     scenario flatly and the options do all the work. "Someone puts this on the
+     aux." carries more than any amount of voice, because the answer is a
+     verdict and a verdict is quotable.
+
+     Three tests every entry passes:
+
+       * A mate could text it. If it only works written down, it is dead.
+       * There is a wrong answer — something you would be embarrassed to pick
+         or something you would defend.
+       * Every option survives the receipt. `findReceipt` quotes answers back
+         verbatim as `You said "X" about <record>` 45 days later, so an option
+         that cannot finish that sentence is a dead end rather than a weak
+         choice. "Taking the aux back" works. "A room" never did.
+
+     Three or four options beats six. The old library padded to five or nine
+     and the extra ones were always taxonomy — a three-way with real stakes is
+     a sharper question than a six-way list of places.
+
+     Tones are the register a finder can ask for:
+       stance      — a verdict on the record, in front of other people
+       habit       — when and how you actually play it
+       origin      — how it reached you
+       attachment  — how much of you is in it
+       structure   — how the album is built (album-only)
+  */
   var QUESTIONS = [
-    { id: 'rinsing', tone: 'casual', kinds: ['album','song'], text: 'Why have you been rinsing this?',
-      opts: ['Going through a phase', 'Reminds me of someone / something', 'It just slaps', 'Someone showed me it', 'No idea'] },
-    { id: 'keeps-back', tone: 'casual', kinds: ['album','song'], text: 'This one keeps coming back...',
-      opts: ['It never left', 'Seasonal', 'Someone put it back in my head', 'Comfort listen', 'Genuinely no idea'] },
-    { id: 'where-take', tone: 'place', kinds: ['album','song'], text: 'Where does this take you?',
-      opts: ['A room', 'A journey', 'A summer', 'somewhere I can’t place', 'Nowhere, I just like it'] },
-    { id: 'who-remind', tone: 'people', kinds: ['album','song'], text: 'Who does this remind you of?',
-      opts: ['A mate', 'Family', 'someone I don’t speak to now', 'Nobody', 'Rather not say'] },
-    { id: 'first-heard', tone: 'time', kinds: ['album','song'], text: 'Where were you when you first heard this?',
-      opts: ['At home', 'In a car', 'At a party', 'Someone else’s room', 'Headphones, walking', 'No memory of it'] },
-    { id: 'who-showed', tone: 'people', kinds: ['album','song'], text: 'Who introduced you to this?',
-      opts: ['A friend', 'Family', 'Found it myself', 'the algorithm, embarrassingly', 'A film or game', 'no idea, genuinely'] },
-    { id: 'what-era', tone: 'time', kinds: ['album','song'], text: 'What era of your life does this belong to?',
-      opts: ['Right now', 'School', 'Last summer', 'A bad stretch', 'A good stretch', 'Before I was properly me'] },
-    { id: 'what-year', tone: 'time', kinds: ['album','song'], text: 'What year does this feel like?',
-      opts: ['This year', 'A couple of years ago', 'School years', 'Before my time', 'Timeless, genuinely'] },
-    { id: 'place-mind', tone: 'place', kinds: ['album','song'], text: 'What place immediately comes to mind?',
-      opts: ['My room', 'A car', 'A town', 'Abroad', 'A night out', 'Nowhere in particular'] },
-    { id: 'weather', tone: 'place', kinds: ['album','song'], text: 'What weather is this?',
-      opts: ['Rain', 'Grey and cold', 'Proper summer', 'Late night', 'Early morning', 'Indoors, always'] },
-    { id: 'court', tone: 'silly', kinds: ['album','song'], text: 'Would you defend this song in court?',
-      opts: ['in a heartbeat', 'reluctantly, under oath', 'no comment', 'I’d testify against it'] },
-    { id: 'never-around', tone: 'silly', kinds: ['album','song'], text: 'Who would you never play this around?',
-      opts: ['My parents', 'My mates', 'Anyone with taste', 'One specific person', 'I’d play it to anyone'] },
-    { id: 'party', tone: 'silly', kinds: ['album','song'], text: 'Would you put this on at a party?',
-      opts: ['Instantly', 'Late, when it thins out', 'Pre-drinks only', 'Only if I’m faded', 'it’d clear the room'] },
-    { id: 'emotional', tone: 'opinion', kinds: ['album','song'], text: 'Is this actually good, or are you emotionally attached?',
-      opts: ['Actually good', 'Emotionally attached', 'Both, obviously', 'objectively terrible, still love it'] },
-    { id: 'aux', tone: 'silly', kinds: ['song'], text: 'Aux cord test — do you risk it?',
-      opts: ['Risk it', 'depends who’s in the car', 'Only with headphones', 'Never'] },
-    { id: 'loud', tone: 'silly', kinds: ['album','song'], text: 'How loud does this need to be?',
-      opts: ['quiet, it’s personal', 'Normal', 'Loud', 'loud enough to annoy someone'] },
-    { id: 'skip', tone: 'silly', kinds: ['song'], text: 'Be honest — do you ever skip this?',
-      opts: ['Never', 'if I’m not feeling it', 'Only the intro', 'constantly, and I keep it anyway'] },
-    { id: 'tattoo', tone: 'silly', kinds: ['album','song'], text: 'Lyric tattoo. Yes or absolutely not?',
-      opts: ['Genuinely yes', 'Ten years ago, yes', 'Absolutely not', 'Not telling you'] },
-    { id: 'karaoke', tone: 'silly', kinds: ['song'], text: 'Could you do this at karaoke?',
-      opts: ['Flawlessly', 'After a few', 'I’d butcher it', 'nobody should attempt this'] },
-    { id: 'guilty', tone: 'opinion', kinds: ['album','song'], text: 'Guilty pleasure or a hill you would die on?',
-      opts: ['hill I’d die on', 'Slightly guilty', 'Deeply guilty', 'No guilt has ever entered this'] },
-    { id: 'changed', tone: 'opinion', kinds: ['album','song'], text: 'Has your opinion on this changed?',
-      opts: ['Grown on me', 'Gone off it', 'Same as ever', 'Completely reversed'] },
-    { id: 'grower', tone: 'opinion', kinds: ['album'], text: 'Instant, or a grower?',
-      opts: ['Instant', 'Took a few listens', 'Took years', 'Still working on it'] },
-    { id: 'best-track', tone: 'opinion', kinds: ['album'], text: 'Is one track carrying this whole album?',
-      opts: ['Yes, and everyone knows which', 'Yes, but nobody agrees with me', 'nah, it’s solid all through', 'nah, it’s all mid'] },
-    { id: 'front-back', tone: 'opinion', kinds: ['album'], text: 'Do you actually play this front to back?',
-      opts: ['Always', 'Sometimes', 'Only the singles', 'Never, and I still rate it'] },
-    { id: 'overrated', tone: 'opinion', kinds: ['album','song'], text: 'Overrated, underrated, or correctly rated?',
-      opts: ['Underrated', 'Correctly rated', 'Overrated and I still like it', 'Wildly overrated'] },
-    { id: 'gateway', tone: 'opinion', kinds: ['album','artist'], text: 'Was this your way into the artist?',
-      opts: ['Yes, this was the one', 'No, came later', 'Still the only one I know', 'Worked backwards from it'] },
-    { id: 'send-to', tone: 'people', kinds: ['album','song'], text: 'Who would you send this to right now?',
-      opts: ['One specific person', 'The group chat', 'nobody, it’s mine', 'Everyone'] },
-    { id: 'shared-with', tone: 'people', kinds: ['album','song'], text: 'Is this shared with anyone?',
-      opts: ['it’s ours', 'it was ours', 'Only mine', 'Everyone I know has it'] },
-    { id: 'inherited', tone: 'people', kinds: ['album','artist'], text: 'Did you inherit this taste from someone?',
-      opts: ['A parent', 'A sibling', 'A friend', 'Entirely my own', 'someone I’d rather not credit'] },
-    { id: 'activity', tone: 'casual', kinds: ['album','song'], text: 'What are you usually doing when this is on?',
-      opts: ['Walking', 'Travelling', 'Working', 'Doing nothing', 'Lying awake', 'Getting ready', 'Tipsy', 'Drunk', 'Faded'] },
-    { id: 'time-of-day', tone: 'casual', kinds: ['album','song'], text: 'When does this actually get played?',
-      opts: ['Morning', 'Afternoon', 'Evening', 'Late night', '3am specifically'] },
-    { id: 'alone', tone: 'casual', kinds: ['album','song'], text: 'Alone, or with people?',
-      opts: ['Alone, always', 'With people', 'Either', 'alone, but I’d never admit it'] },
-    { id: 'season', tone: 'time', kinds: ['album','song'], text: 'Which season owns this?',
-      opts: ['Summer', 'Autumn', 'Winter', 'Spring', 'all year, no season'] }
+    // ---- stance: a verdict, usually with someone watching -----------------
+    { id: 'stay-skip', tone: 'stance', kinds: ['album','song'], text: 'This comes on. Staying or skipping?',
+      opts: ['Staying', 'Skipping', 'Depends on the mood'] },
+    { id: 'aux-someone', tone: 'stance', kinds: ['album','song'], text: 'Someone puts this on the aux.',
+      opts: ['W', 'Fine', 'Taking the aux back'] },
+    { id: 'profile-seen', tone: 'stance', kinds: ['album','song'], text: 'You see this on someone’s profile.',
+      opts: ['Good taste', 'Interesting', 'Red flag'] },
+    { id: 'one-song-aux', tone: 'stance', kinds: ['album','song'], text: 'You get the aux for one song. This or something else?',
+      opts: ['This', 'Something else', 'Depends'] },
+    { id: 'artist-aux', tone: 'stance', kinds: ['album','song'], text: 'This artist hands you the aux.',
+      opts: ['I trust them', 'Nervous', 'Give it back'] },
+    { id: 'overrated', tone: 'stance', kinds: ['album','song'], text: 'Someone says this is overrated.',
+      opts: ['They’re wrong', 'Fair take', 'They’re right'] },
+    { id: 'underrated', tone: 'stance', kinds: ['album','song'], text: 'Someone says this is underrated.',
+      opts: ['Facts', 'Maybe', 'They’re chatting shit'] },
+    { id: 'skip-annoyed', tone: 'stance', kinds: ['album','song'], text: 'Would you be annoyed if someone skipped this?',
+      opts: ['Yes', 'A little', 'Not at all'] },
+    { id: 'playlist-find', tone: 'stance', kinds: ['album','song'], text: 'You find this on someone’s playlist.',
+      opts: ['Steal it', 'Like it', 'Keep scrolling'] },
+    { id: 'their-favourite', tone: 'stance', kinds: ['album','song'], text: 'One person says this is their favourite.',
+      opts: ['Respect', 'Interesting choice', 'Basic', 'I’m judging them'] },
+    { id: 'defend-one', tone: 'stance', kinds: ['album','song'], text: 'You can only defend one thing about this.',
+      opts: ['Lyrics', 'Production', 'Vocals', 'Vibe', 'Nothing needs defending'] },
+    { id: 'in-front', tone: 'stance', kinds: ['album','song'], text: 'You’re putting this on in front of everyone.',
+      opts: ['No hesitation', 'Depends who’s there', 'Absolutely not'] },
+    { id: 'send-it', tone: 'stance', kinds: ['album','song'], text: 'Would you send this to someone?',
+      opts: ['Already have', 'Definitely', 'Maybe', 'Never'] },
+    { id: 'intro-track', tone: 'stance', kinds: ['album','song'], text: 'You have to introduce someone to this artist with one thing.',
+      opts: ['This', 'Definitely not this', 'Depends on the person'] },
+    { id: 'vinyl-15', tone: 'stance', kinds: ['album'], text: 'You see this on vinyl for £15.',
+      opts: ['Buying', 'Thinking about it', 'Leaving it'] },
+    { id: 'vs-biggest', tone: 'stance', kinds: ['song'], text: 'This or the artist’s biggest song?',
+      opts: ['This', 'Biggest song', 'Neither'] },
+
+    // ---- habit: when and how it actually gets played ----------------------
+    { id: 'actually-play', tone: 'habit', kinds: ['album','song'], text: 'You actually play this?',
+      opts: ['All the time', 'Sometimes', 'Rarely', 'Never'] },
+    { id: 'twoam', tone: 'habit', kinds: ['album','song'], text: 'This gets played at 2am.',
+      opts: ['Perfect', 'Depends where', 'Absolutely not'] },
+    { id: 'three-seconds', tone: 'habit', kinds: ['album','song'], text: 'You hear the first 3 seconds.',
+      opts: ['Instant recognition', 'Probably', 'No chance'] },
+    { id: 'day-night', tone: 'habit', kinds: ['album','song'], text: 'This is more…',
+      opts: ['Day', 'Night', 'Late night', 'Anytime'] },
+    { id: 'setting', tone: 'habit', kinds: ['album','song'], text: 'This is more of a…',
+      opts: ['Car song', 'Headphones', 'Party', 'Alone'] },
+    { id: 'repeat-hour', tone: 'habit', kinds: ['album','song'], text: 'Would you play this on repeat for an hour?',
+      opts: ['Easily', 'Maybe', 'Absolutely not'] },
+    { id: 'last-properly', tone: 'habit', kinds: ['album','song'], text: 'When did you last properly listen to this?',
+      opts: ['Today', 'This week', 'This year', 'Ages ago'] },
+    { id: 'rotation-length', tone: 'habit', kinds: ['album','song'], text: 'How long have you had this in rotation?',
+      opts: ['Days', 'Months', 'Years', 'On and off forever'] },
+    { id: 'every-word', tone: 'habit', kinds: ['song'], text: 'You know every word?',
+      opts: ['Obviously', 'Most', 'Chorus only', 'Not even close'] },
+    { id: 'full-volume', tone: 'habit', kinds: ['song'], text: 'Would you sing this at full volume?',
+      opts: ['Obviously', 'If I’m alone', 'Depends where', 'No'] },
+    { id: 'skipped-because', tone: 'habit', kinds: ['song'], text: 'This gets skipped because…',
+      opts: ['Wrong mood', 'Heard it too much', 'Not feeling it', 'Never'] },
+
+    // ---- origin: how it reached you ---------------------------------------
+    { id: 'entered-life', tone: 'origin', kinds: ['album','song'], text: 'How did this enter your life?',
+      opts: ['A friend', 'The algorithm', 'TikTok', 'A film or TV', 'Randomly', 'Can’t remember'] },
+
+    // ---- attachment: how much of you is in it -----------------------------
+    { id: 'good-or-attached', tone: 'attachment', kinds: ['album','song'], text: 'Is this actually good, or are you attached to it?',
+      opts: ['Actually good', 'Both', 'Mostly nostalgia', 'I’m attached'] },
+    { id: 'how-deep', tone: 'attachment', kinds: ['album','song'], text: 'How deep are you with this one?',
+      opts: ['Casual', 'Proper fan', 'Obsessed', 'This is personal'] },
+    { id: 'how-personal', tone: 'attachment', kinds: ['album','song'], text: 'How personal is this one?',
+      opts: ['Very', 'A little', 'Not at all', 'It’s just a banger'] },
+    { id: 'keep-or-fav', tone: 'attachment', kinds: ['album','song'], text: 'You can only keep this or your current favourite.',
+      opts: ['This', 'Favourite', 'Evil question'] },
+    { id: 'vanishes', tone: 'attachment', kinds: ['album','song'], text: 'This disappears from streaming tomorrow.',
+      opts: ['I’m buying it', 'Finding a download', 'Moving on'] },
+    { id: 'admit-fav', tone: 'attachment', kinds: ['album','song'], text: 'Would you admit this is one of your favourites?',
+      opts: ['Easily', 'Depends who asks', 'No chance'] },
+    { id: 'gatekeep', tone: 'attachment', kinds: ['album','song'], text: 'Would you gatekeep this?',
+      opts: ['Absolutely', 'Maybe', 'Nah', 'Too late'] },
+    { id: 'years-later', tone: 'attachment', kinds: ['album','song'], text: 'You haven’t heard this in years. It comes on.',
+      opts: ['Instant nostalgia', 'Forgot how good it was', 'Skip', 'Still sounds the same'] },
+    { id: 'reminds-of', tone: 'attachment', kinds: ['album','song'], text: 'This reminds you of…',
+      opts: ['Someone', 'Somewhere', 'A year', 'A phase', 'Nothing'] },
+    { id: 'send-now', tone: 'attachment', kinds: ['album','song'], text: 'Who would you send this to right now?',
+      opts: ['Best mate', 'Partner', 'Ex', 'Nobody', 'Myself'] },
+    { id: 'your-music', tone: 'attachment', kinds: ['album','song'], text: 'Does this feel like your music?',
+      opts: ['Definitely', 'Kind of', 'Not really', 'I just like it'] },
+    { id: 'which-you', tone: 'attachment', kinds: ['album','song'], text: 'Which version of you does this belong to?',
+      opts: ['Me now', 'Younger me', 'A specific era', 'I’ve always liked it'] },
+    { id: 'keeps-coming-back', tone: 'attachment', kinds: ['album','song'], text: 'What keeps you coming back?',
+      opts: ['Sound', 'Lyrics', 'Memories', 'Vibe', 'No idea'] },
+    { id: 'associate', tone: 'attachment', kinds: ['album','song'], text: 'Would you want someone to associate this with you?',
+      opts: ['Yes', 'I wouldn’t mind', 'Probably not', 'Absolutely not'] },
+    { id: 'someones-fav', tone: 'attachment', kinds: ['album','song'], text: 'If this is someone’s favourite…',
+      opts: ['Good sign', 'Neutral', 'I need to know what else they listen to'] },
+    { id: 'belongs-in', tone: 'attachment', kinds: ['album'], text: 'This album belongs in…',
+      opts: ['Your collection', 'Your playlist', 'Your memories', 'The archives'] },
+    { id: 'story', tone: 'attachment', kinds: ['song'], text: 'Is there a story behind this one?',
+      opts: ['Yeah', 'Kind of', 'Not really'] },
+    { id: 'one-more-time', tone: 'attachment', kinds: ['song'], text: 'You can only hear this one more time. When?',
+      opts: ['Right now', 'Night drive', 'Party', 'Alone', 'Saving it'] },
+
+    // ---- structure: how the record is built (album only) ------------------
+    { id: 'front-back', tone: 'structure', kinds: ['album'], text: 'Front to back or shuffle?',
+      opts: ['Front to back', 'Shuffle', 'Depends'] },
+    { id: 'how-many-skips', tone: 'structure', kinds: ['album'], text: 'How many skips?',
+      opts: ['0', '1–2', '3–4', 'More than 4'] },
+    { id: 'how-many-elite', tone: 'structure', kinds: ['album'], text: 'How many tracks are genuinely elite?',
+      opts: ['1–2', '3–5', 'Most', 'All of them'] },
+    { id: 'works-as-album', tone: 'structure', kinds: ['album'], text: 'Does this actually work as an album?',
+      opts: ['Easily', 'Mostly', 'A few songs carrying', 'Not really'] },
+    { id: 'carried-by', tone: 'structure', kinds: ['album'], text: 'This album is carried by…',
+      opts: ['One song', 'A few songs', 'The whole thing', 'The production', 'Nostalgia'] },
+    { id: 'whole-or-bangers', tone: 'structure', kinds: ['album'], text: 'Recommend the whole album, or just the bangers?',
+      opts: ['Whole album', 'Just the bangers', 'Depends who’s asking'] },
+    { id: 'best-part', tone: 'structure', kinds: ['song'], text: 'Best part?',
+      opts: ['Intro', 'Verse', 'Chorus', 'Bridge', 'Outro'] }
   ];
 
   // ---- what VINALL has noticed ------------------------------------------
@@ -16281,10 +16362,15 @@ window.track = function (name, props) {
 
   // A few answers get to behave. Purely decorative, but it is the difference
   // between a form and something with a sense of humour.
+  /* Every key here has to exist as an option somewhere in QUESTIONS, or the
+     effect is dead code that looks alive. The old map pointed at 'faded',
+     'tipsy' and '3am specifically', none of which survived the rewrite — a
+     lookup that silently never matches is the worst kind of stale. */
   var OPT_FX = {
-    'faded': 'opt-faded', 'only if i’m faded': 'opt-faded',
-    'drunk': 'opt-drunk', 'tipsy': 'opt-drunk',
-    'lying awake': 'opt-late', '3am specifically': 'opt-late'
+    'late night': 'opt-late', 'night drive': 'opt-late', 'saving it': 'opt-late',
+    'evil question': 'opt-drunk', 'i’m judging them': 'opt-drunk',
+    'they’re chatting shit': 'opt-drunk',
+    'obsessed': 'opt-faded', 'this is personal': 'opt-faded', 'too late': 'opt-faded'
   };
   function fxClass(o) { return OPT_FX[String(o).toLowerCase()] || ''; }
 
@@ -16327,7 +16413,7 @@ window.track = function (name, props) {
       if (anyLoreFor('album', a.id)) return;
       out.push(mkDiscovery('fresh',
         'You put ' + esc2(a.name) + ' in your crate ' + (window.timeAgo ? timeAgo(a.savedAt) : 'recently') + '.',
-        itemFromAlbum(a), ['casual', 'place', 'people']));
+        itemFromAlbum(a), ['stance', 'origin']));
     });
     return out.filter(Boolean);
   }
@@ -16339,7 +16425,7 @@ window.track = function (name, props) {
       if (!a || !a.savedAt || now - a.savedAt < 300 * DAY) return;
       out.push(mkDiscovery('nostalgia',
         'You rated ' + esc2(a.name) + ' ' + (window.timeAgo ? timeAgo(a.savedAt) : 'a long time ago') + ' and it is still here.',
-        itemFromAlbum(a), ['time', 'opinion']));
+        itemFromAlbum(a), ['attachment', 'habit']));
     });
     return out.filter(Boolean);
   }
@@ -16360,7 +16446,7 @@ window.track = function (name, props) {
       var best = list.slice().sort(function (a, b) { return (b.score || 0) - (a.score || 0); })[0];
       out.push(mkDiscovery('gap',
         'You have rated ' + list.length + ' ' + esc2(best.artist) + ' songs and not one of their albums.',
-        itemFromSong(best), ['opinion', 'people']));
+        itemFromSong(best), ['stance', 'origin']));
     });
     return out.filter(Boolean);
   }
@@ -16382,7 +16468,7 @@ window.track = function (name, props) {
         'You have got ' + list.length + ' songs from ' + esc2(s.albumName || 'this album') +
         ' rated 8 or higher, and you have never rated the album itself.',
         { kind: 'album', id: aid, name: s.albumName || 'this album', artist: s.artist, art: s.art },
-        ['opinion']));
+        ['structure', 'stance']));
     });
     return out.filter(Boolean);
   }
@@ -16397,11 +16483,11 @@ window.track = function (name, props) {
       if (old && (a.score || 0) >= 85) {
         out.push(mkDiscovery('contradiction',
           'You gave ' + esc2(a.name) + ' ' + a.score + '/100 and have not touched it since.',
-          itemFromAlbum(a), ['opinion', 'time']));
+          itemFromAlbum(a), ['habit', 'attachment']));
       } else if (old && (a.score || 0) <= 45) {
         out.push(mkDiscovery('contradiction',
           'You gave ' + esc2(a.name) + ' ' + a.score + '/100 and it is still sitting in your crate.',
-          itemFromAlbum(a), ['opinion', 'silly']));
+          itemFromAlbum(a), ['stance', 'attachment']));
       }
     });
     return out.filter(Boolean);
@@ -16417,7 +16503,7 @@ window.track = function (name, props) {
         type: 'receipt', item: { kind: r.item_kind, id: r.item_id, name: r.item_name, artist: r.item_artist, art: r.item_art },
         line: 'You said "' + esc2(r.choice) + '" about ' + esc2(r.item_name) + '.',
         receipt: r,
-        q: { id: 'still-true', tone: 'opinion', text: 'Still true?',
+        q: { id: 'still-true', tone: 'stance', text: 'Still true?',
              opts: ['Still true', 'Not any more', 'More than ever', 'No idea what I meant'] }
       });
     });
@@ -16469,7 +16555,7 @@ window.track = function (name, props) {
       if (!id || rated[id] || anyLoreFor('song', id)) return;
       out.push(mkDiscovery('rinsed',
         'You have played ' + esc2(r.track) + ' ' + r.plays + ' times and never said a word about it.',
-        itemFromPlay(r, id), ['casual', 'people', 'place']));
+        itemFromPlay(r, id), ['origin', 'habit', 'attachment']));
     });
     return out.filter(Boolean);
   }
@@ -16487,7 +16573,7 @@ window.track = function (name, props) {
       out.push(mkDiscovery('abandoned',
         'You played ' + esc2(r.track) + ' ' + r.plays + ' times and then stopped — nothing since ' +
         sinceWords(last) + '.',
-        itemFromPlay(r, id), ['time', 'opinion']));
+        itemFromPlay(r, id), ['habit', 'attachment']));
     });
     return out.filter(Boolean);
   }

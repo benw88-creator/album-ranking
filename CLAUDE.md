@@ -875,13 +875,57 @@ The product thesis: VINALL is not a site where you rate music, it is where your 
 with music accumulates. The loop is **listen/rate → VINALL notices → it asks something small
 → you tap → it remembers → it resurfaces it later.**
 
-Two rules that are easy to break by accident and must not be:
+Rules that are easy to break by accident and must not be:
 
 - **The word "meaning" never appears in this UI.** Asking what a song means makes people feel
-  they owe you something profound, so they write nothing. Questions are casual and specific
-  ("Why have you been rinsing this?", "Would you defend this song in court?").
+  they owe you something profound, so they write nothing.
 - **Every question answers in one tap.** Free text is offered *after* the tap and never
   instead of it. An answer is complete without a note.
+- **The app has no personality and never nudges you.** No "Be honest", no "…didn't it?", no
+  telling somebody what they are thinking. It states a situation flatly and the **options** do
+  all the work. This is the rule the first rewrite broke — "Someone's face just came to mind,
+  didn't it?" is the app being clever *at* you, and a question that performs charm is exactly
+  what reads as machine-written. "Someone puts this on the aux." carries more than any amount
+  of voice, because the answer is a verdict.
+
+### The question library, rewritten
+
+The original set asked you to *describe a feeling* — "Where does this take you?", "What era of
+your life does this belong to?" That is a survey, and it read as one. The set now **puts you in
+a situation and makes you take a side**.
+
+Every entry passes three tests:
+
+- **A mate could text it.** If it only works written down, it is dead.
+- **There is a wrong answer** — something you would be embarrassed to pick, or would defend.
+- **Every option survives the receipt.** `findReceipt` quotes answers back verbatim 45 days
+  later as `You said "X" about <record>`, so an option that cannot finish that sentence is a
+  dead end, not merely a weak choice. "Taking the aux back" works; "A room" never did. The old
+  library had eleven that failed this, including three separate phrasings of "no idea".
+
+**Three or four options beats six.** The old set padded to five and nine, and the extra entries
+were always taxonomy. A three-way with real stakes is sharper than a six-way list of places.
+
+Tones are the register a finder asks for, and they were renamed with the library because the
+old ones (casual / silly / place / people / time / opinion) described *subject matter* rather
+than register:
+
+| tone | what it asks | n |
+|---|---|---|
+| `stance` | a verdict on the record, usually with someone watching | 17 |
+| `habit` | when and how you actually play it | 11 |
+| `origin` | how it reached you | 1 |
+| `attachment` | how much of you is in it | 18 |
+| `structure` | how the album is built (album-only) | 7 |
+
+`origin` having one question is deliberate rather than an oversight — there is only one honest
+way to ask how something reached you, and `questionFor` falls back to the whole pool when a
+requested tone is exhausted.
+
+**`OPT_FX` keys must exist as real options.** It maps option text to a decorative class, and
+after the rewrite every one of its old keys (`faded`, `tipsy`, `3am specifically`) pointed at
+text that no longer existed anywhere — a lookup that silently never matches. Check it whenever
+options change.
 
 Pieces:
 
