@@ -262,6 +262,7 @@ body[data-section="albums"]       { --section: var(--c-violet);  --section-dim: 
 body[data-section="songs"]        { --section: var(--c-pink);    --section-dim: var(--c-pink-dim); }
 body[data-section="games"]        { --section: var(--c-lime);    --section-dim: var(--c-lime-dim); }
 body[data-section="draw"]         { --section: var(--gold);      --section-dim: var(--gold-dim); }
+ body[data-section="collection"]   { --section: var(--c-lime);    --section-dim: var(--c-lime-dim); }
 body[data-section="rewards"]      { --section: var(--accent-2);  --section-dim: var(--accent-2-dim); }
 body[data-section="achievements"] { --section: var(--c-blue);    --section-dim: var(--c-blue-dim); }
 body[data-section="wars"]         { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
@@ -3084,6 +3085,62 @@ body.entering-done #artist-hero {
 /* Undo, and the line that shows why the card is about to move. Pausing it is
    a style change on animation-play-state, which is why it's an animation and
    not a transition. */
+/* ---- the collection ----------------------------------------------------- */
+.col-tabs { display: inline-flex; gap: 4px; background: var(--surface-2); border-radius: 999px; padding: 4px; margin: 14px 0 18px; }
+.col-tabs button {
+  border: none; background: none; color: var(--text-dim); cursor: pointer;
+  font: 600 13px var(--font-body); border-radius: 999px; padding: 8px 18px;
+  transition: background .16s, color .16s;
+}
+.col-tabs button.active { background: var(--section); color: #10140a; }
+
+.col-worth-box {
+  border: 1px solid var(--section); border-radius: 18px; padding: 22px; margin-bottom: 20px;
+  background: linear-gradient(150deg, var(--section-dim), var(--surface) 68%); text-align: center;
+}
+.cw-v { font: 700 52px/1 var(--font-mono); color: var(--section); }
+.cw-k { font: 700 10px var(--font-mono); letter-spacing: .22em; text-transform: uppercase; color: var(--text-faint); margin-top: 8px; }
+.cw-s { font-size: 13px; color: var(--text-dim); margin-top: 8px; }
+
+.col-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.col-rec {
+  display: flex; align-items: center; gap: 12px; padding: 12px;
+  border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2);
+  transition: border-color .18s var(--ease), transform .18s var(--ease);
+}
+.col-rec:hover { border-color: var(--section); transform: translateY(-2px); }
+.col-rec.owned { border-color: var(--section-dim); background: linear-gradient(120deg, var(--section-dim), var(--surface-2) 65%); }
+.col-rec img { width: 54px; height: 54px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--surface-3); }
+.col-meta { flex: 1; min-width: 0; }
+.col-nm { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.col-ar { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.col-price { font: 700 14px/1 var(--font-mono); color: var(--section); margin-top: 6px; }
+.col-price small { font-size: 10px; color: var(--text-faint); font-weight: 400; }
+.col-unpriced { color: var(--text-faint); font-weight: 400; font-size: 11px; }
+.col-buy, .col-sell { flex-shrink: 0; }
+/* The purchase lands on the card that was bought, not as a toast elsewhere. */
+.col-rec.just-bought { animation: colBought .9s var(--ease); border-color: var(--section); }
+@keyframes colBought {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 var(--section-dim); }
+  40% { transform: scale(1.04); box-shadow: 0 0 0 16px transparent; }
+  100% { transform: scale(1); }
+}
+
+.col-board { border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.cb-row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  border-bottom: 1px solid var(--border); font-size: 14px;
+}
+.cb-row:last-child { border-bottom: none; }
+.cb-row.me { background: var(--section-dim); }
+.cb-rank { font: 700 13px var(--font-mono); color: var(--text-faint); min-width: 22px; }
+.cb-row img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: var(--surface-3); }
+.cb-nm { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cb-lv { font: 700 10px var(--font-mono); color: var(--text-faint); }
+.cb-n { font: 700 14px var(--font-mono); color: var(--section); }
+.cb-o { font-size: 11px; color: var(--text-faint); min-width: 52px; text-align: right; }
+@media (prefers-reduced-motion: reduce) { .col-rec.just-bought { animation: none; } }
+
 /* ---- profile: what they have done -------------------------------------- */
 .done-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 10px; margin-top: 10px; }
 .done-tile {
@@ -3983,6 +4040,7 @@ window.ICONS = {
          and at this scale a nav item leading to an empty list reads as a dead
          app. view-wars and goToView('wars') are untouched. -->
     <button data-mode="draw">The Draw</button>
+    <button data-mode="collection">Collection</button>
     <button data-mode="rewards">Rewards</button>
     <button data-mode="achievements" class="nav-icon-btn" aria-label="Achievements" title="Achievements"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="6.5" r="4"/><path d="M5.2 9.8 4 14l4-1.6 4 1.6-1.2-4.2"/></svg></button>
     <button class="activity-toggle nav-icon-btn" id="notif-toggle" title="Notifications" aria-label="Notifications"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 2.2c-1.8 0-3.1 1.4-3.1 3.4v2c0 .8-.3 1.6-.9 2.3l-.5.6h9l-.5-.6c-.6-.7-.9-1.5-.9-2.3v-2c0-2-1.3-3.4-3.1-3.4Z"/><path d="M6.3 11.8a1.8 1.8 0 0 0 3.4 0"/></svg><span class="dot" id="notif-dot" style="display:none;"></span></button>
@@ -4290,6 +4348,21 @@ window.ICONS = {
         <div id="draw-odds-body"></div>
       </details>
     </div>
+  </section>
+
+  <!-- ============================ COLLECTION ============================
+       Records you own. Buy with Discs, hold them, and what you hold adds up.
+       The distinction from Bid Wars matters: a war is a match that resolves
+       and the records were never yours. This is a position you keep. -->
+  <section id="view-collection" style="display:none; margin-top:32px;">
+    <div class="section-head"><h2><span data-icon="disc"></span> Collection</h2>
+      <span class="muted" id="col-worth"></span></div>
+    <div class="col-tabs" id="col-tabs">
+      <button data-col-tab="mine" class="active">Yours</button>
+      <button data-col-tab="market">The Market</button>
+      <button data-col-tab="board">Standings</button>
+    </div>
+    <div id="col-body"></div>
   </section>
 
   <!-- ============================ REWARDS ============================
@@ -5798,6 +5871,7 @@ const views = {
   games: document.getElementById('view-games'),
   wars: document.getElementById('view-wars'),
   draw: document.getElementById('view-draw'),
+  collection: document.getElementById('view-collection'),
   rewards: document.getElementById('view-rewards'),
   achievements: document.getElementById('view-achievements'),
   profile: document.getElementById('view-profile'),
@@ -5838,6 +5912,7 @@ function setMode(mode, fromCode) {
   if (mode === 'profile' && window.renderProfile) window.renderProfile();
   if (mode === 'profile' && window.renderLore) window.renderLore();
   if (mode === 'draw' && window.renderDrawTab) window.renderDrawTab();
+  if (mode === 'collection' && window.renderCollection) window.renderCollection();
   if (mode === 'rewards' && window.renderRewards) window.renderRewards();
   if (mode === 'profile' && window.renderBannerPick) window.renderBannerPick();
   if (mode === 'profile' && window.renderListeningImport) window.renderListeningImport();
@@ -13059,6 +13134,285 @@ window.renderAdminStats = renderAdminStats;
   else init();
 
   window.paintUnlocks = paintUnlocks;
+})();
+</script>
+
+<!-- ================================================================
+     THE COLLECTION
+     ================================================================
+     Records you own, bought with Discs, held permanently. What you hold is
+     your net worth, and net worth is the leaderboard.
+
+     Two rules, both of which are load-bearing:
+
+       * The browser never names a price. /api/collection-buy values the album
+         itself and calls a service-role function; the client says which album
+         and nothing else. A client that could name a price could buy a
+         twelve-billion-stream record for one Disc.
+       * Selling refunds 70%. Churning has to cost something, or a net worth
+         only measures how many times somebody has been round the loop.
+
+     Prices are streams ÷ 5,000,000, so the spread is roughly a hundred to one
+     across the crate. That is deliberate: an obscure record affordable in one
+     session and a famous one that takes a fortnight is what gives a shelf a
+     shape to fill.
+     ================================================================ -->
+<script>
+(function () {
+  var section = document.getElementById('view-collection');
+  if (!section) return;
+
+  var tab = 'mine';
+  var busy = false;
+  var _mine = null, _market = null;
+
+  function el(id) { return document.getElementById(id); }
+  function sb() { return (window.Cloud && Cloud.client) ? Cloud.client() : null; }
+  function on() { return !!(window.Cloud && Cloud.isOn && Cloud.isOn()); }
+  function uid() { return (window.Cloud && Cloud.getUser && Cloud.getUser()) ? Cloud.getUser().id : null; }
+  function n(v) { return (Number(v) || 0).toLocaleString('en-GB'); }
+
+  async function token() {
+    try {
+      var s = await sb().auth.getSession();
+      return s && s.data && s.data.session && s.data.session.access_token;
+    } catch (e) { return null; }
+  }
+
+  async function loadMine(force) {
+    if (_mine && !force) return _mine;
+    try {
+      var r = await sb().from('collection')
+        .select('album_id,name,artist,art,price,bought_at')
+        .eq('user_id', uid()).order('price', { ascending: false });
+      _mine = r.data || [];
+    } catch (e) { _mine = []; }
+    return _mine;
+  }
+
+  async function loadMarket(force) {
+    if (_market && !force) return _market;
+    var t = await token();
+    if (!t) return (_market = []);
+    try {
+      var r = await fetch('/api/collection-prices', { headers: { Authorization: 'Bearer ' + t } });
+      var j = await r.json();
+      _market = j.items || [];
+    } catch (e) { _market = []; }
+    return _market;
+  }
+
+  function worthOf(list) {
+    return (list || []).reduce(function (s, x) { return s + (Number(x.price) || 0); }, 0);
+  }
+
+  function paintHeader() {
+    var h = el('col-worth');
+    if (!h) return;
+    if (!on()) { h.textContent = ''; return; }
+    var w = worthOf(_mine);
+    h.textContent = _mine ? n(w) + ' Discs across ' + _mine.length + ' record' + (_mine.length === 1 ? '' : 's') : '';
+  }
+
+  function card(a, opts) {
+    opts = opts || {};
+    var afford = opts.afford;
+    return '<div class="col-rec' + (opts.owned ? ' owned' : '') + '" data-rec="' + esc(a.album_id) + '">' +
+      '<img src="' + esc(a.art || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
+      '<div class="col-meta"><div class="col-nm">' + esc(a.name) + '</div>' +
+      '<div class="col-ar">' + esc(a.artist || '') + '</div>' +
+      (a.price != null
+        ? '<div class="col-price">' + n(a.price) + ' <small>Discs</small></div>'
+        : '<div class="col-price col-unpriced">price on request</div>') +
+      '</div>' +
+      (opts.owned
+        ? '<button class="btn-mini col-sell" data-sell="' + esc(a.album_id) + '">Sell ' + n(Math.floor(a.price * 0.7)) + '</button>'
+        : '<button class="' + (afford === false ? 'btn-mini' : 'btn-primary') + ' col-buy" data-buy="' + esc(a.album_id) + '"' +
+          (afford === false ? ' disabled title="Not enough Discs"' : '') + '>' +
+          (a.price == null ? 'Price it' : 'Buy') + '</button>') +
+    '</div>';
+  }
+
+  async function render() {
+    var body = el('col-body');
+    if (!body) return;
+
+    if (!on()) {
+      body.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.disc +
+        '</span><h3>Collection</h3><p>Log in to start buying records.</p>' +
+        '<button class="btn-primary" id="col-login" style="margin-top:8px;">Log in</button></div>';
+      var b = el('col-login');
+      if (b) b.addEventListener('click', function () { Cloud.openAuth(); });
+      paintHeader();
+      return;
+    }
+
+    el('col-tabs').querySelectorAll('button').forEach(function (t) {
+      t.classList.toggle('active', t.dataset.colTab === tab);
+    });
+
+    if (tab === 'mine') {
+      body.innerHTML = '<p class="reco-note">Loading your shelf…</p>';
+      var mine = await loadMine(true);
+      paintHeader();
+      if (!mine.length) {
+        body.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.disc +
+          '</span><h3>Nothing on the shelf yet</h3>' +
+          '<p>Records cost Discs. What you own adds up to your net worth.</p>' +
+          '<button class="btn-primary" id="col-go-market" style="margin-top:8px;">Go to the Market</button></div>';
+        var g = el('col-go-market');
+        if (g) g.addEventListener('click', function () { tab = 'market'; render(); });
+        return;
+      }
+      var w = worthOf(mine);
+      body.innerHTML =
+        '<div class="col-worth-box"><div class="cw-v">' + n(w) + '</div>' +
+        '<div class="cw-k">Net worth</div>' +
+        '<div class="cw-s">' + mine.length + ' record' + (mine.length === 1 ? '' : 's') +
+        ' · best is ' + esc(mine[0].name) + '</div></div>' +
+        '<div class="col-grid">' + mine.map(function (a) { return card(a, { owned: true }); }).join('') + '</div>';
+      wire(body);
+      return;
+    }
+
+    if (tab === 'market') {
+      body.innerHTML = '<p class="reco-note">Reading the crate…</p>';
+      var items = await loadMarket(true);
+      var owned = {};
+      (await loadMine()).forEach(function (a) { owned[a.album_id] = true; });
+      var discs = (window.Wallet && Wallet.get) ? (Wallet.get().discs || 0) : 0;
+      var admin = (window.Wallet && Wallet.get) ? Wallet.get().is_admin : false;
+      if (!items.length) {
+        body.innerHTML = '<div class="reco-note">Nothing in the crate to buy yet — rate some albums first.</div>';
+        return;
+      }
+      body.innerHTML =
+        '<p class="reco-note">Priced by total Spotify streams. You hold ' +
+        (admin ? '∞' : n(discs)) + ' Discs. Selling a record returns 70%.</p>' +
+        '<div class="col-grid">' + items.map(function (a) {
+          return card(a, {
+            owned: !!owned[a.album_id],
+            afford: admin || a.price == null || discs >= a.price
+          });
+        }).join('') + '</div>';
+      wire(body);
+      return;
+    }
+
+    // Standings
+    body.innerHTML = '<p class="reco-note">Counting everybody…</p>';
+    var rows = [];
+    try {
+      var r = await sb().rpc('collection_leaderboard', { p_limit: 25 });
+      rows = r.data || [];
+    } catch (e) {}
+    if (!rows.length) {
+      body.innerHTML = '<div class="reco-note">Nobody owns anything yet. Be first.</div>';
+      return;
+    }
+    var meId = uid();
+    body.innerHTML = '<div class="col-board">' + rows.map(function (x, i) {
+      return '<div class="cb-row' + (x.user_id === meId ? ' me' : '') + '">' +
+        '<span class="cb-rank">' + (i + 1) + '</span>' +
+        '<img src="' + esc(window.avatarSrc ? avatarSrc(x.avatar_url) : (x.avatar_url || '')) + '" alt="">' +
+        '<span class="cb-nm">' + esc(x.username) + '</span>' +
+        '<span class="cb-lv">Lv ' + x.level + '</span>' +
+        '<span class="cb-n">' + n(x.net_worth) + '</span>' +
+        '<span class="cb-o">' + x.owned + ' rec</span></div>';
+    }).join('') + '</div>';
+  }
+
+  function wire(body) {
+    body.querySelectorAll('[data-buy]').forEach(function (b) {
+      b.addEventListener('click', function () { buy(b, b.dataset.buy); });
+    });
+    body.querySelectorAll('[data-sell]').forEach(function (b) {
+      b.addEventListener('click', function () { sell(b, b.dataset.sell); });
+    });
+  }
+
+  async function buy(btn, albumId) {
+    if (busy) return;
+    busy = true;
+    var was = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '…';
+    if (window.ripple) ripple(btn);
+
+    var item = (_market || []).filter(function (x) { return x.album_id === albumId; })[0] || {};
+    var t = await token();
+    var j = null;
+    try {
+      var r = await fetch('/api/collection-buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
+        body: JSON.stringify({ album_id: albumId, name: item.name, artist: item.artist, art: item.art }),
+      });
+      j = await r.json();
+      if (!r.ok) throw new Error((j && j.error) || 'Could not buy that');
+    } catch (e) {
+      busy = false;
+      btn.disabled = false;
+      btn.textContent = was;
+      if (window.reportIssue) reportIssue('collection buy failed', { error: String(e.message || e) });
+      var note = document.createElement('div');
+      note.className = 'reco-note';
+      note.style.color = 'var(--red)';
+      note.textContent = String(e.message || e);
+      btn.parentNode.appendChild(note);
+      setTimeout(function () { if (note.parentNode) note.remove(); }, 3400);
+      return;
+    }
+
+    busy = false;
+    // The purchase is the moment — mark it on the card that was bought, not
+    // with a toast somewhere else on the page.
+    var rec = btn.closest('.col-rec');
+    if (rec) {
+      rec.classList.add('just-bought');
+      if (window.burst) burst(rec, { count: 26, spread: 150 });
+    }
+    if (window.buzz) buzz('big');
+    if (window.Wallet && Wallet.refresh) Wallet.refresh();
+    else if (window.Wallet && Wallet.load) Wallet.load();
+    _mine = null; _market = null;
+    if (window.track) track('collection_buy', { price: j.price });
+    setTimeout(function () { render(); }, 900);
+  }
+
+  async function sell(btn, albumId) {
+    if (busy) return;
+    var row = (_mine || []).filter(function (x) { return x.album_id === albumId; })[0];
+    var back = row ? Math.floor(row.price * 0.7) : 0;
+    if (!confirm('Sell ' + (row ? row.name : 'this record') + ' for ' + n(back) + ' Discs? You paid ' + n(row ? row.price : 0) + '.')) return;
+    busy = true;
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      var r = await sb().rpc('collection_sell', { p_album_id: albumId });
+      if (r.error) throw new Error(r.error.message);
+    } catch (e) {
+      busy = false;
+      btn.disabled = false;
+      if (window.reportIssue) reportIssue('collection sell failed', { error: String(e.message || e) });
+      return;
+    }
+    busy = false;
+    if (window.buzz) buzz('tap');
+    if (window.Wallet && Wallet.refresh) Wallet.refresh();
+    else if (window.Wallet && Wallet.load) Wallet.load();
+    _mine = null; _market = null;
+    render();
+  }
+
+  el('col-tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-col-tab]');
+    if (!b || busy) return;
+    tab = b.dataset.colTab;
+    render();
+  });
+
+  window.renderCollection = render;
 })();
 </script>
 
