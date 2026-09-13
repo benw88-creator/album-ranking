@@ -1141,9 +1141,58 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
 .shop-sec[open] > summary { border-bottom-color: var(--gold-dim); margin-bottom: 10px; }
 .shop-sec[open] .shop-item + .shop-item { margin-top: 10px; }
 .shop-item {
+  position: relative; overflow: hidden;
   display: flex; align-items: center; gap: 14px;
   padding: 14px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
   transition: transform 0.18s var(--ease), border-color 0.18s, box-shadow 0.18s;
+}
+
+/* ---- Buying ------------------------------------------------------------
+   Deliberately unlike every other bit of feedback in the app. Confetti is what
+   a *win* looks like here — a Mythic, a tournament, a seven-day streak — and a
+   purchase is not a win, it is a transaction that went through. So: a light
+   passes over the row while the request is in flight, then a tick draws itself
+   inside a ring, like a stamp coming down on a receipt. Nothing bursts and
+   nothing is thrown. */
+.shop-item.buying { border-color: var(--gold); }
+.shop-item.buying::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 20%, var(--gold-glow), transparent 80%);
+  animation: buySweep .75s linear infinite;
+}
+@keyframes buySweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+.buy-stamp {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  background: linear-gradient(110deg, var(--gold-dim), var(--surface) 75%);
+  animation: stampIn .22s var(--ease);
+}
+@keyframes stampIn { from { opacity: 0; } to { opacity: 1; } }
+.buy-stamp svg { width: 34px; height: 34px; flex-shrink: 0; overflow: visible; }
+.buy-stamp circle, .buy-stamp path {
+  fill: none; stroke: var(--gold); stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+/* Dash lengths are the real path lengths: 2πr for r=15 is ~94.2, and the tick
+   measures ~22. Guessing these leaves a visible stub at the end. */
+.buy-stamp circle { stroke-dasharray: 94.2; stroke-dashoffset: 94.2; animation: stampRing .42s var(--ease) forwards; }
+.buy-stamp path   { stroke-dasharray: 22;   stroke-dashoffset: 22;   animation: stampTick .26s var(--ease) .34s forwards; }
+@keyframes stampRing { to { stroke-dashoffset: 0; } }
+@keyframes stampTick { to { stroke-dashoffset: 0; } }
+.buy-stamp b {
+  font: 700 13px/1 var(--font-mono); letter-spacing: .22em; text-transform: uppercase;
+  color: var(--gold); opacity: 0; animation: stampWord .34s var(--ease) .5s forwards;
+}
+@keyframes stampWord {
+  from { opacity: 0; transform: translateY(5px) scale(.94); letter-spacing: .34em; }
+  to   { opacity: 1; transform: none; letter-spacing: .22em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shop-item.buying::after { animation: none; opacity: .4; }
+  .buy-stamp, .buy-stamp circle, .buy-stamp path, .buy-stamp b { animation: none !important; }
+  .buy-stamp circle, .buy-stamp path { stroke-dashoffset: 0; }
+  .buy-stamp b { opacity: 1; }
 }
 .shop-item:hover { transform: translateY(-2px); border-color: var(--gold); box-shadow: 0 10px 28px rgba(0,0,0,0.35); }
 .shop-swatch { transition: transform 0.18s ease; }
@@ -3568,16 +3617,57 @@ body.entering-done #artist-hero {
    it — so it renders in mono, uppercase, tracked out, with a hard edge. It is
    the only cosmetic whose content is words. */
 .tagline { margin-top: 7px; }
+/* Every tag carries its own two colours in --t1 / --t2, set inline from
+   TAG_STYLE. A single gold chip for all nineteen read as a label rather than as
+   the thing somebody spent 16,000 Discs on — the colours are what make it an
+   object. The border is a gradient behind the chip rather than a border-image,
+   because border-image cannot follow border-radius. */
 .tag-chip {
-  display: inline-block; padding: 5px 11px; border-radius: 5px;
+  position: relative; display: inline-block; padding: 6px 12px; border-radius: 6px;
   font: 700 11px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase;
-  border: 1px solid var(--gold); color: var(--gold);
-  background: linear-gradient(120deg, var(--gold-dim), transparent);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--surface-2), var(--surface-2)) padding-box,
+    linear-gradient(115deg, var(--t1, var(--gold)), var(--t2, var(--accent-2))) border-box;
+  /* The letters are painted separately on the inner span, because
+     background-clip:text needs a background of its own and this element's is
+     already doing the chip and its border. The parent keeps a real colour so
+     the ellipsis, which renders in it, is visible. */
+  color: var(--t1, var(--gold));
   /* Real tags are longer than a username and must not push the header wide. */
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   vertical-align: middle;
 }
-.tag-chip.mythic { border-color: #ff2d6f; color: #ff6f9c; background: linear-gradient(120deg, rgba(255,45,111,0.22), transparent); }
+.tag-chip > span {
+  background-image: linear-gradient(100deg, var(--t1), var(--t2), var(--t1));
+  background-size: 260% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+/* Three motions rather than nineteen. Enough that the wall of them does not
+   read as one animation applied to everything. */
+.tag-chip.m-sweep > span   { animation: tagSweep 3.2s linear infinite; }
+.tag-chip.m-pulse          { animation: tagPulse 2.4s var(--ease) infinite; }
+.tag-chip.m-flicker > span { animation: tagFlicker 3.6s steps(1, end) infinite; }
+@keyframes tagSweep { to { background-position: 260% 0; } }
+@keyframes tagPulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50%      { box-shadow: 0 0 16px -2px var(--t1); }
+}
+/* Not a fade — a bad neon sign cuts out, it does not dim. Hence steps(). */
+@keyframes tagFlicker {
+  0%, 70%, 74%, 78%, 100% { opacity: 1; }
+  72%, 76%                { opacity: .35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tag-chip, .tag-chip > span { animation: none !important; }
+}
+/* The Shop's own preview of a tag, so the row shows the real thing rather than
+   a colour square. Same chip, shrunk to swatch size. */
+.shop-swatch .tag-chip {
+  font-size: 7px; letter-spacing: .06em; padding: 3px 4px; line-height: 1.15;
+  white-space: normal; text-overflow: clip; max-height: 100%;
+}
 
 /* Name flair. Each is a paint job on the username and nothing else — no size
    change, no layout change, so a flair can never move the header around. The
@@ -3634,12 +3724,14 @@ body.entering-done #artist-hero {
 /* Shop preview swatches for the three new kinds. A tag has no colour of its
    own, so its swatch shows the first characters of the tag itself — the words
    are the product. */
+/* A tag's swatch holds the real chip, so it only has to centre it and get out
+   of the way. Wider than the other swatches because a chip is a word, not a
+   colour — a 44px square cropped "IF YOUNG METRO DON'T TRUST YOU" to "IF". */
 .shop-swatch.sw-tag {
-  display: flex; align-items: center; justify-content: center; text-align: center;
-  font: 700 8px/1.1 var(--font-mono); letter-spacing: .06em; padding: 3px;
-  color: var(--gold); background: linear-gradient(120deg, var(--gold-dim), var(--surface-3));
-  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  width: 86px; padding: 3px; overflow: hidden; border-color: transparent;
 }
+.shop-item:hover .shop-swatch.sw-tag { transform: none; }
 .shop-swatch.sw-flair, .shop-swatch.sw-frame {
   display: flex; align-items: center; justify-content: center;
   font: 700 15px/1 var(--font-display); background: var(--surface-3);
@@ -3737,9 +3829,6 @@ button.rw-day {
 .rw-card:hover { border-color: var(--gold); transform: translateY(-2px); }
 .rw-card h3 { font-family: var(--font-display); font-size: 18px; margin-bottom: 5px; }
 .rw-card p { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
-.rw-rates table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.rw-rates td { padding: 9px 4px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
-.rw-rates td:last-child { text-align: right; font-family: var(--font-mono); color: var(--gold); white-space: nowrap; }
 
 /* ---- Higher or Lower ------------------------------------------------- */
 .hl-mode { display: inline-flex; gap: 4px; background: var(--surface-2); border-radius: 999px; padding: 4px; }
@@ -4271,7 +4360,7 @@ window.ICONS = {
     <button data-mode="albums" class="nav-icon-btn"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>Crate</button>
     <button data-mode="games">Minigames</button>
     <button data-mode="collection">Collection</button>
-    <button data-mode="rewards">Rewards</button>
+    <button data-mode="rewards">Discs</button>
     <button data-mode="achievements" class="nav-icon-btn" aria-label="Achievements" title="Achievements"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="6.5" r="4"/><path d="M5.2 9.8 4 14l4-1.6 4 1.6-1.2-4.2"/></svg></button>
     <button class="activity-toggle nav-icon-btn" id="notif-toggle" title="Notifications" aria-label="Notifications"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 2.2c-1.8 0-3.1 1.4-3.1 3.4v2c0 .8-.3 1.6-.9 2.3l-.5.6h9l-.5-.6c-.6-.7-.9-1.5-.9-2.3v-2c0-2-1.3-3.4-3.1-3.4Z"/><path d="M6.3 11.8a1.8 1.8 0 0 0 3.4 0"/></svg><span class="dot" id="notif-dot" style="display:none;"></span></button>
     <button class="activity-toggle nav-icon-btn" id="activity-toggle" title="Recent activity" aria-label="Recent activity"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.6 1.5"/></svg><span class="dot"></span></button>
@@ -4641,7 +4730,7 @@ window.ICONS = {
        told a new player it existed. A ladder you can see is the reason to
        come back on day two. -->
   <section id="view-rewards" style="display:none; margin-top:32px;">
-    <div class="section-head"><h2><span data-icon="disc"></span> Rewards</h2><span class="muted" id="rw-streak"></span></div>
+    <div class="section-head"><h2><span data-icon="disc"></span> Discs</h2><span class="muted" id="rw-streak"></span></div>
     <div id="rewards-body"></div>
   </section>
 
@@ -7986,6 +8075,17 @@ const CEO_USER_ID='d8efaf23-c9fb-40d4-8c73-4dca30245398';
 function computeBadges(profile,ratedAlbumCount,isOwner){const out=[];const stored=(profile&&profile.badges)||[];if(CEO_USER_ID&&profile&&profile.id===CEO_USER_ID)out.push('ceo');stored.forEach(function(b){if(BADGES[b]&&out.indexOf(b)===-1)out.push(b);});if(ratedAlbumCount>=50&&out.indexOf('critic')===-1)out.push('critic');return out;}
 function badgeHtml(keys){if(!keys||!keys.length)return'';return'<span class="badges">'+keys.map(function(k){const b=BADGES[k];if(!b)return'';return'<span class="badge '+b.cls+'" title="'+esc(b.label)+'">'+b.emoji+' '+esc(b.label)+'</span>';}).join('')+'</span>';}
 
+/* One producer-tag chip, coloured and animated from TAG_STYLE. Shared by the
+   profile header and the Shop's swatch so a tag never looks like two different
+   things in two places — which is exactly what happened with themes, where the
+   shop swatch and the real theme were separately invented. */
+function tagChipHtml(key,def){
+  const s=(window.Wallet&&Wallet.TAG_STYLE&&Wallet.TAG_STYLE[key])||{a:'#F5C842',b:'#ff7a4d',m:'sweep'};
+  return '<span class="tag-chip m-'+esc(s.m)+'" style="--t1:'+esc(s.a)+';--t2:'+esc(s.b)+';">'+
+    '<span>'+esc(def.name)+'</span></span>';
+}
+window.tagChipHtml=tagChipHtml;
+
 async function searchItems(query,kind){
   if(!query||query.trim().length<2)return[];
   const type=kind==='song'?'track':(kind==='artist'?'artist':'album');
@@ -8134,8 +8234,7 @@ async function drawProfile(host,prof,isOwner){
      assumption that stops being true when somebody adds an admin grant. An
      unknown key renders as nothing. */
   const TAGDEF = (window.Wallet && prof.active_tag) ? Wallet.TAGS[prof.active_tag] : null;
-  const tagHtml = TAGDEF
-    ? '<div class="tagline"><span class="tag-chip">'+esc(TAGDEF.name)+'</span></div>' : '';
+  const tagHtml = TAGDEF ? '<div class="tagline">'+tagChipHtml(prof.active_tag, TAGDEF)+'</div>' : '';
   const flairCls = (window.Wallet && prof.active_flair && Wallet.FLAIRS[prof.active_flair])
     ? ' fl-'+prof.active_flair : '';
   const frameCls = (window.Wallet && prof.active_frame && Wallet.FRAMES[prof.active_frame])
@@ -10048,30 +10147,66 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      Costs here are fallbacks only: every one is overwritten from `shop_items`
      by loadPrices(), because the server charges from that table and a price on
      screen that wallet_buy disagrees with is worse than no price at all. */
+  /* Real producer tags only. Seven invented "house" ones — STRAIGHT OUT THE
+     CRATE, NO SKIPS, PROMO USE ONLY and the rest — were removed: next to the
+     real ones they read as filler, and a list of nineteen things people
+     actually recognise is worth more than twenty-six where seven are made up.
+
+     No `desc`. A tag is three words on a chip; explaining it underneath is
+     explaining the joke. */
   const TAGS = {
-    // The house's own. Cheapest in, so a new account can afford one the same
-    // week — a cosmetic nobody can reach is a cosmetic nobody knows exists.
-    crate:      { name: 'STRAIGHT OUT THE CRATE', cost: 3000,  desc: 'The house tag. Where everything here came from.' },
-    needle:     { name: 'DROP THE NEEDLE',        cost: 3000,  desc: 'Less talking, more record.' },
-    noskips:    { name: 'NO SKIPS',               cost: 4500,  desc: 'A claim you have to be able to back.' },
-    dollarbin:  { name: 'DOLLAR BIN DIGGER',      cost: 4500,  desc: 'The good stuff is at the bottom.' },
-    promo:      { name: 'PROMO USE ONLY',         cost: 7500, desc: 'Stamped on a record that was never for sale.' },
-    asintended: { name: 'MONO. AS INTENDED.',     cost: 10000, desc: 'For people who will tell you about the mixdown.' },
-    firstpress: { name: 'FIRST PRESS',            cost: 10000, desc: 'Before anybody else was listening.' },
-    // The real ones.
-    pluh:       { name: 'pluh',                   cost: 4000,  desc: 'That is the whole tag.' },
-    lit:        { name: 'IT’S LIT',          cost: 4000,  desc: 'Two words, whole era.' },
-    twentyone:  { name: '21',                     cost: 4500,  desc: 'Nothing else needed.' },
-    mustard:    { name: 'MUSTARD ON THE BEAT',    cost: 6000, desc: 'You know exactly what is coming next.' },
-    pluto:      { name: 'PLUTO',                  cost: 6000, desc: 'Cold, far out, still orbiting.' },
-    sremm:      { name: 'SREMMLIFE!',             cost: 7000, desc: 'Shouted, never said.' },
-    maybach:    { name: 'M-M-M-MAYBACH MUSIC',    cost: 8000, desc: 'The stutter is the point.' },
-    biscuits:   { name: 'IT’S BISCUITS, IT’S GRAVY', cost: 8000, desc: 'A tag that describes breakfast and means business.' },
-    profit:     { name: 'I GOT TOO MUCH PROFIT',  cost: 9000, desc: 'Not a complaint.' },
-    carti:      { name: 'CASH CARTI B!TCH',       cost: 10000, desc: 'Arrives before the first bar does.' },
-    taykeith:   { name: 'TAY KEITH, FTNU',        cost: 12000, desc: 'Abbreviated, for the same reason radio does it.' },
-    pierre:     { name: 'YO PIERRE, YOU WANNA COME OUT HERE?', cost: 14000, desc: 'A question, permanently unanswered.' },
-    metro:      { name: 'IF YOUNG METRO DON’T TRUST YOU', cost: 16000, desc: 'The most expensive one, and it is not close.' },
+    pluh:       { name: 'pluh',                   cost: 4000 },
+    lit:        { name: 'IT’S LIT',               cost: 4000 },
+    justbeatit: { name: 'JUST BEAT IT',           cost: 4000 },
+    twentyone:  { name: '21',                     cost: 4500 },
+    beef:       { name: '1738',                   cost: 5000 },
+    mustard:    { name: 'MUSTARD',                cost: 6000 },
+    pluto:      { name: 'PLUTO',                  cost: 6000 },
+    astro:      { name: 'ASTRO',                  cost: 6000 },
+    sremm:      { name: 'SREMMLIFE!',             cost: 7000 },
+    sober:      { name: 'I CAN’T SPELL SOBER',    cost: 7000 },
+    maybach:    { name: 'M-M-M-MAYBACH MUSIC',    cost: 8000 },
+    biscuits:   { name: 'IT’S BISCUITS, IT’S GRAVY', cost: 8000 },
+    fuckumean:  { name: 'FUCKUMEAN',              cost: 8000 },
+    profit:     { name: 'I GOT TOO MUCH PROFIT',  cost: 9000 },
+    drizzy:     { name: 'DRIZZY',                 cost: 9000 },
+    carti:      { name: 'CASH CARTI B!TCH',       cost: 10000 },
+    taykeith:   { name: 'TAY KEITH, FTNU',        cost: 12000 },
+    pierre:     { name: 'YO PIERRE, YOU WANNA COME OUT HERE?', cost: 14000 },
+    metro:      { name: 'IF YOUNG METRO DON’T TRUST YOU', cost: 16000 },
+  };
+
+  /* Every tag gets its own colours and one of three motions.
+
+     A chip in the same gold as everything else was the problem: on a profile it
+     read as a label rather than as the thing you spent 16,000 Discs on. Two
+     colours and a motion each is enough to make nineteen of them feel like
+     nineteen different objects without nineteen bespoke keyframes — the colours
+     ride in as `--t1` / `--t2` custom properties and the motion is a class.
+
+     `sweep` slides the gradient through the text, `pulse` breathes the glow,
+     `flicker` is a bad neon sign. All three stop dead under
+     prefers-reduced-motion, leaving the colours. */
+  const TAG_STYLE = {
+    pluh:       { a: '#8b5cf6', b: '#22d3ee', m: 'sweep'   },
+    lit:        { a: '#ff7a1a', b: '#ffd24a', m: 'flicker' },
+    justbeatit: { a: '#f5f5f5', b: '#9aa2b1', m: 'sweep'   },
+    twentyone:  { a: '#ff2d6f', b: '#ff9a3d', m: 'pulse'   },
+    beef:       { a: '#22e3ff', b: '#b16bff', m: 'flicker' },
+    mustard:    { a: '#ffd400', b: '#ff8a00', m: 'pulse'   },
+    pluto:      { a: '#6b8cff', b: '#c084fc', m: 'sweep'   },
+    astro:      { a: '#8b4a2b', b: '#ffb86b', m: 'pulse'   },
+    sremm:      { a: '#ff3d9a', b: '#ffe14a', m: 'flicker' },
+    sober:      { a: '#5eead4', b: '#818cf8', m: 'sweep'   },
+    maybach:    { a: '#d4af37', b: '#6b5a1f', m: 'pulse'   },
+    biscuits:   { a: '#e8c07a', b: '#8b5a2b', m: 'sweep'   },
+    fuckumean:  { a: '#ff2d2d', b: '#ff9d00', m: 'flicker' },
+    profit:     { a: '#3dffab', b: '#d4af37', m: 'sweep'   },
+    drizzy:     { a: '#c9a227', b: '#f5f5f5', m: 'pulse'   },
+    carti:      { a: '#ff2d6f', b: '#111111', m: 'flicker' },
+    taykeith:   { a: '#ff4d4d', b: '#4d9dff', m: 'sweep'   },
+    pierre:     { a: '#a3e635', b: '#22d3ee', m: 'pulse'   },
+    metro:      { a: '#ffd24a', b: '#ff2d6f', m: 'sweep'   },
   };
 
   /* ---- Name flair --------------------------------------------------------
@@ -10623,30 +10758,67 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     buyTheme: buyTheme, equipTheme: equipTheme, buyBanner: buyBanner, equipBanner: equipBanner,
     buyCosmetic: buyCosmetic, equipCosmetic: equipCosmetic, buyBoost: buyBoost,
     applyTheme: applyTheme, THEMES: THEMES, BANNERS: BANNERS,
-    TAGS: TAGS, FLAIRS: FLAIRS, FRAMES: FRAMES, BOOSTS: BOOSTS,
+    TAGS: TAGS, TAG_STYLE: TAG_STYLE, FLAIRS: FLAIRS, FRAMES: FRAMES, BOOSTS: BOOSTS,
     SWATCH: SWATCH, BANNER_SWATCH: BANNER_SWATCH,
     FLAIR_SWATCH: FLAIR_SWATCH, FRAME_SWATCH: FRAME_SWATCH,
   };
 
   // ---- Shop UI ------------------------------------------------------------
-  function shopItemRow(kind, key, item, swatchBg, owned, active, swatchClass, swatchText) {
+  /* `swatchHtml` replaces the old swatchText: a tag's swatch is the real chip,
+     colours and motion and all, rather than a square plus the first 22
+     characters. What you buy should be what you saw. */
+  function shopItemRow(kind, key, item, swatchBg, owned, active, swatchClass, swatchHtml) {
     let action;
-    // Keys used to be short literals from THEMES/BANNERS; album banners put a
-    // URL in here, so it gets escaped into the attribute like any other
-    // untrusted-shaped value.
+    // Keys used to be short literals from THEMES/BANNERS, so this stays escaped
+    // into the attribute like any other untrusted-shaped value.
     const k = window.esc ? esc(key) : key;
     if (active) action = '<button class="btn-mini" disabled>Equipped</button>';
     else if (owned) action = '<button class="btn-mini" data-equip-' + kind + '="' + k + '">Equip</button>';
     else action = '<button class="btn-primary" style="padding:9px 16px;font-size:13px;" data-buy-' + kind + '="' + k + '" ' + ((get().discs < item.cost && !get().is_admin) ? 'disabled' : '') + '>Buy</button>';
-    return '<div class="shop-item">' +
+    return '<div class="shop-item" data-row="' + kind + ':' + k + '">' +
       '<div class="shop-swatch' + (swatchClass ? ' ' + swatchClass : '') +
-        '" style="background:' + swatchBg + '">' +
-        (swatchText ? esc(String(swatchText).slice(0, 22)) : '') + '</div>' +
+        '" style="background:' + swatchBg + '">' + (swatchHtml || '') + '</div>' +
       '<div class="shop-item-info">' +
         '<div class="shop-item-name">' + item.name + (active ? ' ✓' : '') + '</div>' +
-        '<div class="shop-item-desc">' + item.desc + '</div>' +
+        // Tags carry no desc — explaining a three-word tag underneath it is
+        // explaining the joke. The element is dropped rather than left empty.
+        (item.desc ? '<div class="shop-item-desc">' + item.desc + '</div>' : '') +
         '<div class="shop-item-cost">' + (get().is_admin ? 'Free (Admin)' : (item.cost === 0 ? 'Free' : item.cost.toLocaleString('en-GB') + ' Discs')) + '</div>' +
       '</div>' + action + '</div>';
+  }
+
+  /* The purchase stamp: a ring and a tick drawn onto the row that was bought.
+
+     Deliberately not `burst()`. Confetti in this app means a *win* — a Mythic,
+     a tournament, seven days running — and spending Discs is not a win, it is a
+     transaction clearing. Reusing the win animation here would flatten both:
+     everything celebrates, so nothing does. A stamp coming down is the right
+     verb, and it is the only place in VINALL that draws a line rather than
+     throwing particles.
+
+     Resolves when it is done, so the caller can re-render afterwards rather
+     than swapping the row out from under it. */
+  function stampBought(row) {
+    return new Promise(function (resolve) {
+      if (!row) { resolve(); return; }
+      const reduced = !!(window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      const el = document.createElement('div');
+      el.className = 'buy-stamp';
+      // r=15 and a 22-unit tick — the dash lengths in the CSS are these paths
+      // measured, so changing the geometry means changing those too.
+      el.innerHTML =
+        '<svg viewBox="0 0 40 40" aria-hidden="true">' +
+          '<circle cx="20" cy="20" r="15"/>' +
+          '<path d="M13 20.5 l5 5 l10 -11"/>' +
+        '</svg><b>Purchased</b>';
+      row.appendChild(el);
+      if (window.buzz) buzz('good');
+      setTimeout(function () {
+        if (el.parentNode) el.parentNode.removeChild(el);
+        resolve();
+      }, reduced ? 450 : 1150);
+    });
   }
 
   /* Prices are fetched here, not only in load().
@@ -10685,19 +10857,22 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     function cosmeticRows(kind, map, swatches, swatchClass) {
       const ownedList = w[OWN_KEY[kind]] || [];
       const activeKey = w[ACT_KEY[kind]] || 'none';
+      // No desc in the tag section, so the None row does not become the one
+      // line of prose in a column of chips.
       const none = shopItemRow(kind, 'none',
-        { name: 'None', cost: 0, desc: 'Wear nothing.' },
+        { name: 'None', cost: 0, desc: kind === 'tag' ? '' : 'Wear nothing.' },
         'linear-gradient(135deg, var(--surface-2), var(--surface-4))',
         true, activeKey === 'none');
       return none + Object.keys(map).map(function (key) {
-        const swatch = swatches ? swatches[key]
-          : 'linear-gradient(120deg, var(--gold-dim), var(--surface-3))';
+        // Tags: the chip is the colour, so the swatch is only its ground.
+        const swatch = swatches ? swatches[key] : 'var(--surface-2)';
         return shopItemRow(kind, key, map[key], swatch,
                            w.is_admin || ownedList.indexOf(key) !== -1,
                            activeKey === key, swatchClass,
-                           // A tag has no colour of its own. Its swatch shows
-                           // the words, because the words are the product.
-                           kind === 'tag' ? map[key].name : '');
+                           // A tag's swatch is the tag: the same chip that
+                           // ends up on the profile, at swatch size.
+                           kind === 'tag' && window.tagChipHtml
+                             ? tagChipHtml(key, map[key]) : '');
       }).join('');
     }
 
@@ -10721,79 +10896,78 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        tags, flair, frames and boosts arrived, and fifty rows in a 92vh modal
        buries the Motion setting underneath all of them — which matters,
        because Motion is the one control in here a logged-out visitor can use.
-       Only the first section is open; everything else is one tap and the modal
-       stays the height of a modal.
+       **Nothing opens by default.** Producer tags used to, and one section of
+       nineteen rows unfolding on open put the scroll straight back that the
+       sections were added to remove — and it picked a favourite besides. Six
+       closed rows is a shop front; one open drawer is a shelf.
 
        Which one is open is not remembered between opens, deliberately: it is a
        shop, and it should reset to its front window rather than to wherever
        you were rummaging last time. */
-    function sec(title, rows, count, open) {
-      return '<details class="shop-sec"' + (open ? ' open' : '') + '>' +
+    function sec(title, rows, count) {
+      return '<details class="shop-sec">' +
         '<summary><span class="shop-section-title">' + title + '</span>' +
         '<span class="ss-n">' + count + '</span></summary>' + rows + '</details>';
     }
     list.innerHTML =
-      sec('Producer tags', tagRows, Object.keys(TAGS).length, true) +
+      sec('Producer tags', tagRows, Object.keys(TAGS).length) +
       sec('Name flair', flairRows, Object.keys(FLAIRS).length) +
       sec('Avatar frames', frameRows, Object.keys(FRAMES).length) +
       sec('Boosts', boostRows, Object.keys(BOOSTS).length) +
       sec('Themes', themeRows, Object.keys(THEMES).length) +
       sec('Profile banners', bannerRows, Object.keys(BANNERS).length);
 
+    /* One buy path for all four kinds. `doBuy` owns the whole sequence — arm
+       the row, run the purchase, stamp it, re-render — so the animation cannot
+       be on three of the four buttons, which is exactly what happens when each
+       handler carries its own copy. */
+    function doBuy(b, run, after) {
+      b.addEventListener('click', async function () {
+        if (b.disabled) return;
+        b.disabled = true;
+        const row = b.closest('.shop-item');
+        if (row) row.classList.add('buying');
+        if (window.ripple) ripple(b);
+        const res = await run();
+        if (row) row.classList.remove('buying');
+        if (res && res.error) { toast(res.error); b.disabled = false; return; }
+        if (after) await after();
+        await stampBought(row);
+        renderShop();
+        if (typeof window.renderStats === 'function') window.renderStats();
+      });
+    }
+
     // Tags, flair and frames share one pair of handlers, keyed off the kind in
     // the attribute name — six near-identical blocks was the alternative.
     ['tag', 'flair', 'frame'].forEach(function (kind) {
+      const Kind = kind.charAt(0).toUpperCase() + kind.slice(1);
       list.querySelectorAll('[data-buy-' + kind + ']').forEach(function (b) {
-        b.addEventListener('click', async function () {
-          b.disabled = true;
-          const key = b.dataset['buy' + kind.charAt(0).toUpperCase() + kind.slice(1)];
-          const res = await buyCosmetic(kind, key);
-          if (res.error) { toast(res.error); b.disabled = false; return; }
-          await equipCosmetic(kind, key);
-          renderShop();
-          if (typeof window.renderStats === 'function') window.renderStats();
-        });
+        const key = b.dataset['buy' + Kind];
+        doBuy(b, function () { return buyCosmetic(kind, key); },
+                 function () { return equipCosmetic(kind, key); });
       });
       list.querySelectorAll('[data-equip-' + kind + ']').forEach(function (b) {
         b.addEventListener('click', async function () {
-          await equipCosmetic(kind, b.dataset['equip' + kind.charAt(0).toUpperCase() + kind.slice(1)]);
+          await equipCosmetic(kind, b.dataset['equip' + Kind]);
           renderShop();
         });
       });
     });
     list.querySelectorAll('[data-buy-boost]').forEach(function (b) {
-      b.addEventListener('click', async function () {
-        b.disabled = true;
-        const res = await buyBoost(b.dataset.buyBoost);
-        if (res.error) { toast(res.error); b.disabled = false; return; }
-        toast('Added to your account');
-        renderShop();
-        if (typeof window.renderStats === 'function') window.renderStats();
-      });
+      const key = b.dataset.buyBoost;
+      doBuy(b, function () { return buyBoost(key); });
     });
-
     list.querySelectorAll('[data-buy-theme]').forEach(function (b) {
-      b.addEventListener('click', async function () {
-        b.disabled = true;
-        const res = await buyTheme(b.dataset.buyTheme);
-        if (res.error) { toast(res.error); b.disabled = false; return; }
-        await equipTheme(b.dataset.buyTheme);
-        renderShop();
-        if (typeof window.renderStats === 'function') window.renderStats();
-      });
+      const key = b.dataset.buyTheme;
+      doBuy(b, function () { return buyTheme(key); }, function () { return equipTheme(key); });
     });
     list.querySelectorAll('[data-equip-theme]').forEach(function (b) {
       b.addEventListener('click', async function () { await equipTheme(b.dataset.equipTheme); renderShop(); });
     });
     list.querySelectorAll('[data-buy-banner]').forEach(function (b) {
-      b.addEventListener('click', async function () {
-        b.disabled = true;
-        const res = await buyBanner(b.dataset.buyBanner);
-        if (res.error) { toast(res.error); b.disabled = false; return; }
-        await equipBanner(b.dataset.buyBanner);
-        renderShop();
-        if (typeof window.renderStats === 'function') window.renderStats();
-      });
+      const key = b.dataset.buyBanner;
+      doBuy(b, function () { return buyBanner(key); }, function () { return equipBanner(key); });
     });
     list.querySelectorAll('[data-equip-banner]').forEach(function (b) {
       b.addEventListener('click', async function () { await equipBanner(b.dataset.equipBanner); renderShop(); });
@@ -14638,7 +14812,7 @@ window.renderAdminStats = renderAdminStats;
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) {
       if (head) head.textContent = '';
       host.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.disc +
-        '</span><h3>Rewards</h3><p>Log in and every day you come back pays.</p>' +
+        '</span><h3>Discs</h3><p>Log in and every day you come back pays.</p>' +
         '<button class="btn-primary" id="rw-login" style="margin-top:8px;">Log in</button></div>';
       var b = document.getElementById('rw-login');
       if (b) b.addEventListener('click', function () { Cloud.openAuth(); });
@@ -14683,44 +14857,32 @@ window.renderAdminStats = renderAdminStats;
       '</' + (live ? 'button' : 'div') + '>';
     }
 
+    /* Deliberately almost no copy.
+
+       This page used to carry a paragraph above the ladder, a card explaining
+       what the album banner was, and a table listing every rate in the game.
+       All of it was true and all of it read as a manual — and a manual is the
+       wrong shape for a currency. Finding out that answering a question pays,
+       or that the Draw is where Discs go, is the interesting part; printing it
+       up front spends the discovery to save a sentence.
+
+       The ladder still shows the numbers, because those are the reason to come
+       back tomorrow and nobody can discover a schedule. Everything else is a
+       balance, a tile and two doors. */
     host.innerHTML =
-      '<p class="reco-note">' +
-        (claimedToday
-          ? 'Day ' + inWeek + ' claimed. Come back tomorrow — each day doubles the last.'
-          : 'Tap day ' + liveDay + ' to take it. Each day doubles the last, and day seven is a record of your choice.') +
-        ' Miss a day and it starts again from the beginning.' +
-      '</p>' +
       '<div class="rw-ladder">' + days + '</div>' +
       (st.album_picks > 0
         ? '<div class="rw-picks"><b>' + st.album_picks + ' free record' + (st.album_picks === 1 ? '' : 's') +
-          '</b> waiting — take any album in the Market, whatever it costs. ' +
+          '</b> waiting' +
           '<button class="btn-mini" id="rw-go-picks">Go and pick</button></div>'
         : '') +
       '<div class="rw-other">' +
         '<div class="rw-card" id="rw-draw"><h3>The Draw</h3>' +
-          '<p>1,000 Discs a spin. Mythic pays 100,000 Discs, three records of your choice, or a producer tag.</p>' +
+          '<p>1,000 Discs a spin.</p>' +
           '<div class="gc-go">Open one &rarr;</div></div>' +
         '<div class="rw-card" id="rw-shop"><h3>The Shop</h3>' +
-          '<p>Producer tags, name flair, avatar frames, themes, banners and boosts. You hold ' +
-          (st.is_admin ? '∞' : n(st.discs)) + ' Discs.</p>' +
+          '<p>You hold ' + (st.is_admin ? '∞' : n(st.discs)) + ' Discs.</p>' +
           '<div class="gc-go">Browse &rarr;</div></div>' +
-      '</div>' +
-      '<div class="rw-rates">' +
-        '<h3 class="prof-section-title">Everything that pays</h3>' +
-        '<table>' +
-          // These mirror wallet_award_game / wallet_record_rating /
-          // award_lore_disc. They went stale once when the rates were inflated
-          // and this table was not — if you change a rate in SQL, change it here.
-          '<tr><td>Logging in</td><td>1,000 doubling to 32,000, then a record</td></tr>' +
-          '<tr><td>Rating an album or song</td><td>160 &times; 10 a day</td></tr>' +
-          '<tr><td>Answering a question on Today</td><td>100 &times; 20 a day</td></tr>' +
-          '<tr><td>Solving the Daily Drop</td><td>1,500</td></tr>' +
-          '<tr><td>Solving Earworm</td><td>1,000 &times; 3 a day</td></tr>' +
-          '<tr><td>A run of 5+ on Higher or Lower</td><td>800 &times; 3 a day</td></tr>' +
-          '<tr><td>Winning a Tournament</td><td>800 &times; 2 a day</td></tr>' +
-          '<tr><td>Claiming an achievement</td><td>800 &times; 5 a day</td></tr>' +
-          '<tr><td>Winning a Bid War</td><td>30 &mdash; 8 for losing, 15 each for a draw</td></tr>' +
-        '</table>' +
       '</div>';
 
     /* Claiming from the tile. It stays pressed and says so rather than

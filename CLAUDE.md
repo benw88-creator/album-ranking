@@ -178,16 +178,23 @@ because an equipped one with no renderer is a blank header.
 `profiles.banner_picks` still exists, zeroed and still pinned. Dropping a column on a live
 table to save nothing is the worse trade.
 
-## Rewards (`view-rewards`)
+## Discs (`view-rewards`)
 
-The seven-day login ladder, laid out: what each day pays, which days you have taken, and day
-seven showing the free record as the thing the run is for. Then The Draw, the Shop, and a table
-of **every single thing in the app that pays Discs** — which was previously scattered across
-five surfaces and written down nowhere.
+Called **Discs** in the nav and the heading. The view id, the `views` entry in `setMode`,
+`renderRewards` and every `rw-` class are all still `rewards` — renaming those buys nothing
+and walks straight into the `setMode` trap below.
 
-It exists because **every reward in this app used to be invisible until it had already been
-earned.** A reward nobody can see motivates nobody, and the ladder is the entire reason to
-come back on day two.
+The seven-day login ladder, and two doors: The Draw and The Shop. That is the whole page.
+
+**It used to explain itself and no longer does.** There was a paragraph above the ladder, a
+card describing the album banner, and a table listing every rate in the game. All of it was
+true and all of it read as a manual — which is the wrong shape for a currency. Finding out
+that answering a question on Today pays, or that the Draw is where Discs go, is the
+interesting part, and printing it up front spends that discovery to save a sentence.
+
+The ladder keeps its numbers, because they are the reason to come back tomorrow and **nobody
+can discover a schedule**. That is the line: what you could not find out by playing stays on
+the page; what you would enjoy finding out does not.
 
 **The ladder is the claim.** There used to be a bar above it reading "Day 4 is waiting" with a
 Claim button — the same information the ladder underneath was already showing, with the button
@@ -263,12 +270,28 @@ fallback, not the price.** They drifted apart once already when the 4x inflation
 rows and not the duplicates, and the Shop offered Sundown at 150 while `wallet_buy` charged
 600.
 
-- **Producer tags** — a stamped chip under your username, `owned_tags` / `active_tag`. Twenty
-  of them: thirteen real producer tags and seven of the house's own, cheapest first so a new
-  account can reach one in its first week. **These are deliberately not `profiles.badges`.**
-  That column holds status markers — CEO, OG, Beta Tester, Verified — which are *awarded*.
-  Putting bought items in the same array would make Verified purchasable, which is the one
-  thing a verification marker can never be.
+- **Producer tags** — a stamped chip under your username, `owned_tags` / `active_tag`.
+  **Nineteen, all real.** Seven invented "house" ones (STRAIGHT OUT THE CRATE, NO SKIPS, PROMO
+  USE ONLY…) were written to fill the cheap end and removed in `..._20260914090000`: the whole
+  appeal of a producer tag is recognition, and an invented one has none to offer. Anyone
+  holding one was **refunded from `shop_items` before the row was deleted** — do it in that
+  order or the price is unrecoverable.
+  - **These are deliberately not `profiles.badges`.** That column holds status markers — CEO,
+    OG, Beta Tester, Verified — which are *awarded*. Putting bought items in the same array
+    would make Verified purchasable, which is the one thing a verification marker can never be.
+  - **No `desc`.** A tag is three words on a chip; a line explaining it underneath is
+    explaining the joke. `shopItemRow` drops the element entirely when desc is empty rather
+    than rendering a blank one.
+  - **Each has its own two colours and one of three motions**, from `TAG_STYLE`. The colours
+    ride in as `--t1`/`--t2` custom properties and the motion is a class (`sweep`, `pulse`,
+    `flicker`), so nineteen distinct chips cost one CSS block rather than nineteen keyframes.
+    One gold chip for all of them read as a label rather than as the thing somebody spent
+    16,000 Discs on.
+  - `tagChipHtml()` is shared by the profile header and the Shop swatch, so **what you buy is
+    what you saw**. Themes got this wrong for months: the shop swatch and the real theme were
+    separately invented and drifted.
+  - The Mythic tag prize draws straight from `shop_items where kind='tag'`, so adding or
+    removing a tag needs no second edit to the prize pool.
 - **Name flair** — a paint job on the username, `owned_flairs` / `active_flair`. No size
   change and no layout change, deliberately: a cosmetic that moves the profile header around
   is a cosmetic that breaks somebody else's page.
@@ -291,10 +314,24 @@ Tags, flair and frames are three copies of one shape, so they share `buyCosmetic
 banners keep their own pair because a theme also repaints the app and a banner has the
 `album:` special case.
 
-**Sections are `<details>`, only the first open.** Thirteen rows became nearly fifty, and fifty
-rows in a 92vh modal buries the Motion setting under all of them — which matters, because
-Motion is the one control in the Shop a logged-out visitor can actually use. Which section is
-open is not remembered between opens on purpose: a shop resets to its front window.
+**Sections are `<details>` and none of them open.** Thirteen rows became nearly fifty, and
+fifty rows in a 92vh modal buries the Motion setting under all of them — which matters,
+because Motion is the one control in the Shop a logged-out visitor can actually use. Producer
+tags opened by default at first; nineteen rows unfolding on open put the scroll straight back,
+and picked a favourite besides. Which section is open is not remembered between opens on
+purpose: a shop resets to its front window.
+
+**Buying draws a stamp, it does not throw confetti.** `stampBought()` sweeps a light across the
+row while the request is in flight, then draws a ring and a tick onto it and says *Purchased*.
+Deliberately unlike `burst()`, which in this app means a **win** — a Mythic, a tournament,
+seven days running. A purchase is a transaction clearing, not a win, and reusing the win
+animation would flatten both: if everything celebrates, nothing does. It is the only animation
+in VINALL that draws a line rather than throwing particles.
+
+All four kinds buy through one `doBuy()` helper rather than four copies of the same handler,
+because the version with four copies is the version where the animation is on three of them.
+The dash lengths in the stamp CSS are the measured path lengths (2πr ≈ 94.2, tick ≈ 22) —
+guessing them leaves a visible stub at the end of the draw.
 
 **A first one is equipped automatically** when it comes out of The Draw and the slot is empty.
 Winning a producer tag and seeing nothing change anywhere is how a prize becomes a line of
