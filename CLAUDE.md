@@ -148,9 +148,23 @@ somebody owns everything.** It is safe only alongside a sink.
   weaker than rewarding the rating streak beside it still stands — this inverts it. It was
   asked for and the rates are due another pass. **If only one number gets revisited, make it
   this one.**
-- **Rates**: ratings 160 × 10/day, lore 100 × 20/day, Earworm 1,000 × 3, Daily Drop 1,500,
-  Tournament 800 × 2, achievements 800 × 5, Higher or Lower 800 × 3. **Caps are the
-  anti-forgery defence, not the balance lever** — move the amounts, not the caps.
+- **Rates** (`..._20260914160000_play_pays_properly.sql`): ratings 400 × 10/day, lore 250 ×
+  20/day, Earworm 2,000 × 3, Daily Drop 3,000, achievements 1,600 × 5, Higher or Lower
+  1,600 × 3, Tournament 1,600 × 2 (parked). **A day of everything is 30,800.**
+  - The sizing rule is *against prices*, not against each other. A spin is 1,000, the cheapest
+    tag 4,000, the whole shop ~262,000 — and rating an album, the core action of the app, paid
+    160, so hitting the daily cap earned a third of the cheapest thing on sale. A realistic
+    session now buys nine spins or two cheap tags; the whole shop is about 8.5 days of maxing
+    every game.
+  - **Caps are the anti-forgery defence, not the balance lever** — move the amounts, never the
+    caps. Every one of these games runs in the browser and a win cannot be verified, so the
+    cap is the only thing between a daily payout and a console loop.
+  - Raising earnings cannot break The Draw: its 887-against-1,000 is a ratio between two Disc
+    figures, so the sink holds whatever the faucet does. It *does* make the Collection
+    cheaper in real terms — Views is now under two days of everything — and the divisor was
+    deliberately left alone, because `collection.price` is both what a record cost and what it
+    counts for, so re-pricing new buys without re-pricing stored rows makes net worth
+    incoherent between them.
 - **Bid War payouts are still 30/8/15** and now look absurd next to everything else. Scaling
   them is not a number change, for two reasons, both written out in section 5 of the
   migration: `bid_war_submit` has no `create or replace` since `20260907130000`, so touching
@@ -354,6 +368,32 @@ rows and not the duplicates, and the Shop offered Sundown at 150 while `wallet_b
     `flicker`), so nineteen distinct chips cost one CSS block rather than nineteen keyframes.
     One gold chip for all of them read as a label rather than as the thing somebody spent
     16,000 Discs on.
+  - The section is called **Tags** in the Shop, not "Producer tags".
+
+### Scrolling gradients must travel in pixels, not percentages
+
+Applies to `tagSweep`, `flShift` (Holographic), `drawShimmer` and `dtPrism` — every animation
+in the app that loops a gradient through itself. All four shipped broken and all four looked
+the same way: the rainbow reaches the end and visibly snaps back to the start.
+
+`background-position: 260%` **does not mean "shift by 260% of the width"**. Percentage
+positioning aligns a *point of the image* to a *point of the box*, so with an image 2.6× the
+box the travel is `(W − 2.6W) × 2.6 ≈ −4.2W` — a distance with no relationship to the
+gradient's own period. Frame 0 and frame 1 are therefore different images, and the jump between
+them is the glitch.
+
+A pixel tile is exact: size the gradient to N pixels, let it repeat (the default), translate by
+exactly N. Two conditions on the gradient itself, or a tiling seam replaces the snap:
+
+- first and last colour stops identical, and
+- the angle **90deg** — a 100deg gradient tiled horizontally meets itself on a diagonal.
+
+Only the *scrolling* variant gets the tile. The still ones (`fl-foil`, `fl-chrome`, `fl-bleed`,
+and pulse/flicker tags) take `100% 100%` so the palette spans the word once, instead of showing
+one slice of an oversized gradient — which on a short tag like "21" was a single flat colour.
+
+`titleShine` and `shineSweep` are unaffected: they ping-pong 0% → 100% → 0%, so they return to
+where they started whatever the percentages resolve to.
   - `tagChipHtml()` is shared by the profile header and the Shop swatch, so **what you buy is
     what you saw**. Themes got this wrong for months: the shop swatch and the real theme were
     separately invented and drifted.
@@ -1000,6 +1040,32 @@ but a lack of difference.**
   rating, every award and every view change. `get()` returns null until the single fetch lands
   and then re-renders, and will not retry in a loop if it fails. Both buy paths and the sell
   path return the new total in their own response, so the tile updates without a second trip.
+- The **profile's Statistics block** (`done-grid`, was "What you've done") follows one rule:
+  **every tile is a number that only goes up, or a personal best.** That is why Level and
+  Discs-to-spend are not in it — a balance falls every time you buy something, so it measures
+  what you have left rather than what you have done, and Level was a rendering of lifetime
+  Discs sitting beside lifetime Discs. Same reasoning removed `avg` and `level` from the
+  profile header.
+  - **Lifetime Discs is `profiles.lifetime_xp`.** The pin trigger adds every *rise* in the
+    balance to it and never subtracts, so it is already the running total of everything ever
+    earned and spending cannot touch it. There is no separate lifetime column and there does
+    not need to be.
+  - Net worth comes from `collection_net_worth(prof.id)` — takes a user id, reads a publicly
+    readable table, so it works on anybody's profile. The lore, Completionist and game-log
+    tiles are local-only and therefore owner-only, because RLS keeps other people's out of
+    reach, as it should.
+  - **Favourite minigame and best Earworm come from `crate_gamelog_v1`**, a local store in
+    `SYNC_KEYS` so it rides the same `app_state` mirror as ratings. It is not a server table
+    because **nothing pays out from it** — it records what you reached for, and a client that
+    lies about that gains nothing. The moment anything grants Discs off these numbers it has
+    to move server-side like every other counter in the economy.
+    - `notePlay(key)` fires at the **end** of a round, never when a modal opens: a setup screen
+      you backed out of is not a game you played. Higher or Lower counts outside its payout
+      gate, because a run that died at two was still a run played and "favourite" should mean
+      what you reach for, not what you were good at.
+    - `mergeGameLog` merges **per field, not newest-wins**, because the two halves want
+      opposite comparisons — a bigger play count wins, a *smaller* Earworm row count wins.
+      Taking the whole blob from whichever device wrote last would silently drop a best.
 - The **stats row** and the **minigames grid** assign hues by `nth-child`, not per-element
   classes, so both keep working whatever they contain that day. Wallet and level tiles stay
   gold because those carry meaning and are not part of a rotation.

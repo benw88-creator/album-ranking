@@ -3342,8 +3342,11 @@ body.entering-done #artist-hero {
 .cb-o { font-size: 11px; color: var(--text-faint); min-width: 52px; text-align: right; }
 @media (prefers-reduced-motion: reduce) { .col-rec.just-bought { animation: none; } }
 
-/* ---- profile: what they have done -------------------------------------- */
-.done-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 10px; margin-top: 10px; }
+/* ---- profile: Statistics ------------------------------------------------
+   Every tile is a number that only goes up, or a personal best. Wider columns
+   than before because lifetime Discs runs to seven figures and the favourite
+   minigame is a name rather than a numeral. */
+.done-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 10px; margin-top: 10px; }
 .done-tile {
   background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px;
   padding: 14px 12px; text-align: center;
@@ -3351,8 +3354,15 @@ body.entering-done #artist-hero {
 }
 .done-tile:hover { border-color: var(--gold-dim); transform: translateY(-2px); }
 .dt-v { font: 700 26px/1 var(--font-mono); color: var(--gold); }
+/* A game's name is words. At 26px mono "Higher or Lower" wraps to three lines
+   and pushes the row out of alignment. */
+.dt-v-word { font: 700 15px/1.2 var(--font-display); }
 .dt-k { font-size: 12px; font-weight: 600; margin-top: 6px; }
-.dt-s { font-size: 10px; color: var(--text-faint); margin-top: 3px; }
+/* The Earworm tile puts a record title here, which is longer than a caption. */
+.dt-s {
+  font-size: 10px; color: var(--text-faint); margin-top: 3px; line-height: 1.35;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
 
 /* ---- completionist: the albums you have actually done ------------------ */
 .comp-done { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0 4px; align-items: center; }
@@ -3442,7 +3452,7 @@ body.entering-done #artist-hero {
 .lvl-pop .lp-n {
   font: 700 84px/1 var(--font-display); margin-top: 6px;
   background: linear-gradient(90deg, var(--gold), #fff3c9, var(--accent-2), var(--gold));
-  background-size: 300% 100%; -webkit-background-clip: text; background-clip: text;
+  background-size: 300px 100%; -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
   animation: drawShimmer 2.2s linear infinite;
 }
@@ -3568,12 +3578,12 @@ body.entering-done #artist-hero {
   background:
     linear-gradient(165deg, rgba(255,45,111,0.52), rgba(120,60,255,0.30) 45%, var(--surface-2) 92%),
     linear-gradient(90deg, #ff2d6f, #ffd24a, #3dffab, #22e3ff, #b16bff, #ff2d6f);
-  background-size: 100% 100%, 300% 100%;
+  background-size: 100% 100%, 320px 100%;
   animation: dtPrism 3.2s linear infinite;
   box-shadow: inset 0 0 38px rgba(255,45,111,0.42), 0 0 36px rgba(255,45,111,0.55);
 }
 .draw-tile.t-mythic .dt-nm { color: #ffffff; text-shadow: 0 0 10px rgba(255,45,111,0.9); }
-@keyframes dtPrism { to { background-position: 0 0, 300% 0; } }
+@keyframes dtPrism { to { background-position: 0 0, 320px 0; } }
 /* Only the top two shimmer, so the eye catches one going past. */
 .draw-tile.t-mythic .dt-chip,
 .draw-tile.t-legendary .dt-chip { animation: dtShine 1.8s ease-in-out infinite; }
@@ -3617,7 +3627,7 @@ body.entering-done #artist-hero {
 .draw-result.tier-epic .dr-tier  { color: #c46bff; }
 .draw-result.tier-legendary .dr-label {
   background: linear-gradient(90deg, var(--gold), #fff1c2, var(--accent-2), var(--gold));
-  background-size: 300% 100%; -webkit-background-clip: text; background-clip: text;
+  background-size: 300px 100%; -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
   animation: drawShimmer 2.4s linear infinite; font-size: 30px;
 }
@@ -3627,12 +3637,12 @@ body.entering-done #artist-hero {
    just in brightness. */
 .draw-result.tier-mythic .dr-label {
   background: linear-gradient(90deg, #ff2d6f, #ffd24a, #3dffab, #22e3ff, #b16bff, #ff2d6f);
-  background-size: 300% 100%; -webkit-background-clip: text; background-clip: text;
+  background-size: 300px 100%; -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
   animation: drawShimmer 1.6s linear infinite; font-size: 36px;
 }
 .draw-result.tier-mythic .dr-tier { color: #ff2d6f; }
-@keyframes drawShimmer { to { background-position: 300% 0; } }
+@keyframes drawShimmer { to { background-position: 300px 0; } }
 
 /* The button has to answer the tap instantly. Five seconds of reel with a
    button that did nothing on press made the whole thing feel unplugged. */
@@ -3705,18 +3715,40 @@ body.entering-done #artist-hero {
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   vertical-align: middle;
 }
+/* ---- Why these gradients scroll in pixels and not percentages -----------
+   `background-position: 260%` does NOT mean "shift by 260% of the width".
+   Percentage positioning aligns a *point of the image* to a *point of the
+   box*, so with an image 2.6× the box the travel works out as
+   (W − 2.6W) × 2.6 ≈ −4.2W — a distance with no relationship to the gradient's
+   period. The last frame therefore does not match the first, and the animation
+   visibly snaps back on every loop. That is the glitch.
+
+   A pixel tile fixes it exactly: size the gradient to N pixels, let it repeat
+   (the default), and translate by exactly N. Frame 0 and frame 1 are then the
+   same image, so there is no seam to see.
+
+   Two conditions the gradient itself has to meet, or the tiling seam shows up
+   instead of the snap:
+     * first and last colour stops must be identical, and
+     * the angle must be 90deg — a 100deg gradient tiled horizontally meets
+       itself on a diagonal.
+
+   Only the scrolling variant gets the tile. The still ones take `100% 100%`
+   so the whole palette spans the word rather than showing one slice of it,
+   which on a short tag like "21" was a single flat colour. */
 .tag-chip > span {
-  background-image: linear-gradient(100deg, var(--t1), var(--t2), var(--t1));
-  background-size: 260% 100%;
+  background-image: linear-gradient(90deg, var(--t1), var(--t2), var(--t1));
+  background-size: 100% 100%;
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
 }
+.tag-chip.m-sweep > span { background-size: 200px 100%; }
 /* Three motions rather than nineteen. Enough that the wall of them does not
    read as one animation applied to everything. */
 .tag-chip.m-sweep > span   { animation: tagSweep 3.2s linear infinite; }
 .tag-chip.m-pulse          { animation: tagPulse 2.4s var(--ease) infinite; }
 .tag-chip.m-flicker > span { animation: tagFlicker 3.6s steps(1, end) infinite; }
-@keyframes tagSweep { to { background-position: 260% 0; } }
+@keyframes tagSweep { to { background-position: 200px 0; } }
 @keyframes tagPulse {
   0%, 100% { box-shadow: 0 0 0 0 transparent; }
   50%      { box-shadow: 0 0 16px -2px var(--t1); }
@@ -3744,16 +3776,21 @@ body.entering-done #artist-hero {
 .fl-foil, .fl-chrome, .fl-holo, .fl-bleed {
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
-  background-size: 250% 100%;
+  /* The still ones span the name once. They were showing a 40% slice of a
+     250%-wide gradient, which on a short username was one flat colour. */
+  background-size: 100% 100%;
 }
 .fl-foil   { background-image: linear-gradient(95deg, #8a6b1f, var(--gold), #fff4cc, var(--gold), #8a6b1f); }
 .fl-chrome { background-image: linear-gradient(95deg, #6f7480, #e9edf5, #ffffff, #9aa2b1, #6f7480); }
-.fl-holo   { background-image: linear-gradient(95deg, #ff2d6f, #ffd24a, #3dffab, #22e3ff, #b16bff, #ff2d6f);
+/* Holographic is the one that moves, so it gets a pixel tile and a 90deg angle
+   — see the note above .tag-chip > span for why percentages cannot loop. */
+.fl-holo   { background-image: linear-gradient(90deg, #ff2d6f, #ffd24a, #3dffab, #22e3ff, #b16bff, #ff2d6f);
+             background-size: 260px 100%;
              animation: flShift 3.4s linear infinite; }
 .fl-bleed  { background-image: linear-gradient(180deg, #ff5b4d, #b3201a 78%); }
 .fl-phosphor { color: #3dffab; text-shadow: 0 0 12px rgba(61,255,171,0.75), 0 0 30px rgba(61,255,171,0.35); }
 .fl-ember    { color: #ff8a3d; text-shadow: 0 0 14px rgba(255,138,61,0.7); animation: flEmber 2.6s ease-in-out infinite; }
-@keyframes flShift { to { background-position: 250% 0; } }
+@keyframes flShift { to { background-position: 260px 0; } }
 @keyframes flEmber { 0%,100% { text-shadow: 0 0 10px rgba(255,138,61,0.55); } 50% { text-shadow: 0 0 22px rgba(255,138,61,0.95); } }
 
 /* Avatar frames. The ring is drawn on a wrapper rather than on the <img>,
@@ -7091,6 +7128,9 @@ function renderAuthArea(connected){
     else msg='Time to dig into '+artistName+'.';
     finalMsg.textContent=msg;
     try{const k='crate_best_'+gameType;if(score>parseInt(localStorage.getItem(k)||'0',10)){localStorage.setItem(k,String(score));if(window.Cloud)Cloud.push(k);}}catch(e){}
+    // A round finished, not a modal opened — "most played" should mean rounds
+    // you saw through, or abandoning a setup screen would count as playing.
+    if(window.notePlay)notePlay(gameType);
     // Only perfect runs (5/5) count for the speed leaderboard — a fast wrong
     // answer shouldn't beat a slower flawless one.
     if(pct===1 && window.Cloud && Cloud.isOn && Cloud.isOn()){
@@ -7742,7 +7782,7 @@ const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const Cloud=(function(){
   let sb=null,user=null,ready=false;
-  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1'];
+  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1'];
   const pending={};
   function isOn(){return!!(sb&&user);}
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
@@ -7750,6 +7790,20 @@ const Cloud=(function(){
   function mergeItemMap(localObj,cloudObj){const out=Object.assign({},cloudObj||{});const loc=localObj||{};Object.keys(loc).forEach(function(id){const a=loc[id],b=out[id];if(!b||(a.savedAt||0)>=(b.savedAt||0))out[id]=a;});return out;}
   function mergeClaimed(a,b){return Object.assign({},b||{},a||{});}
   function mergeActivity(a,b){const all=(a||[]).concat(b||[]);const seen={};const out=[];all.sort(function(x,y){return(y.t||0)-(x.t||0);});all.forEach(function(e){const k=e.t+'|'+e.h;if(!seen[k]){seen[k]=1;out.push(e);}});return out.slice(0,60);}
+  /* Play counts and the Earworm best. Field by field, because the two halves
+     want opposite comparisons — a bigger play count wins, a *smaller* Earworm
+     row count wins. Taking the whole blob from whichever device wrote last
+     would silently drop a best set on the other one. */
+  function mergeGameLog(a,b){
+    a=a||{};b=b||{};
+    const plays={};
+    Object.keys(a.plays||{}).concat(Object.keys(b.plays||{})).forEach(function(k){
+      plays[k]=Math.max((a.plays||{})[k]||0,(b.plays||{})[k]||0);
+    });
+    const ea=a.ew,eb=b.ew;
+    const ew=(!ea&&!eb)?null:(!ea?eb:(!eb?ea:((ea.rows||99)<=(eb.rows||99)?ea:eb)));
+    return{plays:plays,ew:ew};
+  }
 
   async function pullAndMerge(){
     let rows=[];try{const res=await sb.from('app_state').select('key,value').eq('user_id',user.id);rows=res.data||[];}catch(e){return;}
@@ -7763,6 +7817,11 @@ const Cloud=(function(){
     lsSetRaw('crate_liner_v1',mergeItemMap(lsGet('crate_liner_v1')||{},cloud['crate_liner_v1']||{}));
     lsSetRaw('crate_activity',mergeActivity(lsGet('crate_activity'),cloud['crate_activity']));
     ['crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year'].forEach(function(k){const a=lsGet(k)||0,b=cloud[k]||0;if(Math.max(a,b))lsSetRaw(k,Math.max(a,b));});
+    /* The game log merges per field rather than newest-wins: play counts take
+       the larger of the two, and the Earworm best takes the *smaller* row
+       count, because fewer guesses is better. A whole-blob merge would throw
+       away whichever device happened to be written second. */
+    lsSetRaw('crate_gamelog_v1',mergeGameLog(lsGet('crate_gamelog_v1'),cloud['crate_gamelog_v1']));
     if(cloud['crate_album_size']&&!localStorage.getItem('crate_album_size'))lsSetRaw('crate_album_size',cloud['crate_album_size']);
     await pushAll();
   }
@@ -8277,10 +8336,17 @@ async function drawProfile(host,prof,isOwner){
   else{const r=await Cloud.fetchUserRatings(prof.id);albumsObj=r.albums;songsObj=r.songs;}
   const albumsArr=Object.values(albumsObj);
   const nAlbums=albumsArr.length,nSongs=Object.keys(songsObj).length;
-  const avg=nAlbums?Math.round(albumsArr.reduce(function(s,a){return s+a.score;},0)/nAlbums):0;
   const top3=(prof.top3||[]);const topAll=(prof.top_songs_all||[]);const topNow=(prof.top_songs_now||[]);
   const av=prof.avatar_url||'';
   const counts=await Cloud.followCounts(prof.id);
+  /* Net worth for the Statistics block. `collection_net_worth` takes a user id
+     and reads a publicly-readable table, so it works for anybody's profile —
+     unlike the lore and Completionist counts below it, which are local. */
+  let netWorth=0;
+  try{
+    const nw=await Cloud.client().rpc('collection_net_worth',{p_user:prof.id});
+    netWorth=(nw&&nw.data&&Number(nw.data.net_worth))||0;
+  }catch(e){}
   const me=Cloud.getUser&&Cloud.getUser();
   const following=(!isOwner&&me)?await Cloud.isFollowing(prof.id):false;
   const badges=computeBadges(prof,nAlbums,isOwner);
@@ -8300,34 +8366,55 @@ async function drawProfile(host,prof,isOwner){
      Public numbers come from the profiles row, so they work for anybody.
      Lore and diary counts are local-only and owner-only, because RLS keeps
      other people's out of reach — as it should. */
+  /* Statistics.
+
+     Every tile here is a number that only goes up, or a personal best. That is
+     the whole selection rule, and it is why Level and Discs-to-spend are not
+     in it: a balance goes down every time you buy something, so it measures
+     what you have left rather than what you have done, and Level is a
+     rendering of lifetime Discs that was sitting next to lifetime Discs.
+
+     Public numbers come from the profiles row, so they work for anybody. Lore,
+     Completionist and the game log are local-only and owner-only, because RLS
+     keeps other people's out of reach — as it should. */
   let doneHtml='';
   {
-    const lv=prof.level||1;
     const compDone=(function(){
       try{
         const claimed=loadClaimed()||{};
         return Object.keys(claimed).filter(function(k){return k.indexOf('comp:')===0;}).length;
       }catch(e){return 0;}
     })();
+    const nf=function(v){return (Number(v)||0).toLocaleString('en-GB');};
+    /* Lifetime Discs is `lifetime_xp`: the pin trigger adds every rise in the
+       balance to it and never subtracts, so it is already the running total of
+       everything ever earned. Spending does not touch it. */
     const tiles=[
-      {v:lv,                          k:'Level',        sub:(prof.lifetime_xp||0).toLocaleString()+' XP'},
-      {v:prof.streak_best||0,         k:'Best streak',  sub:'rating days in a row'},
-      {v:prof.login_best||0,          k:'Longest run',  sub:'days opened in a row'},
-      {v:(prof.owned_themes||[]).length+(prof.owned_banners||[]).length+(prof.owned_tags||[]).length+(prof.owned_flairs||[]).length+(prof.owned_frames||[]).length, k:'Cosmetics', sub:'tags, flair, frames, themes, banners'}
+      {v:nf(prof.lifetime_xp||0), k:'Lifetime Discs', sub:'earned, all time'},
+      {v:nf(netWorth),            k:'Net worth',      sub:'what the shelf is worth'},
+      {v:prof.streak_best||0,     k:'Best streak',    sub:'rating days in a row'}
     ];
     if(isOwner){
-      let nLore=0,nDiary=0;
+      let nLore=0,log={};
       try{nLore=(window.VinallLore&&VinallLore.count)?VinallLore.count():0;}catch(e){}
-      try{nDiary=Object.keys(JSON.parse(localStorage.getItem('crate_liner_v1')||'{}')).length;}catch(e){}
-      tiles.push({v:prof.discs||0,k:'Discs',sub:'to spend'});
-      if(nLore)tiles.push({v:nLore,k:'Lore answers',sub:'things you have said'});
-      if(nDiary)tiles.push({v:nDiary,k:'Diary entries',sub:'days written'});
-      if(compDone)tiles.push({v:compDone,k:'Completionist',sub:'discographies finished'});
+      try{log=window.gameLog?gameLog():{};}catch(e){}
+      if(log.favourite){
+        tiles.push({v:log.favourite.label,k:'Favourite minigame',
+                    sub:log.favourite.n+' round'+(log.favourite.n===1?'':'s')+' played',small:true});
+      }
+      if(log.earworm){
+        tiles.push({v:log.earworm.rows+'/6',k:'Best Earworm',
+                    sub:log.earworm.title+(log.earworm.artist?' — '+log.earworm.artist:'')});
+      }
+      tiles.push({v:nLore,k:'Lore answers',sub:'things you have said'});
+      tiles.push({v:compDone,k:'Completionist',sub:'discographies finished'});
       tiles.push({v:lists.length,k:'Lists',sub:'made'});
     }
-    doneHtml='<div class="prof-section-title" style="margin-top:26px;">'+(isOwner?'What you’ve done':'What they’ve done')+'</div>'+
+    doneHtml='<div class="prof-section-title" style="margin-top:26px;">Statistics</div>'+
       '<div class="done-grid">'+tiles.map(function(t){
-        return '<div class="done-tile"><div class="dt-v">'+esc(String(t.v))+'</div>'+
+        // A game's name is words, not a numeral, so it gets its own size —
+        // "Higher or Lower" at 34px wraps to three lines and breaks the grid.
+        return '<div class="done-tile"><div class="dt-v'+(t.small?' dt-v-word':'')+'">'+esc(String(t.v))+'</div>'+
           '<div class="dt-k">'+esc(t.k)+'</div><div class="dt-s">'+esc(t.sub)+'</div></div>';
       }).join('')+'</div>';
   }
@@ -8402,8 +8489,10 @@ async function drawProfile(host,prof,isOwner){
           '<div class="prof-stat clickable" id="stat-following"><b>'+counts.following+'</b><span>following</span></div>'+
           '<div class="prof-stat"><b>'+nAlbums+'</b><span>albums</span></div>'+
           '<div class="prof-stat"><b>'+nSongs+'</b><span>songs</span></div>'+
-          (nAlbums?'<div class="prof-stat"><b>'+avg+'</b><span>avg</span></div>':'')+
-          '<div class="prof-stat"><b>'+(prof.level||1)+'</b><span>level</span></div>'+' </div>'+
+          // avg and level both gone: an average of your own scores stops
+          // moving past fifty ratings, and level was a rendering of lifetime
+          // Discs sitting two lines above lifetime Discs.
+          ' </div>'+
       '</div>'+actionBtn+
     '</div>'+
     doneHtml+
@@ -11100,7 +11189,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         '<span class="ss-n">' + count + '</span></summary>' + rows + '</details>';
     }
     list.innerHTML =
-      sec('Producer tags', tagRows, Object.keys(TAGS).length) +
+      sec('Tags', tagRows, Object.keys(TAGS).length) +
       sec('Name flair', flairRows, Object.keys(FLAIRS).length) +
       sec('Avatar frames', frameRows, Object.keys(FRAMES).length) +
       sec('Boosts', boostRows, Object.keys(BOOSTS).length) +
@@ -12272,7 +12361,14 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       buzz(ewState.won ? 'big' : (exact ? 'good' : 'bad'));
     }
 
+    if (ewState.done && window.notePlay) notePlay('earworm');
     if (ewState.done && ewState.won) {
+      // Fewest rows is the best result, so this is a minimum rather than a
+      // maximum — and it carries what it was for, because "solved in 2" means
+      // nothing without the record it was two guesses at.
+      if (window.noteEarworm) {
+        noteEarworm(ewState.rows.length, ewState.display, ewState.artist, ewState.kind);
+      }
       if (typeof celebrate === 'function') celebrate('Earworm solved', ewState.display + ' — in ' + ewState.rows.length);
       // The payout used to be computed here and thrown away — the client
       // cannot be trusted with an amount, so wallet_award_game decides it.
@@ -12947,6 +13043,7 @@ function playDismissAnimation(gateEl, callback) {
         if (typeof celebrate === 'function') celebrate('Daily Drop solved', baseName(guess.name) + ' — in ' + st.guesses.length);
         /* Fewer guesses, bigger payout; six is still worth something. */
         if (window.Wallet) Wallet.awardGame('drop', { reason: 'Daily Drop' });
+        if (window.notePlay) notePlay('drop');
         if (typeof logActivity === 'function' && window.ICONS) logActivity(ICONS.trophy, 'Solved the Daily Drop', baseName(guess.name));
       }
     }
@@ -14351,6 +14448,67 @@ window.renderAdminStats = renderAdminStats;
   else init();
 
   window.paintUnlocks = paintUnlocks;
+
+  /* ---- The game log ------------------------------------------------------
+     What you play and how well, for the Statistics block on the profile.
+
+     Local, and in SYNC_KEYS so it rides the same `app_state` mirror as
+     ratings and bests. It is not a server table because nothing pays out from
+     it — it is a record of what you reached for, and a client that lies about
+     that gains nothing. The moment anything grants Discs off these numbers,
+     this has to move server-side like every other counter in the economy.
+
+     `notePlay` fires at the END of a round, not when a modal opens. A setup
+     screen you backed out of is not a game you played, and "favourite
+     minigame" has to mean the one you actually finish. */
+  var GAMELOG_KEY = 'crate_gamelog_v1';
+  var GAME_LABELS = {
+    drop: 'Daily Drop', earworm: 'Earworm', higherlower: 'Higher or Lower',
+    cover: 'Guess the Cover', coverx: 'Cover EXTREME',
+    tracklist: 'Guess from Tracklist', year: 'Guess the Year'
+  };
+
+  function readLog() {
+    try { return JSON.parse(localStorage.getItem(GAMELOG_KEY)) || {}; }
+    catch (e) { return {}; }
+  }
+  function writeLog(log) {
+    try { localStorage.setItem(GAMELOG_KEY, JSON.stringify(log)); } catch (e) {}
+    if (window.Cloud && Cloud.push) Cloud.push(GAMELOG_KEY);
+  }
+
+  window.notePlay = function (key) {
+    if (!key || !GAME_LABELS[key]) return;
+    var log = readLog();
+    log.plays = log.plays || {};
+    log.plays[key] = (log.plays[key] || 0) + 1;
+    writeLog(log);
+  };
+
+  // Fewer rows is better, so this keeps the minimum rather than the maximum.
+  window.noteEarworm = function (rows, title, artist, kind) {
+    rows = Number(rows) || 0;
+    if (rows < 1) return;
+    var log = readLog();
+    if (log.ew && (log.ew.rows || 99) <= rows) return;
+    log.ew = { rows: rows, title: String(title || ''), artist: String(artist || ''),
+               kind: kind === 'song' ? 'song' : 'album' };
+    writeLog(log);
+  };
+
+  window.gameLog = function () {
+    var log = readLog();
+    var plays = log.plays || {};
+    var topKey = null, topN = 0;
+    Object.keys(plays).forEach(function (k) {
+      if (plays[k] > topN) { topN = plays[k]; topKey = k; }
+    });
+    return {
+      plays: plays,
+      favourite: topKey ? { key: topKey, label: GAME_LABELS[topKey], n: topN } : null,
+      earworm: log.ew || null
+    };
+  };
 })();
 </script>
 
@@ -15638,6 +15796,10 @@ window.renderAdminStats = renderAdminStats;
     if (score >= 5 && window.Wallet && Wallet.awardGame) {
       Wallet.awardGame('higherlower', { reason: 'Higher or Lower' });
     }
+    // Counted outside the payout gate: a run that ended at two was still a
+    // run played, and "favourite minigame" should count what you reach for,
+    // not what you were good at.
+    if (window.notePlay) notePlay('higherlower');
     if (window.track) track('higherlower_run', { mode: mode, score: score, points: points });
   }
 
