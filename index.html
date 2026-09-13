@@ -3084,6 +3084,40 @@ body.entering-done #artist-hero {
 /* Undo, and the line that shows why the card is about to move. Pausing it is
    a style change on animation-play-state, which is why it's an animation and
    not a transition. */
+/* ---- Home folds --------------------------------------------------------
+   Native <details>, so the content is in the DOM and every render function
+   keeps working whether it is open or shut — no conditional rendering, no
+   "why is the year grid empty" the first time somebody expands it. */
+.home-fold {
+  border: 1px solid var(--border); border-radius: 16px;
+  background: var(--surface); margin-top: 26px; padding: 0 18px;
+}
+.home-fold > summary {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 16px 0; cursor: pointer; list-style: none; user-select: none;
+}
+.home-fold > summary::-webkit-details-marker { display: none; }
+.home-fold > summary::after {
+  content: '›'; margin-left: auto; font-size: 20px; color: var(--text-faint);
+  transform: rotate(90deg); transition: transform .22s var(--ease);
+}
+.home-fold[open] > summary::after { transform: rotate(-90deg); }
+.home-fold > summary:hover { color: var(--section); }
+.hf-t { font-family: var(--font-display); font-size: 19px; font-weight: 600; }
+.hf-s { font-size: 12px; color: var(--text-faint); }
+.home-fold[open] { padding-bottom: 20px; }
+.home-fold[open] > summary { border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+@media (prefers-reduced-motion: reduce) { .home-fold > summary::after { transition: none; } }
+
+/* ---- the claim strip ---------------------------------------------------- */
+.home-claim {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  border: 1px solid var(--gold); border-radius: 16px; padding: 14px 18px; margin-bottom: 20px;
+  background: linear-gradient(120deg, var(--gold-dim), var(--surface) 70%);
+}
+.hc-copy { flex: 1; min-width: 170px; font-size: 14px; }
+.hc-copy b { color: var(--gold); }
+
 /* Sub-tabs. One shape shared by the Crate and the Collection, because two
    different pill bars doing the same job is exactly the kind of thing that
    makes an app feel busier than it is. */
@@ -4109,7 +4143,11 @@ window.ICONS = {
   <!-- ============================ TODAY ============================ -->
   <!-- ============================ HOME ============================ -->
   <section id="view-home" style="margin-top:32px;">
-    <div id="stats-wrap"></div>
+    <!-- Anything waiting to be claimed, at the very top and nowhere else on
+         this page. It only exists when there is something to take, so it is
+         never furniture — and it saves a trip to Rewards for the one action
+         that should never need looking for. -->
+    <div id="home-claim"></div>
 
     <!-- TODAY — the loop. First thing on the page, because everything else
          here is a record of what it already asked. -->
@@ -4137,6 +4175,11 @@ window.ICONS = {
       <div id="today-stream"></div>
     </div>
 
+    <!-- Stats sit under Today, not over it. The comment above has always said
+         Today is the first thing on the page; the stats row was rendering
+         above it anyway, so the loop opened below the fold on a phone. -->
+    <div id="stats-wrap"></div>
+
     <!-- LINER NOTES — the look-back half of the same loop. -->
     <div class="ln-card">
       <div class="ln-card-head">
@@ -4148,6 +4191,15 @@ window.ICONS = {
       </div>
       <div id="ln-card-body"></div>
     </div>
+
+    <!-- The diary's look-back half was four more blocks stacked under the card
+         — stats, the week, the year grid, every entry — on a page that already
+         had Today and the stats row above it. All four are worth having and
+         none of them is worth scrolling past every single visit, so they fold.
+         Open state is remembered, so somebody who lives in the year grid never
+         has to open it twice. -->
+    <details class="home-fold" id="fold-year">
+      <summary><span class="hf-t">Your year</span><span class="hf-s">week, grid and every entry</span></summary>
 
     <div id="ln-stats"></div>
 
@@ -4162,6 +4214,13 @@ window.ICONS = {
     <div class="section-head" style="margin-top:30px;"><h2>Entries</h2>
       <button class="btn-mini" id="ln-more" style="margin-left:auto;"></button></div>
     <div class="ln-timeline" id="ln-timeline"></div>
+    </details>
+
+    <!-- Discovery, not daily. Recommendations and release-watching are things
+         you go looking for; neither needs to sit under the diary every time
+         somebody opens the app to answer one question. -->
+    <details class="home-fold" id="fold-discover">
+      <summary><span class="hf-t">Discover</span><span class="hf-s">recommendations and upcoming releases</span></summary>
 
     <div class="section-head">
       <h2>Recommended for you</h2>
@@ -4186,6 +4245,7 @@ window.ICONS = {
       <div class="g-sugg" id="newrel-artist-sugg"></div>
     </div>
     <div id="newrel-result"></div>
+    </details>
   </section>
 
   <!-- ============================ THE CRATE ============================ -->
@@ -5973,6 +6033,7 @@ function setMode(mode, fromCode) {
     // stack is already built for today, so re-entering Home is cheap.
     if (window.renderToday) window.renderToday();
     if (window.renderDiary) window.renderDiary();
+    if (window.renderHomeClaim) window.renderHomeClaim();
   }
   else { const h = document.getElementById('artist-hero'); if (h) h.style.display = 'none'; }
   if (mode === 'crate' && window.renderCrate) window.renderCrate();
@@ -7395,6 +7456,7 @@ const Cloud=(function(){
     // you are looking elsewhere are Discs you never saw arrive — the press is
     // the whole moment. Rewards shows the button; this only lights the nav.
     if(window.markRewardsDot)markRewardsDot();
+    if(window.renderHomeClaim)renderHomeClaim();
     try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderRecommendations();renderArtistHero();if(window.renderToday)renderToday(true);if(window.renderDiary)renderDiary();}if(currentMode==='profile'&&window.renderProfile)renderProfile();}catch(e){}
     flashSaved();
   }
@@ -13116,6 +13178,96 @@ async function renderAdminStats() {
 }
 window.renderAdminStats = renderAdminStats;
 </script>
+<!-- ================================================================
+     HOME — folds, and the one thing worth claiming
+     ================================================================
+     Home was nine blocks stacked: stats, Today, the diary card, diary stats,
+     the week, the year grid, every entry, recommendations, upcoming releases.
+     Five of those nine were the diary. Somebody opening the app to answer one
+     question had to scroll past all of it.
+
+     Nothing was removed. Four diary blocks fold into "Your year" and the two
+     discovery blocks into "Discover", both remembered, so the page opens on
+     the things you actually came to do and everything else is one tap away.
+
+     The claim strip is the opposite move: the single most worthwhile action in
+     the app was two navigations deep, so it comes to the top of Home when
+     there is something to take, and does not exist when there is not.
+     ================================================================ -->
+<script>
+(function () {
+  var KEY = 'crate_home_folds';
+
+  function state() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+  function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
+
+  function wireFolds() {
+    var s = state();
+    document.querySelectorAll('.home-fold').forEach(function (d) {
+      if (s[d.id]) d.open = true;
+      d.addEventListener('toggle', function () {
+        var cur = state();
+        cur[d.id] = d.open;
+        save(cur);
+        // The year grid sizes itself on render; reopening after a resize can
+        // leave it measured against a collapsed container.
+        if (d.open && d.id === 'fold-year' && window.renderDiary) window.renderDiary();
+      });
+    });
+  }
+
+  /* The claim strip. Same UTC comparison the Rewards page uses — a local date
+     would hand somebody a second claim or withhold one for hours depending on
+     which side of midnight their timezone sits. */
+  function renderHomeClaim() {
+    var host = document.getElementById('home-claim');
+    if (!host) return;
+    host.innerHTML = '';
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
+    var st = (window.Wallet && Wallet.get) ? Wallet.get() : null;
+    if (!st) return;
+
+    var last = st.login_last_date ? String(st.login_last_date).slice(0, 10) : null;
+    var unclaimed = last !== new Date().toISOString().slice(0, 10);
+    var picks = st.banner_picks || 0;
+    if (!unclaimed && !picks) return;
+
+    var streak = st.login_streak || 0;
+    var day = unclaimed ? ((streak % 7) + 1) : 0;
+
+    host.innerHTML = '<div class="home-claim">' +
+      '<div class="hc-copy">' +
+      (unclaimed
+        ? (day === 7 ? '<b>Day 7</b> — an album banner is waiting.'
+                     : '<b>Day ' + day + '</b> of your run is waiting.')
+        : '<b>' + picks + ' album banner' + (picks === 1 ? '' : 's') + '</b> to claim.') +
+      '</div>' +
+      '<button class="btn-primary rw-claim-btn" id="hc-go">' +
+      (unclaimed ? 'Claim' : 'Pick it') + '</button></div>';
+
+    var b = document.getElementById('hc-go');
+    if (b) b.addEventListener('click', async function () {
+      if (window.ripple) ripple(b);
+      if (unclaimed) {
+        b.disabled = true;
+        b.textContent = '…';
+        await Wallet.dailyLogin();
+        renderHomeClaim();
+        if (window.markRewardsDot) markRewardsDot();
+      } else {
+        goToView('profile');
+        if (window.renderProfile) renderProfile();
+        if (window.renderBannerPick) renderBannerPick();
+      }
+    });
+  }
+
+  window.renderHomeClaim = renderHomeClaim;
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireFolds);
+  else wireFolds();
+})();
+</script>
+
 <!-- ================================================================
      CRATE SUB-TABS
      ================================================================
