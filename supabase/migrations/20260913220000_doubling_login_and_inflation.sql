@@ -68,8 +68,13 @@
 --   Epic      1000 x100 + dusk 560 x50 + foil 900 x50    = 173.0
 --   Legendary 2000 x40 + vhs 1200 x45 + static 720 x40   = 162.8
 --             + 1 album pick x25                         =   0
---   Mythic   100000 x3 + tag 1000 x60 + 3 picks x34      = 360.0
+--   Mythic   100000 x3 + tag 1000 x60 + 3 picks x37      = 360.0
 --                                                   total  886.6
+--
+-- Tier weights must sum to 1000, or the published 30/25/20/15/10 split is not
+-- what the machine does. This shipped at 997 once — the jackpot was trimmed
+-- from 6 to 3 and the 3 was never given back to the tier — which quietly made
+-- Mythic 9.73% and every other tier slightly over. Add the weights up.
 --
 -- **An economy whose only sink pays out more than it takes is not a sink, it
 -- is a printer.** Redo this sum before changing any weight, any amount, or
@@ -356,7 +361,7 @@ insert into public.spin_items (key, kind, label, amount, ref, weight, tier) valu
   ('picks1',    'picks', '1 album, free',  1,      null,       25, 'legendary'),
   -- Mythic — 100/1000
   ('tag',       'tag',   'Producer tag',   1000,   null,       60, 'mythic'),
-  ('picks3',    'picks', '3 albums, free', 3,      null,       34, 'mythic'),
+  ('picks3',    'picks', '3 albums, free', 3,      null,       37, 'mythic'),
   ('d100000',   'discs', '100,000 Discs',  100000, null,        3, 'mythic')
 on conflict (key) do update set
   kind = excluded.kind, label = excluded.label, amount = excluded.amount,
