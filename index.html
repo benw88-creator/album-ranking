@@ -9927,7 +9927,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
      shop_items has a public read policy for exactly this. */
   async function loadPrices() {
-    if (!window.Cloud || !Cloud.client) return;
+    if (!window.Cloud || !Cloud.client || !Cloud.client()) return;
     try {
       var r = await Cloud.client().from('shop_items').select('kind,key,cost');
       (r.data || []).forEach(function (row) {
@@ -9938,8 +9938,11 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   }
 
   async function load() {
+    // Prices first, and *before* the signed-in guard: shop_items is publicly
+    // readable, and a logged-out visitor browsing the Shop was being shown the
+    // stale fallback costs baked into the maps above.
+    await loadPrices();
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { loaded = false; return state; }
-    await loadPrices();   // before anything renders a price
     try {
       const me = Cloud.getUser();
       const prof = me && await Cloud.fetchProfile(me.id);
