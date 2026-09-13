@@ -180,6 +180,39 @@ Two traps here:
 - `payFor(day)` in the Rewards module mirrors the formula in `wallet_daily_login()`. **Change
   one and you must change the other** — this one is display only, the server is what pays.
 
+## The Collection
+
+Records you buy with Discs and keep (`..._20260913100000_collection.sql`, `view-collection`,
+`api/collection-buy.js`, `api/collection-prices.js`).
+
+**The distinction from Bid Wars is the whole design.** A war is a match: it starts, it
+resolves, the records were never yours. This is a position you hold. Both read the same
+valuation, so knowing what a record is worth pays off in two different games.
+
+- **Not exclusive** — two people can own the same album. A one-owner-per-record version is a
+  far sharper game, but it needs a way to take a record *off* somebody, and without that the
+  first week permanently decides the standings.
+- **Price is `streams / 5,000,000`.** Raw totals are unusable — Views is 12.81bn streams.
+  Divided down it fits what people actually earn: Views 2,562 Discs (about ten days at a
+  realistic 250/day), In Rainbows 464, The Money Store 36. **Linear, not compressed, on
+  purpose**: the hundred-to-one spread is what makes a famous record a target and an obscure
+  one affordable, and a square-root curve would flatten exactly that.
+- **The browser never names a price.** `/api/collection-buy` values the album itself and calls
+  `collection_buy_from`, which is service-role only. Same rule as `wallet_buy` taking a key and
+  never a cost — a client that could name its own price could buy a twelve-billion-stream
+  record for one Disc.
+- **Selling refunds 70%.** Churning has to cost something, or a net worth only measures how
+  many times somebody has been round the loop. `collection_sell` takes no price: the refund is
+  derived from the stored row, so it is safe to expose straight to a signed-in client.
+- **The market page prices from the `album_plays` cache**, never inline. Twenty uncached
+  albums would be twenty kworb fetches in one serverless invocation, which times out. Uncached
+  rows show "price on request" and one tap values them.
+- **Collections are publicly readable**, like ratings — other people seeing what you built is
+  the point. There is **no INSERT or UPDATE policy at all**, so the only way in is the definer
+  functions.
+- `collection` is in `delete_my_data()`. See the note there: missing that line is how
+  `app_state` survived account deletion for weeks.
+
 ## The Draw
 
 A case-opening reel bought with Discs (`..._20260911230000_the_draw.sql`). Own modal, own
