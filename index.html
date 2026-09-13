@@ -10241,7 +10241,17 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       '</div>' + action + '</div>';
   }
 
-  function renderShop() {
+  /* Prices are fetched here, not only in load().
+
+     load() is called from onAuthed, so a logged-out visitor never reached it
+     and the Shop kept showing the stale fallback costs baked into the maps.
+     Pulling shop_items on every open costs one small public query and means
+     the price on screen is always the price wallet_buy will charge — including
+     the first time, and including for somebody who has not signed in. */
+  var _pricesOnce = null;
+  async function renderShop() {
+    if (!_pricesOnce) _pricesOnce = loadPrices();
+    await _pricesOnce;
     const w = get();
     document.getElementById('shop-balance-val').textContent = w.is_admin ? ('∞ ' + (w.discs || 0)) : w.discs;
     const list = document.getElementById('shop-list');
