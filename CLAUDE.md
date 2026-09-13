@@ -196,10 +196,46 @@ The ladder keeps its numbers, because they are the reason to come back tomorrow 
 can discover a schedule**. That is the line: what you could not find out by playing stays on
 the page; what you would enjoy finding out does not.
 
-**The ladder is the claim.** There used to be a bar above it reading "Day 4 is waiting" with a
-Claim button — the same information the ladder underneath was already showing, with the button
-somewhere other than the thing it acted on. The live day is now a `<button>`, it glows, and
-pressing it takes the day.
+**The ladder is the claim, and it is the only one.** There were three Claim buttons for one
+action: a bar above the ladder, a strip on Home, and the ladder itself. Both extras are gone.
+They were not merely redundant — each was another place to get the state wrong, and the Home
+strip did exactly that (below). The live day is a `<button>`, it glows, and pressing it takes
+the day. The nav dot is the only thing that still advertises the claim from elsewhere, which
+is all the Home strip was ever for.
+
+### `login_last_date` was read in three places and written in none
+
+Fixed in `..._20260914120000_login_returns_last_date.sql` plus the client half. Worth reading
+before adding any field the client decides things with.
+
+`claimedToday` — in the ladder, the nav dot and the old Home strip — compares
+`Wallet.get().login_last_date` against today in UTC. Nothing ever put that value in the state
+object: not the initial literal, not `load()`, and `wallet_daily_login` did not return it. So
+it was `undefined` on every render since the feature shipped and **`claimedToday` was
+permanently false**.
+
+The symptom was not "nothing happens". It was worse than that: you press the live day, the
+server pays, and because `login_streak` updates while `login_last_date` does not, the ladder
+re-renders offering the **next** day. Press that and the server correctly answers
+`claimed_already` and pays nothing — while the tile still animates. The first claim each day
+worked; every press after it was theatre over a no-op, which is indistinguishable from a
+broken button.
+
+Three things to take from it:
+
+- **A value read in three places and written in none should be impossible to miss, and was
+  not**, because every symptom looked like a correct second press.
+- The fix is the **server returning the field**, not the client inferring "it must be today".
+  Inferring is exactly how `payFor()` drifted from the pay formula. `dailyLogin()` keeps a
+  fallback for a new build against an old function, and it calls `reportIssue` when it fires
+  rather than papering over the skew.
+- The claim handler no longer bursts on `claimed_already`. Firing the confetti for a claim
+  that paid nothing is the same lie in miniature.
+
+The ladder also now draws what the server is *about* to do rather than what it last recorded:
+a streak more than a day stale is shown as zero (mirroring `v_gap`), and a completed week with
+today unclaimed shows an empty board with day one live rather than seven ticks and a glowing
+day one contradicting each other.
 
 - It is a `<button>` rather than a `<div>` only when it is live, so it needs `font: inherit`
   and `width: 100%` back — a button inherits neither.
@@ -214,9 +250,9 @@ Two traps here:
 
 - **`views` in `setMode` is an explicit map, not derived from the DOM.** Adding a nav button
   without adding the matching entry hides every section and shows a blank page.
-- `LADDER` in the Rewards module mirrors `v_ladder` in `wallet_daily_login()`, and
-  `renderHomeClaim` holds a third copy. **Change one and you must change all of them** —
-  these are display only, the server is what pays.
+- `LADDER` in the Discs module mirrors `v_ladder` in `wallet_daily_login()`. **Change one and
+  you must change the other** — this is display only, the server is what pays. A third copy
+  lived in `renderHomeClaim` and went with the Home strip.
 
 ## The Collection
 
