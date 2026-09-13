@@ -25,22 +25,28 @@ const STALE_DAYS = 14;
 /* Streams to Discs.
  *
  * Raw totals are unusable as a price: Views is 12.81 billion streams, and at
- * one-to-one nobody buys anything ever. Divided by 1.25 million it becomes a
- * ladder that fits what people actually earn — roughly 1,200 Discs on a normal
- * day, 3,600 if they do everything:
+ * one-to-one nobody buys anything ever. Divided by 250,000 it becomes a ladder
+ * that fits what people actually earn — roughly 9,000 a day from the login
+ * ladder plus up to 16,100 from games:
  *
- *     Views (Drake)    12.81B  -> 10,248    about a week of normal play
- *     Blonde            9.39B  ->  7,512
- *     In Rainbows       2.32B  ->  1,856    a day or two
- *     The Money Store    180M  ->    144    same session
+ *     Views (Drake)    12.81B  -> 51,240    about two days of everything
+ *     Blonde            9.39B  -> 37,560
+ *     In Rainbows       2.32B  ->  9,280    one good session
+ *     The Money Store    180M  ->    720    minutes
  *
  * Linear rather than compressed, deliberately: the hundred-to-one spread is
  * what makes a famous record feel like a target and an obscure one feel
  * affordable. A square-root curve would flatten exactly the thing that gives
  * the collection a shape.
+ *
+ * **This divisor moves with the economy and nothing enforces it.** It went from
+ * 5,000,000 to 1,250,000 with the 4x pass and to 250,000 with the 5x one, each
+ * time in lockstep with ..._rarities_and_inflation and
+ * ..._doubling_login_and_inflation. Change the rates without changing this and
+ * every record becomes either free or unbuyable.
  */
-const DISCS_PER_STREAM_DIVISOR = 1250000;
-const MIN_PRICE = 40;
+const DISCS_PER_STREAM_DIVISOR = 250000;
+const MIN_PRICE = 200;
 
 export function priceFromStreams(streams) {
   const n = Number(streams) || 0;

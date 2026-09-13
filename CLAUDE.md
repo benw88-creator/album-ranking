@@ -129,56 +129,87 @@ check the feel is attached to something real.
 
 ### The economy's shape, and why the sink matters more than the faucet
 
-Balanced in `..._20260911200000_login_rewards_and_inflation.sql`. Before it, the ceiling was
-~256 Discs a day doing literally everything and ~60 on a realistic session, against a shop
-costing 1,580 in total — so a normal player spent about a month earning their way to owning
-everything, and **the day they owned it all, Discs stopped meaning anything.**
+Current numbers set by `..._20260913220000_doubling_login_and_inflation.sql`. The rule that
+survived every pass: **inflating what you earn, on its own, only brings forward the day
+somebody owns everything.** It is safe only alongside a sink.
 
-**Inflating what you earn, on its own, only brings that day forward.** It is safe only
-alongside a sink. Keep that in mind before raising any number here.
+- **Daily login** — `wallet_daily_login()`. **1,000 doubling to 32,000 across six days, and
+  day seven pays a free record instead of Discs.** 63,000 and one album per seven-day cycle.
+  Safe to call on every load — it returns `claimed_already` and changes nothing.
+  - **It cycles.** Position is `((login_streak - 1) % 7) + 1`. Before this it *plateaued* in
+    SQL while the Rewards page drew a cycle, and the two silently disagreed from day eight.
+    Both are now the same expression. A doubling ladder that never reset would also be `2^n`.
+  - The ladder is an **array of seven literals** in SQL and the same array in the Rewards
+    module. Written as literals rather than a formula on purpose: a mismatch is then visible
+    on sight, which is how the last drift should have been caught.
+  - No streak freezes here, because a freeze would protect you from not opening an app.
+- **Logging in now pays far more than playing does.** Every game put together caps at ~16,100
+  a day; day six alone is 32,000. The note above about rewarding *opening the app* being
+  weaker than rewarding the rating streak beside it still stands — this inverts it. It was
+  asked for and the rates are due another pass. **If only one number gets revisited, make it
+  this one.**
+- **Rates**: ratings 160 × 10/day, lore 100 × 20/day, Earworm 1,000 × 3, Daily Drop 1,500,
+  Tournament 800 × 2, achievements 800 × 5, Higher or Lower 800 × 3. **Caps are the
+  anti-forgery defence, not the balance lever** — move the amounts, not the caps.
+- **Bid War payouts are still 30/8/15** and now look absurd next to everything else. Scaling
+  them is not a number change, for two reasons, both written out in section 5 of the
+  migration: `bid_war_submit` has no `create or replace` since `20260907130000`, so touching
+  three integers means re-declaring 150 lines of sealed-bid resolution; and **there is no
+  daily cap on war payouts**, so at a scaled figure two accounts that follow each other can
+  manufacture wars and split the proceeds. A war cannot be *forged*, but it can be
+  *manufactured*, and inflation is what turns that from pointless into profitable. Do it in
+  its own migration with a capped-award helper.
+- **The sink is the Collection**, priced off stream counts, and album picks feed it. That is
+  the same argument the album banner used to carry — every claim is a different object, so it
+  cannot be finished. **If the Collection ever goes, this inflation loses its floor.**
+- **The Draw is the other sink**, and only while its expected return stays under its cost.
+  See The Draw.
 
-- **Daily login** — `wallet_daily_login()`, 10 Discs on day one rising to 40 by day seven,
-  then flat. Plateaued on purpose: this rewards *opening* the app, which is a weaker thing to
-  reward than the rating streak beside it. No streak freezes, because a freeze here would
-  protect you from not opening an app. Safe to call on every load — it returns
-  `claimed_already` and changes nothing.
-- **Every seventh consecutive day earns an album banner.** `wallet_claim_album_banner(art)`
-  spends one `banner_picks` entitlement and appends a banner keyed **`album:<cover url>`** to
-  `owned_banners`. This is the sink: every claim is a different object, so unlike a fixed
-  shop it cannot be finished.
-  - The URL is **re-validated server-side** against `^https://i\.scdn\.co/image/…`. Without
-    that it is an arbitrary image embed on a public profile — a moderation problem and a
-    tracking-pixel problem at once.
-  - `album:` banners are not in the client's `BANNERS` map, so both the profile header and
-    the shop need their own branch for them. The shop lists them from `owned_banners`;
-    without that they would be owned but unreachable the moment you equipped anything else.
-  - Covers render blurred behind a dark gradient. At full strength a 640px cover makes every
-    piece of text on the header unreadable.
-- **Rates**: ratings 5 × 8/day, lore 3 × 20/day, Earworm 25, Daily Drop 40, Tournament 20,
-  achievements 20, Higher or Lower 20. **Caps are the anti-forgery defence, not the balance
-  lever** — move the amounts, not the caps.
-- **Bid War payouts (30/8/15) are deliberately not inflated.** They were already the largest
-  award in the game; the pass brought everything else up to parity rather than chasing them.
-  Changing them means replacing the whole of `bid_war_submit`.
+### The album banner, and where its job went
+
+Removed in `..._20260913220000`. Seven days used to pay a banner — pick a record, its cover
+becomes your profile header, keyed `album:<cover url>` in `owned_banners`. Day seven pays the
+*record* now, one `album_picks`, so the banner had no way in left. Gone with it:
+`wallet_claim_album_banner`, the picker module, the `album:` branches in the profile header
+and the Shop, and the Album Banner Pick boost. Outstanding `banner_picks` were converted to
+album picks rather than voided; `album:` keys were stripped from `owned_banners` and un-equipped,
+because an equipped one with no renderer is a blank header.
+
+`profiles.banner_picks` still exists, zeroed and still pinned. Dropping a column on a live
+table to save nothing is the worse trade.
 
 ## Rewards (`view-rewards`)
 
-The seven-day login ladder, laid out: what each day pays, which days you have taken, today
-lifted, and day seven showing the album banner as the thing the run is for. Then what the
-banner is, The Draw, the Shop, and a table of **every single thing in the app that pays
-Discs** — which was previously scattered across five surfaces and written down nowhere.
+The seven-day login ladder, laid out: what each day pays, which days you have taken, and day
+seven showing the free record as the thing the run is for. Then The Draw, the Shop, and a table
+of **every single thing in the app that pays Discs** — which was previously scattered across
+five surfaces and written down nowhere.
 
 It exists because **every reward in this app used to be invisible until it had already been
-earned.** The album-banner picker only rendered once you owned a pick, so nothing told a new
-player the reward existed at all — it looked like it had never been built. A reward nobody can
-see motivates nobody, and the ladder is the entire reason to come back on day two.
+earned.** A reward nobody can see motivates nobody, and the ladder is the entire reason to
+come back on day two.
+
+**The ladder is the claim.** There used to be a bar above it reading "Day 4 is waiting" with a
+Claim button — the same information the ladder underneath was already showing, with the button
+somewhere other than the thing it acted on. The live day is now a `<button>`, it glows, and
+pressing it takes the day.
+
+- It is a `<button>` rather than a `<div>` only when it is live, so it needs `font: inherit`
+  and `width: 100%` back — a button inherits neither.
+- **The glow is the only affordance on the page that says "take this"**, so it stops the
+  instant the tile is pressed (`.taking`). A re-render is a round trip away and a tile still
+  pulsing after a tap reads as ignored.
+- Day seven's `celebrate()` lives in `Wallet.dailyLogin()`, not at the two call sites, so the
+  claim reads identically from the ladder and from the Home card. Day seven pays **no Discs**,
+  so without it the biggest day is the only one that says nothing when you take it.
 
 Two traps here:
 
 - **`views` in `setMode` is an explicit map, not derived from the DOM.** Adding a nav button
   without adding the matching entry hides every section and shows a blank page.
-- `payFor(day)` in the Rewards module mirrors the formula in `wallet_daily_login()`. **Change
-  one and you must change the other** — this one is display only, the server is what pays.
+- `LADDER` in the Rewards module mirrors `v_ladder` in `wallet_daily_login()`, and
+  `renderHomeClaim` holds a third copy. **Change one and you must change all of them** —
+  these are display only, the server is what pays.
 
 ## The Collection
 
@@ -192,11 +223,14 @@ valuation, so knowing what a record is worth pays off in two different games.
 - **Not exclusive** — two people can own the same album. A one-owner-per-record version is a
   far sharper game, but it needs a way to take a record *off* somebody, and without that the
   first week permanently decides the standings.
-- **Price is `streams / 5,000,000`.** Raw totals are unusable — Views is 12.81bn streams.
-  Divided down it fits what people actually earn: Views 2,562 Discs (about ten days at a
-  realistic 250/day), In Rainbows 464, The Money Store 36. **Linear, not compressed, on
-  purpose**: the hundred-to-one spread is what makes a famous record a target and an obscure
-  one affordable, and a square-root curve would flatten exactly that.
+- **Price is `streams / 250,000`.** Raw totals are unusable — Views is 12.81bn streams.
+  Divided down it fits what people actually earn: Views 51,240 Discs (about two days of doing
+  everything), In Rainbows 9,280, The Money Store 720. **Linear, not compressed, on purpose**:
+  the hundred-to-one spread is what makes a famous record a target and an obscure one
+  affordable, and a square-root curve would flatten exactly that.
+  **The divisor moves with the economy and nothing enforces it** — 5,000,000 to 1,250,000 to
+  250,000 across the 4x and 5x passes, each time in lockstep with a migration. Change the
+  rates without it and every record goes either free or unbuyable.
 - **The browser never names a price.** `/api/collection-buy` values the album itself and calls
   `collection_buy_from`, which is service-role only. Same rule as `wallet_buy` taking a key and
   never a cost — a client that could name its own price could buy a twelve-billion-stream
@@ -242,15 +276,14 @@ rows and not the duplicates, and the Shop offered Sundown at 150 while `wallet_b
   than on the `<img>`, which already uses its own border and box-shadow. Card Sleeve is a
   border rather than a filled panel behind the avatar: a filled `::before` needs `z-index:-1`
   to sit behind its own wrapper, and that only holds while nothing up the tree creates a
-  stacking context — the profile header takes a background image when an album banner is
-  equipped.
-- **Boosts** — `kind = 'boost'`, bought and never owned, so they can be bought again and
-  again. **This is the Shop's floor.** Every cosmetic can be finished; an account that owns
-  all of them has nowhere left to put Discs, and a currency with nowhere to go stops being a
-  currency. Both boosts top up an entitlement that already exists (`streak_freezes`,
-  `banner_picks`) rather than inventing one. **Nothing here raises a daily cap** — caps are
-  the anti-forgery defence for the minigames, not a balance lever, and selling a way round one
-  would be selling a way to forge awards.
+  stacking context.
+- **Boosts** — `kind = 'boost'`, bought and never owned, so it can be bought again and again.
+  **This is the Shop's floor.** Every cosmetic can be finished; an account that owns all of
+  them has nowhere left to put Discs, and a currency with nowhere to go stops being a
+  currency. Streak Freeze is the only one left (Album Banner Pick went with the banner), and
+  it tops up an entitlement that already exists rather than inventing one. **Nothing here
+  raises a daily cap** — caps are the anti-forgery defence for the minigames, not a balance
+  lever, and selling a way round one would be selling a way to forge awards.
 - Themes and banners, unchanged.
 
 Tags, flair and frames are three copies of one shape, so they share `buyCosmetic` /
@@ -309,21 +342,28 @@ before that stays gone for good: Apple's guideline 3.1.1 wants published odds fo
 loot-box shaped, so an App Store submission needs the panel back (it read from `loadItems()`
 and nothing else, so restoring it is small), and see the paragraph above about paid Discs.
 
-### Mythic, and why the spin costs 2,000
+### Mythic, and why the spin costs 1,000
 
-Mythic is exactly three things: **100,000 Discs** (0.6% absolute — one spin in 167),
+Mythic is exactly three things: **100,000 Discs** (0.3% absolute — one spin in 333),
 **3 albums of your choice** (3.4%), and **a producer tag** (6%, a random one you do not own).
+Legendary carries **1 album of your choice**, so picks run 1 at Legendary and 3 at Mythic.
 
-The whole pool's expected return is **~1,788 Discs against a 2,000 cost**, computed for the
-worst case — somebody who owns every cosmetic and therefore converts every duplicate to Discs.
-That margin is the safety property, and it is the reason the earning rates can be as inflated
-as they are. **An economy whose only sink pays out more than it takes is not a sink, it is a
-printer.** Before changing any number in `spin_items` or `v_cost`, redo the sum; it is written
-out in full at the top of `..._20260913180000_mythic_tags_and_shop.sql`.
+The whole pool's expected return is **~887 Discs against a 1,000 cost**, computed for the
+worst case — somebody who owns every drawable cosmetic and therefore converts every duplicate
+to Discs. That margin is the safety property, and it is the reason the earning rates can be as
+inflated as they are. **An economy whose only sink pays out more than it takes is not a sink,
+it is a printer.** Before changing any weight, any `amount`, or `v_cost`, redo the sum; it is
+written out line by line at the top of `..._20260913220000_doubling_login_and_inflation.sql`.
+
+**A duplicate pays 20% of its shop price, not all of it.** That rule changed when the spin
+halved to 1,000 while the shop went up 5x: a 1,000-Disc spin cannot hand back a 6,000-Disc
+theme's worth of Discs thirty times in a hundred and stay a sink. In practice it means
+`spin_items.amount` for every cosmetic is *unchanged* from before the 5x pass — the same
+number, now a fifth of the price.
 
 That sum is also why **a record claimed with an album pick cannot be sold**. At the 70%
-refund, three free records are ~17,500 Discs of arbitrage, which on its own flips the pool
-from a sink to a faucet. `collection.via_pick` marks them and `collection_sell` refuses them.
+refund, free records are pure arbitrage, and enough of it flips the pool from a sink to a
+faucet. `collection.via_pick` marks them and `collection_sell` refuses them.
 
 **The tag prize has no fixed `ref`.** It grants a random tag you do not own yet, drawn from the
 same `shop_items` rows you could buy, so the strip tile says "Producer tag" and only the result

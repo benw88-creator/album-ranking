@@ -3645,16 +3645,12 @@ body.entering-done #artist-hero {
   font: 700 15px/1 var(--font-display); background: var(--surface-3);
 }
 
-/* ---- Rewards ladder --------------------------------------------------- */
-.rw-claim-box {
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  border: 1px solid var(--gold); border-radius: 16px; padding: 16px 18px; margin-bottom: 18px;
-  background: linear-gradient(120deg, var(--gold-dim), var(--surface) 70%);
-}
-.rw-claim-box.done { border-color: var(--border); background: var(--surface-2); }
-.rw-claim-copy { flex: 1; min-width: 180px; font-size: 14px; }
-.rw-claim-done { flex: 1; font-size: 14px; color: var(--text-dim); }
-/* Unclaimed, it should be hard to walk past. */
+/* ---- Rewards ladder ---------------------------------------------------
+   The claim bar that used to sit above the ladder is gone. It said "Day 4 is
+   waiting" next to a Claim button while the ladder underneath already showed
+   which day was next — the same information twice, with the button somewhere
+   other than the thing it acted on. The live day *is* the button now. */
+/* Still used by the Home card's claim button. */
 .rw-claim-btn { animation: claimPulse 1.9s var(--ease) infinite; }
 @keyframes claimPulse {
   0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 var(--gold-glow); }
@@ -3686,19 +3682,53 @@ body.entering-done #artist-hero {
 .rw-day.done { border-color: var(--gold-dim); background: linear-gradient(160deg, var(--gold-dim), var(--surface-2) 70%); }
 .rw-day.done .rw-amt { color: var(--gold); }
 .rw-day .rw-tick { position: absolute; top: 6px; right: 8px; color: var(--gold); font-size: 12px; }
-.rw-day.today { border-color: var(--gold); transform: translateY(-3px); box-shadow: 0 6px 20px var(--gold-dim); }
 .rw-day.grand { border-color: var(--accent-2-dim); background: linear-gradient(160deg, var(--accent-2-dim), var(--surface-2) 70%); }
 .rw-day.grand .rw-amt { font-size: 13px; line-height: 1.3; color: var(--text); }
+
+/* The live day. It is a <button> rather than a <div>, so it needs the font and
+   the full width back — a button does not inherit either. */
+button.rw-day {
+  font: inherit; width: 100%; cursor: pointer; color: inherit;
+  background: linear-gradient(160deg, var(--gold-dim), var(--surface-2) 70%);
+}
+/* The glow is the whole affordance now: nothing else on the page says "take
+   this". It has to be unmistakable at a glance and it has to stop the moment
+   the day is claimed, so the ladder never invites a second press. */
+.rw-day.live {
+  border-color: var(--gold);
+  animation: rwGlow 1.9s var(--ease) infinite;
+}
+@keyframes rwGlow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow), 0 6px 20px var(--gold-dim); transform: translateY(-3px); }
+  50%      { box-shadow: 0 0 0 10px transparent, 0 10px 28px var(--gold-dim); transform: translateY(-6px); }
+}
+.rw-day.live .rw-amt { color: var(--gold); }
+.rw-day .rw-take {
+  margin-top: 8px; font: 700 10px var(--font-mono); letter-spacing: .12em;
+  text-transform: uppercase; color: var(--gold);
+}
+/* Pressed, it stops glowing immediately — the render that replaces it is a
+   round trip away, and a tile still pulsing after a tap reads as ignored. */
+.rw-day.taking { animation: none; opacity: .6; transform: none; }
+
 @media (max-width: 640px) {
   .rw-ladder { grid-template-columns: repeat(4, 1fr); }
   .rw-day .rw-amt { font-size: 19px; }
 }
-
-.rw-grand {
-  border: 1px solid var(--gold-dim); border-radius: 16px; padding: 20px;
-  background: linear-gradient(150deg, var(--gold-dim), var(--surface) 65%); margin-bottom: 22px;
+@media (prefers-reduced-motion: reduce) {
+  .rw-day.live { animation: none; box-shadow: 0 0 0 3px var(--gold-dim); transform: translateY(-3px); }
 }
-.rw-grand h3 { font-family: var(--font-display); font-size: 22px; margin-bottom: 6px; }
+
+/* Free records waiting. Only rendered while you hold one, so it can afford to
+   be loud — it is an entitlement about to become a record, not page furniture. */
+.rw-picks {
+  border: 1px solid #ff2d6f; border-radius: 14px; padding: 13px 15px; margin-bottom: 22px;
+  font-size: 13px; line-height: 1.5;
+  background: linear-gradient(120deg, rgba(255,45,111,0.16), var(--surface) 70%);
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.rw-picks b { color: #ff6f9c; }
+.rw-picks button { margin-left: auto; }
 .rw-other { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 26px; }
 .rw-card {
   border: 1px solid var(--border); border-radius: 14px; padding: 16px; background: var(--surface-2);
@@ -3710,19 +3740,6 @@ body.entering-done #artist-hero {
 .rw-rates table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .rw-rates td { padding: 9px 4px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
 .rw-rates td:last-child { text-align: right; font-family: var(--font-mono); color: var(--gold); white-space: nowrap; }
-
-/* ---- album banner picker --------------------------------------------- */
-.bp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; margin-top: 12px; }
-.bp-item {
-  background: none; border: 1px solid var(--border); border-radius: 12px; padding: 6px;
-  cursor: pointer; color: var(--text-dim); font: 600 11px var(--font-body); text-align: center;
-  transition: border-color .16s, transform .12s var(--ease);
-}
-.bp-item img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; display: block; background: var(--surface-3); }
-.bp-item span { display: block; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bp-item:hover:not(:disabled) { border-color: var(--gold); transform: translateY(-2px); }
-.bp-item:disabled { opacity: .4; cursor: default; }
-.bp-item.picked { border-color: var(--gold); opacity: 1; }
 
 /* ---- Higher or Lower ------------------------------------------------- */
 .hl-mode { display: inline-flex; gap: 4px; background: var(--surface-2); border-radius: 999px; padding: 4px; }
@@ -4521,7 +4538,7 @@ window.ICONS = {
       <div class="game-card" id="draw-card" style="border-color: var(--gold); background: linear-gradient(150deg, var(--gold-dim), var(--surface) 60%);">
         <div class="gc-emoji" data-icon="disc"></div>
         <h3>The Draw</h3>
-        <p>2,000 Discs, one spin. Mythic pays 100,000 Discs, three free records, or a producer tag.</p>
+        <p>1,000 Discs, one spin. Mythic pays 100,000 Discs, three free records, or a producer tag.</p>
         <div class="gc-go">Open one &rarr;</div>
       </div>
       <div class="game-card" id="hl-card">
@@ -4612,7 +4629,7 @@ window.ICONS = {
       <div class="draw-result" id="draw-result"></div>
 
       <div class="draw-cost">
-        <button class="btn-primary" id="draw-go">Open for 2,000 Discs</button>
+        <button class="btn-primary" id="draw-go">Open for 1,000 Discs</button>
       </div>
     </div>
   </section>
@@ -4644,7 +4661,6 @@ window.ICONS = {
     <div class="section-head" style="margin-top:34px;"><h2>Your Music Lore</h2><span class="muted" id="lore-count"></span></div>
     <p class="reco-note">Everything you&rsquo;ve said about your records.</p>
     <div id="lore-list"></div>
-    <div id="banner-pick"></div>
     <div id="listening-import"></div>
     <div id="admin-stats"></div>
   </section>
@@ -6175,7 +6191,6 @@ function setMode(mode, fromCode) {
   if (mode === 'profile' && window.renderLore) window.renderLore();
   if (mode === 'collection' && window.renderCollection) window.renderCollection();
   if (mode === 'rewards' && window.renderRewards) window.renderRewards();
-  if (mode === 'profile' && window.renderBannerPick) window.renderBannerPick();
   if (mode === 'profile' && window.renderListeningImport) window.renderListeningImport();
   if (mode === 'profile' && window.renderAdminStats) window.renderAdminStats();
   if (mode === 'people' && window.renderPeople) window.renderPeople();
@@ -8095,20 +8110,15 @@ async function drawProfile(host,prof,isOwner){
   }
 
 
-  /* Banners are either a named gradient from the shop, or an album cover
-     claimed with a seven-day login streak — those are keyed `album:<url>`, so
-     they are not in BANNERS and need their own branch. The cover is blurred
-     and darkened behind a gradient: at full strength a 640px cover behind the
-     header makes every piece of text on top of it unreadable. */
+  /* A banner is a named gradient from the shop and nothing else now. The
+     `album:<url>` keys that a seven-day streak used to grant are gone — day
+     seven pays a record for the Collection instead — and the migration strips
+     them from owned_banners and un-equips them, so an unknown key here falls
+     through to no banner rather than a blank header. */
   const ab=prof.active_banner||'';
-  const isAlbumBanner=ab.indexOf('album:')===0;
-  const bannerDef=!isAlbumBanner&&window.Wallet&&ab&&Wallet.BANNERS[ab];
+  const bannerDef=window.Wallet&&ab&&Wallet.BANNERS[ab];
   let bannerStyle='';
-  if(isAlbumBanner){
-    const url=ab.slice(6);
-    bannerStyle=' style="background-image:linear-gradient(to bottom, rgba(10,9,8,0.62), rgba(10,9,8,0.88)), url(\''+esc(url)+'\');'+
-      'background-size:cover; background-position:center; border-radius:var(--radius); padding:20px;"';
-  } else if(bannerDef){
+  if(bannerDef){
     bannerStyle=' style="background:'+bannerDef.gradient+'; border-radius:var(--radius); padding:20px;"';
   }
   /* The three account cosmetics: a producer tag under the name, a flair on the
@@ -9982,13 +9992,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   'use strict';
 
   const THEMES = {
-    classic:  { name: 'Crate',    cost: 0,   desc: 'The original — near-black, gold and ember.' },
-    sundown:  { name: 'Sundown',  cost: 150, desc: 'Plum dusk, hot orange, pink neon edge.' },
-    cassette: { name: 'Cassette', cost: 150, desc: 'Deep graphite with turquoise and blue.' },
-    citrus:   { name: 'Citrus',   cost: 250, desc: 'Espresso dark, blood orange and lime.' },
-    vhs:      { name: 'VHS Tracking', cost: 300, desc: 'Bottle-green black with phosphor green and hot pink.' },
-    bone:     { name: 'Bone China',   cost: 300, desc: 'Warm off-white on soot. Quiet, and the only pale one.' },
-    neon:     { name: 'Neon Vault', cost: 350, desc: 'Indigo black, magenta and cyan. Loud.' },
+    classic:  { name: 'Crate',    cost: 0,    desc: 'The original — near-black, gold and ember.' },
+    sundown:  { name: 'Sundown',  cost: 3000, desc: 'Plum dusk, hot orange, pink neon edge.' },
+    cassette: { name: 'Cassette', cost: 3000, desc: 'Deep graphite with turquoise and blue.' },
+    citrus:   { name: 'Citrus',   cost: 5000, desc: 'Espresso dark, blood orange and lime.' },
+    vhs:      { name: 'VHS Tracking', cost: 6000, desc: 'Bottle-green black with phosphor green and hot pink.' },
+    bone:     { name: 'Bone China',   cost: 6000, desc: 'Warm off-white on soot. Quiet, and the only pale one.' },
+    neon:     { name: 'Neon Vault', cost: 7000, desc: 'Indigo black, magenta and cyan. Loud.' },
   };
   const SWATCH = {
     classic:  'linear-gradient(135deg,#0a0908 20%,#F5C842 60%,#ff7a4d)',
@@ -10001,12 +10011,12 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   };
   const BANNERS = {
     none:   { name: 'None',      cost: 0,   desc: 'No banner — the plain profile header.', gradient: 'transparent' },
-    aurora: { name: 'Aurora',    cost: 100, desc: 'A cool blue-to-gold wash behind your header.', gradient: 'linear-gradient(120deg, rgba(94,184,255,0.28), rgba(245,200,66,0.16))' },
-    ember:  { name: 'Ember',     cost: 100, desc: 'Warm orange-red, low and moody.', gradient: 'linear-gradient(120deg, rgba(232,118,63,0.30), rgba(226,75,74,0.16))' },
-    mono:   { name: 'Mono Fade', cost: 80,  desc: 'A quiet fade to nothing — subtle depth.', gradient: 'linear-gradient(120deg, rgba(255,255,255,0.10), transparent)' },
-    tape:   { name: 'Tape Loop', cost: 140, desc: 'Phosphor green bleeding into black.', gradient: 'linear-gradient(120deg, rgba(61,255,171,0.24), rgba(255,79,163,0.12))' },
-    dusk:   { name: 'Dusk',      cost: 140, desc: 'The last twenty minutes of light.', gradient: 'linear-gradient(120deg, rgba(120,90,190,0.28), rgba(255,150,90,0.14))' },
-    static: { name: 'Static',    cost: 180, desc: 'Snow on a dead channel.', gradient: 'repeating-linear-gradient(115deg, rgba(255,255,255,0.09) 0 2px, transparent 2px 5px)' },
+    aurora: { name: 'Aurora',    cost: 2000, desc: 'A cool blue-to-gold wash behind your header.', gradient: 'linear-gradient(120deg, rgba(94,184,255,0.28), rgba(245,200,66,0.16))' },
+    ember:  { name: 'Ember',     cost: 2000, desc: 'Warm orange-red, low and moody.', gradient: 'linear-gradient(120deg, rgba(232,118,63,0.30), rgba(226,75,74,0.16))' },
+    mono:   { name: 'Mono Fade', cost: 1600,  desc: 'A quiet fade to nothing — subtle depth.', gradient: 'linear-gradient(120deg, rgba(255,255,255,0.10), transparent)' },
+    tape:   { name: 'Tape Loop', cost: 2800, desc: 'Phosphor green bleeding into black.', gradient: 'linear-gradient(120deg, rgba(61,255,171,0.24), rgba(255,79,163,0.12))' },
+    dusk:   { name: 'Dusk',      cost: 2800, desc: 'The last twenty minutes of light.', gradient: 'linear-gradient(120deg, rgba(120,90,190,0.28), rgba(255,150,90,0.14))' },
+    static: { name: 'Static',    cost: 3600, desc: 'Snow on a dead channel.', gradient: 'repeating-linear-gradient(115deg, rgba(255,255,255,0.09) 0 2px, transparent 2px 5px)' },
   };
   // The real banner gradients above are deliberately subtle overlays meant to
   // sit on top of a full profile page. At 44px swatch-chip size with nothing
@@ -10041,27 +10051,27 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   const TAGS = {
     // The house's own. Cheapest in, so a new account can afford one the same
     // week — a cosmetic nobody can reach is a cosmetic nobody knows exists.
-    crate:      { name: 'STRAIGHT OUT THE CRATE', cost: 600,  desc: 'The house tag. Where everything here came from.' },
-    needle:     { name: 'DROP THE NEEDLE',        cost: 600,  desc: 'Less talking, more record.' },
-    noskips:    { name: 'NO SKIPS',               cost: 900,  desc: 'A claim you have to be able to back.' },
-    dollarbin:  { name: 'DOLLAR BIN DIGGER',      cost: 900,  desc: 'The good stuff is at the bottom.' },
-    promo:      { name: 'PROMO USE ONLY',         cost: 1500, desc: 'Stamped on a record that was never for sale.' },
-    asintended: { name: 'MONO. AS INTENDED.',     cost: 2000, desc: 'For people who will tell you about the mixdown.' },
-    firstpress: { name: 'FIRST PRESS',            cost: 2000, desc: 'Before anybody else was listening.' },
+    crate:      { name: 'STRAIGHT OUT THE CRATE', cost: 3000,  desc: 'The house tag. Where everything here came from.' },
+    needle:     { name: 'DROP THE NEEDLE',        cost: 3000,  desc: 'Less talking, more record.' },
+    noskips:    { name: 'NO SKIPS',               cost: 4500,  desc: 'A claim you have to be able to back.' },
+    dollarbin:  { name: 'DOLLAR BIN DIGGER',      cost: 4500,  desc: 'The good stuff is at the bottom.' },
+    promo:      { name: 'PROMO USE ONLY',         cost: 7500, desc: 'Stamped on a record that was never for sale.' },
+    asintended: { name: 'MONO. AS INTENDED.',     cost: 10000, desc: 'For people who will tell you about the mixdown.' },
+    firstpress: { name: 'FIRST PRESS',            cost: 10000, desc: 'Before anybody else was listening.' },
     // The real ones.
-    pluh:       { name: 'pluh',                   cost: 800,  desc: 'That is the whole tag.' },
-    lit:        { name: 'IT’S LIT',          cost: 800,  desc: 'Two words, whole era.' },
-    twentyone:  { name: '21',                     cost: 900,  desc: 'Nothing else needed.' },
-    mustard:    { name: 'MUSTARD ON THE BEAT',    cost: 1200, desc: 'You know exactly what is coming next.' },
-    pluto:      { name: 'PLUTO',                  cost: 1200, desc: 'Cold, far out, still orbiting.' },
-    sremm:      { name: 'SREMMLIFE!',             cost: 1400, desc: 'Shouted, never said.' },
-    maybach:    { name: 'M-M-M-MAYBACH MUSIC',    cost: 1600, desc: 'The stutter is the point.' },
-    biscuits:   { name: 'IT’S BISCUITS, IT’S GRAVY', cost: 1600, desc: 'A tag that describes breakfast and means business.' },
-    profit:     { name: 'I GOT TOO MUCH PROFIT',  cost: 1800, desc: 'Not a complaint.' },
-    carti:      { name: 'CASH CARTI B!TCH',       cost: 2000, desc: 'Arrives before the first bar does.' },
-    taykeith:   { name: 'TAY KEITH, FTNU',        cost: 2400, desc: 'Abbreviated, for the same reason radio does it.' },
-    pierre:     { name: 'YO PIERRE, YOU WANNA COME OUT HERE?', cost: 2800, desc: 'A question, permanently unanswered.' },
-    metro:      { name: 'IF YOUNG METRO DON’T TRUST YOU', cost: 3200, desc: 'The most expensive one, and it is not close.' },
+    pluh:       { name: 'pluh',                   cost: 4000,  desc: 'That is the whole tag.' },
+    lit:        { name: 'IT’S LIT',          cost: 4000,  desc: 'Two words, whole era.' },
+    twentyone:  { name: '21',                     cost: 4500,  desc: 'Nothing else needed.' },
+    mustard:    { name: 'MUSTARD ON THE BEAT',    cost: 6000, desc: 'You know exactly what is coming next.' },
+    pluto:      { name: 'PLUTO',                  cost: 6000, desc: 'Cold, far out, still orbiting.' },
+    sremm:      { name: 'SREMMLIFE!',             cost: 7000, desc: 'Shouted, never said.' },
+    maybach:    { name: 'M-M-M-MAYBACH MUSIC',    cost: 8000, desc: 'The stutter is the point.' },
+    biscuits:   { name: 'IT’S BISCUITS, IT’S GRAVY', cost: 8000, desc: 'A tag that describes breakfast and means business.' },
+    profit:     { name: 'I GOT TOO MUCH PROFIT',  cost: 9000, desc: 'Not a complaint.' },
+    carti:      { name: 'CASH CARTI B!TCH',       cost: 10000, desc: 'Arrives before the first bar does.' },
+    taykeith:   { name: 'TAY KEITH, FTNU',        cost: 12000, desc: 'Abbreviated, for the same reason radio does it.' },
+    pierre:     { name: 'YO PIERRE, YOU WANNA COME OUT HERE?', cost: 14000, desc: 'A question, permanently unanswered.' },
+    metro:      { name: 'IF YOUNG METRO DON’T TRUST YOU', cost: 16000, desc: 'The most expensive one, and it is not close.' },
   };
 
   /* ---- Name flair --------------------------------------------------------
@@ -10069,12 +10079,12 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      layout change, deliberately: a cosmetic that moves the profile header
      around is a cosmetic that breaks somebody else's page. */
   const FLAIRS = {
-    foil:     { name: 'Gold Foil',    cost: 900,  desc: 'Your name pressed into the sleeve.' },
-    chrome:   { name: 'Chrome',       cost: 900,  desc: 'Mirror-polished, like a 12″ label.' },
-    phosphor: { name: 'Phosphor',     cost: 1200, desc: 'Green-screen burn-in.' },
-    ember:    { name: 'Ember',        cost: 1200, desc: 'Warm, and it breathes.' },
-    bleed:    { name: 'Ink Bleed',    cost: 1600, desc: 'Red spreading through cheap paper.' },
-    holo:     { name: 'Holographic',  cost: 2400, desc: 'Never the same colour twice.' },
+    foil:     { name: 'Gold Foil',    cost: 4500,  desc: 'Your name pressed into the sleeve.' },
+    chrome:   { name: 'Chrome',       cost: 4500,  desc: 'Mirror-polished, like a 12″ label.' },
+    phosphor: { name: 'Phosphor',     cost: 6000, desc: 'Green-screen burn-in.' },
+    ember:    { name: 'Ember',        cost: 6000, desc: 'Warm, and it breathes.' },
+    bleed:    { name: 'Ink Bleed',    cost: 8000, desc: 'Red spreading through cheap paper.' },
+    holo:     { name: 'Holographic',  cost: 12000, desc: 'Never the same colour twice.' },
   };
   const FLAIR_SWATCH = {
     foil:     'linear-gradient(135deg,#8a6b1f,#F5C842 55%,#fff4cc)',
@@ -10087,11 +10097,11 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   /* ---- Avatar frames ----------------------------------------------------- */
   const FRAMES = {
-    sleeve:  { name: 'Card Sleeve', cost: 700,  desc: 'A square paper sleeve behind a round record.' },
-    groove:  { name: 'Groove',      cost: 900,  desc: 'Concentric rings, cut from the outside in.' },
-    gold:    { name: 'Gold Ring',   cost: 1200, desc: 'One solid band. Nothing clever.' },
-    splice:  { name: 'Splice',      cost: 1400, desc: 'Tape marked up for the edit.' },
-    spindle: { name: 'Spindle',     cost: 1600, desc: 'It turns, slowly, forever.' },
+    sleeve:  { name: 'Card Sleeve', cost: 3500,  desc: 'A square paper sleeve behind a round record.' },
+    groove:  { name: 'Groove',      cost: 4500,  desc: 'Concentric rings, cut from the outside in.' },
+    gold:    { name: 'Gold Ring',   cost: 6000, desc: 'One solid band. Nothing clever.' },
+    splice:  { name: 'Splice',      cost: 7000, desc: 'Tape marked up for the edit.' },
+    spindle: { name: 'Spindle',     cost: 8000, desc: 'It turns, slowly, forever.' },
   };
   const FRAME_SWATCH = {
     sleeve:  'linear-gradient(150deg,#3a3733,#1a1917)',
@@ -10102,24 +10112,24 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   };
 
   /* ---- Boosts ------------------------------------------------------------
-     The only repeatable things in the Shop, and the reason it has a floor.
+     The only repeatable thing in the Shop, and the reason it has a floor.
      Every cosmetic can be finished; an account that owns all of them has
      nowhere left to put Discs, and a currency with nowhere to go stops being a
-     currency. These can be bought again and again, so they never run out.
+     currency. This can be bought again and again, so it never runs out.
 
-     Both top up an entitlement that already exists rather than inventing a new
-     one, which is what keeps them safe: wallet_buy adds to `streak_freezes` or
-     `banner_picks`, both of which are pinned against client writes and already
-     spent through paths the server owns. Nothing here raises a daily cap —
-     caps are the anti-forgery defence for the minigames, not a balance lever,
-     and selling a way around one would sell a way to forge awards. */
+     It tops up an entitlement that already exists rather than inventing a new
+     one, which is what keeps it safe: wallet_buy adds to `streak_freezes`,
+     which is pinned against client writes and spent through a path the server
+     owns. Nothing here raises a daily cap — caps are the anti-forgery defence
+     for the minigames, not a balance lever, and selling a way around one would
+     sell a way to forge awards.
+
+     Album Banner Pick used to sit beside it. It went with the banner itself. */
   const BOOSTS = {
-    freeze:     { name: 'Streak Freeze',     cost: 1200, desc: 'Covers one missed day of your rating streak. Stacks — buy as many as you like.' },
-    bannerpick: { name: 'Album Banner Pick', cost: 3000, desc: 'One album banner claim now, instead of waiting out seven days.' },
+    freeze: { name: 'Streak Freeze', cost: 6000, desc: 'Covers one missed day of your rating streak. Stacks — buy as many as you like.' },
   };
   const BOOST_SWATCH = {
-    freeze:     'linear-gradient(135deg,#0b1d2a,#5eb8ff)',
-    bannerpick: 'linear-gradient(135deg,#F5C842,#ff7a4d)',
+    freeze: 'linear-gradient(135deg,#0b1d2a,#5eb8ff)',
   };
 
   const STREAK_MILESTONES = [7, 30, 100, 365];
@@ -10133,7 +10143,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     owned_tags: [], active_tag: null,
     owned_flairs: [], active_flair: null,
     owned_frames: [], active_frame: null,
-    login_streak: 0, login_best: 0, banner_picks: 0, album_picks: 0,
+    login_streak: 0, login_best: 0, album_picks: 0,
     lifetime_xp: 0, level: 1,
   };
 
@@ -10305,7 +10315,6 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
           active_frame: prof.active_frame || null,
           login_streak: prof.login_streak || 0,
           login_best: prof.login_best || 0,
-          banner_picks: prof.banner_picks || 0,
           album_picks: prof.album_picks || 0,
           lifetime_xp: prof.lifetime_xp || 0,
           level: prof.level || 1,
@@ -10337,7 +10346,6 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (w.owned_frames) state.owned_frames = w.owned_frames;
     if (w.login_streak != null) state.login_streak = w.login_streak;
     if (w.login_best != null) state.login_best = w.login_best;
-    if (w.banner_picks != null) state.banner_picks = w.banner_picks;
     if (w.album_picks != null) state.album_picks = w.album_picks;
     if (w.lifetime_xp != null) state.lifetime_xp = w.lifetime_xp;
     /* Every award path funnels through here, so this is the one place a level
@@ -10450,13 +10458,17 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (w.claimed_already) return w;
 
     if (w.earned > 0) {
-      toast('+' + w.earned + ' Discs — day ' + w.login_streak);
+      toast('+' + (w.earned || 0).toLocaleString('en-GB') + ' Discs — day ' + w.login_streak);
       spawnDiscParticle(w.earned);
       if (window.buzz) buzz('good');
     }
-    if (w.banner_pick && typeof window.celebrate === 'function') {
+    /* Day seven pays no Discs at all, so without this the biggest day on the
+       ladder is the only one that says nothing when you take it. It lives here
+       rather than at the two call sites so the claim celebrates identically
+       from the Rewards ladder and from the Home card. */
+    if (w.album_pick && typeof window.celebrate === 'function') {
       window.celebrate('Seven days straight',
-        'Pick any album and its cover becomes your profile banner.');
+        'A record of your choice, free — take any album in the Market.');
       if (window.buzz) buzz('big');
     }
     return w;
@@ -10491,21 +10503,6 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
     const res = await rpc('wallet_state');
     if (!res.error && res.data) applyWallet(res.data);
-  }
-
-  /* Spend one seven-day entitlement on an album cover as a banner. The URL is
-     re-checked server-side against Spotify's image CDN — without that this is
-     an arbitrary image embed on a public profile, which is a moderation
-     problem and a tracking-pixel problem at once. */
-  async function claimAlbumBanner(art, label) {
-    const res = await rpc('wallet_claim_album_banner', { p_art: art, p_label: label || null });
-    if (res.error) return { error: res.error };
-    applyWallet(res.data);
-    if (window.burst) burst(document.body, { count: 20, spread: 140 });
-    if (window.buzz) buzz('big');
-    toast('Banner set — ' + (label || 'your album'));
-    if (typeof window.renderProfile === 'function') window.renderProfile();
-    return { ok: true, data: res.data };
   }
 
   /* One spin of The Draw. The server charges, picks, grants and returns —
@@ -10566,10 +10563,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   /* Tags, flair and frames are three copies of the same shape, so they share
      one pair of functions rather than six near-identical ones. Themes and
-     banners keep their own because a theme also repaints the app and a banner
-     has the `album:` special case — generalising those would have meant
-     branching inside the generic version, which is the same code with more
-     steps.
+     banners keep their own because a theme also repaints the app — generalising
+     that would have meant branching inside the generic version, which is the
+     same code with more steps.
 
      'none' is a real choice for all three: equipping nothing has to be
      reachable, or the first tag you buy is permanent. */
@@ -10601,13 +10597,12 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   /* Boosts own nothing, so there is no equip half and no ownership check —
      buying one is the whole interaction. The server folds it straight into
-     streak_freezes or banner_picks. */
+     the thing it tops up. */
   async function buyBoost(key) {
     if (!BOOSTS[key]) return { error: 'Unknown boost' };
     const res = await rpc('wallet_buy', { p_kind: 'boost', p_key: key });
     if (res.error) return { error: res.error };
     applyWallet(res.data);
-    if (typeof window.renderBannerPick === 'function') window.renderBannerPick();
     return { ok: true };
   }
 
@@ -10623,7 +10618,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     },
     load: load, get: get, recordRating: recordRating,
     awardGame: awardGame, syncAward: syncAward, awardDiscs: awardDiscs,
-    dailyLogin: dailyLogin, claimAlbumBanner: claimAlbumBanner, spin: spin,
+    dailyLogin: dailyLogin, spin: spin,
     levelInfo: levelInfo,
     buyTheme: buyTheme, equipTheme: equipTheme, buyBanner: buyBanner, equipBanner: equipBanner,
     buyCosmetic: buyCosmetic, equipCosmetic: equipCosmetic, buyBoost: buyBoost,
@@ -10650,7 +10645,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       '<div class="shop-item-info">' +
         '<div class="shop-item-name">' + item.name + (active ? ' ✓' : '') + '</div>' +
         '<div class="shop-item-desc">' + item.desc + '</div>' +
-        '<div class="shop-item-cost">' + (get().is_admin ? 'Free (Admin)' : (item.cost === 0 ? 'Free' : item.cost + ' Discs')) + '</div>' +
+        '<div class="shop-item-cost">' + (get().is_admin ? 'Free (Admin)' : (item.cost === 0 ? 'Free' : item.cost.toLocaleString('en-GB') + ' Discs')) + '</div>' +
       '</div>' + action + '</div>';
   }
 
@@ -10678,18 +10673,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       return shopItemRow('banner', key, BANNERS[key], BANNER_SWATCH[key], owned, active);
     }).join('');
 
-    /* Album banners earned with a seven-day streak are keyed `album:<url>`,
-       so they are not in BANNERS and would otherwise vanish from the shop the
-       moment you equipped something else — owned but unreachable. Listed here
-       from owned_banners instead, with the cover itself as the swatch. */
-    const albumRows = (w.owned_banners || []).filter(function (k) {
-      return String(k).indexOf('album:') === 0;
-    }).map(function (key) {
-      const url = key.slice(6);
-      const def = { name: 'Album banner', cost: 0, desc: 'Earned with a seven-day streak.' };
-      return shopItemRow('banner', key, def, 'url(\'' + url + '\') center/cover', true,
-                         (w.active_banner || '') === key);
-    }).join('');
+    /* The "Your albums" section that listed `album:<url>` banners is gone with
+       the album banner itself — day seven pays a record for the Collection
+       now. The migration strips those keys from owned_banners, so there is
+       nothing left for it to list. */
 
     /* The three account cosmetics. One renderer for all of them, because they
        differ only in which array holds ownership and what the swatch looks
@@ -10722,7 +10709,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        time, and how many you already hold is on the row — an item you can buy
        again needs to tell you where the last one went. */
     const boostRows = Object.keys(BOOSTS).map(function (key) {
-      const held = key === 'freeze' ? (w.streak_freezes || 0) : (w.banner_picks || 0);
+      const held = w.streak_freezes || 0;
       const def = {
         name: BOOSTS[key].name, cost: BOOSTS[key].cost,
         desc: BOOSTS[key].desc + (held ? ' <b>You hold ' + held + '.</b>' : ''),
@@ -10745,18 +10732,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         '<summary><span class="shop-section-title">' + title + '</span>' +
         '<span class="ss-n">' + count + '</span></summary>' + rows + '</details>';
     }
-    const albumCount = (w.owned_banners || []).filter(function (k) {
-      return String(k).indexOf('album:') === 0;
-    }).length;
-
     list.innerHTML =
       sec('Producer tags', tagRows, Object.keys(TAGS).length, true) +
       sec('Name flair', flairRows, Object.keys(FLAIRS).length) +
       sec('Avatar frames', frameRows, Object.keys(FRAMES).length) +
       sec('Boosts', boostRows, Object.keys(BOOSTS).length) +
       sec('Themes', themeRows, Object.keys(THEMES).length) +
-      sec('Profile banners', bannerRows, Object.keys(BANNERS).length) +
-      (albumRows ? sec('Your albums', albumRows, albumCount) : '');
+      sec('Profile banners', bannerRows, Object.keys(BANNERS).length);
 
     // Tags, flair and frames share one pair of handlers, keyed off the kind in
     // the attribute name — six near-identical blocks was the alternative.
@@ -13652,18 +13634,20 @@ window.renderAdminStats = renderAdminStats;
 
     var last = st.login_last_date ? String(st.login_last_date).slice(0, 10) : null;
     var unclaimed = last !== new Date().toISOString().slice(0, 10);
-    var picks = st.banner_picks || 0;
+    var picks = st.album_picks || 0;
     if (!unclaimed && !picks) return;
 
     var streak = st.login_streak || 0;
+    // Same position formula as v_pos in wallet_daily_login() and the ladder.
     var day = unclaimed ? ((streak % 7) + 1) : 0;
+    var LADDER = [1000, 2000, 4000, 8000, 16000, 32000, 0];
 
     host.innerHTML = '<div class="home-claim">' +
       '<div class="hc-copy">' +
       (unclaimed
-        ? (day === 7 ? '<b>Day 7</b> — an album banner is waiting.'
-                     : '<b>Day ' + day + '</b> of your run is waiting.')
-        : '<b>' + picks + ' album banner' + (picks === 1 ? '' : 's') + '</b> to claim.') +
+        ? (day === 7 ? '<b>Day 7</b> — a record of your choice is waiting.'
+                     : '<b>Day ' + day + '</b> — ' + LADDER[day - 1].toLocaleString('en-GB') + ' Discs.')
+        : '<b>' + picks + ' free record' + (picks === 1 ? '' : 's') + '</b> to claim.') +
       '</div>' +
       '<button class="btn-primary rw-claim-btn" id="hc-go">' +
       (unclaimed ? 'Claim' : 'Pick it') + '</button></div>';
@@ -13677,10 +13661,8 @@ window.renderAdminStats = renderAdminStats;
         await Wallet.dailyLogin();
         renderHomeClaim();
         if (window.markRewardsDot) markRewardsDot();
-      } else {
-        goToView('profile');
-        if (window.renderProfile) renderProfile();
-        if (window.renderBannerPick) renderBannerPick();
+      } else if (window.openCollectionMarket) {
+        openCollectionMarket();
       }
     });
   }
@@ -13900,7 +13882,7 @@ window.renderAdminStats = renderAdminStats;
        * Selling refunds 70%. Churning has to cost something, or a net worth
          only measures how many times somebody has been round the loop.
 
-     Prices are streams ÷ 5,000,000, so the spread is roughly a hundred to one
+     Prices are streams ÷ 250,000, so the spread is roughly a hundred to one
      across the crate. That is deliberate: an obscure record affordable in one
      session and a famous one that takes a fortnight is what gives a shelf a
      shape to fill.
@@ -14291,6 +14273,14 @@ window.renderAdminStats = renderAdminStats;
     if (window.goToView) goToView('collection');
     render();
   };
+  /* Where a free record gets spent. Day seven and both Draw pick prizes hand
+     over an album_pick and then have to point somewhere — an entitlement whose
+     destination you have to go looking for is an entitlement nobody spends. */
+  window.openCollectionMarket = function () {
+    tab = 'market';
+    if (window.goToView) goToView('collection');
+    render();
+  };
   window.renderCollection = render;
 })();
 </script>
@@ -14325,15 +14315,14 @@ window.renderAdminStats = renderAdminStats;
   var section = document.getElementById('col-draw');
   if (!section) return;
 
-  /* 2,000, up from 1,000, because the prize pool doubled in value when Mythic
-     arrived. The pool's expected return is ~1,788 Discs a spin even for
-     somebody who owns every cosmetic and therefore converts every duplicate
-     back to Discs, so the Draw stays a net sink — which is the only reason the
-     inflation in the earning rates is safe. Change one and you must change the
-     other; the sum is written out in ..._20260913180000_mythic_tags_and_shop.
-     This mirrors v_cost in wallet_spin() and is display only — the server is
-     what charges. */
-  var COST = 2000;
+  /* The pool's expected return is ~887 Discs a spin even for somebody who owns
+     every drawable cosmetic and therefore converts every duplicate back to
+     Discs, against this 1,000 cost — so the Draw stays a net sink, which is the
+     only reason the earning rates can be as inflated as they are. Change one
+     and you must change the other; the sum is written out in full at the top of
+     ..._20260913220000_doubling_login_and_inflation.sql. This mirrors v_cost in
+     wallet_spin() and is display only — the server is what charges. */
+  var COST = 1000;
   var TILE = 130;        // 120px wide + 2×5px margin, must match the CSS
   var STRIP_LEN = 70;
   var WIN_INDEX = 62;    // far enough in that it reads as a real run
@@ -14362,7 +14351,6 @@ window.renderAdminStats = renderAdminStats;
     if (it.kind === 'banner' && w && w.BANNER_SWATCH && w.BANNER_SWATCH[it.ref]) return w.BANNER_SWATCH[it.ref];
     if (it.kind === 'frame' && w && w.FRAME_SWATCH && w.FRAME_SWATCH[it.ref]) return w.FRAME_SWATCH[it.ref];
     if (it.kind === 'flair' && w && w.FLAIR_SWATCH && w.FLAIR_SWATCH[it.ref]) return w.FLAIR_SWATCH[it.ref];
-    if (it.kind === 'banner_pick') return 'linear-gradient(135deg, var(--gold), var(--accent-2))';
     // The two Mythic non-Disc prizes have no single ref to draw a swatch from —
     // a producer tag is whichever one you do not own yet, and album picks are
     // records you have not chosen. Both get the prism instead.
@@ -14396,7 +14384,7 @@ window.renderAdminStats = renderAdminStats;
   /* Every rarity goes past, every spin.
 
      Left to pure weighting the strip is mostly Common — a Mythic is a 1-in-10
-     tile and its best prize is 1-in-167, so most spins would show little worth
+     tile and its best prize is 1-in-333, so most spins would show little worth
      reacting to on the way down. Seeding one of each tier at fixed positions
      means you always see the full ladder go by, and clustering the rare ones
      toward the end means the run gets visibly more valuable as it slows.
@@ -14451,7 +14439,7 @@ window.renderAdminStats = renderAdminStats;
     if (!st) return;
     el('draw-balance').textContent = st.is_admin
       ? 'Admin — free spins'
-      : (st.discs || 0) + ' Discs';
+      : (st.discs || 0).toLocaleString('en-GB') + ' Discs';
     el('draw-go').disabled = !st.is_admin && (st.discs || 0) < COST;
   }
 
@@ -14555,14 +14543,14 @@ window.renderAdminStats = renderAdminStats;
         '<div class="dr-sub">' + esc(
           won.kind === 'discs' ? '+' + (Number(won.gained) || 0).toLocaleString() + ' Discs'
           : won.duplicate ? 'Already yours — ' + (Number(won.gained) || 0).toLocaleString() + ' Discs instead'
-          : won.kind === 'banner_pick' ? 'Pick any album as your banner, on your profile'
-          : won.kind === 'picks' ? 'Three records of your choice, free. Claim them in the Market.'
+          : won.kind === 'picks'
+            ? (won.picks === 1 ? 'One record of your choice, free. Claim it in the Market.'
+                               : won.picks + ' records of your choice, free. Claim them in the Market.')
           : won.kind === 'tag' ? 'A producer tag — wear it under your name in the Shop'
           : 'Unlocked — equip it in the Shop') + '</div>';
 
       applyFeedback(won);
       paintBalance();
-      if (typeof window.renderBannerPick === 'function') window.renderBannerPick();
       /* Deliberately NOT calling renderCollection() here, even though winning
          album picks changes what the Market offers. The Draw is a pane inside
          Collection, so that call re-enters render(), hits the `tab === 'draw'`
@@ -14574,7 +14562,7 @@ window.renderAdminStats = renderAdminStats;
 
   /* The payoff scales with the tier, so a Mythic does not land with the same
      weight as 400 Discs. The gap between Legendary and Mythic is deliberately
-     wide — a 1-in-10 tier carrying a 1-in-167 jackpot has to feel unmistakably
+     wide — a 1-in-10 tier carrying a 1-in-333 jackpot has to feel unmistakably
      different from the tier below it, or the top of the ladder is just a
      slightly better middle. Everything here degrades to nothing under
      prefers-reduced-motion. */
@@ -14586,7 +14574,7 @@ window.renderAdminStats = renderAdminStats;
       if (window.buzz) buzz('big');
       if (typeof window.celebrate === 'function') {
         window.celebrate('✦ MYTHIC — ' + name,
-          won.kind === 'picks' ? 'Three records of your choice, free. Go and take them.'
+          won.kind === 'picks' ? won.picks + ' records of your choice, free. Go and take them.'
           : won.kind === 'tag' ? 'A producer tag. Wear it under your name.'
           : won.duplicate ? 'You had every tag already, so it paid out instead.'
           : 'The top of the ladder.');
@@ -14595,8 +14583,8 @@ window.renderAdminStats = renderAdminStats;
       if (window.burst) burst(wnd, { count: 42, spread: 220 });
       if (window.buzz) buzz('big');
       if (typeof window.celebrate === 'function') {
-        window.celebrate('Legendary — ' + name, won.kind === 'banner_pick'
-          ? 'Pick any album as your banner.'
+        window.celebrate('Legendary — ' + name, won.kind === 'picks'
+          ? 'A record of your choice, free. Take it in the Market.'
           : 'One spin in seven lands here.');
       }
     } else if (won.tier === 'epic') {
@@ -14632,15 +14620,15 @@ window.renderAdminStats = renderAdminStats;
      ================================================================ -->
 <script>
 (function () {
-  // Mirrors wallet_daily_login(): 25 + 12 per day, capped at 100. If that
-  // formula changes in SQL it has to change here too — this is display only,
-  // the server is what actually pays.
-  /* Mirrors wallet_daily_login(): 100 + 50 per day, capped at 400. Display
-     only — the server is what pays. This drifted once already when the rates
-     were inflated and the mirror was not, so the two formulas are written the
-     same way on purpose, to make a mismatch obvious on sight. */
-  var LOGIN_BASE = 100, LOGIN_STEP = 50, LOGIN_CAP = 400;
-  function payFor(day) { return Math.min(LOGIN_BASE + (day - 1) * LOGIN_STEP, LOGIN_CAP); }
+  /* Mirrors the `v_ladder` array in wallet_daily_login(). Display only — the
+     server is what pays — but the two drifted once already and nothing said
+     so, which is why both are now written as the same seven literals rather
+     than as a formula each side has to agree about.
+
+     Day seven pays no Discs. The record is the reward. */
+  var LADDER = [1000, 2000, 4000, 8000, 16000, 32000, 0];
+  function payFor(day) { return LADDER[day - 1]; }
+  function n(v) { return (Number(v) || 0).toLocaleString('en-GB'); }
 
   async function renderRewards() {
     var host = document.getElementById('rewards-body');
@@ -14661,71 +14649,60 @@ window.renderAdminStats = renderAdminStats;
     if (!st) return;
 
     var streak = st.login_streak || 0;
-    // Position in the current week of seven. Day 7 shows as 7, not 0.
+    /* Position in the current week of seven, matching `v_pos` in
+       wallet_daily_login(). Day 7 shows as 7, not 0. */
     var inWeek = streak % 7 === 0 && streak > 0 ? 7 : streak % 7;
     if (head) head.textContent = streak ? streak + ' day' + (streak === 1 ? '' : 's') + ' running' : '';
 
+    /* UTC, because wallet_daily_login() rolls the day in UTC. Comparing against
+       a local date would hand somebody a second claim, or withhold one for
+       hours, depending on which side of midnight their timezone sits. */
+    var lastUtc = st.login_last_date ? String(st.login_last_date).slice(0, 10) : null;
+    var claimedToday = lastUtc === new Date().toISOString().slice(0, 10);
+    // The one day you can take right now. Null when today is already claimed.
+    var liveDay = claimedToday ? null : (inWeek % 7) + 1;
+
+    /* The ladder is the claim. There used to be a bar above it saying "Day 4 is
+       waiting" with a Claim button, which was the same information twice and
+       put the button somewhere other than the thing it acted on — you read the
+       day off the ladder and then pressed something else. The live day is now
+       a button, it glows, and pressing it is how the day gets taken. */
     var days = '';
     for (var d = 1; d <= 7; d++) {
       var done = d <= inWeek;
-      var today = d === inWeek;
-      days += '<div class="rw-day' + (done ? ' done' : '') + (today ? ' today' : '') + (d === 7 ? ' grand' : '') + '">' +
+      var live = d === liveDay;
+      days += '<' + (live ? 'button type="button"' : 'div') +
+        ' class="rw-day' + (done ? ' done' : '') + (live ? ' live' : '') + (d === 7 ? ' grand' : '') + '"' +
+        (live ? ' data-claim-day="' + d + '"' : '') + '>' +
         '<div class="rw-d">Day ' + d + '</div>' +
         (d === 7
-          ? '<div class="rw-prize">' + ICONS.disc + '</div><div class="rw-amt">Album<br>banner</div>'
-          : '<div class="rw-amt">' + payFor(d) + '</div><div class="rw-unit">Discs</div>') +
+          ? '<div class="rw-prize">' + ICONS.disc + '</div><div class="rw-amt">Album<br>of your choice</div>'
+          : '<div class="rw-amt">' + n(payFor(d)) + '</div><div class="rw-unit">Discs</div>') +
         (done ? '<div class="rw-tick">✓</div>' : '') +
-      '</div>';
+        (live ? '<div class="rw-take">Claim</div>' : '') +
+      '</' + (live ? 'button' : 'div') + '>';
     }
 
-    /* The claim. It used to fire on load, which meant the Discs were already
-       in your balance before you looked — the single most rewarding second in
-       the app happened off screen. Now you press it.
-
-       `claimed` is inferred from the stored login date rather than asked for,
-       so the page paints immediately instead of waiting on a round trip. The
-       server is still the authority: press it twice and the second returns
-       claimed_already and changes nothing. */
-    // UTC, because wallet_daily_login() rolls the day in UTC. Comparing
-    // against a local date would hand somebody a second claim, or withhold one
-    // for hours, depending on which side of midnight their timezone sits.
-    var lastUtc = st.login_last_date ? String(st.login_last_date).slice(0, 10) : null;
-    var claimedToday = lastUtc === new Date().toISOString().slice(0, 10);
-    var nextDay = claimedToday ? inWeek : (inWeek % 7) + 1;
-    var nextPay = nextDay === 7 ? null : payFor(nextDay);
-
     host.innerHTML =
-      '<div class="rw-claim-box' + (claimedToday ? ' done' : '') + '">' +
+      '<p class="reco-note">' +
         (claimedToday
-          ? '<div class="rw-claim-done">✓ Day ' + inWeek + ' claimed. Come back tomorrow.</div>'
-          : '<div class="rw-claim-copy"><b>Day ' + nextDay + ' is waiting</b>' +
-            (nextDay === 7 ? ' — the album banner.' : ' — ' + nextPay + ' Discs.') + '</div>' +
-            '<button class="btn-primary rw-claim-btn" id="rw-claim-day">Claim</button>') +
-      '</div>' +
-      '<p class="reco-note">Open VINALL and claim the day. Miss a day and it starts again ' +
-      'from the beginning — seven in a row is the whole point.</p>' +
+          ? 'Day ' + inWeek + ' claimed. Come back tomorrow — each day doubles the last.'
+          : 'Tap day ' + liveDay + ' to take it. Each day doubles the last, and day seven is a record of your choice.') +
+        ' Miss a day and it starts again from the beginning.' +
+      '</p>' +
       '<div class="rw-ladder">' + days + '</div>' +
-      '<div class="rw-grand">' +
-        '<h3>The album banner</h3>' +
-        '<p class="reco-note">Seven days running and you pick any record from your crate. ' +
-        'Its cover becomes your profile header, and it is yours to keep — every one is ' +
-        'different, so it is the one reward that never runs out.' +
-        (st.banner_picks > 0
-          ? ' <b>You have ' + st.banner_picks + ' to claim right now.</b>'
-          : '') + '</p>' +
-        (st.banner_picks > 0
-          ? '<button class="btn-primary" id="rw-claim">Pick your album</button>'
-          : '<p class="reco-note" style="opacity:.7;">' +
-            (inWeek ? (7 - inWeek) + ' more day' + (7 - inWeek === 1 ? '' : 's') + ' to go.'
-                    : 'Come back tomorrow to start the run.') + '</p>') +
-      '</div>' +
+      (st.album_picks > 0
+        ? '<div class="rw-picks"><b>' + st.album_picks + ' free record' + (st.album_picks === 1 ? '' : 's') +
+          '</b> waiting — take any album in the Market, whatever it costs. ' +
+          '<button class="btn-mini" id="rw-go-picks">Go and pick</button></div>'
+        : '') +
       '<div class="rw-other">' +
         '<div class="rw-card" id="rw-draw"><h3>The Draw</h3>' +
-          '<p>2,000 Discs a spin. Mythic pays 100,000 Discs, three records of your choice, or a producer tag.</p>' +
+          '<p>1,000 Discs a spin. Mythic pays 100,000 Discs, three records of your choice, or a producer tag.</p>' +
           '<div class="gc-go">Open one &rarr;</div></div>' +
         '<div class="rw-card" id="rw-shop"><h3>The Shop</h3>' +
           '<p>Producer tags, name flair, avatar frames, themes, banners and boosts. You hold ' +
-          (st.is_admin ? '∞' : (st.discs || 0)) + ' Discs.</p>' +
+          (st.is_admin ? '∞' : n(st.discs)) + ' Discs.</p>' +
           '<div class="gc-go">Browse &rarr;</div></div>' +
       '</div>' +
       '<div class="rw-rates">' +
@@ -14734,38 +14711,40 @@ window.renderAdminStats = renderAdminStats;
           // These mirror wallet_award_game / wallet_record_rating /
           // award_lore_disc. They went stale once when the rates were inflated
           // and this table was not — if you change a rate in SQL, change it here.
-          '<tr><td>Rating an album or song</td><td>32 &times; 10 a day</td></tr>' +
-          '<tr><td>Answering a question on Today</td><td>20 &times; 20 a day</td></tr>' +
-          '<tr><td>Solving the Daily Drop</td><td>300</td></tr>' +
-          '<tr><td>Solving Earworm</td><td>200 &times; 3 a day</td></tr>' +
-          '<tr><td>A run of 5+ on Higher or Lower</td><td>160 &times; 3 a day</td></tr>' +
-          '<tr><td>Winning a Tournament</td><td>160 &times; 2 a day</td></tr>' +
-          '<tr><td>Claiming an achievement</td><td>160 &times; 5 a day</td></tr>' +
-          '<tr><td>Logging in</td><td>100 rising to 400 by day seven</td></tr>' +
+          '<tr><td>Logging in</td><td>1,000 doubling to 32,000, then a record</td></tr>' +
+          '<tr><td>Rating an album or song</td><td>160 &times; 10 a day</td></tr>' +
+          '<tr><td>Answering a question on Today</td><td>100 &times; 20 a day</td></tr>' +
+          '<tr><td>Solving the Daily Drop</td><td>1,500</td></tr>' +
+          '<tr><td>Solving Earworm</td><td>1,000 &times; 3 a day</td></tr>' +
+          '<tr><td>A run of 5+ on Higher or Lower</td><td>800 &times; 3 a day</td></tr>' +
+          '<tr><td>Winning a Tournament</td><td>800 &times; 2 a day</td></tr>' +
+          '<tr><td>Claiming an achievement</td><td>800 &times; 5 a day</td></tr>' +
           '<tr><td>Winning a Bid War</td><td>30 &mdash; 8 for losing, 15 each for a draw</td></tr>' +
         '</table>' +
       '</div>';
 
-    var claimDay = document.getElementById('rw-claim-day');
-    if (claimDay) claimDay.addEventListener('click', async function () {
-      claimDay.disabled = true;
-      claimDay.textContent = '…';
-      if (window.ripple) ripple(claimDay);
+    /* Claiming from the tile. It stays pressed and says so rather than
+       disappearing, because the tile is also the thing that tells you what you
+       just got — swapping it out at the moment of the reward would take the
+       number away as it arrived. */
+    var dayBtn = host.querySelector('[data-claim-day]');
+    if (dayBtn) dayBtn.addEventListener('click', async function () {
+      dayBtn.disabled = true;
+      dayBtn.classList.add('taking');
+      if (window.ripple) ripple(dayBtn);
       var w = await Wallet.dailyLogin();
-      if (!w) { claimDay.disabled = false; claimDay.textContent = 'Claim'; return; }
+      if (!w) { dayBtn.disabled = false; dayBtn.classList.remove('taking'); return; }
+      if (window.burst) burst(dayBtn, { count: w.album_pick ? 50 : 20, spread: w.album_pick ? 240 : 130 });
+      if (window.buzz) buzz(w.album_pick ? 'big' : 'good');
       renderRewards();
       if (window.markRewardsDot) markRewardsDot();
+      // Day seven's celebrate() lives inside Wallet.dailyLogin(), so the claim
+      // reads the same from here and from the Home card.
     });
 
-    var claim = document.getElementById('rw-claim');
-    if (claim) claim.addEventListener('click', function () {
-      goToView('profile');
-      if (window.renderProfile) renderProfile();
-      if (window.renderBannerPick) renderBannerPick();
-      setTimeout(function () {
-        var el = document.getElementById('banner-pick');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 180);
+    var gp = document.getElementById('rw-go-picks');
+    if (gp) gp.addEventListener('click', function () {
+      if (window.openCollectionMarket) openCollectionMarket();
     });
     var dr = document.getElementById('rw-draw');
     if (dr) dr.addEventListener('click', function () { if (window.openDraw) openDraw(); });
@@ -14785,7 +14764,7 @@ window.renderAdminStats = renderAdminStats;
     var on = false;
     if (st && window.Cloud && Cloud.isOn && Cloud.isOn()) {
       var last = st.login_last_date ? String(st.login_last_date).slice(0, 10) : null;
-      on = last !== new Date().toISOString().slice(0, 10) || (st.banner_picks || 0) > 0;
+      on = last !== new Date().toISOString().slice(0, 10) || (st.album_picks || 0) > 0;
     }
     btn.classList.toggle('has-dot', !!on);
   }
@@ -14795,76 +14774,20 @@ window.renderAdminStats = renderAdminStats;
 </script>
 
 <!-- ================================================================
-     ALBUM BANNER — the seven-day login reward
-     ================================================================
-     Seven consecutive days of opening VINALL earns one album banner: pick a
-     record and its cover becomes your profile header.
+     The album banner is gone — see ..._20260913220000_doubling_login…
 
-     The pick comes from your own crate rather than a Spotify search, for three
-     reasons. It is instant with no network. Every cover in there is already an
-     i.scdn.co URL, which is exactly what the server will accept. And "an album
-     of your choice" means more when the choice is made from records you
-     actually put there.
+     Day seven used to pay a banner: pick a record, its cover becomes your
+     profile header. It now pays the record itself, one `album_picks`, so the
+     banner had no way in left and the picker, the `album:<url>` banner keys,
+     `wallet_claim_album_banner` and the Album Banner Pick boost all went with
+     it.
 
-     This is also the sink that makes the inflation safe: every claim is a
-     different object, so unlike five themes and six banners it cannot be
-     finished.
+     CLAUDE.md called that banner "the sink that makes the inflation safe",
+     because every claim was a different object and so could never be finished.
+     That argument still holds — it moved. Album picks feed the Collection,
+     which is priced off stream counts and is equally bottomless. If the
+     Collection ever goes, the inflation loses its floor.
      ================================================================ -->
-<script>
-(function () {
-  function W() { return window.Wallet; }
-
-  async function renderBannerPick() {
-    var host = document.getElementById('banner-pick');
-    if (!host) return;
-    host.innerHTML = '';
-    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn() || !W()) return;
-
-    // Same guard every section inside view-profile needs: this view is also
-    // how you look at somebody else's profile.
-    var viewing = new URLSearchParams(location.search).get('u');
-    if (viewing && viewing !== Cloud.getUser().id) return;
-
-    var st = W().get ? W().get() : null;
-    if (!st || !(st.banner_picks > 0)) return;
-
-    var al = {};
-    try { al = window.loadAlbums ? loadAlbums() : {}; } catch (e) {}
-    var picks = Object.keys(al).map(function (k) { return al[k]; })
-      .filter(function (a) { return a && a.art && /^https:\/\/i\.scdn\.co\/image\//.test(a.art); })
-      .sort(function (a, b) { return (b.score || 0) - (a.score || 0); })
-      .slice(0, 24);
-
-    host.innerHTML =
-      '<div class="section-head" style="margin-top:34px;"><h2>Your album banner</h2>' +
-      '<span class="muted">' + st.banner_picks + ' to claim</span></div>' +
-      (picks.length
-        ? '<p class="reco-note">Seven days straight. Pick a record — its cover becomes your profile header, and it is yours to keep.</p>' +
-          '<div class="bp-grid">' + picks.map(function (a) {
-            return '<button class="bp-item" type="button" data-art="' + esc(a.art) + '" data-nm="' + esc(a.name) + '">' +
-              '<img src="' + esc(a.art) + '" alt="" loading="lazy">' +
-              '<span>' + esc(a.name) + '</span></button>';
-          }).join('') + '</div>'
-        : '<p class="reco-note">Rate an album and you can turn its cover into your banner.</p>');
-
-    host.querySelectorAll('.bp-item').forEach(function (b) {
-      b.addEventListener('click', async function () {
-        host.querySelectorAll('.bp-item').forEach(function (x) { x.disabled = true; });
-        b.classList.add('picked');
-        var r = await W().claimAlbumBanner(b.dataset.art, b.dataset.nm);
-        if (r && r.error) {
-          host.querySelectorAll('.bp-item').forEach(function (x) { x.disabled = false; });
-          b.classList.remove('picked');
-          if (window.reportIssue) reportIssue('claimAlbumBanner failed', { error: r.error });
-          return;
-        }
-        renderBannerPick();
-      });
-    });
-  }
-  window.renderBannerPick = renderBannerPick;
-})();
-</script>
 
 <!-- ================================================================
      HIGHER OR LOWER
