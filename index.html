@@ -10186,7 +10186,14 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
      `sweep` slides the gradient through the text, `pulse` breathes the glow,
      `flicker` is a bad neon sign. All three stop dead under
-     prefers-reduced-motion, leaving the colours. */
+     prefers-reduced-motion, leaving the colours.
+
+     **Both colours have to be bright.** The chip sits on a near-black ground
+     and the text is a gradient between the two, so a dark second colour makes
+     the *end of the word* unreadable rather than making the chip darker —
+     CASH CARTI B!TCH shipped with black as `b` and the "B!TCH" disappeared.
+     Anything below about #999 fails. Contrast is a per-letter problem here,
+     not a per-element one, which is why eyeballing the swatch is not enough. */
   const TAG_STYLE = {
     pluh:       { a: '#8b5cf6', b: '#22d3ee', m: 'sweep'   },
     lit:        { a: '#ff7a1a', b: '#ffd24a', m: 'flicker' },
@@ -10195,15 +10202,15 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     beef:       { a: '#22e3ff', b: '#b16bff', m: 'flicker' },
     mustard:    { a: '#ffd400', b: '#ff8a00', m: 'pulse'   },
     pluto:      { a: '#6b8cff', b: '#c084fc', m: 'sweep'   },
-    astro:      { a: '#8b4a2b', b: '#ffb86b', m: 'pulse'   },
+    astro:      { a: '#ffb86b', b: '#e8743a', m: 'pulse'   },
     sremm:      { a: '#ff3d9a', b: '#ffe14a', m: 'flicker' },
     sober:      { a: '#5eead4', b: '#818cf8', m: 'sweep'   },
-    maybach:    { a: '#d4af37', b: '#6b5a1f', m: 'pulse'   },
-    biscuits:   { a: '#e8c07a', b: '#8b5a2b', m: 'sweep'   },
+    maybach:    { a: '#d4af37', b: '#fff1b8', m: 'pulse'   },
+    biscuits:   { a: '#f0c987', b: '#d98e4a', m: 'sweep'   },
     fuckumean:  { a: '#ff2d2d', b: '#ff9d00', m: 'flicker' },
     profit:     { a: '#3dffab', b: '#d4af37', m: 'sweep'   },
     drizzy:     { a: '#c9a227', b: '#f5f5f5', m: 'pulse'   },
-    carti:      { a: '#ff2d6f', b: '#111111', m: 'flicker' },
+    carti:      { a: '#ff2d6f', b: '#ffd0dd', m: 'flicker' },
     taykeith:   { a: '#ff4d4d', b: '#4d9dff', m: 'sweep'   },
     pierre:     { a: '#a3e635', b: '#22d3ee', m: 'pulse'   },
     metro:      { a: '#ffd24a', b: '#ff2d6f', m: 'sweep'   },
