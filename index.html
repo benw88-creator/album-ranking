@@ -261,7 +261,6 @@ body[data-section="crate"]        { --section: var(--c-cyan);    --section-dim: 
 body[data-section="albums"]       { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
 body[data-section="songs"]        { --section: var(--c-pink);    --section-dim: var(--c-pink-dim); }
 body[data-section="games"]        { --section: var(--c-lime);    --section-dim: var(--c-lime-dim); }
-body[data-section="draw"]         { --section: var(--gold);      --section-dim: var(--gold-dim); }
  body[data-section="collection"]   { --section: var(--c-lime);    --section-dim: var(--c-lime-dim); }
 body[data-section="rewards"]      { --section: var(--accent-2);  --section-dim: var(--accent-2-dim); }
 body[data-section="achievements"] { --section: var(--c-blue);    --section-dim: var(--c-blue-dim); }
@@ -3085,14 +3084,22 @@ body.entering-done #artist-hero {
 /* Undo, and the line that shows why the card is about to move. Pausing it is
    a style change on animation-play-state, which is why it's an animation and
    not a transition. */
-/* ---- the collection ----------------------------------------------------- */
-.col-tabs { display: inline-flex; gap: 4px; background: var(--surface-2); border-radius: 999px; padding: 4px; margin: 14px 0 18px; }
-.col-tabs button {
+/* Sub-tabs. One shape shared by the Crate and the Collection, because two
+   different pill bars doing the same job is exactly the kind of thing that
+   makes an app feel busier than it is. */
+.crate-tabs, .col-tabs {
+  display: inline-flex; gap: 4px; background: var(--surface-2);
+  border-radius: 999px; padding: 4px; margin: 0 0 18px;
+}
+.crate-tabs button, .col-tabs button {
   border: none; background: none; color: var(--text-dim); cursor: pointer;
   font: 600 13px var(--font-body); border-radius: 999px; padding: 8px 18px;
   transition: background .16s, color .16s;
 }
-.col-tabs button.active { background: var(--section); color: #10140a; }
+.crate-tabs button.active, .col-tabs button.active { background: var(--section); color: #10140a; }
+
+/* ---- the collection ----------------------------------------------------- */
+.col-tabs { margin: 14px 0 18px; }
 
 .col-worth-box {
   border: 1px solid var(--section); border-radius: 18px; padding: 22px; margin-bottom: 20px;
@@ -4077,15 +4084,14 @@ window.ICONS = {
   <nav class="modes" id="modes">
     <span class="nav-indicator" id="nav-indicator"></span>
     <button data-mode="home" class="active">Home</button>
-    <button data-mode="crate" class="nav-icon-btn"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>The Crate</button>
-    <button data-mode="albums">Albums</button>
-    <button data-mode="songs">Songs</button>
+    <!-- Albums, Songs and The Crate were three nav items for one idea: music
+         that has been rated. They are one button now with a sub-tab bar, which
+         is the single biggest thing that made the top of the app feel busy.
+         Bid Wars and The Draw both lost their tabs the same way — one into the
+         Minigames grid, one into Collection — because a nav item should be a
+         place you go, not every feature that exists. -->
+    <button data-mode="albums" class="nav-icon-btn"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>Crate</button>
     <button data-mode="games">Minigames</button>
-    <!-- Bid Wars lost its tab and lives in the Minigames grid instead. It is a
-         thing you occasionally start with one friend, not a place you visit —
-         and at this scale a nav item leading to an empty list reads as a dead
-         app. view-wars and goToView('wars') are untouched. -->
-    <button data-mode="draw">The Draw</button>
     <button data-mode="collection">Collection</button>
     <button data-mode="rewards">Rewards</button>
     <button data-mode="achievements" class="nav-icon-btn" aria-label="Achievements" title="Achievements"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="6.5" r="4"/><path d="M5.2 9.8 4 14l4-1.6 4 1.6-1.2-4.2"/></svg></button>
@@ -4372,29 +4378,6 @@ window.ICONS = {
        Promoted out of the Minigames grid into its own tab. It is the only
        place Discs are spent, so burying it two clicks deep behind a grid of
        word games meant the currency had no visible destination. -->
-  <section id="view-draw" style="display:none; margin-top:32px;">
-    <div class="section-head"><h2><span data-icon="disc"></span> The Draw</h2>
-      <span class="muted" id="draw-balance"></span></div>
-    <p class="reco-note">Spend Discs. See what falls out.</p>
-
-    <div class="draw-window" id="draw-window">
-      <div class="draw-needle"></div>
-      <div class="draw-strip" id="draw-strip"></div>
-    </div>
-
-    <div class="draw-result" id="draw-result"></div>
-
-    <div class="draw-cost">
-      <button class="btn-primary" id="draw-go">Open for 1,000 Discs</button>
-    </div>
-
-    <div class="draw-odds">
-      <details>
-        <summary>Odds</summary>
-        <div id="draw-odds-body"></div>
-      </details>
-    </div>
-  </section>
 
   <!-- ============================ COLLECTION ============================
        Records you own. Buy with Discs, hold them, and what you hold adds up.
@@ -4403,9 +4386,13 @@ window.ICONS = {
   <section id="view-collection" style="display:none; margin-top:32px;">
     <div class="section-head"><h2><span data-icon="disc"></span> Collection</h2>
       <span class="muted" id="col-worth"></span></div>
+    <!-- The Draw lives here rather than in a tab of its own. Both are "spend
+         Discs on records", and splitting them across two nav items made the
+         currency look like it had two unrelated homes. -->
     <div class="col-tabs" id="col-tabs">
       <button data-col-tab="mine" class="active">Yours</button>
       <button data-col-tab="market">The Market</button>
+      <button data-col-tab="draw">The Draw</button>
       <button data-col-tab="board">Standings</button>
     </div>
     <!-- Search is the difference between a shop with thirty things in it and a
@@ -4415,6 +4402,33 @@ window.ICONS = {
       <input id="col-q" class="g-input" type="text" placeholder="Search any album to price it&hellip;" autocomplete="off">
     </div>
     <div id="col-body"></div>
+
+    <!-- The Draw's own pane. Kept as static markup rather than rendered into
+         col-body, because the reel module holds references to these ids and
+         rebuilding them under it mid-spin would drop the strip. -->
+    <div id="col-draw" style="display:none;">
+      <p class="reco-note">1,000 Discs a spin. Holy Grail at 5% &mdash; the album banner
+        and 20,000 Discs only come from there.
+        <span class="muted" id="draw-balance"></span></p>
+
+      <div class="draw-window" id="draw-window">
+        <div class="draw-needle"></div>
+        <div class="draw-strip" id="draw-strip"></div>
+      </div>
+
+      <div class="draw-result" id="draw-result"></div>
+
+      <div class="draw-cost">
+        <button class="btn-primary" id="draw-go">Open for 1,000 Discs</button>
+      </div>
+
+      <div class="draw-odds">
+        <details>
+          <summary>Odds</summary>
+          <div id="draw-odds-body"></div>
+        </details>
+      </div>
+    </div>
   </section>
 
   <!-- ============================ REWARDS ============================
@@ -5922,7 +5936,6 @@ const views = {
   songs: document.getElementById('view-songs'),
   games: document.getElementById('view-games'),
   wars: document.getElementById('view-wars'),
-  draw: document.getElementById('view-draw'),
   collection: document.getElementById('view-collection'),
   rewards: document.getElementById('view-rewards'),
   achievements: document.getElementById('view-achievements'),
@@ -5941,7 +5954,17 @@ function setMode(mode, fromCode) {
   // Repaints --section, which the background washes and every section heading
   // read from. One attribute, and the whole page changes temperature.
   document.body.dataset.section = mode;
-  document.querySelectorAll('#modes button').forEach(function (b) { b.classList.toggle('active', b.dataset.mode === mode); });
+  if (window.paintCrateTabs) window.paintCrateTabs(mode);
+  /* One nav button can stand for several views. The Crate button covers
+     albums, songs and the community feed, so it has to stay lit on all three —
+     otherwise switching sub-tab visibly unselects the nav item you are inside. */
+  var CRATE_GROUP = ['albums', 'songs', 'crate'];
+  document.querySelectorAll('#modes button').forEach(function (b) {
+    var m = b.dataset.mode;
+    var on = m === mode ||
+      (m === 'albums' && CRATE_GROUP.indexOf(mode) !== -1);
+    b.classList.toggle('active', on);
+  });
   if (window.positionNavIndicator) window.positionNavIndicator();
   if (mode === 'home' || mode === 'albums' || mode === 'songs') lastListMode = mode;
   if (mode === 'home') {
@@ -5963,7 +5986,6 @@ function setMode(mode, fromCode) {
   if (mode === 'achievements' && window.renderAchievements) window.renderAchievements();
   if (mode === 'profile' && window.renderProfile) window.renderProfile();
   if (mode === 'profile' && window.renderLore) window.renderLore();
-  if (mode === 'draw' && window.renderDrawTab) window.renderDrawTab();
   if (mode === 'collection' && window.renderCollection) window.renderCollection();
   if (mode === 'rewards' && window.renderRewards) window.renderRewards();
   if (mode === 'profile' && window.renderBannerPick) window.renderBannerPick();
@@ -13095,6 +13117,70 @@ async function renderAdminStats() {
 window.renderAdminStats = renderAdminStats;
 </script>
 <!-- ================================================================
+     CRATE SUB-TABS
+     ================================================================
+     Albums, Songs and The Crate were three separate nav items for one idea —
+     music that has been rated, sliced by whose it is and what type. Three top
+     level entries for that is most of why the header felt crowded.
+
+     They are one nav button now, with a bar inside each of the three views. No
+     DOM was moved to do it: each section stays exactly where it was, the bar is
+     injected at the top of each, and it just calls setMode. That keeps every
+     existing render function, id and event handler working untouched, which on
+     a 700KB single file is worth more than a tidier tree.
+     ================================================================ -->
+<script>
+(function () {
+  var TABS = [
+    { mode: 'albums', label: 'Albums' },
+    { mode: 'songs',  label: 'Songs' },
+    { mode: 'crate',  label: 'Everyone' }
+  ];
+
+  function barHTML(active) {
+    return '<div class="crate-tabs">' + TABS.map(function (t) {
+      return '<button type="button" data-crate-tab="' + t.mode + '"' +
+        (t.mode === active ? ' class="active"' : '') + '>' + t.label + '</button>';
+    }).join('') + '</div>';
+  }
+
+  function ensureBar(mode) {
+    var sec = document.getElementById('view-' + mode);
+    if (!sec) return null;
+    var bar = sec.querySelector('.crate-tabs');
+    if (!bar) {
+      var wrap = document.createElement('div');
+      wrap.innerHTML = barHTML(mode);
+      bar = wrap.firstChild;
+      // Above the section heading, so it reads as "which of these am I looking
+      // at" rather than as a filter on the thing below.
+      sec.insertBefore(bar, sec.firstChild);
+      bar.addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-crate-tab]');
+        if (b && window.goToView) goToView(b.dataset.crateTab);
+      });
+    }
+    return bar;
+  }
+
+  function paintCrateTabs(mode) {
+    TABS.forEach(function (t) {
+      var bar = ensureBar(t.mode);
+      if (!bar) return;
+      bar.querySelectorAll('button').forEach(function (b) {
+        b.classList.toggle('active', b.dataset.crateTab === mode);
+      });
+    });
+  }
+
+  window.paintCrateTabs = paintCrateTabs;
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { paintCrateTabs('albums'); });
+  } else { paintCrateTabs('albums'); }
+})();
+</script>
+
+<!-- ================================================================
      MINIGAME UNLOCKS
      ================================================================
      Everything was available on the first visit, which sounds generous and is
@@ -13342,6 +13428,20 @@ window.renderAdminStats = renderAdminStats;
     // Search belongs to the Market and nowhere else.
     el('col-search').style.display = (tab === 'market') ? '' : 'none';
 
+    /* The Draw is a pane rather than something rendered into col-body: the
+       reel module holds references to #draw-window and #draw-strip, and
+       replacing them under it mid-spin would drop the strip on the floor. */
+    var drawPane = el('col-draw');
+    if (tab === 'draw') {
+      body.innerHTML = '';
+      body.style.display = 'none';
+      drawPane.style.display = '';
+      if (window.renderDrawTab) window.renderDrawTab();
+      return;
+    }
+    body.style.display = '';
+    drawPane.style.display = 'none';
+
     if (tab === 'mine') {
       body.innerHTML = '<p class="reco-note">Loading your shelf…</p>';
       var mine = await loadMine(true);
@@ -13564,6 +13664,13 @@ window.renderAdminStats = renderAdminStats;
     render();
   });
 
+  // Entry point for anything that used to navigate to the Draw's own tab —
+  // the Minigames card, and the Rewards page's Draw panel.
+  window.openCollectionDraw = function () {
+    tab = 'draw';
+    if (window.goToView) goToView('collection');
+    render();
+  };
   window.renderCollection = render;
 })();
 </script>
@@ -13595,7 +13702,7 @@ window.renderAdminStats = renderAdminStats;
   // A tab now, not a modal. The only place Discs are spent should not be two
   // clicks deep behind a grid of word games — a currency with no visible
   // destination is a currency nobody counts.
-  var section = document.getElementById('view-draw');
+  var section = document.getElementById('col-draw');
   if (!section) return;
 
   var COST = 1000;
@@ -13740,7 +13847,7 @@ window.renderAdminStats = renderAdminStats;
       'Nothing here has cash value or leaves VINALL.</p>';
   }
 
-  // Draws the tab. setMode('draw') calls this; openDraw() navigates here.
+  // Draws the Draw pane inside Collection. The Collection tab bar calls this.
   async function render() {
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) {
       el('draw-balance').textContent = '';
@@ -13756,7 +13863,8 @@ window.renderAdminStats = renderAdminStats;
     paintBalance();
     paintOdds();
   }
-  function open() { if (window.goToView) goToView('draw'); }
+  // Anything that used to link to the Draw tab now opens Collection on it.
+  function open() { if (window.openCollectionDraw) window.openCollectionDraw(); }
 
   async function spin() {
     if (busy) return;
