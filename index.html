@@ -6714,10 +6714,11 @@ function renderStats(){
     // than as a balance.
     const lv=Wallet.levelInfo?Wallet.levelInfo():null;
     walletTiles+=
-      (lv?'<div class="stat stat-wallet stat-level" id="stat-level" title="'+lv.into+' / '+lv.step+' XP to level '+(lv.level+1)+'">'+
+      (lv?'<div class="stat stat-wallet stat-level" id="stat-level" title="'+(lv.max?'Max level':(lv.into+' / '+lv.step+' XP to level '+(lv.level+1)))+'">'+
         '<div class="s-label">◈ Level</div><div class="s-val">'+lv.level+'</div>'+
         '<div class="lvl-bar"><i style="width:'+lv.pct+'%"></i></div>'+
-        '<div class="lvl-sub">'+lv.into.toLocaleString()+' / '+lv.step.toLocaleString()+' XP</div></div>':'')+
+        // At the cap there is no next level to be a fraction of.
+        '<div class="lvl-sub">'+(lv.max?'Max level':(lv.into.toLocaleString()+' / '+lv.step.toLocaleString()+' XP'))+'</div></div>':'')+
       '<div class="stat stat-wallet" id="stat-streak"><div class="s-label">\u{1F525} Streak</div><div class="s-val">'+(w.streak_current||0)+'</div></div>'+
       // An admin spends without limit, but the real balance is shown next to
       // the ∞ rather than replaced by it. Hiding the number behind a symbol is
@@ -10558,12 +10559,23 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     } catch (e) {}
   }
 
+  /* Mirrors the `exit when v_level >= 200` in level_for_xp(). **Change one and
+     you must change the other** — same arrangement as LADDER and payFor. */
+  var MAX_LEVEL = 200;
+
   function levelInfo() {
     var lv = state.level || 1;
     var floor = xpFloor(lv), step = xpStep(lv);
     var into = Math.max(0, (state.lifetime_xp || 0) - floor);
-    return { level: lv, into: into, step: step,
-             pct: Math.max(0, Math.min(100, Math.round(into / step * 100))) };
+    /* At the cap there is no next level, so `into / step` stops meaning
+       anything: XP keeps accruing past a floor nothing sits above, and the
+       tile reads as "11,397,658 / 102,287" — a fraction over eleven thousand
+       percent, under a bar silently clamped at 100%. Anything that says
+       "progress towards" has to know when there is nothing left to progress
+       towards. */
+    var max = lv >= MAX_LEVEL;
+    return { level: lv, into: into, step: step, max: max,
+             pct: max ? 100 : Math.max(0, Math.min(100, Math.round(into / step * 100))) };
   }
   let loaded = false;
   let ratingsToday = 0, ratingsTodayDate = null;

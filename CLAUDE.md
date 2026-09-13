@@ -370,6 +370,32 @@ rows and not the duplicates, and the Shop offered Sundown at 150 while `wallet_b
     16,000 Discs on.
   - The section is called **Tags** in the Shop, not "Producer tags".
 
+### Levels are Discs, and level 200 is the ceiling
+
+`profiles.lifetime_xp` is commented "every Disc ever earned" and means it literally:
+`pin_profile_economy` adds every *rise* in the balance to it and never subtracts. **XP is not a
+second currency, it is the running total of the first one.** Spending cannot lower it, and
+there is no separate lifetime column because this is it.
+
+Two consequences worth knowing:
+
+- **Any server-side Disc grant pumps it, including an admin top-up from the SQL editor.** The
+  editor runs as `postgres`, so `current_user <> 'authenticated'` and the XP branch fires. A
+  top-up that should not count as progress has to restore `lifetime_xp` in the same
+  transaction — lowering it is not a rise, so the trigger does not fight the restore.
+- **`level_for_xp` caps at 200**, mirrored by `MAX_LEVEL` in the Wallet module. Change one and
+  you must change the other, same arrangement as `LADDER` and `payFor`.
+
+At the cap `into / step` stops meaning anything: XP keeps accruing past a floor with nothing
+above it, so the Home tile rendered `11,397,658 / 102,287` — a fraction over eleven thousand
+percent — under a bar silently clamped at 100%. `levelInfo()` returns `max` now and the tile
+says "Max level". **Anything that says "progress towards" has to know when there is nothing
+left to progress towards**, and a clamp is not that: it hides the condition instead of
+reporting it.
+
+Level gates nothing anywhere — it is display-only in three places (the Home tile, the
+Collection standings row, and the `levelUp()` pop).
+
 ### Scrolling gradients must travel in pixels, not percentages
 
 Applies to `tagSweep`, `flShift` (Holographic), `drawShimmer` and `dtPrism` — every animation
