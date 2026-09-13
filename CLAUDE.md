@@ -573,7 +573,8 @@ How a war runs:
 
 1. You challenge someone you follow. `/api/bid-war-create` picks five records, values each
    by its total play count, and stores those values where the client cannot read them.
-2. Both players spread 100 chips across the five records, blind, one submission each.
+2. Each player is **dealt the five records one at a time** and commits chips to each before
+   seeing the next. Blind, one submission each.
 3. When the second bid lands, `bid_war_submit` resolves the war in that same transaction.
    Higher bid takes each record; equal bids mean nobody takes it.
 4. A record you won is worth its total plays. Most plays wins. Winner +30 Discs, loser +8,
@@ -581,6 +582,28 @@ How a war runs:
 
 Design decisions worth not undoing:
 
+- **The board is dealt, not laid out.** All five used to be on screen at once with chips you
+  could move around freely until you were happy — which is an *allocation puzzle*: the set is
+  known, so you are solving for the best split rather than deciding about a record. One at a
+  time makes it a decision under uncertainty: you commit to this record not knowing whether
+  something you want more is still in the deck, so holding back has a real cost and so does
+  going big early.
+  - **There is no back button, and that is the whole mechanism.** Going back would let you see
+    all five and then revise, which is the old game with extra steps. The review screen at the
+    end is **read-only** for the same reason — it exists so you see your board before sealing
+    it, not so you can edit it.
+  - Two layers of not-knowing now: what a record is worth (sealed, below) and what is coming
+    next. Do not add a "records remaining" preview; the dots deliberately say *how many* are
+    left and never *which*.
+  - `_bids` holds only locked records. Chips-left counts the card in your hand as already gone
+    (`paintChips(w, pending)`), so the number moves while you decide rather than after you
+    commit, and the input is clamped to what is actually available — going over is no longer
+    reachable at all.
+  - **All in** is on every card, not just the last. Without it the final record takes twenty
+    taps to put your pot on, and unspent chips buy nothing whatsoever.
+  - One `#war-submit` button with two jobs (`warPrimary`): lock the card in hand, or seal the
+    finished board. A submit error drops you back to the review, not into the deck — the board
+    is still decided.
 - **Value is total Spotify streams**: the sum of every track on the album. Spotify exposes
   no stream counts at all (not per track, not per album, and this app no longer receives
   even `popularity`), so `api/bid-war-create.js` takes the album's real tracklist from the
@@ -692,6 +715,22 @@ Things that cost time to discover and should not be rediscovered:
 
 Client-side, every value goes through `fmtVal(n, war, rec)` rather than `fmtPlays`. £12.50
 rendered through the streams formatter reads as "1,250".
+
+## Album Tournament — parked
+
+Its card in the Minigames grid was its only way in, so removing that card retires it. The
+module, `tourney-modal`, and the `'tournament'` case in `wallet_award_game` are all still
+there — parked the same way market-mode Bid Wars is, so bringing it back is putting a card
+back rather than rebuilding anything. `window.openTournament` is exported for exactly that.
+
+Two things the removal had to touch, and both would have been silent failures:
+
+- The module did `document.getElementById('tourney-card').addEventListener(...)` unguarded,
+  which throws a TypeError the moment the card is gone — and it runs at load, inside the same
+  script as the rest of the tournament. It is null-checked now.
+- `GATES` in the unlock painter had a `tourney-card` entry. `paintUnlocks` does guard with
+  `if (!card) return;`, so this one was harmless, but a gate for a card that cannot exist is a
+  gate that can never be passed. Removed.
 
 ## Higher or Lower
 

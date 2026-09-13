@@ -3057,6 +3057,62 @@ body.entering-done #artist-hero {
 .war-stepper input::-webkit-outer-spin-button,
 .war-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
+/* ---- One record at a time ----------------------------------------------
+   Records are dealt rather than laid out. The card is big because it is the
+   only thing being decided, and it enters from below so each one arrives
+   rather than replacing the last in place — a swap reads as a re-render, an
+   arrival reads as a deal. */
+.war-dots { display: flex; align-items: center; gap: 7px; margin-bottom: 14px; }
+.war-dots .wd {
+  width: 8px; height: 8px; border-radius: 50%;
+  border: 1px solid var(--border-strong); background: transparent;
+  transition: background .2s var(--ease), border-color .2s;
+}
+.war-dots .wd.done { background: var(--gold-dim); border-color: var(--gold-dim); }
+.war-dots .wd.now  { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 10px var(--gold-glow); }
+.war-dots .wd-n {
+  margin-left: auto; font: 700 10px var(--font-mono);
+  letter-spacing: .14em; text-transform: uppercase; color: var(--text-faint);
+}
+
+.war-one {
+  text-align: center; padding: 22px 18px 18px;
+  border: 1px solid var(--border); border-radius: 18px; background: var(--surface-2);
+  transition: border-color .2s var(--ease);
+}
+.war-one.staked { border-color: var(--gold); }
+.war-one.in { animation: warDeal .34s var(--ease); }
+@keyframes warDeal {
+  from { opacity: 0; transform: translateY(16px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+.war-one img {
+  width: 150px; height: 150px; border-radius: 12px; object-fit: cover;
+  background: var(--surface-3); display: block; margin: 0 auto 14px;
+  box-shadow: 0 14px 34px rgba(0,0,0,0.5);
+}
+.war-one-nm { font: 700 18px/1.25 var(--font-display); }
+.war-one-ar { font-size: 13px; color: var(--text-dim); margin-top: 3px; }
+.war-one-bid {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 16px; flex-wrap: wrap;
+}
+.war-allin { flex-shrink: 0; }
+@media (prefers-reduced-motion: reduce) { .war-one.in { animation: none; } }
+
+/* The review. Rows, not cards — you are reading a board you have already
+   decided, not deciding one. */
+.war-review-head {
+  font: 700 10px var(--font-mono); letter-spacing: .18em; text-transform: uppercase;
+  color: var(--text-faint); margin-bottom: 10px;
+}
+.war-rec-chips {
+  flex-shrink: 0; font: 700 18px/1 var(--font-mono); color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+.war-rec-chips.none { color: var(--text-faint); }
+.war-left-note { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
 .war-submit { width: 100%; margin-top: 6px; }
 .war-foot { font-size: 12px; color: var(--text-faint); margin-top: 10px; line-height: 1.5; }
 .war-err { color: var(--red); font-size: 13px; min-height: 18px; margin: 4px 0; }
@@ -4646,12 +4702,11 @@ window.ICONS = {
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" id="hl-card-status"></div>
       </div>
-      <div class="game-card" id="tourney-card">
-        <div class="gc-emoji"><svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M5 2.5h6v3.2a3 3 0 0 1-6 0V2.5Z"/><path d="M5 3.3H3.2a1.6 1.6 0 0 0 0 3.2c.4 0 .8-.1 1.1-.4M11 3.3h1.8a1.6 1.6 0 0 1 0 3.2c-.4 0-.8-.1-1.1-.4"/><path d="M8 8.7v2.1M5.6 13.5h4.8M6.4 11v1.3a1.6 1.6 0 0 0 0 1.2M9.6 11v1.3a1.6 1.6 0 0 1 0 1.2"/></svg></div>
-        <h3>Album Tournament</h3>
-        <p>Bracket battle &mdash; pick your favourite until one album wins it all.</p>
-        <div class="gc-go">Start &rarr;</div>
-      </div>
+      <!-- Album Tournament's card was here, and it was the feature's only way
+           in, so removing it retires it. The module, its modal and its
+           wallet_award_game('tournament') case are all left in place — parked
+           the same way market-mode Bid Wars is, so bringing it back is putting
+           a card back rather than rebuilding it. -->
       <div class="game-card" id="war-card" style="border-color: var(--accent-2-dim); background: linear-gradient(150deg, var(--accent-2-dim), var(--surface) 60%);">
         <div class="gc-emoji" data-icon="trophy"></div>
         <h3>Bid Wars</h3>
@@ -4670,7 +4725,7 @@ window.ICONS = {
   <!-- ============================ BID WARS ============================ -->
   <section id="view-wars" style="display:none; margin-top:32px;">
     <div class="section-head"><h2><span data-icon="trophy"></span> Bid Wars</h2><button class="btn-primary" id="war-new-btn" style="margin-left:auto;">Start a war</button></div>
-    <p class="reco-note">Five records, 100 chips. You both see what they&rsquo;re worth &mdash; only the bids are blind. Outbid them on a record and you take its value. Most value wins.</p>
+    <p class="reco-note">Five records, dealt one at a time. Spread 100 chips across them without seeing what is still to come, and without seeing what any of them is worth. Outbid them on a record and you take its value. Most value wins.</p>
     <div id="war-challenges"></div>
     <div id="war-active"></div>
     <div id="war-history"></div>
@@ -8831,7 +8886,11 @@ window.handleGrooveLink=handleGrooveLink;
   function close(){modal.classList.remove('open');}
   function fail(msg){document.getElementById('tourney-loading').style.display='none';document.getElementById('tourney-start').disabled=false;document.getElementById('tourney-error').textContent=msg;}
 
-  document.getElementById('tourney-card').addEventListener('click',open);
+  // The Minigames card is gone, so there is no entry point. The module stays
+  // parked and openTournament() still works if a card is ever put back.
+  var tourneyCard=document.getElementById('tourney-card');
+  if(tourneyCard)tourneyCard.addEventListener('click',open);
+  window.openTournament=open;
   document.getElementById('tourney-close').addEventListener('click',close);
   modal.addEventListener('click',function(e){if(e.target===modal)close();});
 
@@ -13056,7 +13115,9 @@ function playDismissAnimation(gateEl, callback) {
 
   var CHIPS = 100;
   var _war = null;        // war currently open in the modal
-  var _bids = {};         // album_id -> chips, while composing
+  var _bids = {};         // album_id -> chips, for records already locked in
+  var _recs = [];         // the five, in the order they are dealt
+  var _idx  = 0;          // which one is in your hand
   var _oppTimer = null;
   var _profiles = {};     // id -> profile, cached per render
 
@@ -13319,80 +13380,157 @@ function playDismissAnimation(gateEl, callback) {
     });
   }
 
+  /* ---- Bidding, one record at a time -------------------------------------
+
+     The board used to show all five at once and let you move chips around
+     freely until you were happy. That is an allocation puzzle: you can see the
+     whole set, so you are solving for the best split rather than making a
+     decision about a record.
+
+     Dealt one at a time it becomes a decision under uncertainty — you commit
+     chips to *this* record not knowing whether something you want more is
+     still in the deck. Holding back is now a real choice with a real cost, and
+     so is going big early.
+
+     **There is no going back, and that is the entire mechanism.** A back
+     button would let you see all five and then revise, which is the old game
+     with extra steps. The review screen at the end is read-only for the same
+     reason: it exists so you see your board before sealing it, not so you can
+     edit it.
+
+     Values are still hidden — see the note on the reseal migration. Two layers
+     of not-knowing now: what a record is worth, and what is coming next. */
+
   function showBidding(w) {
     setPane('bidding');
-    /* Values are hidden again, and this time actually hidden.
-       Showing them turned the game into pure chip allocation and took away
-       the thing it was for: backing your own read of which record is worth
-       most. The previous argument for opening them was that
-       /api/album-streams leaked the same numbers anyway — so that endpoint is
-       now authenticated and refuses any album sitting on one of your own
-       pending boards. Seal plus leak was the worst of both; this is the seal
-       without the leak. */
-    document.getElementById('war-sub').textContent =
-      'Five records, ' + w.chips + ' chips. Nobody sees what they are worth until it resolves.';
     _bids = {};
-    var recs = w.records || [];
-    document.getElementById('war-board').innerHTML = recs.map(function (r) {
-      return '<div class="war-rec" data-rec="' + esc2(r.album_id) + '">' +
-        '<img src="' + esc2(r.art || '') + '" alt="" loading="lazy">' +
-        '<div class="war-rec-meta"><div class="war-rec-nm">' + esc2(r.name) + '</div>' +
-        '<div class="war-rec-ar">' + esc2(r.artist) + '</div>' +
-        // No value on the bidding board. It reappears at the reveal, which is
-        // the whole point of the reveal. Old wars created while values were
-        // open still carry one in `records`, so this has to be a hard omission
-        // rather than a conditional on the field being present.
-        '' +
-        '</div>' +
-        '<div class="war-stepper">' +
-          '<button type="button" data-step="-1" aria-label="Bid less">&minus;</button>' +
-          '<input type="number" inputmode="numeric" value="0" min="0" max="' + w.chips + '" data-input="' + esc2(r.album_id) + '">' +
-          '<button type="button" data-step="1" aria-label="Bid more">+</button>' +
-        '</div></div>';
-    }).join('');
-
-    var board = document.getElementById('war-board');
-    board.querySelectorAll('.war-rec').forEach(function (row) {
-      var id = row.dataset.rec;
-      var input = row.querySelector('input');
-      function commit(v) {
-        v = Math.max(0, Math.min(w.chips, Math.round(Number(v) || 0)));
-        _bids[id] = v;
-        input.value = v;
-        row.classList.toggle('staked', v > 0);
-        paintChips(w);
-      }
-      row.querySelectorAll('[data-step]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          // 5s are the useful granularity at 100 chips; 1-at-a-time would be
-          // twenty clicks to commit half your pot.
-          commit((Number(input.value) || 0) + Number(btn.dataset.step) * 5);
-        });
-      });
-      input.addEventListener('input', function () { commit(input.value); });
-      _bids[id] = 0;
-    });
-    paintChips(w);
-
-    var sBtn = document.getElementById('war-submit');
-    sBtn.disabled = false;
-    sBtn.textContent = 'Lock in your bids';
+    _recs = (w.records || []).slice();
+    _idx = 0;
+    document.getElementById('war-sub').textContent =
+      w.chips + ' chips, five records, one at a time.';
+    var foot = document.querySelector('#war-bidding .war-foot');
+    if (foot) foot.textContent =
+      'You cannot go back, and you cannot see what is still to come.';
+    paintStep(w);
   }
 
+  // Chips already committed to records you have locked in.
   function spent() {
     return Object.keys(_bids).reduce(function (s, k) { return s + (Number(_bids[k]) || 0); }, 0);
   }
 
-  function paintChips(w) {
+  function paintStep(w) {
+    if (_idx >= _recs.length) { paintReview(w); return; }
+    var r = _recs[_idx];
+    var avail = w.chips - spent();
+
+    /* The dots are the only thing on screen that says how much deck is left.
+       Filled for locked, hollow for still to come — deliberately no labels on
+       the ones ahead, since naming them is the one thing this whole change
+       exists to prevent. */
+    var dots = _recs.map(function (_, i) {
+      return '<span class="wd' + (i < _idx ? ' done' : (i === _idx ? ' now' : '')) + '"></span>';
+    }).join('');
+
+    document.getElementById('war-board').innerHTML =
+      '<div class="war-dots">' + dots +
+        '<span class="wd-n">' + (_idx + 1) + ' of ' + _recs.length + '</span></div>' +
+      '<div class="war-one in" data-rec="' + esc2(r.album_id) + '">' +
+        '<img src="' + esc2(r.art || '') + '" alt="" loading="lazy">' +
+        '<div class="war-one-nm">' + esc2(r.name) + '</div>' +
+        '<div class="war-one-ar">' + esc2(r.artist) + '</div>' +
+        '<div class="war-one-bid">' +
+          '<div class="war-stepper">' +
+            '<button type="button" data-step="-1" aria-label="Bid less">&minus;</button>' +
+            '<input type="number" inputmode="numeric" value="0" min="0" max="' + avail + '">' +
+            '<button type="button" data-step="1" aria-label="Bid more">+</button>' +
+          '</div>' +
+          // Without this, the last record takes twenty taps to put your pot on,
+          // and unspent chips buy nothing at all.
+          '<button type="button" class="btn-mini war-allin" id="war-allin">All in &middot; ' + avail + '</button>' +
+        '</div>' +
+      '</div>';
+
+    var card = document.getElementById('war-board').querySelector('.war-one');
+    var input = card.querySelector('input');
+    function commit(v) {
+      v = Math.max(0, Math.min(avail, Math.round(Number(v) || 0)));
+      input.value = v;
+      card.classList.toggle('staked', v > 0);
+      paintChips(w, v);
+    }
+    card.querySelectorAll('[data-step]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        // 5s are the useful granularity at 100 chips; 1-at-a-time would be
+        // twenty clicks to commit half your pot.
+        commit((Number(input.value) || 0) + Number(btn.dataset.step) * 5);
+      });
+    });
+    input.addEventListener('input', function () { commit(input.value); });
+    var allin = document.getElementById('war-allin');
+    if (allin) allin.addEventListener('click', function () { commit(avail); });
+
+    commit(0);
+    var sBtn = document.getElementById('war-submit');
+    sBtn.disabled = false;
+    sBtn.textContent = _idx === _recs.length - 1 ? 'Lock in the last one' : 'Lock it in';
+  }
+
+  // Takes the current card's number, banks it, and deals the next.
+  function lockCurrent(w) {
+    var card = document.getElementById('war-board').querySelector('.war-one');
+    if (!card) return;
+    var v = Math.max(0, Math.round(Number(card.querySelector('input').value) || 0));
+    _bids[_recs[_idx].album_id] = v;
+    _idx++;
+    if (window.buzz) buzz('tap');
+    paintStep(w);
+  }
+
+  /* The review. Read-only on purpose: it is the last look at a board you have
+     already decided, not a second pass at deciding it. */
+  function paintReview(w) {
     var left = w.chips - spent();
+    document.getElementById('war-board').innerHTML =
+      '<div class="war-review-head">Your board</div>' +
+      _recs.map(function (r) {
+        var v = Number(_bids[r.album_id]) || 0;
+        return '<div class="war-rec' + (v > 0 ? ' staked' : '') + '">' +
+          '<img src="' + esc2(r.art || '') + '" alt="" loading="lazy">' +
+          '<div class="war-rec-meta"><div class="war-rec-nm">' + esc2(r.name) + '</div>' +
+          '<div class="war-rec-ar">' + esc2(r.artist) + '</div></div>' +
+          '<div class="war-rec-chips' + (v > 0 ? '' : ' none') + '">' + v + '</div></div>';
+      }).join('') +
+      (left > 0
+        ? '<p class="war-left-note">' + left + ' chips unspent. They buy nothing &mdash; ' +
+          'but the board is set.</p>'
+        : '');
+
+    paintChips(w, 0);
+    var sBtn = document.getElementById('war-submit');
+    sBtn.disabled = false;
+    sBtn.textContent = 'Seal your bids';
+  }
+
+  // What the submit button does depends on where you are in the deck.
+  function warPrimary() {
+    if (!_war) return;
+    if (_idx < _recs.length) lockCurrent(_war);
+    else submitBids();
+  }
+
+  function paintChips(w, pending) {
+    // Chips left counts the card in your hand as already gone, so the number
+    // moves while you are deciding rather than only after you commit.
+    var left = w.chips - spent() - (Number(pending) || 0);
     var box = document.getElementById('war-chips');
     document.getElementById('war-chips-left').textContent = left;
     document.getElementById('war-chips-fill').style.width =
       Math.max(0, Math.min(100, (left / w.chips) * 100)) + '%';
+    // The input is clamped to what is available, so going over is no longer
+    // reachable — the class stays for the reveal's sake and costs nothing.
     box.classList.toggle('over', left < 0);
-    document.getElementById('war-submit').disabled = left < 0;
-    document.getElementById('war-error').textContent = left < 0
-      ? 'That is ' + (-left) + ' chips over your pot.' : '';
+    document.getElementById('war-error').textContent = '';
   }
 
   async function submitBids() {
@@ -13409,7 +13547,8 @@ function playDismissAnimation(gateEl, callback) {
     if (res.error) {
       document.getElementById('war-error').textContent = res.error.message || 'Could not submit.';
       btn.disabled = false;
-      btn.textContent = 'Lock in your bids';
+      // Back to the review, not to the deck: the board is still decided.
+      btn.textContent = 'Seal your bids';
       return;
     }
     var w = res.data;
@@ -13617,7 +13756,8 @@ function playDismissAnimation(gateEl, callback) {
       });
     });
     var sub = document.getElementById('war-submit');
-    if (sub) sub.addEventListener('click', submitBids);
+    // One button, two jobs: lock the card in hand, or seal the finished board.
+    if (sub) sub.addEventListener('click', warPrimary);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
@@ -14109,7 +14249,6 @@ window.renderAdminStats = renderAdminStats;
     'hl-card':          { need: 8,  label: 'Higher or Lower' },
     'tracklist':        { need: 10, label: 'Guess from Tracklist' },
     'year':             { need: 12, label: 'Guess the Year' },
-    'tourney-card':     { need: 15, label: 'Album Tournament' },
     'coverx':           { need: 20, label: 'Cover EXTREME' },
     'war-card':         { need: 25, label: 'Bid Wars' }
   };
