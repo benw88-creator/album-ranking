@@ -3118,6 +3118,13 @@ body.entering-done #artist-hero {
 .col-price small { font-size: 10px; color: var(--text-faint); font-weight: 400; }
 .col-unpriced { color: var(--text-faint); font-weight: 400; font-size: 11px; }
 .col-buy, .col-sell { flex-shrink: 0; }
+/* Errors sit inside the card and wrap, rather than spilling raw Postgres text
+   across the page as unwrapped red. */
+.col-err {
+  flex-basis: 100%; margin-top: 8px; font-size: 12px; line-height: 1.4;
+  color: var(--red); border-top: 1px solid var(--border); padding-top: 8px;
+}
+.col-rec { flex-wrap: wrap; }
 /* The purchase lands on the card that was bought, not as a toast elsewhere. */
 .col-rec.just-bought { animation: colBought .9s var(--ease); border-color: var(--section); }
 @keyframes colBought {
@@ -3327,32 +3334,44 @@ body.entering-done #artist-hero {
    gives the eye nothing to track while it is moving — the colours are what
    make the speed visible and what makes something rare flashing past
    register before it has gone. */
-/* Each rarity owns a colour, loudly — except common, which stays grey so the
-   others have something to be brighter than. A strip where everything glows
-   is a strip where nothing does. */
-.draw-tile.t-common {
+/* Five rarities, named as a crate-digger's ladder rather than a loot box's:
+   Bargain Bin, B-Side, Deep Cut, White Label, Holy Grail. Each owns a colour
+   loudly — except Bargain Bin, which stays grey so the others have something
+   to be brighter than. A strip where everything glows is a strip where nothing
+   does. */
+.draw-tile.t-bargain {
   background: linear-gradient(165deg, rgba(255,255,255,0.05), var(--surface-2) 70%);
 }
-.draw-tile.t-uncommon {
+.draw-tile.t-bside {
   border-color: #2fe0ff;
   background: linear-gradient(165deg, rgba(47,224,255,0.34), rgba(47,224,255,0.08) 60%, var(--surface-2) 88%);
   box-shadow: inset 0 0 22px rgba(47,224,255,0.22), 0 0 12px rgba(47,224,255,0.18);
 }
-.draw-tile.t-uncommon .dt-nm { color: #a8f2ff; }
-.draw-tile.t-rare {
+.draw-tile.t-bside .dt-nm { color: #a8f2ff; }
+.draw-tile.t-deepcut {
   border-color: #c46bff;
   background: linear-gradient(165deg, rgba(196,107,255,0.40), rgba(196,107,255,0.10) 60%, var(--surface-2) 88%);
   box-shadow: inset 0 0 26px rgba(196,107,255,0.28), 0 0 18px rgba(196,107,255,0.26);
 }
-.draw-tile.t-rare .dt-nm { color: #e9c6ff; }
-.draw-tile.t-legendary {
-  border-color: #ffd24a;
-  background: linear-gradient(165deg, rgba(255,210,74,0.46), rgba(255,110,60,0.22) 50%, var(--surface-2) 90%);
-  box-shadow: inset 0 0 30px rgba(255,210,74,0.34), 0 0 26px rgba(255,190,60,0.42);
+.draw-tile.t-deepcut .dt-nm { color: #e9c6ff; }
+/* White Label is literally a blank promo pressing, so it is the one that is
+   actually white — and against gold that reads as a different thing entirely
+   rather than a paler version of it. */
+.draw-tile.t-whitelabel {
+  border-color: #f2f0ff;
+  background: linear-gradient(165deg, rgba(242,240,255,0.40), rgba(200,205,255,0.12) 55%, var(--surface-2) 88%);
+  box-shadow: inset 0 0 28px rgba(242,240,255,0.30), 0 0 22px rgba(220,225,255,0.35);
 }
-.draw-tile.t-legendary .dt-nm { color: #fff0bd; }
-/* Only the legendaries shimmer, so the eye catches one going past. */
-.draw-tile.t-legendary .dt-chip { animation: dtShine 1.8s ease-in-out infinite; }
+.draw-tile.t-whitelabel .dt-nm { color: #ffffff; }
+.draw-tile.t-grail {
+  border-color: #ffd24a;
+  background: linear-gradient(165deg, rgba(255,210,74,0.50), rgba(255,110,60,0.26) 50%, var(--surface-2) 90%);
+  box-shadow: inset 0 0 34px rgba(255,210,74,0.38), 0 0 30px rgba(255,190,60,0.48);
+}
+.draw-tile.t-grail .dt-nm { color: #fff0bd; }
+/* Only the top two shimmer, so the eye catches one going past. */
+.draw-tile.t-grail .dt-chip,
+.draw-tile.t-whitelabel .dt-chip { animation: dtShine 1.8s ease-in-out infinite; }
 @keyframes dtShine { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.5); } }
 
 /* While it runs. The sweep is a single moving highlight rather than
@@ -3367,11 +3386,12 @@ body.entering-done #artist-hero {
 .draw-window.spinning .draw-needle { animation: needlePulse .55s ease-in-out infinite alternate; }
 @keyframes needlePulse { from { opacity: .55; } to { opacity: 1; box-shadow: 0 0 14px var(--gold); } }
 
-/* The landing. Scaled by tier, because a legendary arriving with the same
+/* The landing. Scaled by tier, because a Holy Grail arriving with the same
    weight as 80 Discs is the fastest way to make both feel like nothing. */
-.draw-window.hit-uncommon  { animation: drawShake .35s var(--ease); box-shadow: 0 0 34px rgba(47,224,255,0.45); border-color: #2fe0ff; }
-.draw-window.hit-rare      { animation: drawShake .5s var(--ease);  box-shadow: 0 0 50px rgba(196,107,255,0.55); border-color: #c46bff; }
-.draw-window.hit-legendary { animation: drawShakeBig .7s var(--ease); box-shadow: 0 0 80px rgba(255,200,70,0.6); border-color: #ffd24a; }
+.draw-window.hit-bside      { animation: drawShake .35s var(--ease); box-shadow: 0 0 34px rgba(47,224,255,0.45); border-color: #2fe0ff; }
+.draw-window.hit-deepcut    { animation: drawShake .5s var(--ease);  box-shadow: 0 0 50px rgba(196,107,255,0.55); border-color: #c46bff; }
+.draw-window.hit-whitelabel { animation: drawShake .6s var(--ease);  box-shadow: 0 0 64px rgba(232,235,255,0.6);  border-color: #f2f0ff; }
+.draw-window.hit-grail      { animation: drawShakeBig .75s var(--ease); box-shadow: 0 0 92px rgba(255,200,70,0.65); border-color: #ffd24a; }
 @keyframes drawShake {
   0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); }
 }
@@ -3382,14 +3402,25 @@ body.entering-done #artist-hero {
   70% { transform: translate(-4px,1px) scale(1.01); }
 }
 
-.draw-result.tier-uncommon .dr-label  { color: #2fe0ff; text-shadow: 0 0 22px rgba(47,224,255,0.55); }
-.draw-result.tier-rare .dr-label      { color: #c46bff; text-shadow: 0 0 26px rgba(196,107,255,0.65); }
-.draw-result.tier-legendary .dr-label {
+.draw-result .dr-tier {
+  font: 700 10px/1 var(--font-mono); letter-spacing: .26em; text-transform: uppercase;
+  color: var(--text-faint); margin-bottom: 6px;
+}
+.draw-result.tier-bside .dr-label   { color: #2fe0ff; text-shadow: 0 0 22px rgba(47,224,255,0.55); }
+.draw-result.tier-bside .dr-tier    { color: #2fe0ff; }
+.draw-result.tier-deepcut .dr-label { color: #c46bff; text-shadow: 0 0 26px rgba(196,107,255,0.65); }
+.draw-result.tier-deepcut .dr-tier  { color: #c46bff; }
+.draw-result.tier-whitelabel .dr-label {
+  color: #ffffff; text-shadow: 0 0 30px rgba(226,230,255,0.8); font-size: 30px;
+}
+.draw-result.tier-whitelabel .dr-tier { color: #f2f0ff; }
+.draw-result.tier-grail .dr-label {
   background: linear-gradient(90deg, var(--gold), #fff1c2, var(--accent-2), var(--gold));
   background-size: 300% 100%; -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
-  animation: drawShimmer 2.4s linear infinite; font-size: 32px;
+  animation: drawShimmer 2.4s linear infinite; font-size: 34px;
 }
+.draw-result.tier-grail .dr-tier { color: var(--gold); }
 @keyframes drawShimmer { to { background-position: 300% 0; } }
 
 /* The button has to answer the tap instantly. Five seconds of reel with a
@@ -3416,6 +3447,20 @@ body.entering-done #artist-hero {
 @keyframes drawIn { 0% { opacity: 0; transform: translateY(10px) scale(.94); } 100% { opacity: 1; transform: none; } }
 
 .draw-cost { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.odds-tier { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+.ot-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+.ot-nm { font: 700 12px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
+.ot-pc { font: 700 16px var(--font-mono); }
+.odds-tier.tier-grail      { border-color: #ffd24a; } .odds-tier.tier-grail .ot-nm,
+.odds-tier.tier-grail .ot-pc { color: #ffd24a; }
+.odds-tier.tier-whitelabel { border-color: #f2f0ff; } .odds-tier.tier-whitelabel .ot-nm,
+.odds-tier.tier-whitelabel .ot-pc { color: #ffffff; }
+.odds-tier.tier-deepcut    { border-color: rgba(196,107,255,.6); } .odds-tier.tier-deepcut .ot-nm,
+.odds-tier.tier-deepcut .ot-pc { color: #c46bff; }
+.odds-tier.tier-bside      { border-color: rgba(47,224,255,.55); } .odds-tier.tier-bside .ot-nm,
+.odds-tier.tier-bside .ot-pc { color: #2fe0ff; }
+.odds-tier.tier-bargain .ot-nm, .odds-tier.tier-bargain .ot-pc { color: var(--text-dim); }
+
 .draw-odds { margin-top: 16px; }
 .draw-odds table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .draw-odds td { padding: 6px 4px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
@@ -3426,8 +3471,8 @@ body.entering-done #artist-hero {
   .draw-strip { transition: none !important; }
   .draw-window.landed .draw-needle, .draw-result.in,
   .draw-window.spinning::after, .draw-window.spinning .draw-needle,
-  .draw-window.hit-uncommon, .draw-window.hit-rare, .draw-window.hit-legendary,
-  .draw-tile.t-legendary .dt-chip, .draw-result.tier-legendary .dr-label,
+  .draw-window.hit-bside, .draw-window.hit-deepcut, .draw-window.hit-whitelabel, .draw-window.hit-grail,
+  .draw-tile.t-grail .dt-chip, .draw-tile.t-whitelabel .dt-chip, .draw-result.tier-grail .dr-label,
   #draw-go.arming { animation: none !important; }
 }
 
@@ -4339,7 +4384,7 @@ window.ICONS = {
     <div class="draw-result" id="draw-result"></div>
 
     <div class="draw-cost">
-      <button class="btn-primary" id="draw-go">Open for 250 Discs</button>
+      <button class="btn-primary" id="draw-go">Open for 1,000 Discs</button>
     </div>
 
     <div class="draw-odds">
@@ -10082,7 +10127,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   /* One spin of The Draw. The server charges, picks, grants and returns —
      the client is told what it won and never asked. A browser that chose its
-     own prize would be a browser that always chose the legendary. */
+     own prize would be a browser that always drew a Holy Grail. */
   async function spin() {
     const res = await rpc('wallet_spin');
     if (res.error) return { error: res.error };
@@ -13355,12 +13400,24 @@ window.renderAdminStats = renderAdminStats;
       btn.disabled = false;
       btn.textContent = was;
       if (window.reportIssue) reportIssue('collection buy failed', { error: String(e.message || e) });
+      /* Raw Postgres text has no business on a card. "Could not find
+         public.collection_buy_from(p_art, p_artist…) in the schema cache" is
+         PostgREST telling you a migration has not been run — true, useless to
+         a player, and it was being printed straight onto the record. */
+      var raw = String(e.message || e);
+      var msg = /schema cache|PGRST202|Could not find/i.test(raw)
+        ? 'The Collection is not switched on yet.'
+        : /costs .* Discs/i.test(raw) ? raw
+        : /already own/i.test(raw) ? 'You already own that one.'
+        : /cannot be priced|not enough of its tracks/i.test(raw)
+          ? 'That record cannot be priced — too few of its tracks matched.'
+        : 'That did not go through. Try again in a moment.';
       var note = document.createElement('div');
-      note.className = 'reco-note';
-      note.style.color = 'var(--red)';
-      note.textContent = String(e.message || e);
-      btn.parentNode.appendChild(note);
-      setTimeout(function () { if (note.parentNode) note.remove(); }, 3400);
+      note.className = 'col-err';
+      note.textContent = msg;
+      var host = btn.closest('.col-rec') || btn.parentNode;
+      host.appendChild(note);
+      setTimeout(function () { if (note.parentNode) note.remove(); }, 4200);
       return;
     }
 
@@ -13446,7 +13503,7 @@ window.renderAdminStats = renderAdminStats;
   var section = document.getElementById('view-draw');
   if (!section) return;
 
-  var COST = 250;
+  var COST = 1000;
   var TILE = 130;        // 120px wide + 2×5px margin, must match the CSS
   var STRIP_LEN = 70;
   var WIN_INDEX = 62;    // far enough in that it reads as a real run
@@ -13477,7 +13534,7 @@ window.renderAdminStats = renderAdminStats;
   }
 
   function tileHTML(it) {
-    return '<div class="draw-tile t-' + esc(it.tier || 'common') + '">' +
+    return '<div class="draw-tile t-' + esc(it.tier || 'bargain') + '">' +
       '<span class="dt-chip" style="background:' + swatchFor(it) + '"></span>' +
       '<span class="dt-nm">' + esc(it.label) + '</span></div>';
   }
@@ -13499,21 +13556,32 @@ window.renderAdminStats = renderAdminStats;
 
   /* Every rarity goes past, every spin.
 
-     Left to pure weighting the strip is 95% grey — a legendary is a 1-in-100
-     tile, so most spins show you nothing but Discs and there is nothing to
-     react to on the way down. Seeding one of each tier at fixed positions
-     means you always see the full ladder go by, and clustering the rare ones
+     Left to pure weighting the strip is mostly Bargain Bin — a Holy Grail is a
+     1-in-20 tile, so most spins show little worth reacting to on the way down.
+     Seeding one of each tier at fixed positions means you always see the full
+     ladder go by, and clustering the rare ones
      toward the end means the run gets visibly more valuable as it slows.
 
      This is theatre and it is honest theatre: what goes past has no bearing on
      what you get, which the server decided before any of this was built. The
      strip is a rendering of the possible, not a hint at the actual. */
+  // Display names, so the reel and the odds table say the same thing and the
+  // tier keys stay short in the database.
+  var TIERS = {
+    bargain:    'Bargain Bin',
+    bside:      'B-Side',
+    deepcut:    'Deep Cut',
+    whitelabel: 'White Label',
+    grail:      'Holy Grail'
+  };
+  function tierName(t) { return TIERS[t] || 'Bargain Bin'; }
+
   var SEED_PLAN = [
-    { at: 10, tier: 'uncommon' }, { at: 18, tier: 'rare' },
-    { at: 26, tier: 'legendary' }, { at: 33, tier: 'uncommon' },
-    { at: 40, tier: 'rare' }, { at: 46, tier: 'legendary' },
-    { at: 52, tier: 'rare' }, { at: 57, tier: 'legendary' },
-    { at: 60, tier: 'rare' }
+    { at: 10, tier: 'bside' }, { at: 18, tier: 'deepcut' },
+    { at: 26, tier: 'grail' }, { at: 33, tier: 'bside' },
+    { at: 40, tier: 'deepcut' }, { at: 46, tier: 'whitelabel' },
+    { at: 52, tier: 'deepcut' }, { at: 57, tier: 'grail' },
+    { at: 60, tier: 'whitelabel' }
   ];
 
   function buildStrip(pool, winner) {
@@ -13548,15 +13616,32 @@ window.renderAdminStats = renderAdminStats;
     el('draw-go').disabled = !st.is_admin && (st.discs || 0) < COST;
   }
 
+  /* Odds, grouped by tier. A flat list of fourteen prizes is a list nobody
+     reads; the number people actually want is "how often do I get a Holy
+     Grail", so the tier total leads and the individual prizes sit under it.
+     Still read from the same rows the server draws from, so the published
+     figures cannot drift from the real ones. */
+  var TIER_ORDER = ['grail', 'whitelabel', 'deepcut', 'bside', 'bargain'];
+
   async function paintOdds() {
     var pool = await loadItems();
     var total = pool.reduce(function (s, i) { return s + i.weight; }, 0) || 1;
-    el('draw-odds-body').innerHTML = '<table>' +
-      pool.slice().sort(function (a, b) { return b.weight - a.weight; }).map(function (i) {
-        return '<tr><td>' + esc(i.label) + '</td><td>' +
-          (i.weight / total * 100).toFixed(1) + '%</td></tr>';
-      }).join('') + '</table>' +
-      '<p class="reco-note" style="margin-top:8px;">Discs are earned only and cannot be bought. ' +
+    var byTier = {};
+    pool.forEach(function (i) { (byTier[i.tier] = byTier[i.tier] || []).push(i); });
+
+    el('draw-odds-body').innerHTML = TIER_ORDER.filter(function (t) { return byTier[t]; })
+      .map(function (t) {
+        var items = byTier[t].slice().sort(function (a, b) { return b.weight - a.weight; });
+        var sum = items.reduce(function (s, i) { return s + i.weight; }, 0);
+        return '<div class="odds-tier tier-' + t + '">' +
+          '<div class="ot-head"><span class="ot-nm">' + esc(tierName(t)) + '</span>' +
+          '<span class="ot-pc">' + (sum / total * 100).toFixed(0) + '%</span></div>' +
+          '<table>' + items.map(function (i) {
+            return '<tr><td>' + esc(i.label) + '</td><td>' +
+              (i.weight / total * 100).toFixed(1) + '%</td></tr>';
+          }).join('') + '</table></div>';
+      }).join('') +
+      '<p class="reco-note" style="margin-top:10px;">Discs are earned only and cannot be bought. ' +
       'Nothing here has cash value or leaves VINALL.</p>';
   }
 
@@ -13600,7 +13685,7 @@ window.renderAdminStats = renderAdminStats;
     if (res.error) {
       busy = false;
       el('draw-window').classList.remove('spinning');
-      go.textContent = 'Open for ' + COST + ' Discs';
+      go.textContent = 'Open for ' + COST.toLocaleString() + ' Discs';
       paintBalance();
       el('draw-result').innerHTML = '<div class="dr-sub">' + esc(res.error) + '</div>';
       if (window.reportIssue) reportIssue('wallet_spin failed', { error: res.error });
@@ -13629,14 +13714,18 @@ window.renderAdminStats = renderAdminStats;
       busy = false;
       var wnd = el('draw-window');
       wnd.classList.remove('spinning');
-      wnd.classList.add('landed', 'hit-' + (won.tier || 'common'));
+      wnd.classList.add('landed', 'hit-' + (won.tier || 'bargain'));
       go.textContent = 'Open another';
       var r = el('draw-result');
-      r.className = 'draw-result in tier-' + (won.tier || 'common');
-      r.innerHTML = '<div class="dr-label">' + esc(won.label) + '</div>' +
+      r.className = 'draw-result in tier-' + (won.tier || 'bargain');
+      // The tier is named above the prize, because "Holy Grail" is the part
+      // worth reading and a Disc amount on its own says nothing about how
+      // lucky you just were.
+      r.innerHTML = '<div class="dr-tier">' + esc(tierName(won.tier)) + '</div>' +
+        '<div class="dr-label">' + esc(won.label) + '</div>' +
         '<div class="dr-sub">' + esc(
-          won.kind === 'discs' ? '+' + won.gained + ' Discs'
-          : won.duplicate ? 'Already yours — ' + won.gained + ' Discs instead'
+          won.kind === 'discs' ? '+' + (Number(won.gained) || 0).toLocaleString() + ' Discs'
+          : won.duplicate ? 'Already yours — ' + (Number(won.gained) || 0).toLocaleString() + ' Discs instead'
           : won.kind === 'banner_pick' ? 'Pick any album as your banner, on your profile'
           : 'Unlocked — equip it in the Shop') + '</div>';
 
@@ -13646,24 +13735,33 @@ window.renderAdminStats = renderAdminStats;
     }, SPIN_MS + 40);
   }
 
-  // The payoff is scaled to the tier, so a legendary does not land with the
-  // same weight as 80 Discs. Everything here degrades to nothing under
-  // prefers-reduced-motion.
+  /* The payoff scales with the tier, so a Holy Grail does not land with the
+     same weight as 300 Discs. Five steps now rather than four, and the gap
+     between White Label and Holy Grail is deliberately wide — a 1-in-20 needs
+     to feel unmistakably different from a 1-in-10 or the top of the ladder is
+     just a slightly better middle. Everything here degrades to nothing under
+     prefers-reduced-motion. */
   function applyFeedback(won) {
     var wnd = el('draw-window');
-    if (won.tier === 'legendary') {
-      if (window.burst) burst(wnd, { count: 40, spread: 230 });
+    if (won.tier === 'grail') {
+      if (window.burst) burst(wnd, { count: 60, spread: 280 });
       if (window.buzz) buzz('big');
       if (typeof window.celebrate === 'function') {
-        window.celebrate('✨ ' + won.label, won.kind === 'banner_pick'
-          ? 'Seven-day reward, out of the machine. Pick your album.'
-          : 'The rarest thing in the box.');
+        window.celebrate('🏆 Holy Grail — ' + won.label, won.kind === 'banner_pick'
+          ? 'Pick any album as your banner. One in twenty.'
+          : 'One in twenty. The top of the crate.');
       }
-    } else if (won.tier === 'rare') {
-      if (window.burst) burst(wnd, { count: 24, spread: 160 });
+    } else if (won.tier === 'whitelabel') {
+      if (window.burst) burst(wnd, { count: 34, spread: 200 });
       if (window.buzz) buzz('big');
-    } else if (won.tier === 'uncommon') {
-      if (window.burst) burst(wnd, { count: 14, spread: 110 });
+      if (typeof window.celebrate === 'function') {
+        window.celebrate('White Label — ' + won.label, 'One in ten. Unmarked and worth knowing.');
+      }
+    } else if (won.tier === 'deepcut') {
+      if (window.burst) burst(wnd, { count: 22, spread: 150 });
+      if (window.buzz) buzz('big');
+    } else if (won.tier === 'bside') {
+      if (window.burst) burst(wnd, { count: 13, spread: 105 });
       if (window.buzz) buzz('good');
     } else {
       if (window.burst) burst(wnd, { count: 8, spread: 70 });

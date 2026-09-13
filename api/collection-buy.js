@@ -18,22 +18,22 @@ const STALE_DAYS = 14;
 /* Streams to Discs.
  *
  * Raw totals are unusable as a price: Views is 12.81 billion streams, and at
- * one-to-one nobody buys anything ever. Divided by five million it becomes a
- * ladder that fits what people actually earn — roughly 250 Discs on a normal
- * day, 900 if they do everything:
+ * one-to-one nobody buys anything ever. Divided by 1.25 million it becomes a
+ * ladder that fits what people actually earn — roughly 1,200 Discs on a normal
+ * day, 3,600 if they do everything:
  *
- *     Views (Drake)    12.81B  ->  2,562    about ten days of normal play
- *     Blonde            9.39B  ->  1,878
- *     In Rainbows       2.32B  ->    464    about two days
- *     The Money Store    180M  ->     36    same session
+ *     Views (Drake)    12.81B  -> 10,248    about a week of normal play
+ *     Blonde            9.39B  ->  7,512
+ *     In Rainbows       2.32B  ->  1,856    a day or two
+ *     The Money Store    180M  ->    144    same session
  *
  * Linear rather than compressed, deliberately: the hundred-to-one spread is
  * what makes a famous record feel like a target and an obscure one feel
  * affordable. A square-root curve would flatten exactly the thing that gives
  * the collection a shape.
  */
-const DISCS_PER_STREAM_DIVISOR = 5000000;
-const MIN_PRICE = 10;
+const DISCS_PER_STREAM_DIVISOR = 1250000;
+const MIN_PRICE = 40;
 
 export function priceFromStreams(streams) {
   const n = Number(streams) || 0;
