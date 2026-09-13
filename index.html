@@ -3118,6 +3118,7 @@ body.entering-done #artist-hero {
 .col-price small { font-size: 10px; color: var(--text-faint); font-weight: 400; }
 .col-unpriced { color: var(--text-faint); font-weight: 400; font-size: 11px; }
 .col-buy, .col-sell { flex-shrink: 0; }
+.col-search { margin-bottom: 14px; max-width: 460px; }
 /* Errors sit inside the card and wrap, rather than spilling raw Postgres text
    across the page as unwrapped red. */
 .col-err {
@@ -4327,7 +4328,7 @@ window.ICONS = {
       <div class="game-card" id="draw-card" style="border-color: var(--gold); background: linear-gradient(150deg, var(--gold-dim), var(--surface) 60%);">
         <div class="gc-emoji" data-icon="disc"></div>
         <h3>The Draw</h3>
-        <p>Spend 250 Discs, spin the strip, see what falls out. Odds on the page.</p>
+        <p>Spend 1,000 Discs, spin the strip, see what falls out. Odds on the page.</p>
         <div class="gc-go">Open one &rarr;</div>
       </div>
       <div class="game-card" id="hl-card">
@@ -4406,6 +4407,12 @@ window.ICONS = {
       <button data-col-tab="mine" class="active">Yours</button>
       <button data-col-tab="market">The Market</button>
       <button data-col-tab="board">Standings</button>
+    </div>
+    <!-- Search is the difference between a shop with thirty things in it and a
+         market. Without it you can only buy what the community happened to
+         rate, which is not a collection you chose. -->
+    <div class="col-search" id="col-search" style="display:none;">
+      <input id="col-q" class="g-input" type="text" placeholder="Search any album to price it&hellip;" autocomplete="off">
     </div>
     <div id="col-body"></div>
   </section>
@@ -9909,8 +9916,30 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     label.dataset.val = state.discs;
   }
 
+  /* Prices come from shop_items, not from the maps above.
+
+     The `cost` values written next to each theme and banner were duplicates of
+     rows in `shop_items`, and the 4x inflation moved the rows without moving
+     the duplicates — so the Shop offered Sundown at 150 while wallet_buy
+     charged 600, and the Buy button enabled itself against a price that did
+     not exist. Every number here is now read from the same table the server
+     charges from, so the two cannot disagree again.
+
+     shop_items has a public read policy for exactly this. */
+  async function loadPrices() {
+    if (!window.Cloud || !Cloud.client) return;
+    try {
+      var r = await Cloud.client().from('shop_items').select('kind,key,cost');
+      (r.data || []).forEach(function (row) {
+        var map = row.kind === 'theme' ? THEMES : row.kind === 'banner' ? BANNERS : null;
+        if (map && map[row.key]) map[row.key].cost = row.cost;
+      });
+    } catch (e) { /* keep whatever the maps say rather than showing nothing */ }
+  }
+
   async function load() {
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { loaded = false; return state; }
+    await loadPrices();   // before anything renders a price
     try {
       const me = Cloud.getUser();
       const prof = me && await Cloud.fetchProfile(me.id);
@@ -13210,6 +13239,8 @@ window.renderAdminStats = renderAdminStats;
   var tab = 'mine';
   var busy = false;
   var _mine = null, _market = null;
+  // Search results, when a search is showing. Null means "show the crate".
+  var _results = null, _qTimer = null;
 
   function el(id) { return document.getElementById(id); }
   function sb() { return (window.Cloud && Cloud.client) ? Cloud.client() : null; }
@@ -13295,6 +13326,8 @@ window.renderAdminStats = renderAdminStats;
     el('col-tabs').querySelectorAll('button').forEach(function (t) {
       t.classList.toggle('active', t.dataset.colTab === tab);
     });
+    // Search belongs to the Market and nowhere else.
+    el('col-search').style.display = (tab === 'market') ? '' : 'none';
 
     if (tab === 'mine') {
       body.innerHTML = '<p class="reco-note">Loading your shelf…</p>';
@@ -13321,8 +13354,9 @@ window.renderAdminStats = renderAdminStats;
     }
 
     if (tab === 'market') {
+      el('col-search').style.display = '';
       body.innerHTML = '<p class="reco-note">Reading the crate…</p>';
-      var items = await loadMarket(true);
+      var items = _results || await loadMarket(true);
       var owned = {};
       (await loadMine()).forEach(function (a) { owned[a.album_id] = true; });
       var discs = (window.Wallet && Wallet.get) ? (Wallet.get().discs || 0) : 0;
@@ -13332,8 +13366,10 @@ window.renderAdminStats = renderAdminStats;
         return;
       }
       body.innerHTML =
-        '<p class="reco-note">Priced by total Spotify streams. You hold ' +
-        (admin ? '∞' : n(discs)) + ' Discs. Selling a record returns 70%.</p>' +
+        '<p class="reco-note">' +
+        (_results ? 'Search results — tap Price it to value one. ' : 'Priced by total Spotify streams. ') +
+        'You hold ' + (admin ? '∞' : n(discs)) + ' Discs. Selling a record returns 70%.' +
+        (_results ? ' <a href="#" id="col-clear">Back to the crate</a>' : '') + '</p>' +
         '<div class="col-grid">' + items.map(function (a) {
           return card(a, {
             owned: !!owned[a.album_id],
@@ -13368,6 +13404,13 @@ window.renderAdminStats = renderAdminStats;
   }
 
   function wire(body) {
+    var clear = body.querySelector('#col-clear');
+    if (clear) clear.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      _results = null;
+      var q = el('col-q'); if (q) q.value = '';
+      render();
+    });
     body.querySelectorAll('[data-buy]').forEach(function (b) {
       b.addEventListener('click', function () { buy(b, b.dataset.buy); });
     });
@@ -13384,7 +13427,9 @@ window.renderAdminStats = renderAdminStats;
     btn.textContent = '…';
     if (window.ripple) ripple(btn);
 
-    var item = (_market || []).filter(function (x) { return x.album_id === albumId; })[0] || {};
+    // Could be a crate row or a search result — look in both.
+    var item = (_results || []).concat(_market || [])
+      .filter(function (x) { return x.album_id === albumId; })[0] || {};
     var t = await token();
     var j = null;
     try {
@@ -13461,6 +13506,43 @@ window.renderAdminStats = renderAdminStats;
     _mine = null; _market = null;
     render();
   }
+
+  /* Search any album on Spotify and buy it.
+
+     Results come back with no price: pricing an album means a kworb fetch, and
+     doing twenty of those to render a search would take twenty seconds. So a
+     result shows "price on request" and the button says "Price it" — one tap
+     values it, caches it in album_plays, and buys. The second tap on the same
+     record is instant because it is cached. */
+  async function search(q) {
+    if (!q || q.length < 2) { _results = null; render(); return; }
+    var body = el('col-body');
+    body.innerHTML = '<p class="reco-note">Searching…</p>';
+    try {
+      var d = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: 'album', limit: '18' }).toString(),
+                                 { priority: true });
+      var items = ((d.albums && d.albums.items) || []).filter(function (a) { return a && a.id; });
+      var seen = {};
+      _results = items.filter(function (a) {
+        if (seen[a.id]) return false; seen[a.id] = 1; return true;
+      }).map(function (a) {
+        return {
+          album_id: a.id, name: a.name,
+          artist: (a.artists && a.artists[0] && a.artists[0].name) || '',
+          art: (window.pickImage ? pickImage(a.images, 160) : (a.images && a.images[0] && a.images[0].url)) || '',
+          price: null,
+        };
+      });
+    } catch (e) { _results = []; }
+    render();
+  }
+
+  var qEl = el('col-q');
+  if (qEl) qEl.addEventListener('input', function () {
+    clearTimeout(_qTimer);
+    var v = qEl.value.trim();
+    _qTimer = setTimeout(function () { search(v); }, 300);
+  });
 
   el('col-tabs').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-col-tab]');
@@ -13793,7 +13875,12 @@ window.renderAdminStats = renderAdminStats;
   // Mirrors wallet_daily_login(): 25 + 12 per day, capped at 100. If that
   // formula changes in SQL it has to change here too — this is display only,
   // the server is what actually pays.
-  function payFor(day) { return Math.min(25 + (day - 1) * 12, 100); }
+  /* Mirrors wallet_daily_login(): 100 + 50 per day, capped at 400. Display
+     only — the server is what pays. This drifted once already when the rates
+     were inflated and the mirror was not, so the two formulas are written the
+     same way on purpose, to make a mismatch obvious on sight. */
+  var LOGIN_BASE = 100, LOGIN_STEP = 50, LOGIN_CAP = 400;
+  function payFor(day) { return Math.min(LOGIN_BASE + (day - 1) * LOGIN_STEP, LOGIN_CAP); }
 
   async function renderRewards() {
     var host = document.getElementById('rewards-body');
@@ -13874,7 +13961,7 @@ window.renderAdminStats = renderAdminStats;
       '</div>' +
       '<div class="rw-other">' +
         '<div class="rw-card" id="rw-draw"><h3>The Draw</h3>' +
-          '<p>250 Discs a spin. Discs, banners, themes — or the album banner, straight out of the machine. Odds on the page.</p>' +
+          '<p>1,000 Discs a spin. Holy Grail at 5% — the album banner and 20,000 Discs only come from there. Odds on the page.</p>' +
           '<div class="gc-go">Open one &rarr;</div></div>' +
         '<div class="rw-card" id="rw-shop"><h3>The Shop</h3>' +
           '<p>Spend what you have earned on themes and banners. You hold ' +
@@ -13884,13 +13971,17 @@ window.renderAdminStats = renderAdminStats;
       '<div class="rw-rates">' +
         '<h3 class="prof-section-title">Everything that pays</h3>' +
         '<table>' +
-          '<tr><td>Rating an album or song</td><td>8 &times; 10 a day</td></tr>' +
-          '<tr><td>Answering a question on Today</td><td>5 &times; 20 a day</td></tr>' +
-          '<tr><td>Solving the Daily Drop</td><td>75</td></tr>' +
-          '<tr><td>Solving Earworm</td><td>50 &times; 3 a day</td></tr>' +
-          '<tr><td>A run of 5+ on Higher or Lower</td><td>40 &times; 3 a day</td></tr>' +
-          '<tr><td>Winning a Tournament</td><td>40 &times; 2 a day</td></tr>' +
-          '<tr><td>Claiming an achievement</td><td>40 &times; 5 a day</td></tr>' +
+          // These mirror wallet_award_game / wallet_record_rating /
+          // award_lore_disc. They went stale once when the rates were inflated
+          // and this table was not — if you change a rate in SQL, change it here.
+          '<tr><td>Rating an album or song</td><td>32 &times; 10 a day</td></tr>' +
+          '<tr><td>Answering a question on Today</td><td>20 &times; 20 a day</td></tr>' +
+          '<tr><td>Solving the Daily Drop</td><td>300</td></tr>' +
+          '<tr><td>Solving Earworm</td><td>200 &times; 3 a day</td></tr>' +
+          '<tr><td>A run of 5+ on Higher or Lower</td><td>160 &times; 3 a day</td></tr>' +
+          '<tr><td>Winning a Tournament</td><td>160 &times; 2 a day</td></tr>' +
+          '<tr><td>Claiming an achievement</td><td>160 &times; 5 a day</td></tr>' +
+          '<tr><td>Logging in</td><td>100 rising to 400 by day seven</td></tr>' +
           '<tr><td>Winning a Bid War</td><td>30 &mdash; 8 for losing, 15 each for a draw</td></tr>' +
         '</table>' +
       '</div>';
