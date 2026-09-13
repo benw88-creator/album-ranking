@@ -16639,9 +16639,29 @@ window.track = function (name, props) {
     var raw = [].concat(findRinsed(), findAbandoned(),
                         findFresh(), findContradiction(), findAlbumLove(),
                         findArtistGap(), findNostalgia(), findAnyRated());
-    // One entry per record per pass. You work through everything you own
-    // before anything comes round again.
+
+    /* One card per record per pass — and that has to include receipts.
+
+       The ask pool deduped itself, but receipts were spliced in afterwards
+       without consulting `seen`, so a record you had already been asked about
+       could come round a second time in the same pass as a receipt. Seeing the
+       same album twice in one sitting is the fastest way to make an endless
+       stack feel short.
+
+       Receipts claim their record first. A receipt only exists for something
+       answered 45+ days ago, so it is both rarer and the better card — quoting
+       somebody back to themselves is the whole point of the loop, where a
+       second new question about the same record can simply wait for the next
+       pass. */
     var seen = {}, pool = [];
+    var receipts = shuffle(findReceipt()).filter(function (r) {
+      if (!r || !r.item) return false;
+      var k = r.item.kind + ':' + r.item.id;
+      if (seen[k]) return false;
+      seen[k] = 1;
+      return true;
+    });
+
     shuffle(raw).forEach(function (d) {
       if (!d || !d.item) return;
       var k = d.item.kind + ':' + d.item.id;
@@ -16650,7 +16670,6 @@ window.track = function (name, props) {
       pool.push(d);
     });
 
-    var receipts = shuffle(findReceipt());
     var out = [];
     pool.forEach(function (d, i) {
       out.push({ t: 'ask', d: d });
