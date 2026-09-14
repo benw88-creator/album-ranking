@@ -1148,11 +1148,16 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
 #ew-status { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
 
 .ew-board { display: flex; flex-direction: column; gap: 6px; align-items: center; margin: 4px 0 16px; }
+/* The columns are written per row in JS: every letter is a 1fr track and
+   each word break is its own fixed track, so the gap between words costs
+   the cells nothing in evenness. An empty .ew-gap sits in that track. */
 .ew-row {
   display: grid; width: 100%;
   grid-template-columns: repeat(var(--ew-cols, 5), 1fr); gap: 6px;
-  max-width: calc(var(--ew-cols, 5) * 56px);
+  max-width: calc(var(--ew-cols, 5) * 56px + var(--ew-wordgap) * 2);
+  --ew-wordgap: 14px;
 }
+.ew-gap { display: block; }
 .ew-cell {
   aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display); font-weight: 700; text-transform: uppercase;
@@ -1193,8 +1198,12 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
 .ew-result-actions { margin-top: 14px; }
 @media (max-width: 520px) {
   .ew-key { height: 46px; max-width: none; }
-  .ew-row { max-width: 100%; gap: 4px; }
-  .ew-board { gap: 4px; }
+  /* Eleven letters and two word breaks have to fit a 375px phone. The panel
+     gives back the side padding and the gaps tighten, because the letter has
+     to stay readable and it is the cells that were paying for the breaks. */
+  .ew-modal .modal-panel { padding: 24px 12px; }
+  .ew-row { max-width: 100%; gap: 3px; --ew-wordgap: 7px; }
+  .ew-board { gap: 3px; }
 }
 
 /* ---- SHOP ---- */
@@ -12519,15 +12528,36 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      and the board is as wide as that title rather than a fixed five —
      capped, because a nineteen-letter grid is unplayable on a phone.
 
+     Two things make it a puzzle rather than a slog:
+
+     - The board shows the WORD SHAPE. Nearly half of these titles are
+       more than one word, and rendered as one unbroken run of letters
+       "OKCOMPUTER" and "THANKUNEXT" are not puzzles, they are anagram
+       homework. Knowing it is 2 + 8 is the difference between guessing a
+       record and guessing a string; measured over the pool it takes the
+       candidates sharing a clue set from a median of 14 down to 4.
+     - Nothing is looked up while you play. The clues used to wait on an
+       iTunes genre lookup before the board was drawn at all, which meant
+       a measured four seconds of empty "Loading…" on open — six when
+       Apple was slow, since that is the abort timeout — and a blank
+       Genre clue whenever it timed out. Worse, switching mode left the
+       previous puzzle on screen with the keyboard silently dead until
+       the call came back, and two loads in flight at once ended with
+       whichever resolved last on the board, not the one you asked for.
+       The genre is part of the list now, so the game opens instantly and
+       cannot race itself.
+
      Two modes. Daily is a pure function of the date, so everyone gets the
      same one and it can be shared. Unlimited draws from the records YOU
      have rated, which is the whole point of having a library — and falls
-     back to the famous pool if you haven't rated enough yet.
+     back to the famous pool if you haven't rated enough yet. A library
+     pick is the one case with no baked genre, so that one clue is filled
+     in afterwards if the lookup answers; it never blocks the board.
 
      Clues are deliberately thin: the kind (album or song), the letter
-     count, and the genre. The artist is available on request, because
-     being stuck with no way forward is not difficulty, it's a dead end —
-     but taking it is recorded on the result.
+     count, the word shape, and the genre. The artist is available on
+     request, because being stuck with no way forward is not difficulty,
+     it's a dead end — but taking it is recorded on the result.
      ================================================================ -->
 <script>
 (function () {
@@ -12537,77 +12567,154 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   var MIN_LEN = 4;
   var MAX_LEN = 11; // a phone can show eleven columns; beyond that it's mush
 
-  /* --- pools ------------------------------------------------------------
+  /* --- the pool ---------------------------------------------------------
      Deliberately famous: a title you've never heard of is not a puzzle,
-     it's a slot machine. Reuses the same shape as Daily Drop's pools. */
-  var EW_ALBUMS = [
-    'Rumours|Fleetwood Mac', 'Thriller|Michael Jackson', 'Nevermind|Nirvana',
-    'Abbey Road|The Beatles', 'Purple Rain|Prince', 'Graduation|Kanye West',
-    'Illmatic|Nas', 'Blonde|Frank Ocean', 'Lemonade|Beyonce',
-    'Reputation|Taylor Swift', 'Midnights|Taylor Swift', 'Folklore|Taylor Swift',
-    'Views|Drake', 'Scorpion|Drake', 'Utopia|Travis Scott',
-    'Astroworld|Travis Scott', 'Damn|Kendrick Lamar', 'Sour|Olivia Rodrigo',
-    'Divide|Ed Sheeran', 'Parachutes|Coldplay', 'Ok Computer|Radiohead',
-    'Kid A|Radiohead', 'Hybrid Theory|Linkin Park', 'Meteora|Linkin Park',
-    'Nothing Was The Same|Drake', 'Channel Orange|Frank Ocean',
-    'Igor|Tyler The Creator', 'Flower Boy|Tyler The Creator',
-    'Ctrl|SZA', 'Sos|SZA', 'Renaissance|Beyonce', 'Dangerous Woman|Ariana Grande',
-    'Thank U Next|Ariana Grande', 'Future Nostalgia|Dua Lipa',
-    'After Hours|The Weeknd', 'Starboy|The Weeknd', 'Beauty Behind The Madness|The Weeknd',
-    'Back In Black|AC DC', 'Hotel California|Eagles', 'The Wall|Pink Floyd',
-    'Animals|Pink Floyd', 'Ready To Die|The Notorious BIG', 'The Chronic|Dr Dre',
-    'Doggystyle|Snoop Dogg', 'Stankonia|Outkast', 'Aquemini|Outkast',
-    'Californication|Red Hot Chili Peppers', 'Bad|Michael Jackson',
-    'Off The Wall|Michael Jackson', 'Ten|Pearl Jam', 'Dookie|Green Day',
-    'American Idiot|Green Day', 'Is This It|The Strokes', 'Whatever People Say I Am|Arctic Monkeys',
-    'Am|Arctic Monkeys', 'Definitely Maybe|Oasis', 'Blue|Joni Mitchell',
-    'Rubber Soul|The Beatles', 'Revolver|The Beatles', 'Let It Be|The Beatles',
-    'Born To Run|Bruce Springsteen', 'Nebraska|Bruce Springsteen',
-    'Legend|Bob Marley', 'Exodus|Bob Marley', 'Innervisions|Stevie Wonder',
-    'Kind Of Blue|Miles Davis', 'Blue Train|John Coltrane', 'Grace|Jeff Buckley',
-    'Homework|Daft Punk', 'Discovery|Daft Punk', 'Random Access Memories|Daft Punk',
-    'Melodrama|Lorde', 'Pure Heroine|Lorde', 'Fine Line|Harry Styles',
-    'Harrys House|Harry Styles', 'Positions|Ariana Grande', 'Happier Than Ever|Billie Eilish',
-    'Hit Me Hard And Soft|Billie Eilish', 'Norman Fucking Rockwell|Lana Del Rey',
-    'Born To Die|Lana Del Rey', 'Ultraviolence|Lana Del Rey', 'Igor|Tyler The Creator',
-    'Take Care|Drake', 'Certified Lover Boy|Drake', 'Her Loss|Drake',
-    'Trench|Twenty One Pilots', 'Blurryface|Twenty One Pilots',
-    'Currents|Tame Impala', 'Lonerism|Tame Impala', 'The Slow Rush|Tame Impala'
-  ];
-  var EW_SONGS = [
-    'Bohemian Rhapsody|Queen', 'Billie Jean|Michael Jackson', 'Thriller|Michael Jackson',
-    'Smells Like Teen Spirit|Nirvana', 'Imagine|John Lennon', 'Yesterday|The Beatles',
-    'Hey Jude|The Beatles', 'Let It Be|The Beatles', 'Creep|Radiohead',
-    'Wonderwall|Oasis', 'Yellow|Coldplay', 'Fix You|Coldplay',
-    'Hallelujah|Jeff Buckley', 'Hotel California|Eagles', 'Purple Rain|Prince',
-    'Superstition|Stevie Wonder', 'Respect|Aretha Franklin', 'Redemption Song|Bob Marley',
-    'No Woman No Cry|Bob Marley', 'Rolling In The Deep|Adele', 'Someone Like You|Adele',
-    'Hello|Adele', 'Shape Of You|Ed Sheeran', 'Perfect|Ed Sheeran',
-    'Blinding Lights|The Weeknd', 'Starboy|The Weeknd', 'Levitating|Dua Lipa',
-    'Dont Start Now|Dua Lipa', 'Bad Guy|Billie Eilish', 'Ocean Eyes|Billie Eilish',
-    'Anti Hero|Taylor Swift', 'Blank Space|Taylor Swift', 'Cruel Summer|Taylor Swift',
-    'Shake It Off|Taylor Swift', 'Style|Taylor Swift', 'Lover|Taylor Swift',
-    'Hotline Bling|Drake', 'Gods Plan|Drake', 'One Dance|Drake', 'Passionfruit|Drake',
-    'Sicko Mode|Travis Scott', 'Goosebumps|Travis Scott', 'Humble|Kendrick Lamar',
-    'Alright|Kendrick Lamar', 'Money Trees|Kendrick Lamar', 'Stronger|Kanye West',
-    'Heartless|Kanye West', 'Runaway|Kanye West', 'Gold Digger|Kanye West',
-    'Lose Yourself|Eminem', 'Stan|Eminem', 'Without Me|Eminem',
-    'Juicy|The Notorious BIG', 'California Love|2Pac', 'In Da Club|50 Cent',
-    'Crazy In Love|Beyonce', 'Halo|Beyonce', 'Formation|Beyonce',
-    'Umbrella|Rihanna', 'Diamonds|Rihanna', 'We Found Love|Rihanna',
-    'Poker Face|Lady Gaga', 'Bad Romance|Lady Gaga', 'Shallow|Lady Gaga',
-    'Uptown Funk|Mark Ronson', 'Get Lucky|Daft Punk', 'One More Time|Daft Punk',
-    'Seven Nation Army|The White Stripes', 'Mr Brightside|The Killers',
-    'Take Me Out|Franz Ferdinand', 'Do I Wanna Know|Arctic Monkeys',
-    '505|Arctic Monkeys', 'Riptide|Vance Joy', 'Ho Hey|The Lumineers',
-    'Radioactive|Imagine Dragons', 'Believer|Imagine Dragons',
-    'Counting Stars|OneRepublic', 'Viva La Vida|Coldplay', 'The Scientist|Coldplay',
-    'Karma Police|Radiohead', 'No Surprises|Radiohead', 'Everlong|Foo Fighters',
-    'The Less I Know The Better|Tame Impala', 'Redbone|Childish Gambino',
-    'Nights|Frank Ocean', 'Pink Matter|Frank Ocean', 'Good News|Mac Miller',
-    'Self Care|Mac Miller', 'Kill Bill|SZA', 'Good Days|SZA',
-    'Vampire|Olivia Rodrigo', 'Drivers License|Olivia Rodrigo', 'Good 4 U|Olivia Rodrigo',
-    'Flowers|Miley Cyrus', 'As It Was|Harry Styles', 'Watermelon Sugar|Harry Styles'
+     it's a slot machine. Genre and artwork are frozen here, taken from the
+     Daily Drop's list wherever the same record appears in both, so the two
+     games label a record the same way and neither needs the network.
+
+       title, artist, kind, genre, art  */
+  var EW_ROWS = [
+    ['Rumours', 'Fleetwood Mac', 'album', 'Rock', 'https://i.scdn.co/image/ab67616d0000b27357df7ce0eac715cf70e519a7'],
+    ['Thriller', 'Michael Jackson', 'album', 'Pop', 'https://i.scdn.co/image/ab67616d0000b27332a7d87248d1b75463483df5'],
+    ['Nevermind', 'Nirvana', 'album', 'Alternative', 'https://i.scdn.co/image/ab67616d0000b273fbc71c99f9c1296c56dd51b6'],
+    ['Abbey Road', 'The Beatles', 'album', 'Rock', 'https://i.scdn.co/image/ab67616d0000b273dc30583ba717007b00cceb25'],
+    ['Purple Rain', 'Prince', 'album', 'R&B/Soul', 'https://i.scdn.co/image/ab67616d0000b2738a2ce3f148f57584269c3782'],
+    ['Graduation', 'Kanye West', 'album', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b27326f7f19c7f0381e56156c94a'],
+    ['Illmatic', 'Nas', 'album', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b27371d840defb002ed3b180f7cd'],
+    ['Blonde', 'Frank Ocean', 'album', 'R&B/Soul', 'https://i.scdn.co/image/ab67616d0000b273c5649add07ed3720be9d5526'],
+    ['Lemonade', 'Beyonce', 'album', 'R&B/Soul', 'https://i.scdn.co/image/ab67616d0000b2738db37bc9a58543471bee78c5'],
+    ['Reputation', 'Taylor Swift', 'album', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273da5d5aeeabacacc1263c0f4b'],
+    ['Midnights', 'Taylor Swift', 'album', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273bb54dde68cd23e2a268ae0f5'],
+    ['Folklore', 'Taylor Swift', 'album', 'Folk', 'https://i.scdn.co/image/ab67616d0000b27395f754318336a07e85ec59bc'],
+    ['Views', 'Drake', 'album', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b27372d0af2341359a90710c1fdc'],
+    ['Scorpion', 'Drake', 'album', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b273c185e37be2a06b5c6f2dc704'],
+    ['Utopia', 'Travis Scott', 'album', 'Hip-Hop', 'https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/7d/4f/94/7d4f9468-56e1-3a2d-7186-c8088170ef58/196871341899.jpg/300x300bb.jpg'],
+    ['Astroworld', 'Travis Scott', 'album', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b273daec894c14c0ca42d76eeb32'],
+    ['Damn', 'Kendrick Lamar', 'album', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b2732171b967bef683ab0eaf12e9'],
+    ['Sour', 'Olivia Rodrigo', 'album', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273a91c10fe9472d9bd89802e5a'],
+    ['Divide', 'Ed Sheeran', 'album', 'Pop', ''],
+    ['Parachutes', 'Coldplay', 'album', 'Alternative', 'https://i.scdn.co/image/ab67616d0000b2739164bafe9aaa168d93f4816a'],
+    ['Ok Computer', 'Radiohead', 'album', 'Alternative', 'https://i.scdn.co/image/ab67616d0000b273c8b444df094279e70d0ed856'],
+    ['Kid A', 'Radiohead', 'album', 'Alternative', 'https://i.scdn.co/image/ab67616d0000b2736c7112082b63beefffe40151'],
+    ['Meteora', 'Linkin Park', 'album', 'Rock', 'https://i.scdn.co/image/ab67616d0000b2735f1f51d14e8bea89484ecd1b'],
+    ['Igor', 'Tyler The Creator', 'album', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b27330a635de2bb0caa4e26f6abb'],
+    ['Flower Boy', 'Tyler The Creator', 'album', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b2738940ac99f49e44f59e6f7fb3'],
+    ['Ctrl', 'SZA', 'album', 'R&B/Soul', 'https://i.scdn.co/image/ab67616d0000b27306d56b057cce5797538a16d5'],
+    ['Renaissance', 'Beyonce', 'album', 'Electronic', 'https://i.scdn.co/image/ab67616d0000b27369a3c061676c2020adfe8315'],
+    ['Thank U Next', 'Ariana Grande', 'album', 'Pop', 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/bb/69/07/bb6907de-8ad4-970b-3311-121320e1bf9c/19UMGIM03691.rgb.jpg/300x300bb.jpg'],
+    ['After Hours', 'The Weeknd', 'album', 'R&B/Soul', 'https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/2b/b9/fe/2bb9fef5-d7f3-8345-25a9-db0e79fde4e4/20UMGIM11048.rgb.jpg/300x300bb.jpg'],
+    ['Starboy', 'The Weeknd', 'album', 'R&B/Soul', 'https://i.scdn.co/image/ab67616d0000b273a048415db06a5b6fa7ec4e1a'],
+    ['Back In Black', 'AC DC', 'album', 'Rock', 'https://i.scdn.co/image/ab67616d0000b273ff191d7fbdb5a13eaf84132b'],
+    ['The Wall', 'Pink Floyd', 'album', 'Rock', 'https://i.scdn.co/image/ab67616d0000b273b694e89ba937dd2631ff584c'],
+    ['Animals', 'Pink Floyd', 'album', 'Rock', ''],
+    ['Ready To Die', 'The Notorious BIG', 'album', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b2730f51e29700232d57fe8a0830'],
+    ['The Chronic', 'Dr Dre', 'album', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b2739710731c9d7baec635f1bab1'],
+    ['Doggystyle', 'Snoop Dogg', 'album', 'Hip-Hop', ''],
+    ['Stankonia', 'Outkast', 'album', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b273153b3d6495031cb813a7451c'],
+    ['Aquemini', 'Outkast', 'album', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b273e2352cc20602d45e9a0e7617'],
+    ['Off The Wall', 'Michael Jackson', 'album', 'Pop', 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/0c/fe/a3/0cfea324-57c1-d530-5248-9bb591bbd7bf/074643574525.jpg/300x300bb.jpg'],
+    ['Dookie', 'Green Day', 'album', 'Punk', 'https://i.scdn.co/image/ab67616d0000b273db89b08034de626ebee6823d'],
+    ['Is This It', 'The Strokes', 'album', 'Alternative', 'https://i.scdn.co/image/ab67616d0000b273a388a3f20d1bf2123249cc79'],
+    ['Blue', 'Joni Mitchell', 'album', 'Folk', 'https://i.scdn.co/image/ab67616d0000b273e79dc1438d650f426b5e99a7'],
+    ['Rubber Soul', 'The Beatles', 'album', 'Rock', 'https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/af/20/aa/af20aa89-4002-11fb-25d8-ff544af67eb4/00602567725404.rgb.jpg/300x300bb.jpg'],
+    ['Revolver', 'The Beatles', 'album', 'Rock', 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/97/f4/3a/97f43ab4-9fdf-7a41-e430-7c6c313f3883/13UMGIM63887.rgb.jpg/300x300bb.jpg'],
+    ['Let It Be', 'The Beatles', 'album', 'Rock', 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/5f/ff/9a/5fff9a6a-bb13-6507-5e68-2793ef798834/21UMGIM61121.rgb.jpg/300x300bb.jpg'],
+    ['Born To Run', 'Bruce Springsteen', 'album', 'Rock', 'https://i.scdn.co/image/ab67616d0000b2738c5b6f7dcdc5817dc5050b2a'],
+    ['Nebraska', 'Bruce Springsteen', 'album', 'Rock', 'https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/76/2d/e5/762de50e-0967-4d24-c4da-752164312cd2/074643835824.jpg/300x300bb.jpg'],
+    ['Legend', 'Bob Marley', 'album', 'Reggae', ''],
+    ['Exodus', 'Bob Marley', 'album', 'Reggae', 'https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/23/fa/f8/23faf820-c4fa-2bf1-d672-846971f5cf5c/06UMGIM31355.rgb.jpg/300x300bb.jpg'],
+    ['Kind Of Blue', 'Miles Davis', 'album', 'Jazz', 'https://i.scdn.co/image/ab67616d0000b273387a29c90de3b2398c29c34f'],
+    ['Blue Train', 'John Coltrane', 'album', 'Jazz', 'https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/6e/1a/13/6e1a134d-8f6f-d90f-b855-ea69436a2e8b/17UM1IM45370.rgb.jpg/300x300bb.jpg'],
+    ['Grace', 'Jeff Buckley', 'album', 'Alternative', 'https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/99/d6/ab/99d6abb0-4837-f397-3f56-c7dfd627e23e/886447700778.jpg/300x300bb.jpg'],
+    ['Homework', 'Daft Punk', 'album', 'Electronic', 'https://i.scdn.co/image/ab67616d0000b2738ac778cc7d88779f74d33311'],
+    ['Discovery', 'Daft Punk', 'album', 'Electronic', 'https://i.scdn.co/image/ab67616d0000b2731e81bff9807a9e629fce5ade'],
+    ['Melodrama', 'Lorde', 'album', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273f8553e18a11209d4becd0336'],
+    ['Pure Heroine', 'Lorde', 'album', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273187331e276c898d39764cc98'],
+    ['Fine Line', 'Harry Styles', 'album', 'Pop', 'https://i.scdn.co/image/ab67616d0000b27325180571abce9472f61bd722'],
+    ['Harrys House', 'Harry Styles', 'album', 'Pop', 'https://i.scdn.co/image/ab67616d0000b27382ce362511fb3d9dda6578ee'],
+    ['Positions', 'Ariana Grande', 'album', 'Pop', 'https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/a8/8e/f9/a88ef97a-74c3-bedf-0574-ea0b83b40a38/20UMGIM94965.rgb.jpg/300x300bb.jpg'],
+    ['Born To Die', 'Lana Del Rey', 'album', 'Pop', 'https://i.scdn.co/image/ab67616d0000b27317d513ccda8f837aedd185b5'],
+    ['Take Care', 'Drake', 'album', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b273bf7926038f1dd479de84691f'],
+    ['Her Loss', 'Drake', 'album', 'Hip-Hop', 'https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/e1/6e/6a/e16e6a89-3e6d-1936-1a9c-b51680bcd4c1/22UM1IM29132.rgb.jpg/300x300bb.jpg'],
+    ['Trench', 'Twenty One Pilots', 'album', 'Alternative', 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/a3/c0/2b/a3c02b76-baa1-e575-dcba-247509200424/075679864789.jpg/300x300bb.jpg'],
+    ['Blurryface', 'Twenty One Pilots', 'album', 'Alternative', 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/8e/e2/89/8ee28904-0821-610d-5011-a61845f62756/075679926951.jpg/300x300bb.jpg'],
+    ['Currents', 'Tame Impala', 'album', 'Alternative', 'https://i.scdn.co/image/ab67616d0000b2739e1cfc756886ac782e363d79'],
+    ['Lonerism', 'Tame Impala', 'album', 'Alternative', 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/b7/40/9b/b7409bc6-24fa-b956-5613-4be8dc62be06/12UMGIM64219.rgb.jpg/300x300bb.jpg'],
+    ['The Slow Rush', 'Tame Impala', 'album', 'Alternative', 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/65/e3/e7/65e3e740-b69f-f5cb-f2e6-7dedb5265ac9/19UMGIM96748.rgb.jpg/300x300bb.jpg'],
+    ['Billie Jean', 'Michael Jackson', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b27332a7d87248d1b75463483df5'],
+    ['Thriller', 'Michael Jackson', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b27332a7d87248d1b75463483df5'],
+    ['Imagine', 'John Lennon', 'song', 'Rock', 'https://i.scdn.co/image/ab67616d0000b27399581550ef9746ca582bb3cc'],
+    ['Yesterday', 'The Beatles', 'song', 'Rock', 'https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/1a/19/db/1a19db26-17ad-b986-11a9-f72ac7a6194b/18UMGIM31214.rgb.jpg/300x300bb.jpg'],
+    ['Hey Jude', 'The Beatles', 'song', 'Rock', 'https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/01/69/02/01690216-48fc-1c54-b1de-48170d16b1c3/00602567725268.rgb.jpg/300x300bb.jpg'],
+    ['Let It Be', 'The Beatles', 'song', 'Rock', 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/5f/ff/9a/5fff9a6a-bb13-6507-5e68-2793ef798834/21UMGIM61121.rgb.jpg/300x300bb.jpg'],
+    ['Creep', 'Radiohead', 'song', 'Alternative', 'https://i.scdn.co/image/ab67616d0000b27393ffc909e21de5a8d88d04ca'],
+    ['Wonderwall', 'Oasis', 'song', 'Rock', 'https://i.scdn.co/image/ab67616d0000b2732f2eeee9b405f4d00428d84c'],
+    ['Yellow', 'Coldplay', 'song', 'Alternative', 'https://i.scdn.co/image/ab67616d0000b27383580914326a689d622ab4f2'],
+    ['Fix You', 'Coldplay', 'song', 'Alternative', 'https://i.scdn.co/image/ab67616d0000b2734e0362c225863f6ae2432651'],
+    ['Hallelujah', 'Jeff Buckley', 'song', 'Alternative', 'https://is1-ssl.mzstatic.com/image/thumb/Features6/v4/61/d7/90/61d7900e-10ef-6f89-3980-53d330f38adf/dj.xjlbtpmc.jpg/300x300bb.jpg'],
+    ['Purple Rain', 'Prince', 'song', 'R&B/Soul', 'https://i.scdn.co/image/ab67616d0000b2738a2ce3f148f57584269c3782'],
+    ['Respect', 'Aretha Franklin', 'song', 'R&B/Soul', 'https://i.scdn.co/image/ab67616d0000b2736aa9314b7ddfbd8f036ba3ac'],
+    ['Hello', 'Adele', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273550ece654c69e2c138f6d374'],
+    ['Shape Of You', 'Ed Sheeran', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96'],
+    ['Perfect', 'Ed Sheeran', 'song', 'Pop', 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/15/e6/e8/15e6e8a4-4190-6a8b-86c3-ab4a51b88288/190295851286.jpg/300x300bb.jpg'],
+    ['Starboy', 'The Weeknd', 'song', 'R&B/Soul', 'https://i.scdn.co/image/ab67616d0000b273a048415db06a5b6fa7ec4e1a'],
+    ['Levitating', 'Dua Lipa', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273c88bae7846e62a8ba59ee0bd'],
+    ['Bad Guy', 'Billie Eilish', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b27350a3147b4edd7701a876c6ce'],
+    ['Ocean Eyes', 'Billie Eilish', 'song', 'Pop', 'https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/2e/c1/e3/2ec1e3e2-12f5-2bc2-f9d5-b102d9efcb89/194491997700.jpg/300x300bb.jpg'],
+    ['Anti Hero', 'Taylor Swift', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273bb54dde68cd23e2a268ae0f5'],
+    ['Blank Space', 'Taylor Swift', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273b7e976d2b35c767f9012cb72'],
+    ['Cruel Summer', 'Taylor Swift', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273e787cffec20aa2a396a61647'],
+    ['Shake It Off', 'Taylor Swift', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273b7e976d2b35c767f9012cb72'],
+    ['Style', 'Taylor Swift', 'song', 'Pop', 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/a7/98/d8/a798d867-344d-2bf2-fbfe-d2d1412dcef8/14UMDIM03793.rgb.jpg/300x300bb.jpg'],
+    ['Lover', 'Taylor Swift', 'song', 'Pop', 'https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/49/3d/ab/493dab54-f920-9043-6181-80993b8116c9/19UMGIM53909.rgb.jpg/300x300bb.jpg'],
+    ['Gods Plan', 'Drake', 'song', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b273f907de96b9a4fbc04accc0d5'],
+    ['One Dance', 'Drake', 'song', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b2739416ed64daf84936d89e671c'],
+    ['Sicko Mode', 'Travis Scott', 'song', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b273daec894c14c0ca42d76eeb32'],
+    ['Goosebumps', 'Travis Scott', 'song', 'Hip-Hop', 'https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/b8/e5/27/b8e527c8-aaf4-c7b7-5562-c479458ed7d9/886446092645.jpg/300x300bb.jpg'],
+    ['Humble', 'Kendrick Lamar', 'song', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b2732171b967bef683ab0eaf12e9'],
+    ['Alright', 'Kendrick Lamar', 'song', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b273cdb645498cd3d8a2db4d05e1'],
+    ['Money Trees', 'Kendrick Lamar', 'song', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b2732cd55246d935a8a77cb4859e'],
+    ['Stronger', 'Kanye West', 'song', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b273bcfdfd7c62c57a5a58a24b24'],
+    ['Heartless', 'Kanye West', 'song', 'Hip-Hop', 'https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/4d/75/2d/4d752db1-022d-f65d-40a1-a2390f01427a/13UAEIM26465.rgb.jpg/300x300bb.jpg'],
+    ['Runaway', 'Kanye West', 'song', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b273d9194aa18fa4c9362b47464f'],
+    ['Gold Digger', 'Kanye West', 'song', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b273d79ba8ad2be777bad0e9924b'],
+    ['Stan', 'Eminem', 'song', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b273dbb3dd82da45b7d7f31b1b42'],
+    ['Without Me', 'Eminem', 'song', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b2736ca5c90113b30c3c43ffb8f4'],
+    ['Juicy', 'The Notorious BIG', 'song', 'Hip-Hop', 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f8/6a/3d/f86a3db0-d518-cd49-c0c9-25e767ae0a6d/075679456861.jpg/300x300bb.jpg'],
+    ['In Da Club', '50 Cent', 'song', 'Hip-Hop', 'https://i.scdn.co/image/ab67616d0000b273c5ff6672e70d0b6aac93695d'],
+    ['Crazy In Love', 'Beyonce', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273a9fd4a0405945cd51e8de130'],
+    ['Halo', 'Beyonce', 'song', 'R&B/Soul', 'https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/35/0f/55/350f55da-2104-162a-5872-cb35fef30410/mzi.morbeoaw.jpg/300x300bb.jpg'],
+    ['Formation', 'Beyonce', 'song', 'R&B/Soul', 'https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/13/ea/ef/13eaef4e-c602-0389-9b19-9339e3f27c0f/196871182607.jpg/300x300bb.jpg'],
+    ['Umbrella', 'Rihanna', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273c10fafad6a659f2802b32421'],
+    ['Diamonds', 'Rihanna', 'song', 'Pop', 'https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/d3/72/50/d3725004-0117-e76d-47f3-00b185e9dd82/12UMGIM59888.rgb.jpg/300x300bb.jpg'],
+    ['We Found Love', 'Rihanna', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b2733d2a1bbb6368ee88ea102984'],
+    ['Poker Face', 'Lady Gaga', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273e691217483df8798445c82e2'],
+    ['Bad Romance', 'Lady Gaga', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b2730a49322a2b093601bce2f38e'],
+    ['Shallow', 'Lady Gaga', 'song', 'Pop', 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/b1/9f/ef/b19fef51-79de-a940-e8ab-9e4e07b04d96/18UMGIM53752.rgb.jpg/300x300bb.jpg'],
+    ['Uptown Funk', 'Mark Ronson', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b2739860171ddfee17f77a570cf6'],
+    ['Get Lucky', 'Daft Punk', 'song', 'Electronic', 'https://i.scdn.co/image/ab67616d0000b2734d22198f946d9b32f25fc263'],
+    ['One More Time', 'Daft Punk', 'song', 'Electronic', 'https://i.scdn.co/image/ab67616d0000b27338e5c88261ac859cee792916'],
+    ['Take Me Out', 'Franz Ferdinand', 'song', 'Alternative', 'https://i.scdn.co/image/ab67616d0000b273c9b11ace613fff7f815600e5'],
+    ['Riptide', 'Vance Joy', 'song', 'Folk', 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/7a/1c/65/7a1c6571-34e9-bb77-32be-90c72ba003c0/075679920355.jpg/300x300bb.jpg'],
+    ['Ho Hey', 'The Lumineers', 'song', 'Folk', 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/ee/5b/95/ee5b95dc-4086-4e71-98c9-07f9dde84375/18513.jpg/300x300bb.jpg'],
+    ['Radioactive', 'Imagine Dragons', 'song', 'Rock', 'https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/23/4b/10/234b10a6-95b6-db07-ff15-542b56aee927/22UMGIM65859.rgb.jpg/300x300bb.jpg'],
+    ['Believer', 'Imagine Dragons', 'song', 'Rock', 'https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/11/7a/b8/117ab805-6811-8929-18b9-0fad7baf0c25/17UMGIM98210.rgb.jpg/300x300bb.jpg'],
+    ['Viva La Vida', 'Coldplay', 'song', 'Alternative', 'https://i.scdn.co/image/ab67616d0000b273be592342bbc8e3bfce593b16'],
+    ['Karma Police', 'Radiohead', 'song', 'Alternative', 'https://i.scdn.co/image/ab67616d0000b273c8b444df094279e70d0ed856'],
+    ['No Surprises', 'Radiohead', 'song', 'Alternative', 'https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/07/60/ba/0760ba0f-148c-b18f-d0ff-169ee96f3af5/634904078164.png/300x300bb.jpg'],
+    ['Everlong', 'Foo Fighters', 'song', 'Rock', 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/68/f5/86/68f586ca-a375-9965-a864-9e227e77ef5b/884977570328.jpg/300x300bb.jpg'],
+    ['Redbone', 'Childish Gambino', 'song', 'R&B/Soul', 'https://i.scdn.co/image/ab67616d0000b2731c29562d6e8c1f55bb1311d5'],
+    ['Nights', 'Frank Ocean', 'song', 'R&B/Soul', 'https://i.scdn.co/image/ab67616d0000b273c5649add07ed3720be9d5526'],
+    ['Pink Matter', 'Frank Ocean', 'song', 'R&B/Soul', ''],
+    ['Good News', 'Mac Miller', 'song', 'Hip-Hop', 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/23/39/38/23393826-762f-ec76-dc1e-9344f647c958/093624905981.jpg/300x300bb.jpg'],
+    ['Self Care', 'Mac Miller', 'song', 'Hip-Hop', ''],
+    ['Kill Bill', 'SZA', 'song', 'R&B/Soul', 'https://i.scdn.co/image/ab67616d0000b273c5276ed6cb0287df8d9be07f'],
+    ['Good Days', 'SZA', 'song', 'R&B/Soul', 'https://i.scdn.co/image/ab67616d0000b27304257b29be46a894e651a1a3'],
+    ['Vampire', 'Olivia Rodrigo', 'song', 'Pop', 'https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/9e/0d/17/9e0d17e0-c068-fbd9-fd85-610cc87c86aa/23UMGIM71511.rgb.jpg/300x300bb.jpg'],
+    ['Good 4 U', 'Olivia Rodrigo', 'song', 'Pop', 'https://i.scdn.co/image/ab67616d0000b273a91c10fe9472d9bd89802e5a'],
+    ['Flowers', 'Miley Cyrus', 'song', 'Pop', 'https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/c4/40/d8/c440d88a-2bcd-5d10-e814-e482271134f4/196871387361.jpg/300x300bb.jpg'],
+    ['As It Was', 'Harry Styles', 'song', 'Pop', 'https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/2a/19/fb/2a19fb85-2f70-9e44-f2a9-82abe679b88e/886449990061.jpg/300x300bb.jpg']
   ];
 
   /* --- helpers ---------------------------------------------------------- */
@@ -12618,7 +12725,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   function ewHash(s) {
     var h = 2166136261;
     for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-    return Math.abs(h);
+    return h >>> 0;
   }
   // Letters only: spaces, punctuation and accents all disappear, so the
   // board is one clean run of characters and "Don't Start Now" is eleven
@@ -12628,38 +12735,56 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       .normalize('NFD')
       .toUpperCase().replace(/[^A-Z]/g, '');
   }
+  /* How many letters are in each word — the shape the board draws its gaps
+     from. A word that is pure punctuation ("&") leaves nothing behind and
+     is dropped rather than shown as an empty group. */
+  function ewShape(title) {
+    return String(title || '').trim().split(/\s+/)
+      .map(function (w) { return ewLetters(w).length; })
+      .filter(function (n) { return n > 0; });
+  }
   function ewPlayable(title) {
-    var L = ewLetters(title);
-    return L.length >= MIN_LEN && L.length <= MAX_LEN;
+    var L = ewLetters(title).length;
+    return L >= MIN_LEN && L <= MAX_LEN;
   }
 
-  var ewState = {
-    mode: 'daily',          // 'daily' | 'unlimited'
-    answer: '',             // letters only
-    display: '',            // the title as written
-    artist: '',
-    kind: 'album',
-    genre: '',
-    art: '',
-    rows: [],               // array of {letters:[], marks:[]}
-    current: '',
-    done: false,
-    won: false,
-    hinted: false,
-    busy: false
-  };
+  function ewRec(r, i) {
+    return { i: i, title: r[0], artist: r[1], kind: r[2], genre: r[3], art: r[4],
+             answer: ewLetters(r[0]), shape: ewShape(r[0]) };
+  }
+  var EW_POOL = EW_ROWS.map(ewRec);
 
-  var el = {};
-
-  /* --- picking the answer ------------------------------------------------ */
-  function ewPoolPick(seed) {
-    // Interleave albums and songs so a run of days doesn't feel one-sided.
-    var pool = (ewHash(seed + 'kind') % 2 === 0) ? EW_ALBUMS : EW_SONGS;
-    var kind = pool === EW_ALBUMS ? 'album' : 'song';
-    var usable = pool.filter(function (e) { return ewPlayable(e.split('|')[0]); });
-    var entry = usable[ewHash(seed) % usable.length];
-    var parts = entry.split('|');
-    return { title: parts[0], artist: parts[1], kind: kind };
+  /* --- which record is today's --------------------------------------------
+     A seeded shuffle indexed by the day number rather than hash(date) %
+     length, so the list plays through before anything repeats. Both halves
+     are pure, so every device agrees without asking a server. */
+  function ewDayNumber() {
+    var d = new Date();
+    return Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(2020, 0, 1)) / 86400000);
+  }
+  var ewOrder = null;
+  function ewCycle() {
+    if (ewOrder) return ewOrder;
+    var n = EW_POOL.length, a = [], seed = ewHash('vinall-earworm');
+    for (var i = 0; i < n; i++) a.push(i);
+    function rnd() {                       // mulberry32
+      seed = (seed + 0x6D2B79F5) >>> 0;
+      var t = seed;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+    for (var j = n - 1; j > 0; j--) { var k = Math.floor(rnd() * (j + 1)), tmp = a[j]; a[j] = a[k]; a[k] = tmp; }
+    ewOrder = a;
+    return a;
+  }
+  function ewDailyPick() {
+    if (!EW_POOL.length) return null;
+    var n = EW_POOL.length;
+    return EW_POOL[ewCycle()[((ewDayNumber() % n) + n) % n]];
+  }
+  function ewRandomPick() {
+    return EW_POOL.length ? EW_POOL[Math.floor(Math.random() * EW_POOL.length)] : null;
   }
 
   function ewLibraryPick() {
@@ -12671,14 +12796,16 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       Object.keys(albums).forEach(function (id) {
         var a = albums[id];
         if (a && a.name && ewPlayable(a.name)) {
-          out.push({ title: a.name, artist: a.artist || '', kind: 'album', art: a.art || '' });
+          out.push({ i: -1, title: a.name, artist: a.artist || '', kind: 'album', genre: '',
+                     art: a.art || '', answer: ewLetters(a.name), shape: ewShape(a.name) });
         }
       });
       var songs = JSON.parse(localStorage.getItem('crate_songs_v1') || '{}');
       Object.keys(songs).forEach(function (id) {
         var s = songs[id];
         if (s && s.name && ewPlayable(s.name)) {
-          out.push({ title: s.name, artist: s.artist || '', kind: 'song', art: s.art || '' });
+          out.push({ i: -1, title: s.name, artist: s.artist || '', kind: 'song', genre: '',
+                     art: s.art || '', answer: ewLetters(s.name), shape: ewShape(s.name) });
         }
       });
     } catch (e) {}
@@ -12686,64 +12813,72 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     return out[Math.floor(Math.random() * out.length)];
   }
 
-  async function ewLoadAnswer() {
-    ewState.busy = true;
-    ewRenderStatus('Loading…');
+  var ewState = {
+    mode: 'daily',          // 'daily' | 'unlimited'
+    rec: null,              // the record being guessed
+    fromPool: false,        // unlimited fell back to the famous list
+    rows: [],               // array of {letters:[], marks:[]}
+    current: '',
+    done: false,
+    won: false,
+    hinted: false
+  };
+
+  var el = {};
+  var ewGenreToken = 0;     // a late genre lookup must not paint an old puzzle
+
+  /* --- loading a puzzle --------------------------------------------------
+     Synchronous. There is nothing to wait for, so there is no in-flight
+     state to get wrong and no way for two loads to end up interleaved. */
+  function ewLoadAnswer() {
     var pick;
+    ewState.fromPool = false;
     if (ewState.mode === 'unlimited') {
       pick = ewLibraryPick();
-      if (!pick) {
-        // Not enough rated yet — say so plainly and use the famous pool
-        // instead of showing an empty game.
-        pick = ewPoolPick('free' + Date.now() + Math.random());
-        ewState.fromPool = true;
-      } else {
-        ewState.fromPool = false;
-      }
+      if (!pick) { pick = ewRandomPick(); ewState.fromPool = true; }
     } else {
-      pick = ewPoolPick(ewToday());
-      ewState.fromPool = false;
+      pick = ewDailyPick();
     }
-
-    ewState.display = pick.title;
-    ewState.answer = ewLetters(pick.title);
-    ewState.artist = pick.artist;
-    ewState.kind = pick.kind;
-    ewState.art = pick.art || '';
-    ewState.genre = '';
-
-    // Genre comes from the same Apple lookup the Daily Drop uses, so the
-    // two games label things the same way.
-    try {
-      if (window.VinalGenre && pick.artist) ewState.genre = await window.VinalGenre(pick.artist);
-    } catch (e) {}
-
+    ewState.rec = pick;
     ewState.rows = [];
     ewState.current = '';
     ewState.done = false;
     ewState.won = false;
     ewState.hinted = false;
-    ewState.busy = false;
 
     if (ewState.mode === 'daily') ewRestoreDaily();
     ewRenderAll();
+
+    /* The only record without a baked genre is one out of your own library.
+       Fill that clue in if the lookup answers, but never wait for it, and
+       drop the answer if the puzzle has moved on since. */
+    if (pick && !pick.genre && pick.artist && window.VinalGenre) {
+      var token = ++ewGenreToken;
+      Promise.resolve(window.VinalGenre(pick.artist)).then(function (g) {
+        if (token !== ewGenreToken || ewState.rec !== pick || !g) return;
+        pick.genre = g;
+        ewRenderClues();
+      }, function () {});
+    }
   }
 
-  /* --- persistence (daily only; unlimited is meant to be endless) -------- */
-  function ewKey() { return 'vinal_earworm_' + ewToday(); }
+  /* --- persistence (daily only; unlimited is meant to be endless) --------
+     v2: the v1 key belongs to a pool with no genre or artwork in it and a
+     different pick for any given date. */
+  function ewKey() { return 'vinal_earworm2_' + ewToday(); }
   function ewRestoreDaily() {
     try {
       var st = JSON.parse(localStorage.getItem(ewKey()));
-      if (!st || st.answer !== ewState.answer) return;
-      st.guesses.forEach(function (g) { ewState.rows.push(ewScore(g)); });
-      ewState.done = st.done; ewState.won = st.won; ewState.hinted = !!st.hinted;
+      if (!st || !ewState.rec || st.answer !== ewState.rec.answer) return;
+      (st.guesses || []).forEach(function (g) { ewState.rows.push(ewScore(g)); });
+      ewState.done = !!st.done; ewState.won = !!st.won; ewState.hinted = !!st.hinted;
     } catch (e) {}
   }
   function ewSaveDaily() {
-    if (ewState.mode !== 'daily') return;
+    if (ewState.mode !== 'daily' || !ewState.rec) return;
     try {
       localStorage.setItem(ewKey(), JSON.stringify({
-        answer: ewState.answer,
+        answer: ewState.rec.answer,
         guesses: ewState.rows.map(function (r) { return r.letters.join(''); }),
         done: ewState.done, won: ewState.won, hinted: ewState.hinted
       }));
@@ -12756,7 +12891,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      actually still unaccounted for. One pass would mark the second L in
      "HELLO" amber against an answer with a single L. */
   function ewScore(guess) {
-    var ans = ewState.answer.split('');
+    var ans = (ewState.rec ? ewState.rec.answer : '').split('');
     var g = guess.split('');
     var marks = new Array(g.length).fill('absent');
     var pool = {};
@@ -12794,24 +12929,38 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     ewRenderResult();
   }
 
+  /* Every letter is a 1fr track and each word break is a fixed-width track
+     of its own, so the cells stay exactly the same size however the title
+     is split up. */
+  function ewTemplate(shape) {
+    return shape.map(function (n) { return 'repeat(' + n + ', 1fr)'; }).join(' var(--ew-wordgap)');
+  }
+
   function ewRenderBoard() {
-    var n = ewState.answer.length;
-    if (!n) { el.board.innerHTML = ''; return; }
+    var rec = ewState.rec;
+    if (!rec || !rec.answer) { el.board.innerHTML = ''; return; }
+    var n = rec.answer.length;
     // The grid is as wide as the title, so the cell size has to come down
     // as titles get longer or eleven columns won't fit a phone.
     el.board.style.setProperty('--ew-cols', n);
+    var tpl = ewTemplate(rec.shape);
     var html = '';
     for (var r = 0; r < ROWS; r++) {
       var row = ewState.rows[r];
-      html += '<div class="ew-row">';
-      for (var c = 0; c < n; c++) {
-        if (row) {
-          html += '<div class="ew-cell ' + row.marks[c] + '" style="animation-delay:' + (c * 0.07) + 's">' + row.letters[c] + '</div>';
-        } else if (r === ewState.rows.length && !ewState.done) {
-          var ch = ewState.current[c] || '';
-          html += '<div class="ew-cell' + (ch ? ' filled' : '') + '">' + ch + '</div>';
-        } else {
-          html += '<div class="ew-cell"></div>';
+      var live = (r === ewState.rows.length && !ewState.done);
+      html += '<div class="ew-row" style="grid-template-columns:' + tpl + '">';
+      var c = 0;
+      for (var w = 0; w < rec.shape.length; w++) {
+        if (w) html += '<i class="ew-gap" aria-hidden="true"></i>';
+        for (var k = 0; k < rec.shape[w]; k++, c++) {
+          if (row) {
+            html += '<div class="ew-cell ' + row.marks[c] + '" style="animation-delay:' + (c * 0.07) + 's">' + row.letters[c] + '</div>';
+          } else if (live) {
+            var ch = ewState.current[c] || '';
+            html += '<div class="ew-cell' + (ch ? ' filled' : '') + '">' + ch + '</div>';
+          } else {
+            html += '<div class="ew-cell"></div>';
+          }
         }
       }
       html += '</div>';
@@ -12836,36 +12985,48 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   }
 
   function ewRenderClues() {
+    var rec = ewState.rec;
+    if (!rec) { el.clues.innerHTML = ''; return; }
     var bits = [];
-    bits.push('<span class="ew-clue"><b>' + (ewState.kind === 'album' ? 'Album' : 'Song') + '</b></span>');
-    bits.push('<span class="ew-clue"><b>' + ewState.answer.length + '</b> letters</span>');
-    if (ewState.genre) bits.push('<span class="ew-clue">' + esc(ewState.genre) + '</span>');
+    bits.push('<span class="ew-clue"><b>' + (rec.kind === 'album' ? 'Album' : 'Song') + '</b></span>');
+    /* The word shape is drawn on the board, but saying it out loud is what
+       makes a player look for a title rather than for a string of letters.
+       The total stays alongside it — "2 + 8" and "ten letters" are two
+       different thoughts and both are useful. */
+    bits.push('<span class="ew-clue"><b>' + rec.answer.length + '</b> letters</span>');
+    if (rec.shape.length > 1) {
+      bits.push('<span class="ew-clue"><b>' + rec.shape.join('</b> + <b>') + '</b></span>');
+    }
+    if (rec.genre) bits.push('<span class="ew-clue">' + esc(rec.genre) + '</span>');
     if (ewState.hinted || ewState.done) {
-      bits.push('<span class="ew-clue ew-clue-hint">' + esc(ewState.artist) + '</span>');
+      bits.push('<span class="ew-clue ew-clue-hint">' + esc(rec.artist) + '</span>');
     }
     el.clues.innerHTML = bits.join('');
-    el.hintBtn.style.display = (ewState.hinted || ewState.done || !ewState.artist) ? 'none' : '';
+    el.hintBtn.style.display = (ewState.hinted || ewState.done || !rec.artist) ? 'none' : '';
     if (ewState.mode === 'unlimited' && ewState.fromPool) {
       ewRenderStatus('Rate a few more records and these come from your own library.');
     } else if (!ewState.done) {
       var left = ROWS - ewState.rows.length;
       ewRenderStatus(left + ' guess' + (left === 1 ? '' : 'es') + ' left');
+    } else {
+      ewRenderStatus('');
     }
   }
 
   function ewRenderResult() {
-    if (!ewState.done) { el.result.innerHTML = ''; return; }
+    var rec = ewState.rec;
+    if (!ewState.done || !rec) { el.result.innerHTML = ''; return; }
     var grid = ewShareGrid();
     el.result.innerHTML =
       '<div class="ew-result">' +
-        (ewState.art ? '<img class="ew-result-art" src="' + esc(ewState.art) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
-        '<h3>' + (ewState.won ? 'Got it — ' : 'It was ') + esc(ewState.display) + '</h3>' +
-        '<p>' + esc(ewState.artist) + (ewState.genre ? ' · ' + esc(ewState.genre) : '') + '</p>' +
+        (rec.art ? '<img class="ew-result-art" src="' + esc(rec.art) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
+        '<h3>' + (ewState.won ? 'Got it — ' : 'It was ') + esc(rec.title) + '</h3>' +
+        '<p>' + esc(rec.artist) + (rec.genre ? ' · ' + esc(rec.genre) : '') + '</p>' +
         (ewState.mode === 'daily' ? '<div class="drop-share">' + esc(grid) + '</div>' : '') +
         '<div class="ew-result-actions">' +
           (ewState.mode === 'daily'
-            ? '<button class="btn-primary" id="ew-copy">Copy result</button>'
-            : '<button class="btn-primary" id="ew-again">Another one</button>') +
+            ? '<button class="btn-primary" type="button" id="ew-copy">Copy result</button>'
+            : '<button class="btn-primary" type="button" id="ew-again">Another one</button>') +
         '</div>' +
       '</div>';
     var copy = document.getElementById('ew-copy');
@@ -12890,37 +13051,51 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     return head + body + '\nwildcrate.xyz';
   }
 
+  /* Today's result on the Minigames card, the same as the Daily Drop's.
+     The element was already in the markup and nothing ever wrote to it. */
+  function ewCardStatus() {
+    var node = document.getElementById('ew-card-status');
+    if (!node) return;
+    var st = null;
+    try { st = JSON.parse(localStorage.getItem(ewKey())); } catch (e) {}
+    node.textContent = (st && st.done)
+      ? (st.won ? st.guesses.length + '/' + ROWS + (st.hinted ? ' (hint)' : '') : 'X/' + ROWS)
+      : '';
+  }
+
   /* --- input ------------------------------------------------------------- */
+  function ewLen() { return ewState.rec ? ewState.rec.answer.length : 0; }
   function ewType(ch) {
-    if (ewState.done || ewState.busy) return;
-    if (ewState.current.length >= ewState.answer.length) return;
+    if (ewState.done || !ewState.rec) return;
+    if (ewState.current.length >= ewLen()) return;
     ewState.current += ch;
     ewRenderBoard();
   }
   function ewBack() {
-    if (ewState.done || ewState.busy) return;
+    if (ewState.done || !ewState.rec) return;
     ewState.current = ewState.current.slice(0, -1);
     ewRenderBoard();
   }
   function ewSubmit() {
-    if (ewState.done || ewState.busy) return;
-    if (ewState.current.length !== ewState.answer.length) {
+    if (ewState.done || !ewState.rec) return;
+    if (ewState.current.length !== ewLen()) {
       // No dictionary check: titles aren't words, and rejecting "SICKOMODE"
       // for not being in a word list would be absurd. Length is the only
       // rule, so say so rather than silently ignoring the key.
       el.board.classList.remove('ew-shake');
       void el.board.offsetWidth;
       el.board.classList.add('ew-shake');
-      ewRenderStatus('Needs all ' + ewState.answer.length + ' letters');
+      ewRenderStatus('Needs all ' + ewLen() + ' letters');
       return;
     }
     var scored = ewScore(ewState.current);
     ewState.rows.push(scored);
-    ewState.won = ewState.current === ewState.answer;
+    ewState.won = ewState.current === ewState.rec.answer;
     ewState.current = '';
     if (ewState.won || ewState.rows.length >= ROWS) ewState.done = true;
     ewSaveDaily();
     ewRenderAll();
+    ewCardStatus();
 
     /* The win already has confetti. What this game was missing is the other
        five guesses — the ones that actually make up a session. A guess with
@@ -12937,13 +13112,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       // maximum — and it carries what it was for, because "solved in 2" means
       // nothing without the record it was two guesses at.
       if (window.noteEarworm) {
-        noteEarworm(ewState.rows.length, ewState.display, ewState.artist, ewState.kind);
+        noteEarworm(ewState.rows.length, ewState.rec.title, ewState.rec.artist, ewState.rec.kind);
       }
-      if (typeof celebrate === 'function') celebrate('Earworm solved', ewState.display + ' — in ' + ewState.rows.length);
+      if (typeof celebrate === 'function') celebrate('Earworm solved', ewState.rec.title + ' — in ' + ewState.rows.length);
       // The payout used to be computed here and thrown away — the client
       // cannot be trusted with an amount, so wallet_award_game decides it.
       if (ewState.mode === 'daily' && window.Wallet) Wallet.awardGame('earworm', { reason: 'Earworm' });
-      if (typeof logActivity === 'function' && window.ICONS) logActivity(ICONS.trophy, 'Solved Earworm', ewState.display);
+      if (typeof logActivity === 'function' && window.ICONS) logActivity(ICONS.trophy, 'Solved Earworm', ewState.rec.title);
     }
   }
 
@@ -12962,13 +13137,17 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     ewState.mode = m;
     document.querySelectorAll('#ew-mode button').forEach(function (b) {
       b.classList.toggle('active', b.dataset.ewMode === m);
+      b.setAttribute('aria-pressed', b.dataset.ewMode === m ? 'true' : 'false');
     });
     ewLoadAnswer();
   }
 
   function ewOpen() {
     el.modal.classList.add('open');
-    if (!ewState.answer) ewLoadAnswer();
+    /* Daily rebuilds from storage every time, so reopening after playing
+       elsewhere — or after midnight — shows the right board. Unlimited is
+       left alone, because a half-finished one should survive being closed. */
+    if (!ewState.rec || ewState.mode === 'daily') ewLoadAnswer();
   }
 
   function ewInit() {
@@ -12998,17 +13177,20 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       ewState.hinted = true;
       ewSaveDaily();
       ewRenderClues();
+      ewCardStatus();
     });
     document.addEventListener('keydown', ewOnKeydown);
 
     var card = document.getElementById('ew-card');
     if (card) card.addEventListener('click', ewOpen);
+    ewCardStatus();
     window.openEarworm = ewOpen;
   }
 
   ewInit();
 })();
 </script>
+
 
 <!-- ================================================================
      Dismiss choreography — the splash transforms into the dashboard.

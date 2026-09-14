@@ -690,6 +690,60 @@ Finishing a guess buzzes, and a win pays through `Wallet.awardGame('drop')` and
 `notePlay('drop')` like every other game — never `awardDiscs`, which now reports itself as
 an issue.
 
+## Earworm
+
+The other half of the Daily Drop: that one asks you to deduce a record from its
+attributes, this one gives you the record's shape and asks you to spell it. The answer is
+the TITLE of a famous album or song stripped to letters, the board is as wide as that
+title rather than a fixed five, and six rows score like the game everyone already knows.
+One IIFE in `index.html` (`window.openEarworm`), no schema, no server route.
+
+Same two invariants as the Drop, for the same reasons:
+
+- **The pool is static**, baked into `EW_ROWS` as title / artist / kind / genre / art.
+  Genre and artwork are lifted from the Drop's table wherever the same record appears in
+  both, so the two games label a record identically and neither needs the network. The
+  previous version awaited an iTunes genre lookup *before drawing the board at all*: a
+  measured 4.2s of empty "Loading…" on open, six when Apple was slow (that is the abort
+  timeout), a blank Genre clue whenever it timed out, and a silently dead keyboard on top
+  of the previous puzzle for the whole of that time whenever you switched mode. Two loads
+  could also be in flight at once, and the one that resolved last won regardless of which
+  mode was selected. `ewLoadAnswer()` is synchronous now and none of that is reachable.
+- **A library pick is the one record with no baked genre** (it came out of your own
+  crate, not the list). That clue is filled in afterwards if `VinalGenre` answers, guarded
+  by a token so a late reply cannot paint a puzzle that has moved on — it never blocks the
+  board.
+
+What makes it playable:
+
+- **The board draws the word shape**, and the clue row says it out loud ("11 letters",
+  "5 + 2 + 4"). Forty-five per cent of these titles are more than one word, and as an
+  unbroken run of letters "OKCOMPUTER" and "THANKUNEXT" are not puzzles, they are anagram
+  homework. Measured over the pool, adding the shape takes the records sharing a clue set
+  from a median of 14 down to 4.
+- **There is deliberately no "how many still fit" counter**, unlike the Drop. Measured:
+  kind + genre + word shape already leaves a median of **1** candidate, so the number
+  would read "1 of 140" before you had typed anything — it would announce that the answer
+  is pinned down without telling you which record it is. The Drop can show its count
+  because you pick from a list you can see; here the list is invisible and the count would
+  be a solver, not a progress bar.
+- Word breaks are their own fixed grid tracks (`--ew-wordgap`) with an empty `.ew-gap` in
+  each, so every letter stays exactly `1fr` and the gaps cost the cells nothing in
+  evenness. At 375px the worst case — eleven letters in three words — still lands on 24px
+  cells, the same size they were before the shape existed, because the panel gives back
+  its side padding there.
+- **No dictionary check.** Titles are not words and rejecting "SICKOMODE" for not being in
+  a word list would be absurd; length is the only rule, and a short guess is refused with
+  a shake rather than silently ignored or spent.
+- The daily pick is a seeded shuffle indexed by day number, so the list plays through
+  before anything repeats, and storage moved to `vinal_earworm2_<date>` — the v1 key
+  belongs to a pool with no genre or artwork and a different pick for any given date.
+- `ew-card-status` had been in the markup since the game shipped with nothing ever writing
+  to it. It now carries today's result on the Minigames card, like the Drop's.
+
+The card is gated on three rated albums (see the unlock gates), so `window.openEarworm()`
+opens it in a fresh browser where clicking the card will not.
+
 ## Bid Wars
 
 A 1v1 sealed-bid auction, reachable from its own nav tab (`view-wars`) and from a card in
