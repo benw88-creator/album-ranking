@@ -556,6 +556,57 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
   50%      { box-shadow: 0 0 0 6px rgba(245,200,66,0); }
 }
 
+/* ---- Discs flying to the wallet ----------------------------------------
+   A payout used to be a number changing in a corner nobody was looking at.
+   These leave the thing that produced the reward and land on the wallet chip,
+   and only then does the balance start counting — so it moves *because*
+   something arrived.
+
+   One element per disc, each running a single keyframe on transform and
+   opacity. No per-frame JS, so eighteen of them still hold 60fps on a phone.
+   The arc goes through a waypoint set per disc in `--mx`/`--my`: eighteen
+   straight lines from the same origin is a laser beam, not a payout. */
+.disc-fly-layer { position: fixed; inset: 0; z-index: 640; pointer-events: none; }
+.disc-fly {
+  position: fixed; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #fff3c4 0 18%, var(--gold) 42%, #9c7615 100%);
+  box-shadow: 0 0 10px var(--gold-glow), inset 0 0 3px rgba(0,0,0,0.45);
+  opacity: 0;
+  animation-name: discFly;
+  animation-timing-function: cubic-bezier(.34,.62,.2,1);
+  animation-fill-mode: forwards;
+}
+/* The centre hole. A flat gold dot reads as a bokeh blob rather than a disc. */
+.disc-fly::after {
+  content: ''; position: absolute; inset: 43%; border-radius: 50%;
+  background: var(--bg); opacity: .85;
+}
+@keyframes discFly {
+  0%   { opacity: 0; transform: translate(0,0) scale(.35); }
+  12%  { opacity: 1; transform: translate(calc(var(--mx) * .28), calc(var(--my) * .3)) scale(1.15); }
+  60%  { opacity: 1; transform: translate(var(--mx), var(--my)) scale(1); }
+  100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(.3); }
+}
+/* The chip takes a knock per arrival, so a big payout visibly gets pummelled
+   while a small one gets tapped once. */
+.wallet-hit { animation: walletHit .34s var(--ease); }
+@keyframes walletHit {
+  0%, 100% { transform: none; }
+  35%      { transform: scale(1.14); filter: brightness(1.35); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .disc-fly, .wallet-hit { animation: none !important; }
+  .disc-fly-layer { display: none; }
+}
+
+/* An achievement already taken, with what it paid — the card would otherwise
+   go from a number on a button to nothing at all. */
+.ach-paid {
+  margin-top: 10px; font: 700 11px/1 var(--font-mono);
+  letter-spacing: .1em; text-transform: uppercase; color: var(--gold);
+}
+
 .disc-particle {
   position: fixed; z-index: 500; pointer-events: none;
   font-family: var(--font-mono); font-weight: 700; font-size: 15px; color: var(--gold);
@@ -7333,13 +7384,23 @@ document.getElementById('celebrate').addEventListener('click',function(e){if(e.t
 
 const MILESTONES=[1,5,10,25,50,100,250,500];
 function milestoneLabel(m){return m===1?'Rank First Album':'Rank '+m+' Albums';}
+/* Mirrors the `case v_n` in wallet_claim_milestone(). Display only — the
+   server decides what it pays — but showing the wrong number next to a Claim
+   button is worse than showing none, so change both together. */
+const MILESTONE_PAY={1:500,5:1000,10:2500,25:6000,50:12000,100:25000,250:50000,500:100000};
 
-function renderAchievements(){
+async function renderAchievements(){
   const count=Object.keys(loadAlbums()).length;
-  const claimed=loadClaimed();
+  /* Claimed-ness comes from the server now, not `crate_claimed`. localStorage
+     is fine for "have I shown you this confetti" and useless as a payment
+     gate — and it was worse than useless here, because the album page wrote
+     the same key on completion and locked people out of their own reward. */
+  if(window.Wallet&&Wallet.loadClaims)await Wallet.loadClaims();
   const mEl=document.getElementById('ach-milestones');
   mEl.innerHTML=MILESTONES.map(function(m){
-    const reached=count>=m;const key='albums:'+m;const done=!!claimed[key];const pct=Math.min(100,Math.round(count/m*100));
+    const reached=count>=m;const key='albums:'+m;
+    const done=!!(window.Wallet&&Wallet.claimedMilestone&&Wallet.claimedMilestone(key));
+    const pct=Math.min(100,Math.round(count/m*100));
     return '<div class="ach '+(done?'done':(reached?'claimable':''))+'">'+
       (done?'<div class="ach-check">\u2713</div>':'')+
       '<div class="ach-top"><div class="ach-medal">'+(done?ICONS.medal:ICONS.disc)+'</div>'+
@@ -7347,13 +7408,44 @@ function renderAchievements(){
       '<div class="ach-sub">'+(m===1?'Rate your first album':'Rate '+m+' albums total')+'</div></div></div>'+
       '<div class="ach-bar"><div class="ach-bar-fill" style="width:'+pct+'%"></div></div>'+
       '<div class="ach-prog"><span>'+Math.min(count,m)+' / '+m+'</span><span>'+pct+'%</span></div>'+
-      (reached&&!done?'<button class="ach-claim" data-claim="'+key+'" data-label="'+milestoneLabel(m)+'">Claim achievement</button>':'')+
+      // The amount is on the button. "Claim achievement" gave no reason to
+      // press it over any other one, and these are now wildly different sizes.
+      (reached&&!done?'<button class="ach-claim" data-claim="'+key+'" data-pay="'+MILESTONE_PAY[m]+'" data-label="'+milestoneLabel(m)+'">Claim '+MILESTONE_PAY[m].toLocaleString('en-GB')+' Discs</button>':'')+
+      (done?'<div class="ach-paid">Claimed \u00b7 '+MILESTONE_PAY[m].toLocaleString('en-GB')+' Discs</div>':'')+
       '</div>';
   }).join('');
-  mEl.querySelectorAll('[data-claim]').forEach(function(b){b.addEventListener('click',function(){setClaimed(b.dataset.claim);logActivity(ICONS.trophy,'Unlocked',b.dataset.label);celebrate('Achievement Unlocked!',b.dataset.label);if(window.Wallet)Wallet.awardGame('achievement',{reason:b.dataset.label});renderAchievements();});});
-  const doneCount=MILESTONES.filter(function(m){return claimed['albums:'+m];}).length;
-  document.getElementById('ach-summary').textContent=count+' albums rated \u00b7 '+doneCount+' milestones claimed';
+  mEl.querySelectorAll('[data-claim]').forEach(function(b){b.addEventListener('click',function(){claimAch(b);});});
+  const doneCount=MILESTONES.filter(function(m){
+    return window.Wallet&&Wallet.claimedMilestone&&Wallet.claimedMilestone('albums:'+m);
+  }).length;
+  const owed=MILESTONES.filter(function(m){
+    return count>=m&&!(window.Wallet&&Wallet.claimedMilestone&&Wallet.claimedMilestone('albums:'+m));
+  }).reduce(function(s,m){return s+MILESTONE_PAY[m];},0);
+  document.getElementById('ach-summary').textContent=count+' albums rated \u00b7 '+doneCount+' claimed'+
+    (owed?' \u00b7 '+owed.toLocaleString('en-GB')+' Discs waiting':'');
   renderCompletionistAchievements();
+}
+
+/* One claim path for milestones and Completionists both, so the discs fly the
+   same way from either card. The button is the throw origin \u2014 the reward has
+   to leave the thing you pressed, or it reads as unrelated. */
+async function claimAch(btn){
+  if(btn.disabled)return;
+  btn.disabled=true;
+  const was=btn.textContent;
+  btn.textContent='\u2026';
+  if(window.ripple)ripple(btn);
+  const res=(window.Wallet&&Wallet.claimMilestone)
+    ? await Wallet.claimMilestone(btn.dataset.claim,btn)
+    : {error:'Wallet not ready'};
+  if(res.error){
+    btn.disabled=false;btn.textContent=was;
+    if(window.reportIssue)reportIssue('milestone claim failed',{key:btn.dataset.claim,error:res.error});
+    return;
+  }
+  logActivity(ICONS.trophy,'Unlocked',btn.dataset.label);
+  if(res.earned>0)celebrate('\u{1F3C6} '+btn.dataset.label,'+'+res.earned.toLocaleString('en-GB')+' Discs');
+  renderAchievements();
 }
 window.renderAchievements=renderAchievements;
 
@@ -7436,7 +7528,11 @@ function drawCompCard(a,claimed){
   const ratedBases={};a.rated.forEach(function(r){ratedBases[baseAlbumTitle(r.name)]=true;});
   const have=studio.filter(function(b){return ratedBases[b];}).length;
   const Y=studio.length,pct=Math.round(have/Y*100),complete=have>=Y;
-  const key='comp:'+a.id,done=!!claimed[key];
+  const key='comp:'+a.id;
+  const done=!!(window.Wallet&&Wallet.claimedMilestone&&Wallet.claimedMilestone(key));
+  // Mirrors least(n, 15) * 800 in wallet_claim_milestone(). `have` is how many
+  // of their albums you have rated, which is exactly what the server counts.
+  const pay=Math.min(have,15)*800;
   card.className='ach '+(done?'done':(complete?'claimable':''));
   card.innerHTML=(done?'<div class="ach-check">\u2713</div>':'')+
     '<div class="ach-top"><div class="ach-medal">'+(done?ICONS.trophy:ICONS.mic)+'</div>'+
@@ -7452,7 +7548,8 @@ function drawCompCard(a,claimed){
         .join('')+
       (have>14?'<span class="comp-more">+'+(have-14)+'</span>':'')+
     '</div>':'')+
-    (complete&&!done?'<button class="ach-claim" data-claim="'+key+'" data-label="'+esc(a.name)+' Completionist">Claim achievement</button>':'')+
+    (complete&&!done?'<button class="ach-claim" data-claim="'+key+'" data-pay="'+pay+'" data-label="'+esc(a.name)+' Completionist">Claim '+pay.toLocaleString('en-GB')+' Discs</button>':'')+
+    (done?'<div class="ach-paid">Claimed</div>':'')+
     (!complete?'<button class="ach-claim" style="background:var(--surface-3);color:var(--text);" data-missing="'+esc(a.id)+'">See what’s missing</button>':'');
   // Stash the actual album objects so the modal can show covers and open them,
   // rather than re-deriving them from the base-title strings above.
@@ -7460,7 +7557,7 @@ function drawCompCard(a,claimed){
   const btn=card.querySelector('[data-claim]');
   const mb=card.querySelector('[data-missing]');
   if(mb)mb.addEventListener('click',function(){openMissing(mb.dataset.missing);});
-  if(btn)btn.addEventListener('click',function(){setClaimed(key);logActivity(ICONS.trophy,'Unlocked',a.name+' Completionist');celebrate('\u{1F3C6} '+a.name+' Completionist','You\u2019ve rated every studio album.');if(window.Wallet)Wallet.awardGame('achievement',{reason:'Completionist'});drawCompCard(a,loadClaimed());});
+  if(btn)btn.addEventListener('click',function(){claimAch(btn).then(function(){drawCompCard(a,loadClaimed());});});
 }
 
 (function(){
@@ -7524,8 +7621,20 @@ async function renderCompletion(meta){
   _compState={meta:meta,studio:studio,ratedBases:ratedBases};
   const have=studio.filter(function(s){return ratedBases[baseAlbumTitle(s.name)];}).length;
   const complete=have>=studio.length;
-  const celebKey='comp:'+meta.artistId;
-  if(complete&&!isClaimed(celebKey)){setClaimed(celebKey);logActivity(ICONS.trophy,'Unlocked',meta.artist+' Completionist');celebrate('\u{1F3C6} '+meta.artist+' Completionist','You\u2019ve rated every studio album.');}
+  /* The celebration key is deliberately NOT the claim key any more.
+
+     It used to be `comp:<artistId>` \u2014 the exact string the Achievements card
+     uses to decide whether the reward is still available. So finishing a
+     discography here marked it claimed, threw the confetti, and paid nothing;
+     the card then rendered as done with no Claim button, permanently. Everyone
+     who completed an artist the natural way lost the reward and had no route
+     back to it.
+
+     Claimed-ness lives in `milestone_claims` server-side now. This flag only
+     answers "have I already shown you this confetti", which is the only thing
+     localStorage should ever have been deciding here. */
+  const celebKey='compseen:'+meta.artistId;
+  if(complete&&!isClaimed(celebKey)){setClaimed(celebKey);logActivity(ICONS.trophy,'Unlocked',meta.artist+' Completionist');celebrate('\u{1F3C6} '+meta.artist+' Completionist','Claim it on the Achievements page.');}
   drawCompletion();
 }
 
@@ -8429,6 +8538,9 @@ async function drawProfile(host,prof,isOwner){
     const nw=await Cloud.client().rpc('collection_net_worth',{p_user:prof.id});
     netWorth=(nw&&nw.data&&Number(nw.data.net_worth))||0;
   }catch(e){}
+  // Milestone claims, for the Completionist tile below. Owner-only by RLS,
+  // which is correct — it is a count of your own rewards.
+  if(isOwner&&window.Wallet&&Wallet.loadClaims){try{await Wallet.loadClaims();}catch(e){}}
   const me=Cloud.getUser&&Cloud.getUser();
   const following=(!isOwner&&me)?await Cloud.isFollowing(prof.id):false;
   const badges=computeBadges(prof,nAlbums,isOwner);
@@ -8461,10 +8573,14 @@ async function drawProfile(host,prof,isOwner){
      keeps other people's out of reach — as it should. */
   let doneHtml='';
   {
+    /* Counted from the server's claims, not `crate_claimed`. The local copy
+       still holds `comp:` keys written by the old auto-claim bug — claims that
+       were never actually paid — so reading it here would count achievements
+       nobody was rewarded for. */
     const compDone=(function(){
       try{
-        const claimed=loadClaimed()||{};
-        return Object.keys(claimed).filter(function(k){return k.indexOf('comp:')===0;}).length;
+        const claims=(window.Wallet&&Wallet.claims)?Wallet.claims():{};
+        return Object.keys(claims).filter(function(k){return k.indexOf('comp:')===0;}).length;
       }catch(e){return 0;}
     })();
     const nf=function(v){return (Number(v)||0).toLocaleString('en-GB');};
@@ -10702,12 +10818,111 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     const rect = anchor.getBoundingClientRect();
     const p = document.createElement('div');
     p.className = 'disc-particle';
-    p.textContent = '+' + amount;
+    p.textContent = '+' + (Number(amount) || 0).toLocaleString('en-GB');
     p.style.left = (rect.left + rect.width / 2) + 'px';
     p.style.top = rect.top + 'px';
     document.body.appendChild(p);
     setTimeout(function () { p.remove(); }, 1200);
   }
+
+  /* ---- Discs flying to the wallet ----------------------------------------
+
+     A payout used to be a number changing in a corner you were not looking at.
+     This throws actual discs from wherever the reward happened to the wallet
+     chip in the header, and only *then* starts the balance counting up — so
+     the number moves because something arrived, rather than just moving.
+
+     Sizing is the whole feel. The count scales with the payout on a log curve:
+     500 Discs throws six, 100,000 throws the full eighteen. Linear would mean
+     either six discs for a Mythic or two hundred for a rating, and a fixed
+     count makes every reward the same size, which is the thing this exists to
+     stop.
+
+     One element per disc, each on its own transform/opacity transition — no
+     per-frame JS, so eighteen of them still hold 60fps on a phone. Staggered
+     starts, slightly different arcs and durations, because eighteen discs
+     arriving in formation reads as a progress bar rather than a payout.
+
+     Resolves when the last one lands, so the caller can time the count-up to
+     the arrival instead of guessing. */
+  function flyDiscs(fromEl, amount) {
+    return new Promise(function (resolve) {
+      const target = document.getElementById('shop-open-btn');
+      const reduced = !!(window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      if (!target || !fromEl || reduced) { resolve(); return; }
+
+      let a, b;
+      try { a = fromEl.getBoundingClientRect(); b = target.getBoundingClientRect(); }
+      catch (e) { resolve(); return; }
+      // A source scrolled out of view would throw from off-screen, which looks
+      // like nothing happening at all.
+      if (a.width === 0 || a.bottom < 0 || a.top > window.innerHeight) { resolve(); return; }
+
+      const n = Math.max(6, Math.min(18, Math.round(Math.log10(Math.max(amount, 10)) * 4.5)));
+      const tx = b.left + b.width / 2, ty = b.top + b.height / 2;
+      const layer = document.createElement('div');
+      layer.className = 'disc-fly-layer';
+      document.body.appendChild(layer);
+
+      let landed = 0;
+      for (let i = 0; i < n; i++) {
+        const d = document.createElement('i');
+        d.className = 'disc-fly';
+        // Scatter the start across the source element so they leave the thing
+        // that produced them rather than a single point on it.
+        const sx = a.left + a.width * (0.15 + Math.random() * 0.7);
+        const sy = a.top + a.height * (0.15 + Math.random() * 0.7);
+        d.style.left = sx + 'px';
+        d.style.top = sy + 'px';
+        // Arc via a mid-flight waypoint, offset perpendicular-ish to the path.
+        // A straight line from A to B eighteen times is a laser beam.
+        const lift = (Math.random() * 90 + 40) * (Math.random() < 0.5 ? -1 : 1);
+        d.style.setProperty('--mx', ((tx - sx) * 0.45 + lift) + 'px');
+        d.style.setProperty('--my', ((ty - sy) * 0.45 - Math.abs(lift) * 0.8) + 'px');
+        d.style.setProperty('--tx', (tx - sx) + 'px');
+        d.style.setProperty('--ty', (ty - sy) + 'px');
+        d.style.animationDelay = (i * 28 + Math.random() * 60) + 'ms';
+        d.style.animationDuration = (620 + Math.random() * 260) + 'ms';
+        layer.appendChild(d);
+        d.addEventListener('animationend', function () {
+          landed++;
+          // The chip reacts to each arrival, so a big payout visibly pummels it.
+          target.classList.remove('wallet-hit');
+          void target.offsetWidth;
+          target.classList.add('wallet-hit');
+          if (landed >= n) {
+            setTimeout(function () {
+              if (layer.parentNode) layer.remove();
+              target.classList.remove('wallet-hit');
+            }, 420);
+            resolve();
+          }
+        });
+      }
+      // Never leave a caller hanging on an animation the browser skipped.
+      setTimeout(function () {
+        if (layer.parentNode) layer.remove();
+        resolve();
+      }, 1800);
+    });
+  }
+  window.flyDiscs = flyDiscs;
+
+  /* The full payout moment: throw the discs, then count. Exported because the
+     reward happens in five different modules and every one of them should feel
+     identical — the same argument as burst/ripple/buzz being global. */
+  async function payoutFrom(fromEl, amount, w) {
+    if (!(amount > 0)) { if (w) applyWallet(w); return; }
+    // Hold the balance at its old value until the discs land, so the number
+    // moves *because* they arrived. applyWallet would otherwise snap it first.
+    const pending = w;
+    if (window.buzz) buzz('good');
+    await flyDiscs(fromEl, amount);
+    if (pending) applyWallet(pending);
+    spawnDiscParticle(amount);
+  }
+  window.payoutFrom = payoutFrom;
 
   async function persist(fields) {
     Object.assign(state, fields);
@@ -10965,7 +11180,12 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
     if (w.earned > 0) {
       toast('+' + (w.earned || 0).toLocaleString('en-GB') + ' Discs — day ' + w.login_streak);
-      spawnDiscParticle(w.earned);
+      /* Thrown from the ladder tile you pressed, when there is one. The claim
+         is the single most rewarding second in the app and it used to be a
+         number ticking in the header while you looked at a button. */
+      const tile = document.querySelector('.rw-day.taking') || document.querySelector('.rw-day.live');
+      if (tile && window.flyDiscs) { flyDiscs(tile, w.earned).then(function () { spawnDiscParticle(w.earned); }); }
+      else spawnDiscParticle(w.earned);
       if (window.buzz) buzz('good');
     }
     /* Day seven pays no Discs at all, so without this the biggest day on the
@@ -11007,6 +11227,42 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
     const res = await rpc('wallet_state');
     if (!res.error && res.data) applyWallet(res.data);
+  }
+
+  /* ---- Milestones --------------------------------------------------------
+
+     The only awards in this app the server can actually verify: "50 albums
+     rated" is a count against `ratings`, and "completed this artist" is a count
+     of rows whose data->>'artistId' matches. So unlike every minigame, these
+     are uncapped — the amount is decided from the key server-side and the
+     claim is one-time by primary key.
+
+     `_claims` is the set of keys already taken, read once per session. The
+     claimed state used to live only in localStorage, which is fine for "have I
+     shown you this confetti" and useless as a payment gate. */
+  let _claims = null;
+
+  async function loadClaims(force) {
+    if (_claims && !force) return _claims;
+    _claims = {};
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return _claims;
+    try {
+      const r = await Cloud.client().from('milestone_claims')
+        .select('key,awarded').eq('user_id', Cloud.getUser().id);
+      (r.data || []).forEach(function (row) { _claims[row.key] = row.awarded; });
+    } catch (e) {}
+    return _claims;
+  }
+  function claimedMilestone(key) { return !!(_claims && _claims[key] != null); }
+
+  async function claimMilestone(key, fromEl) {
+    const res = await rpc('wallet_claim_milestone', { p_key: key });
+    if (res.error) return { error: res.error };
+    const w = res.data || {};
+    if (_claims) _claims[key] = w.earned || 0;
+    if (w.already) { applyWallet(w); return { already: true, earned: 0 }; }
+    await payoutFrom(fromEl, w.earned, w);
+    return { ok: true, earned: w.earned || 0 };
   }
 
   /* One spin of The Draw. The server charges, picks, grants and returns —
@@ -11123,6 +11379,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     load: load, get: get, recordRating: recordRating,
     awardGame: awardGame, syncAward: syncAward, awardDiscs: awardDiscs,
     dailyLogin: dailyLogin, spin: spin,
+    loadClaims: loadClaims, claimedMilestone: claimedMilestone, claimMilestone: claimMilestone,
+    claims: function () { return _claims || {}; },
     levelInfo: levelInfo,
     buyTheme: buyTheme, equipTheme: equipTheme, buyBanner: buyBanner, equipBanner: equipBanner,
     buyCosmetic: buyCosmetic, equipCosmetic: equipCosmetic, buyBoost: buyBoost,
