@@ -27,6 +27,158 @@ ever authenticates against Spotify. Only the app owner's credentials are involve
 
 Data comes from the Spotify Web API; user data is stored in Supabase.
 
+## The spine — score history, and why everything hangs off it
+
+VINALL had two economies running in parallel and only one of them was about music.
+There was the Disc economy — play games, earn currency, buy cosmetics and records —
+which is generic and could belong to any app. And there was the meaning economy —
+rate, answer, remember, collect — which is the differentiated one and was
+underdeveloped and disconnected. Lore answers went into a table and never came back.
+The Crate was a feed with hearts on it. Level was lifetime Discs, which measures how
+much of the app you have used rather than how deep you have gone.
+
+The thing this app can know that nothing else can is **how your opinion of a record
+moved**. Spotify knows what you played. Every rating site knows what you think today.
+Only this one can know that you gave Blonde an 82 in March and a 94 in September.
+That fact can only be earned by time, it compounds the longer an account runs, and it
+is what makes a VINALL account expensive to walk away from. So it is the spine, and
+four features read from it.
+
+### `history[]` and `ratedAt` on every rating
+
+`pushScoreHistory()` in `saveAlbum` / `saveSong`. One entry per *distinct* score,
+oldest first, current last, so `[0]` is the first thing you ever thought and the last
+is what you think now. A re-rate to the same number is not a change of mind and writes
+no row — it still stamps `ratedAt`, because that field answers "when did you last look
+at this". Capped at 24, and the cap drops from the **middle**: the first opinion is the
+origin of the story and the recent ones are the live part, so neither end is ever the
+thing thrown away. `scoreMove(item)` is the read side and is on `window`.
+
+This is local data riding the existing `app_state` mirror, so it needed no migration.
+
+**It also exposed a real sync bug.** `mergeItemMap` resolved per item on `savedAt`,
+which is the moment a record *entered* the crate and never moves again. For any record
+rated on two devices the two timestamps were identical, the `>=` sent the tie to local
+every time, and **a re-rate made on another device could never come down**. Re-rating is
+the whole point of score history, so that had to stop being true: the merge resolves on
+`max(ratedAt, savedAt)` now, and an item written before `ratedAt` existed has none and
+falls back to exactly the old behaviour.
+
+### Second thoughts (Today)
+
+`findSecondThoughts()` + `rethinkCard()`. An album whose last look was six months ago
+gets a card that says "You gave this 82 in November 2025" with a slider on it. The save
+button carries the verdict rather than the word "save" — *Still 82* until you move it,
+then *Make it 95* — so the control reads as one sentence and there is no way to move the
+slider and not notice you had not saved.
+
+Both answers are worth having: "still 82" is a fact about you and so is 82 → 95.
+Answering either way stamps `ratedAt` and buys six months of quiet.
+
+Six months is the floor deliberately — any sooner and it is a nag about a record you
+have barely lived with. **These are claimed before the ask pool**, for the same reason
+receipts are: `findAnyRated` puts every rated record in the ask pool, so a filter
+running afterwards finds every id already taken and shows none of them. That is exactly
+how the first version of this shipped and showed nothing.
+
+This is the strongest return-driver in the product and the only card in the stack that
+cannot be built on a first visit.
+
+### The Crate: a stance, not a like
+
+The heart is gone and **nothing took its slot**. A like on a rating is agreement with a
+*person*, not with an opinion — it cannot disagree, it cannot be uncertain, and it can
+be given by somebody who has never heard the record. The unit this app already thinks in
+is a score out of 100, so that is what a response is: you answer somebody's 93 with your
+own number, and the gap between them is the interaction. The card then reads
+`You 62 −31`.
+
+- **The spread.** One dot per score anybody has given that record, on a 0–100 track,
+  the poster's filled in their own score colour and yours ringed. Two ratings is the
+  floor — a single dot is not a spread, it is the post again. `Cloud.fetchAlbumScores()`
+  gets the lot in one round trip, because `crate_feed` already holds exactly one row per
+  person per album; it needs no session, since a record dividing people is worth seeing
+  logged out.
+- **"Not heard"** is the honest answer to a stranger's opinion and the one the heart
+  could not express. It goes to a **shortlist** (`crate_shortlist_v1`, in `SYNC_KEYS`,
+  merged with the same per-item rule as ratings), which turns the admission into the only
+  genuinely useful thing it could be: a queue of records somebody you follow rated highly
+  enough to post. Rating one takes it off, so the list empties by being used.
+- Answering **builds your own crate** — the score is a real rating, with history. That is
+  the elegant part: engaging with somebody else's opinion is how your library grows.
+- Comments stay. Discussion was never the problem.
+
+`feed_likes` and `Cloud.toggleLike` / `fetchLikes` are left in place and unused, parked
+the same way market-mode Bid Wars is.
+
+One trap worth not repeating: the first version of `commitCall` asked Spotify for the
+album's `artistId` in the background, because a feed row does not carry one. A failed
+catalogue call runs `showGate()`, so **an optional enrichment put a "can't reach Spotify"
+banner across the page because somebody answered a card**. It takes the id from another
+record by the same artist in your crate now — free, offline, right nearly always — and an
+absent id costs that record a place among the recommendation seeds and nothing else,
+since `artistStats` skips a blank id rather than lumping them together.
+
+### Standing replaces Level as the headline
+
+Level is `lifetime_xp`, which is every Disc ever earned. It rises fastest for somebody
+grinding minigames and barely moves for somebody quietly building a serious crate, which
+is the opposite of what this app is for. It is **still there**, unchanged, on the profile
+as a statistic. What leads is Standing.
+
+A record earns depth by having more of *you* attached to it:
+
+| | |
+|---|---|
+| scored it | 1 |
+| wrote a note on it | +1 |
+| answered a question about it | +1 |
+| own it | +1 |
+| changed your mind about it, 30+ days apart | +2 |
+| held it 90 days | +1 |
+
+Three points makes a **deep cut**. You cannot get there by rating faster — rating is one
+point — and you cannot get there in an afternoon, because the two-point ingredient needs a
+month to pass between two opinions and the one-point one needs ninety days on the shelf.
+Tiers roughly double: Listener 0 / Crate Digger 3 / Selector 10 / Collector 25 / Curator
+60 / Archivist 130.
+
+The profile block **prints the rule**. A ladder whose steps you cannot see is a ladder
+people climb by accident, and this one is trying to say what the app thinks is worth
+doing.
+
+It is computed from local data, so it is yours and is not shown on anybody else's
+profile. Publishing it would need a `profiles` column and a `pin_profile_economy` change
+— and a number people can compare is a number people optimise, which is the failure mode
+this replaced. If it is ever published, publish the tier name and not the count.
+
+`Standing.get()` reads `CollectionWorth.mine()` and `VinallLore.items()`, two small
+synchronous accessors added for it; both return empty until their owners have loaded,
+which degrades the number rather than breaking it.
+
+### The Collection carries its provenance
+
+Price says what the world thinks. The provenance line is the only thing on an owned card
+that is about you: *Held since Feb 2026 · you gave it 93 ↑15 from 78*. A record you own
+and have **never rated** says so and is tappable — it is the one state on that page worth
+acting on, and a shelf full of records you have never had an opinion about is a portfolio
+again.
+
+Four shelf orders, because a shelf you can only sort by price is a portfolio: Value,
+Longest held, Your rating, Grown on you. Both helpers are wrapped in try/catch and fall
+back to returning nothing and to the original order — they are ornaments on a card, and an
+ornament that throws would take the whole shelf down with it.
+
+### What was deliberately not done
+
+- **No "how many still fit" counter in the Crate**, and no second currency. The Disc
+  economy is untouched: no migration, no RLS change, no new table, nothing added to a pin
+  trigger. Every change above is client-side and reversible.
+- **Standing does not gate anything.** Progression that locks features turns a statement
+  of values into a toll gate.
+- The shortlist is a local list, not a `lists` row. It syncs, it is private, and it costs
+  no round trip per tap.
+
 ## Deploying
 
 GitHub → Vercel is connected. **Push to `main` and the site is live** in roughly half a minute:

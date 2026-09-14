@@ -792,6 +792,11 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
 }
 .stat.stat-wallet { cursor: pointer; }
 .stat.stat-wallet .s-val { font-family: var(--font-mono); font-size: 30px; }
+/* A tier is a word, and a word at 30px monospace wraps out of the tile. */
+.stat.stat-wallet .s-val.s-val-word {
+  font-family: var(--font-display); font-size: 21px; letter-spacing: -0.01em;
+  line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
 
 /* ============================================================
@@ -2439,7 +2444,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 /* Score — massive, bottom right, colour-coded */
 .cf-score {
   position: absolute;
-  bottom: 52px; right: 14px;
+  bottom: calc(var(--cf-foot, 52px) + 10px); right: 14px;
   font-family: var(--font-display);
   font-size: 58px; font-weight: 800;
   line-height: 1; letter-spacing: -0.05em;
@@ -2454,7 +2459,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 /* Album name + artist — bottom left */
 .cf-meta {
   position: absolute;
-  bottom: 52px; left: 14px; right: 80px;
+  bottom: calc(var(--cf-foot, 52px) + 10px); left: 14px; right: 80px;
   z-index: 3;
 }
 .cf-album-name {
@@ -2487,15 +2492,41 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 }
 
 /* Action bar — sits at very bottom of card, always visible */
-.cf-actions {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  display: flex; align-items: center;
-  gap: 4px;
-  padding: 8px 10px;
-  background: rgba(6,5,4,0.6);
+/* The footer now carries two rows — where the room sits, then what you say —
+   so it is a flow block pinned to the bottom rather than the single absolute
+   bar the action row used to be. */
+.cf-foot {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 4;
+  background: linear-gradient(to top, rgba(6,5,4,0.88), rgba(6,5,4,0.62));
   backdrop-filter: blur(8px);
-  z-index: 4;
+}
+.cf-spread { padding: 10px 12px 2px; }
+.cf-spread-track {
+  position: relative; height: 16px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(226,75,74,0.22), rgba(239,185,39,0.22) 55%, rgba(79,180,119,0.28));
+}
+/* One dot per rating. They overlap where people agree, which is the point:
+   a tight cluster and a scatter should look different from across the room. */
+.cf-dot {
+  position: absolute; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%; background: rgba(255,255,255,0.5);
+}
+.cf-dot.poster { background: var(--d, #fff); width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; box-shadow: 0 0 0 2px rgba(6,5,4,0.75); }
+.cf-dot.me { background: transparent; border: 2px solid var(--gold); width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; }
+.cf-avg { position: absolute; top: -2px; bottom: -2px; width: 1px; margin-left: -0.5px; background: rgba(255,255,255,0.45); }
+.cf-spread-legend {
+  font: 11px/1.4 var(--font-mono); color: var(--text-dim);
+  margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 10px;
+}
+.cf-spread-legend b { color: var(--text); }
+.cf-vs { color: var(--gold); }
+.cf-vs b { color: var(--gold); }
+
+.cf-actions {
+  display: flex; align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
 }
 .cf-action-btn {
   display: inline-flex; align-items: center; gap: 4px;
@@ -2510,25 +2541,67 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   user-select: none;
   white-space: nowrap;
 }
-.cf-action-btn:hover {
-  background: rgba(255,255,255,0.16);
-  color: #fff;
-  border-color: rgba(255,255,255,0.25);
+.cf-comment-btn { margin-left: auto; }
+.cf-heard.listed { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); }
+
+/* The primary response. Reads as the thing to do when you have not answered,
+   and as a statement of where you stand once you have. */
+.cf-call {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--gold); border: 1px solid var(--gold); color: #16120a;
+  border-radius: 20px; padding: 6px 13px;
+  font-size: 12.5px; font-weight: 800; letter-spacing: 0.01em;
+  cursor: pointer; white-space: nowrap;
+  transition: transform 0.12s var(--ease), filter 0.15s;
 }
-.cf-like-btn.liked {
-  color: #ff4d6d;
-  border-color: rgba(255,77,109,0.4);
-  background: rgba(255,77,109,0.12);
+.cf-call:hover { filter: brightness(1.08); }
+.cf-call:active { transform: scale(0.97); }
+.cf-call.rated {
+  background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.14); color: var(--text-dim);
+  font-weight: 700;
 }
-.cf-like-btn .heart { display: inline-block; transition: transform 0.25s cubic-bezier(0.2,1.5,0.4,1); }
-.cf-like-btn.liked .heart { transform: scale(1.35); }
-.cf-rate-btn {
-  margin-left: auto;
-  color: var(--gold);
-  border-color: rgba(245,200,66,0.3);
-  background: rgba(245,200,66,0.08);
+.cf-call-you { font: 10px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.75; }
+.cf-call-n { font-family: var(--font-mono); font-size: 14px; font-weight: 700; }
+/* The gap is the opinion. Green when you went higher, red when lower — this is
+   the one place in the app where those two colours mean direction and not
+   quality, so they are deliberately muted into chips rather than filled. */
+.cf-gap {
+  font: 11px/1 var(--font-mono); font-weight: 700;
+  padding: 3px 6px; border-radius: 6px;
 }
-.cf-rate-btn:hover { background: rgba(245,200,66,0.2); border-color: var(--gold); }
+.cf-gap.up { background: rgba(79,180,119,0.18); color: var(--green); }
+.cf-gap.down { background: rgba(226,75,74,0.18); color: var(--red); }
+.cf-gap.same { background: rgba(255,255,255,0.1); color: var(--text-dim); letter-spacing: 0.05em; text-transform: uppercase; font-size: 9.5px; }
+
+/* Your own post: the movement line, because there is no call to make on it. */
+.cf-own { display: flex; align-items: center; gap: 8px; font: 12px/1 var(--font-mono); color: var(--text-dim); flex-wrap: wrap; }
+.cf-own b { color: var(--text); font-size: 14px; }
+.cf-own-d { font-weight: 700; }
+.cf-own-d.up { color: var(--green); }
+.cf-own-d.down { color: var(--red); }
+.cf-own-since { color: var(--text-faint); }
+
+.cf-callbox { display: flex; align-items: center; gap: 10px; width: 100%; }
+.cf-slider { flex: 1 1 0; min-width: 0; accent-color: var(--gold); height: 22px; cursor: pointer; }
+.cf-callnum { font-family: var(--font-mono); font-size: 18px; font-weight: 700; min-width: 34px; text-align: right; }
+.cf-save {
+  background: var(--gold); color: #16120a; border: none; border-radius: 18px;
+  padding: 7px 14px; font-size: 12.5px; font-weight: 800; cursor: pointer;
+}
+.cf-cancel {
+  background: transparent; border: 1px solid rgba(255,255,255,0.16); color: var(--text-dim);
+  border-radius: 50%; width: 26px; height: 26px; font-size: 15px; line-height: 1; cursor: pointer; flex-shrink: 0;
+}
+/* A brief edge-light when an answer lands, so the card acknowledges it without
+   borrowing burst(), which in this app means a win. */
+@keyframes cfAnswered { 0% { box-shadow: 0 0 0 0 var(--gold); } 100% { box-shadow: 0 0 0 14px rgba(0,0,0,0); } }
+.cf-answered { animation: cfAnswered 0.9s var(--ease); }
+
+@media (max-width: 520px) {
+  .cf-spread-legend { font-size: 10px; }
+  .cf-call { padding: 6px 11px; font-size: 12px; }
+  .cf-action-btn { padding: 5px 9px; font-size: 11.5px; }
+}
 
 /* Sidebar */
 .crate-sidebar { position: sticky; top: 24px; }
@@ -2538,6 +2611,15 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint);
   margin-bottom: 14px;
 }
+.sl-row { position: relative; }
+.sl-drop {
+  margin-left: auto; flex-shrink: 0; background: transparent; border: none;
+  color: var(--text-faint); font-size: 17px; line-height: 1; cursor: pointer;
+  padding: 2px 4px; border-radius: 6px; opacity: 0; transition: opacity 0.12s, color 0.12s;
+}
+.sl-row:hover .sl-drop, .sl-drop:focus-visible { opacity: 1; }
+.sl-drop:hover { color: var(--red); }
+@media (hover: none) { .sl-drop { opacity: 0.55; } }
 .crate-trending-row {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 0; border-bottom: 1px solid var(--border);
@@ -3434,6 +3516,21 @@ body.entering-done #artist-hero {
 .cw-s { font-size: 13px; color: var(--text-dim); margin-top: 8px; }
 
 .col-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+/* Provenance and the shelf sorts. */
+.col-prov { font: 11px/1.4 var(--font-mono); color: var(--text-faint); margin-top: 5px; }
+.col-prov b { color: var(--text-dim); }
+.col-mv.up { color: var(--green); }
+.col-mv.down { color: var(--red); }
+.col-prov-gap { color: var(--gold); cursor: pointer; }
+.col-prov-gap:hover { text-decoration: underline; text-underline-offset: 3px; }
+.col-sorts { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 10px; }
+.col-sort {
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
+  border-radius: 999px; padding: 6px 13px; font-size: 12px; cursor: pointer;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.col-sort:hover { color: var(--text); }
+.col-sort.active { background: var(--gold); border-color: var(--gold); color: #16120a; font-weight: 700; }
 .col-rec {
   display: flex; align-items: center; gap: 12px; padding: 12px;
   border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2);
@@ -3500,6 +3597,44 @@ body.entering-done #artist-hero {
    Every tile is a number that only goes up, or a personal best. Wider columns
    than before because lifetime Discs runs to seven figures and the favourite
    minigame is a name rather than a numeral. */
+/* Standing — the one block on a profile that argues rather than counts. */
+.stg-card {
+  border: 1px solid var(--border-strong); border-radius: 16px;
+  background: linear-gradient(150deg, var(--gold-dim), var(--surface) 62%);
+  padding: 18px 20px; margin-top: 10px;
+}
+.stg-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.stg-tier {
+  font-family: var(--font-display); font-size: 28px; font-weight: 800;
+  letter-spacing: -0.025em; color: var(--gold);
+}
+.stg-deep { font: 12px/1 var(--font-mono); color: var(--text-dim); margin-left: auto; }
+.stg-deep b { color: var(--text); font-size: 15px; }
+.stg-blurb { font-size: 13.5px; color: var(--text-dim); margin-top: 6px; }
+.stg-bar {
+  height: 6px; border-radius: 999px; background: var(--surface-3);
+  overflow: hidden; margin: 14px 0 7px;
+}
+.stg-bar i { display: block; height: 100%; background: var(--gold); border-radius: 999px; transition: width 0.5s var(--ease); }
+.stg-next { font: 11px/1 var(--font-mono); color: var(--text-dim); }
+.stg-next b { color: var(--gold); }
+/* The rule is printed rather than discovered. A ladder whose steps you cannot
+   see is a ladder people climb by accident, and this one is trying to say
+   something. */
+.stg-rule {
+  font-size: 12px; line-height: 1.5; color: var(--text-faint);
+  border-top: 1px solid var(--border); margin-top: 16px; padding-top: 12px;
+}
+.stg-counts {
+  display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px;
+  font: 11px/1.4 var(--font-mono); color: var(--text-faint);
+}
+.stg-counts b { color: var(--text-dim); }
+@media (max-width: 520px) {
+  .stg-card { padding: 16px 14px; }
+  .stg-tier { font-size: 23px; }
+  .stg-deep { margin-left: 0; }
+}
 .done-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 10px; margin-top: 10px; }
 .done-tile {
   background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px;
@@ -3585,6 +3720,9 @@ body.entering-done #artist-hero {
 
 /* ---- level tile ------------------------------------------------------- */
 .stat-level { min-width: 132px; }
+/* A tier name plus "12 deep cuts · 13 to Collector" needs more room than a
+   two-digit level did. */
+#stat-standing { min-width: 184px; }
 .lvl-bar {
   height: 4px; border-radius: 3px; background: var(--surface-4);
   overflow: hidden; margin-top: 7px;
@@ -4235,6 +4373,21 @@ button.rw-day {
   transition: background 0.14s;
 }
 .td-go:hover { background: var(--surface-4); }
+/* Second thoughts. The save button carries the verdict rather than the word
+   "save", so the control reads as one sentence: this record, this number,
+   press it. It deliberately does not use .td-go — that class is wired to
+   "open the album" for every card in the stack. */
+.td-rethink-hist { font: 11px/1.4 var(--font-mono); color: var(--text-faint); margin: -4px 0 10px; }
+.td-rethink-row { display: flex; align-items: center; gap: 12px; margin: 4px 0 14px; }
+.td-rethink-slider { flex: 1 1 0; min-width: 0; accent-color: var(--gold); height: 24px; cursor: pointer; }
+.td-rethink-num { font-family: var(--font-mono); font-size: 22px; font-weight: 700; min-width: 42px; text-align: right; }
+.td-rethink-save {
+  background: var(--surface-3); border: 1px solid var(--border-strong); color: var(--text);
+  border-radius: 999px; padding: 9px 18px; font-size: 13px; cursor: pointer;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.td-rethink-save:hover { background: var(--surface-4); }
+.td-rethink-save.changed { background: var(--gold); border-color: var(--gold); color: #16120a; font-weight: 700; }
 .td-game-nm { font-family: var(--font-display); font-size: 22px; font-weight: 700; margin-bottom: 12px; }
 .td-quiet .td-kicker { color: var(--text-dim); }
 
@@ -4765,6 +4918,13 @@ window.ICONS = {
         <button class="btn-ghost" id="crate-load-more" style="width:100%; margin-top:16px; display:none;">Load more</button>
       </div>
       <div class="crate-sidebar" id="crate-sidebar">
+        <!-- Yours first: the shortlist is the only thing in this column that is
+             about you, and it is where "not heard" goes so that admitting it is
+             worth something. Hidden until there is one. -->
+        <div class="crate-sidebar-section" id="crate-shortlist-block" style="display:none;">
+          <div class="crate-sidebar-title">To hear <span id="crate-shortlist-n"></span></div>
+          <div id="crate-shortlist"></div>
+        </div>
         <div class="crate-sidebar-section">
           <div class="crate-sidebar-title">🔥 Highest rated this week</div>
           <div id="crate-trending"></div>
@@ -6233,17 +6393,100 @@ function loadAlbums() { try { return JSON.parse(localStorage.getItem(ALBUMS_KEY)
 function loadSongs()  { try { return JSON.parse(localStorage.getItem(SONGS_KEY)) || {}; } catch (e) { return {}; } }
 function persist(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); flashSaved(); } catch (e) {} if (window.Cloud) Cloud.push(key); }
 
+/* ---- score history -------------------------------------------------------
+   The one thing about this app that cannot be got anywhere else. Spotify knows
+   what you played and every rating site knows what you think today; only this
+   one can know that you gave Blonde an 82 in March and a 94 in September. That
+   is a fact about *you*, it can only be earned by time, and it is what the
+   Second Thoughts card, the movement line on a record and the Standing ladder
+   are all reading from.
+
+   One entry per distinct score, oldest first, current score last — so [0] is
+   the first thing you ever thought and the last is what you think now. A
+   re-rate to the same number is not a change of mind and does not write a row;
+   it still stamps ratedAt, because the point of that field is "when did you
+   last look at this".
+
+   Capped, and the cap drops from the middle: the first opinion is the origin
+   of the story and the recent ones are the live part of it, so neither end is
+   ever the thing thrown away. */
+/* ---- the shortlist -------------------------------------------------------
+   "I haven't heard it" is the honest answer to somebody else's rating, and the
+   only one the old heart could not express — you could like a record you had
+   never played, which is how a feed ends up measuring popularity of people
+   rather than of records. Saying so puts it here instead, which turns the
+   admission into the one genuinely useful thing it could be: a queue of
+   records somebody you follow rated highly enough to post.
+
+   Keyed by album id with a savedAt, so it rides the existing app_state mirror
+   and merges with the same per-item rule the ratings use. Rating a record
+   takes it off the list, because at that point you have heard it. */
+const SHORTLIST_KEY = 'crate_shortlist_v1';
+function loadShortlist() { try { return JSON.parse(localStorage.getItem(SHORTLIST_KEY)) || {}; } catch (e) { return {}; } }
+function shortlistHas(id) { return !!loadShortlist()[id]; }
+function shortlistCount() { return Object.keys(loadShortlist()).length; }
+function shortlistAdd(meta, why) {
+  if (!meta || !meta.id) return;
+  const list = loadShortlist();
+  if (list[meta.id]) return;
+  list[meta.id] = { id: meta.id, name: meta.name || '', artist: meta.artist || '', art: meta.art || '',
+                    why: why || '', savedAt: Date.now() };
+  persist(SHORTLIST_KEY, list);
+  if (window.renderShortlist) renderShortlist();
+}
+function shortlistRemove(id) {
+  const list = loadShortlist();
+  if (!list[id]) return;
+  delete list[id];
+  persist(SHORTLIST_KEY, list);
+  if (window.renderShortlist) renderShortlist();
+}
+window.loadShortlist = loadShortlist;
+window.shortlistAdd = shortlistAdd;
+window.shortlistRemove = shortlistRemove;
+window.shortlistHas = shortlistHas;
+window.shortlistCount = shortlistCount;
+
+const SCORE_HISTORY_MAX = 24;
+function pushScoreHistory(prev, score, now) {
+  var h = (prev && Array.isArray(prev.history)) ? prev.history.slice() : [];
+  if (!h.length && prev && typeof prev.score === 'number') {
+    // Rated before this field existed: seed the history with what we know.
+    h.push({ s: prev.score, t: prev.savedAt || now });
+  }
+  var last = h[h.length - 1];
+  if (!last || last.s !== score) h.push({ s: score, t: now });
+  if (h.length > SCORE_HISTORY_MAX) h = [h[0]].concat(h.slice(h.length - (SCORE_HISTORY_MAX - 1)));
+  return h;
+}
+/* What a record's history says, in the two forms the UI asks for. */
+function scoreMove(item) {
+  var h = (item && Array.isArray(item.history)) ? item.history : [];
+  if (h.length < 2) return null;
+  var first = h[0], last = h[h.length - 1];
+  return { from: first.s, to: last.s, delta: last.s - first.s, since: first.t, at: last.t, turns: h.length - 1 };
+}
+window.scoreMove = scoreMove;
+
 function saveAlbum(meta, score) {
   const albums = loadAlbums();
   const prev = albums[meta.id];
+  const now = Date.now();
   albums[meta.id] = {
     id: meta.id, name: meta.name, artist: meta.artist, artistId: meta.artistId || '',
     art: meta.art, year: meta.year || '', genre: meta.genre || '', score: score,
     note: (typeof meta.note === 'string') ? meta.note : (prev && prev.note) || '',
-    savedAt: (prev && prev.savedAt) || Date.now(),
+    savedAt: (prev && prev.savedAt) || now,
+    // savedAt is when this record entered the crate and never moves again, so
+    // it cannot answer "which copy is newer" once a record has been re-rated.
+    // That is what ratedAt is for, and what the merge now resolves on.
+    ratedAt: now,
+    history: pushScoreHistory(prev, score, now),
     date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   };
   persist(ALBUMS_KEY, albums);
+  // You have heard it now, so it stops being something to hear.
+  if (shortlistHas(meta.id)) shortlistRemove(meta.id);
   if (window.Cloud) Cloud.syncRating('album', meta.id, albums[meta.id]);
   if (window.Cloud) Cloud.postToFeed(meta, score, albums[meta.id].note);
   if (window.Wallet) Wallet.recordRating();
@@ -6263,6 +6506,8 @@ function saveSong(track, score, albumMeta) {
       artistId: (track.artists && track.artists[0] && track.artists[0].id) || '',
       albumId: albumMeta.id, albumName: albumMeta.name, art: albumMeta.art, score: score,
       savedAt: (songs[track.id] && songs[track.id].savedAt) || Date.now(),
+      ratedAt: Date.now(),
+      history: pushScoreHistory(songs[track.id], score, Date.now()),
       date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     };
     if (window.Cloud) Cloud.syncRating('song', track.id, songs[track.id]);
@@ -6277,6 +6522,118 @@ function removeSong(id)  { const s = loadSongs(); delete s[id]; persist(SONGS_KE
 window.removeAlbum = removeAlbum;
 window.removeSong = removeSong;
 
+
+/* ================================================================
+   STANDING — progression that measures depth instead of activity.
+
+   Level is lifetime Discs, which means it measures how much of the app you
+   have used. That is a fair thing to count and a poor thing to lead with: it
+   rises fastest for somebody grinding minigames and barely moves for somebody
+   quietly building a serious crate, which is the opposite of what this app is
+   for. It is still on the profile, as a statistic. This is what leads.
+
+   A record earns depth by having more of *you* attached to it, and the two
+   heaviest ingredients cannot be hurried:
+
+     scored it                    1
+     wrote a note on it          +1
+     answered a question about it +1
+     own it                      +1
+     changed your mind about it  +2   (and 30 days between the two opinions)
+     held it 90 days             +1
+
+   Three points makes a deep cut. You cannot get there by rating faster —
+   rating is one point — and you cannot get there in an afternoon, because the
+   two-point ingredient needs a month to pass between two opinions. That is
+   the whole design: the ladder is a statement that this app values a few
+   records you have really lived with over a thousand you have scored.
+
+   The thresholds roughly double. Getting off the bottom is a week; the top is
+   a hundred and thirty records you have genuinely engaged with, which is years
+   rather than a weekend, and is meant to be.
+
+   It is computed from local data, so it is yours and is not shown on anybody
+   else's profile. Publishing it would need a profiles column and a pin-trigger
+   change, and a number you can compare is a number people optimise — which is
+   the failure mode this replaced.
+   ================================================================ */
+(function () {
+  'use strict';
+  var DAY = 86400000;
+  var TIERS = [
+    { n: 0,   name: 'Listener',     blurb: 'Rate something. That is all it takes to start.' },
+    { n: 3,   name: 'Crate Digger', blurb: 'A few records you have done more than score.' },
+    { n: 10,  name: 'Selector',     blurb: 'You are starting to have positions, not just opinions.' },
+    { n: 25,  name: 'Collector',    blurb: 'A shelf with reasons behind it.' },
+    { n: 60,  name: 'Curator',      blurb: 'Enough depth that the crate says something about you.' },
+    { n: 130, name: 'Archivist',    blurb: 'Years of it. Very few people get here.' }
+  ];
+
+  function loreIdSet() {
+    var out = {};
+    try {
+      var list = (window.VinallLore && VinallLore.items) ? VinallLore.items() : [];
+      list.forEach(function (x) { if (x && x.item_id && !x.skipped) out[x.item_id] = 1; });
+    } catch (e) {}
+    return out;
+  }
+  function ownedMap() {
+    var out = {};
+    try {
+      var rows = (window.CollectionWorth && CollectionWorth.mine) ? CollectionWorth.mine() : [];
+      rows.forEach(function (r) { if (r && r.album_id) out[r.album_id] = r; });
+    } catch (e) {}
+    return out;
+  }
+
+  function depthOf(a, lore, owned, now) {
+    if (!a || typeof a.score !== 'number') return 0;
+    var p = 1;
+    if (a.note && String(a.note).trim()) p += 1;
+    if (lore[a.id]) p += 1;
+    var own = owned[a.id];
+    if (own) p += 1;
+    var mv = window.scoreMove ? scoreMove(a) : null;
+    // A change of mind only counts once time has passed between the two
+    // opinions — otherwise dragging the slider twice would be worth more than
+    // owning a record for a year.
+    if (mv && (mv.at - mv.since) >= 30 * DAY) p += 2;
+    if (own && own.bought_at) {
+      var held = now - new Date(own.bought_at).getTime();
+      if (held >= 90 * DAY) p += 1;
+    }
+    return p;
+  }
+
+  function compute() {
+    var albums = {};
+    try { albums = window.loadAlbums ? loadAlbums() : {}; } catch (e) {}
+    var lore = loreIdSet(), owned = ownedMap(), now = Date.now();
+    var deep = 0, rated = 0, minds = 0, written = 0, held = 0;
+    Object.keys(albums).forEach(function (k) {
+      var a = albums[k];
+      if (!a || typeof a.score !== 'number') return;
+      rated++;
+      if (a.note && String(a.note).trim()) written++;
+      var mv = window.scoreMove ? scoreMove(a) : null;
+      if (mv && (mv.at - mv.since) >= 30 * DAY) minds++;
+      if (owned[a.id]) held++;
+      if (depthOf(a, lore, owned, now) >= 3) deep++;
+    });
+
+    var i = 0;
+    for (var t = 0; t < TIERS.length; t++) if (deep >= TIERS[t].n) i = t;
+    var tier = TIERS[i], next = TIERS[i + 1] || null;
+    var pct = next ? Math.max(0, Math.min(100, Math.round(((deep - tier.n) / (next.n - tier.n)) * 100))) : 100;
+    return {
+      deep: deep, rated: rated, minds: minds, written: written, owned: held,
+      tier: tier.name, blurb: tier.blurb, index: i, top: !next,
+      next: next ? next.name : null, need: next ? next.n - deep : 0, pct: pct
+    };
+  }
+
+  window.Standing = { get: compute, tiers: TIERS };
+})();
 
 /* ================================================================
    5. RECOMMENDATIONS
@@ -6877,16 +7234,19 @@ function renderStats(){
       '<div class="stat stat-wallet" id="stat-worth" title="What your Collection is worth">' +
         '<div class="s-label">◈ Net worth</div>' +
         '<div class="s-val">'+(nw==null?'&mdash;':nw.toLocaleString('en-GB'))+'</div></div>';
-    // Level first, and wider than the rest. It is the only number here that
-    // never goes down, which makes it the one that reads as progress rather
-    // than as a balance.
-    const lv=Wallet.levelInfo?Wallet.levelInfo():null;
+    /* Standing, not Level. Level is lifetime Discs — it measures how much of
+       the app you have used, which rises fastest for somebody grinding
+       minigames and barely moves for somebody quietly building a serious
+       crate. Standing counts records you have done more than score. Level is
+       still on the profile as a statistic; this is what leads, because the
+       number in the widest tile on the home page is the app saying what it
+       thinks is worth doing. */
+    const st=window.Standing?Standing.get():null;
     walletTiles+=
-      (lv?'<div class="stat stat-wallet stat-level" id="stat-level" title="'+(lv.max?'Max level':(lv.into+' / '+lv.step+' XP to level '+(lv.level+1)))+'">'+
-        '<div class="s-label">◈ Level</div><div class="s-val">'+lv.level+'</div>'+
-        '<div class="lvl-bar"><i style="width:'+lv.pct+'%"></i></div>'+
-        // At the cap there is no next level to be a fraction of.
-        '<div class="lvl-sub">'+(lv.max?'Max level':(lv.into.toLocaleString()+' / '+lv.step.toLocaleString()+' XP'))+'</div></div>':'')+
+      (st?'<div class="stat stat-wallet stat-level" id="stat-standing" title="'+(st.top?'Top standing':(st.need+' more deep cuts to '+st.next))+'">'+
+        '<div class="s-label">◈ Standing</div><div class="s-val s-val-word">'+esc(st.tier)+'</div>'+
+        '<div class="lvl-bar"><i style="width:'+st.pct+'%"></i></div>'+
+        '<div class="lvl-sub">'+(st.top?st.deep+' deep cuts':(st.deep+' deep cuts · '+st.need+' to '+esc(st.next)))+'</div></div>':'')+
       '<div class="stat stat-wallet" id="stat-streak"><div class="s-label">\u{1F525} Streak</div><div class="s-val">'+(w.streak_current||0)+'</div></div>'+
       // An admin spends without limit, but the real balance is shown next to
       // the ∞ rather than replaced by it. Hiding the number behind a symbol is
@@ -8027,12 +8387,21 @@ const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const Cloud=(function(){
   let sb=null,user=null,ready=false;
-  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1'];
+  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1'];
   const pending={};
   function isOn(){return!!(sb&&user);}
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
   function lsSetRaw(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
-  function mergeItemMap(localObj,cloudObj){const out=Object.assign({},cloudObj||{});const loc=localObj||{};Object.keys(loc).forEach(function(id){const a=loc[id],b=out[id];if(!b||(a.savedAt||0)>=(b.savedAt||0))out[id]=a;});return out;}
+  /* Resolves per item, newest wins. It used to compare savedAt alone, which is
+     the moment a record *entered* the crate and never moves again — so for any
+     record rated on both devices the two timestamps were identical, the >= sent
+     the tie to local every time, and a re-rate made on another device could
+     never come down. Re-rating is the whole point of score history, so that had
+     to stop being true. ratedAt is stamped on every save; an item written
+     before it existed has none and falls back to savedAt, which is exactly the
+     old behaviour for old data. */
+  function itemStamp(x){return Math.max((x&&x.ratedAt)||0,(x&&x.savedAt)||0);}
+  function mergeItemMap(localObj,cloudObj){const out=Object.assign({},cloudObj||{});const loc=localObj||{};Object.keys(loc).forEach(function(id){const a=loc[id],b=out[id];if(!b||itemStamp(a)>=itemStamp(b))out[id]=a;});return out;}
   function mergeClaimed(a,b){return Object.assign({},b||{},a||{});}
   function mergeActivity(a,b){const all=(a||[]).concat(b||[]);const seen={};const out=[];all.sort(function(x,y){return(y.t||0)-(x.t||0);});all.forEach(function(e){const k=e.t+'|'+e.h;if(!seen[k]){seen[k]=1;out.push(e);}});return out.slice(0,60);}
   /* Play counts and the Earworm best. Field by field, because the two halves
@@ -8061,6 +8430,9 @@ const Cloud=(function(){
     // and then on a laptop keeps both days instead of one clobbering the other.
     lsSetRaw('crate_liner_v1',mergeItemMap(lsGet('crate_liner_v1')||{},cloud['crate_liner_v1']||{}));
     lsSetRaw('crate_activity',mergeActivity(lsGet('crate_activity'),cloud['crate_activity']));
+    // The shortlist is keyed by album id and carries savedAt, so it merges with
+    // the same per-item rule the ratings use.
+    lsSetRaw('crate_shortlist_v1',mergeItemMap(lsGet('crate_shortlist_v1')||{},cloud['crate_shortlist_v1']||{}));
     ['crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year'].forEach(function(k){const a=lsGet(k)||0,b=cloud[k]||0;if(Math.max(a,b))lsSetRaw(k,Math.max(a,b));});
     /* The game log merges per field rather than newest-wins: play counts take
        the larger of the two, and the Earworm best takes the *smaller* row
@@ -8449,6 +8821,23 @@ const Cloud=(function(){
     if(!isOn())return;
     try{await sb.from('crate_feed').delete().eq('user_id',user.id).eq('album_id',albumId);}catch(e){}
   }
+  /* Every score the room has given these records, in one round trip. crate_feed
+     already holds exactly one row per person per album, so the spread on a card
+     is a query and not a new table. Reads without a session too — a logged-out
+     visitor should still see that a record divides people. */
+  async function fetchAlbumScores(albumIds){
+    if(!sb||!albumIds||!albumIds.length)return{};
+    try{
+      const res=await sb.from('crate_feed').select('album_id,user_id,score').in('album_id',albumIds.slice(0,120));
+      const out={};
+      (res.data||[]).forEach(function(r){
+        if(r.score==null)return;
+        if(window.isBlocked&&isBlocked(r.user_id))return;
+        (out[r.album_id]=out[r.album_id]||[]).push({u:r.user_id,s:r.score});
+      });
+      return out;
+    }catch(e){return{};}
+  }
   async function fetchFeed(opts){
     if(!sb)return[];
     opts=opts||{};
@@ -8627,7 +9016,7 @@ const Cloud=(function(){
          submitLeaderboardTime:submitLeaderboardTime,fetchLeaderboard:fetchLeaderboard,fetchMyBestTime:fetchMyBestTime,
          syncRating:syncRating,deleteRating:deleteRating,setRatingsVisibility:setRatingsVisibility,
          postToFeed:postToFeed,removeFromFeed:removeFromFeed,fetchFeed:fetchFeed,fetchTrending:fetchTrending,
-         toggleLike:toggleLike,fetchLikes:fetchLikes,addComment:addComment,fetchComments:fetchComments,
+         toggleLike:toggleLike,fetchLikes:fetchLikes,fetchAlbumScores:fetchAlbumScores,addComment:addComment,fetchComments:fetchComments,
          fetchAlbumPageRatings:fetchAlbumPageRatings};
 })();
 window.Cloud=Cloud;
@@ -8762,7 +9151,10 @@ async function drawProfile(host,prof,isOwner){
     const tiles=[
       {v:nf(prof.lifetime_xp||0), k:'Lifetime Discs', sub:'earned, all time'},
       {v:nf(netWorth),            k:'Net worth',      sub:'what the shelf is worth'},
-      {v:prof.streak_best||0,     k:'Best streak',    sub:'rating days in a row'}
+      {v:prof.streak_best||0,     k:'Best streak',    sub:'rating days in a row'},
+      // Level is lifetime Discs. It belongs in a list of things that only go
+      // up, not at the top of a page about somebody's taste.
+      {v:prof.level||1,           k:'Level',          sub:'from Discs earned'}
     ];
     if(isOwner){
       let nLore=0,log={};
@@ -8780,7 +9172,32 @@ async function drawProfile(host,prof,isOwner){
       tiles.push({v:compDone,k:'Completionist',sub:'discographies finished'});
       tiles.push({v:lists.length,k:'Lists',sub:'made'});
     }
-    doneHtml='<div class="prof-section-title" style="margin-top:26px;">Statistics</div>'+
+    /* Standing sits above Statistics because it is the one thing on this page
+       that is an argument rather than a count: it says what the app thinks is
+       worth doing, and prints the rule so nobody has to guess at it. Owner
+       only — it reads local ratings, so there is nothing to show on somebody
+       else's profile and inventing a number there would be worse than a gap. */
+    var stg = (isOwner && window.Standing) ? Standing.get() : null;
+    if (stg) {
+      doneHtml+='<div class="prof-section-title" style="margin-top:26px;">Standing</div>'+
+        '<div class="stg-card">'+
+          '<div class="stg-top"><div class="stg-tier">'+esc(stg.tier)+'</div>'+
+            '<div class="stg-deep"><b>'+stg.deep+'</b> deep cuts</div></div>'+
+          '<div class="stg-blurb">'+esc(stg.blurb)+'</div>'+
+          (stg.top?'':'<div class="stg-bar"><i style="width:'+stg.pct+'%"></i></div>'+
+            '<div class="stg-next"><b>'+stg.need+'</b> more to '+esc(stg.next)+'</div>')+
+          '<div class="stg-rule">A record becomes a deep cut when you have done more than score it &mdash; '+
+            'written a note on it, answered a question about it, bought it, or changed your mind about it '+
+            'after living with it a while.</div>'+
+          '<div class="stg-counts">'+
+            '<span><b>'+stg.rated+'</b> rated</span>'+
+            '<span><b>'+stg.written+'</b> written about</span>'+
+            '<span><b>'+stg.owned+'</b> owned</span>'+
+            '<span><b>'+stg.minds+'</b> changed your mind</span>'+
+          '</div>'+
+        '</div>';
+    }
+    doneHtml+='<div class="prof-section-title" style="margin-top:26px;">Statistics</div>'+
       '<div class="done-grid">'+tiles.map(function(t){
         // A game's name is words, not a numeral, so it gets its own size —
         // "Higher or Lower" at 34px wraps to three lines and breaks the grid.
@@ -9452,7 +9869,7 @@ window.handleGrooveLink=handleGrooveLink;
   const trendingEl = document.getElementById('crate-trending');
 
   let _feedCache = [];         // cards already rendered
-  let _likesMap = {};          // feedId -> [userId, ...]
+  let _scores = {};            // albumId -> [{u,s}, ...]  every rating the room has given
   let _myId = null;
   let _offset = 0;
   let _loading = false;
@@ -9468,8 +9885,16 @@ window.handleGrooveLink=handleGrooveLink;
     return Math.floor(s/86400)+'d';
   }
 
-  /* ---------- card builder ---------- */
-  function buildCard(post, likedByMe) {
+  /* ---------- card builder ----------------------------------------------
+     The heart is gone and nothing took its slot. A like on a rating is an
+     agreement with a *person*, not with an opinion — it cannot disagree, it
+     cannot be uncertain, and it can be given by somebody who has never heard
+     the record. The unit this app already thinks in is a score out of 100, so
+     that is what a response is: you answer somebody's 93 with your own number,
+     and the gap between them is the whole interaction. Saying nothing is still
+     allowed; saying "I haven't heard it" is a first-class answer that queues
+     the record instead of pretending to an opinion. */
+  function buildCard(post, scores) {
     const div = document.createElement('div');
     div.className = 'cf-card';
     div.dataset.feedId = post.id;
@@ -9494,7 +9919,7 @@ window.handleGrooveLink=handleGrooveLink;
       '</div>' +
       /* note pill top-right */
       (post.note && post.note.trim() ?
-        '<div class="cf-note-pill" data-open-ap="1" title="' + esc(post.note) + '">\u201C' + esc(post.note.slice(0,28)) + (post.note.length>28?'\u2026':'\u201D') + '</div>' : '') +
+        '<div class="cf-note-pill" data-open-ap="1" title="' + esc(post.note) + '">“' + esc(post.note.slice(0,28)) + (post.note.length>28?'…':'”') + '</div>' : '') +
       /* album info bottom-left */
       '<div class="cf-meta" data-open-ap="1">' +
         '<div class="cf-album-name">' + esc(post.album_name) + '</div>' +
@@ -9503,66 +9928,218 @@ window.handleGrooveLink=handleGrooveLink;
       /* big score bottom-right */
       (post.score != null ?
         '<div class="cf-score" style="--score:' + scoreCol + '">' + post.score + '<span>/100</span></div>' : '') +
-      /* action bar fixed to bottom */
-      '<div class="cf-actions">' +
-        '<button class="cf-action-btn cf-like-btn' + (likedByMe?' liked':'') + '" data-action="like">' +
-          '<span class="heart">' + (likedByMe?'❤\uFE0F':'🤍') + '</span>' +
-          '<span class="like-count"></span>' +
-        '</button>' +
-        '<button class="cf-action-btn cf-comment-btn" data-action="ap">💬</button>' +
-        '<button class="cf-action-btn cf-rate-btn" data-action="rate">⭐ Rate</button>' +
+      /* the room, then the response */
+      '<div class="cf-foot">' +
+        '<div class="cf-spread" data-spread></div>' +
+        '<div class="cf-actions" data-bar></div>' +
       '</div>';
 
+    renderSpread(div, post, scores);
+    renderActions(div, post);
+    measureFoot(div);
     wireCard(div, post);
     return div;
+  }
+
+  /* The footer is one row on a card nobody else has rated and two on one that
+     divides people, so the album name and the score are pushed up by what it
+     actually measures. A hard-coded offset was fine while it was a fixed bar
+     and would now cover the title on exactly the cards worth reading. */
+  function measureFoot(div) {
+    const foot = div.querySelector('.cf-foot');
+    if (!foot) return;
+    // Synchronously, because offsetHeight forces the layout it needs and a
+    // requestAnimationFrame does not run at all in a backgrounded tab — which
+    // is exactly when a card gets built and never measured.
+    var h = foot.offsetHeight;
+    if (h) { div.style.setProperty('--cf-foot', Math.round(h) + 'px'); return; }
+    // Not in the document yet: one frame later it will be.
+    requestAnimationFrame(function () {
+      var h2 = foot.offsetHeight;
+      if (h2) div.style.setProperty('--cf-foot', Math.round(h2) + 'px');
+    });
+  }
+
+  /* ---------- the room ----------------------------------------------------
+     One dot per score anybody has given this record, on a 0-100 track. Two
+     ratings is the floor: a single dot is not a spread, it is the post again.
+     The poster's dot is filled in their own score colour and yours is ringed,
+     so the question the row answers at a glance is "where do I sit in this". */
+  function renderSpread(div, post, scores) {
+    const host = div.querySelector('[data-spread]');
+    if (!host) return;
+    const all = (scores && scores[post.album_id]) || [];
+    if (all.length < 2) { host.innerHTML = ''; host.style.display = 'none'; return; }
+    host.style.display = '';
+    const mine = myScoreFor(post.album_id);
+    const avg = Math.round(all.reduce(function (n, r) { return n + r.s; }, 0) / all.length);
+    const dots = all.map(function (r) {
+      const isPoster = r.u === post.user_id;
+      const isMe = _myId && r.u === _myId;
+      return '<i class="cf-dot' + (isPoster ? ' poster' : '') + (isMe ? ' me' : '') + '"' +
+        ' style="left:' + r.s + '%' + (isPoster ? ';--d:' + albumColor(r.s) : '') + '"></i>';
+    }).join('');
+    host.innerHTML =
+      '<div class="cf-spread-track">' +
+        '<i class="cf-avg" style="left:' + avg + '%"></i>' + dots +
+      '</div>' +
+      '<div class="cf-spread-legend">' +
+        '<b>' + all.length + '</b> ratings · room average <b>' + avg + '</b>' +
+        (mine != null && Math.abs(mine - avg) >= 8
+          ? '<span class="cf-vs">you are <b>' + (mine > avg ? '+' : '') + (mine - avg) + '</b> on the room</span>'
+          : '') +
+      '</div>';
+  }
+
+  function myScoreFor(albumId) {
+    try { const a = (window.loadAlbums ? loadAlbums() : {})[albumId]; return a && typeof a.score === 'number' ? a.score : null; }
+    catch (e) { return null; }
+  }
+
+  /* ---------- the response ---------- */
+  function renderActions(div, post) {
+    const bar = div.querySelector('[data-bar]');
+    if (!bar) return;
+    const mine = myScoreFor(post.album_id);
+    const isMine = _myId && post.user_id === _myId;
+    const listed = window.shortlistHas && shortlistHas(post.album_id);
+    let html = '';
+
+    if (isMine) {
+      /* Your own post has no call to make, so the slot shows the one thing
+         only this app knows: whether your mind has changed since. */
+      const mv = window.scoreMove && scoreMove((window.loadAlbums ? loadAlbums() : {})[post.album_id]);
+      html += mv
+        ? '<div class="cf-own">' + mv.from + ' → <b>' + mv.to + '</b> ' +
+            '<span class="cf-own-d ' + (mv.delta > 0 ? 'up' : 'down') + '">' + (mv.delta > 0 ? '+' : '') + mv.delta + '</span>' +
+            '<span class="cf-own-since">since ' + esc(shortDate(mv.since)) + '</span></div>'
+        : '<div class="cf-own"><span class="cf-own-since">your rating — re-rate it and the change is kept</span></div>';
+    } else if (mine != null) {
+      const gap = mine - (post.score || 0);
+      html += '<button class="cf-call rated" data-action="call">' +
+          '<span class="cf-call-you">You</span>' +
+          '<span class="cf-call-n" style="color:' + albumColor(mine) + '">' + mine + '</span>' +
+          (gap ? '<span class="cf-gap ' + (gap > 0 ? 'up' : 'down') + '">' + (gap > 0 ? '+' : '') + gap + '</span>'
+               : '<span class="cf-gap same">agreed</span>') +
+        '</button>';
+    } else {
+      html += '<button class="cf-call" data-action="call">Your call</button>' +
+        '<button class="cf-action-btn cf-heard' + (listed ? ' listed' : '') + '" data-action="heard">' +
+          (listed ? 'Shortlisted' : 'Not heard') + '</button>';
+    }
+    html += '<button class="cf-action-btn cf-comment-btn" data-action="ap" aria-label="Discuss">💬</button>';
+    bar.innerHTML = html;
+  }
+
+  function shortDate(t) {
+    try { return new Date(t).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }); }
+    catch (e) { return ''; }
+  }
+
+  /* The score control itself. A slider rather than a text field: a number you
+     have to type is a number you talk yourself into, and the point is the
+     first answer. Opens on whatever the room thinks so there is something to
+     move away from, or on your own score when you are changing your mind. */
+  function openCall(div, post) {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { if (window.Cloud) Cloud.openAuth(); return; }
+    const bar = div.querySelector('[data-bar]');
+    if (!bar || bar.querySelector('.cf-slider')) return;
+    const mine = myScoreFor(post.album_id);
+    const start = mine != null ? mine : (post.score != null ? post.score : 70);
+    bar.innerHTML =
+      '<div class="cf-callbox">' +
+        '<input class="cf-slider" type="range" min="1" max="100" value="' + start + '" aria-label="Your score">' +
+        '<output class="cf-callnum" style="color:' + albumColor(start) + '">' + start + '</output>' +
+        '<button class="cf-save" data-action="save">Save</button>' +
+        '<button class="cf-cancel" data-action="cancel" aria-label="Cancel">×</button>' +
+      '</div>';
+    const slider = bar.querySelector('.cf-slider');
+    const num = bar.querySelector('.cf-callnum');
+    slider.addEventListener('input', function () {
+      num.textContent = slider.value;
+      num.style.color = albumColor(+slider.value);
+    });
+    setTimeout(function () { slider.focus(); }, 0);
+  }
+
+  async function commitCall(div, post) {
+    const slider = div.querySelector('.cf-slider');
+    if (!slider) return;
+    const score = +slider.value;
+    const meta = { id: post.album_id, name: post.album_name, artist: post.album_artist, art: post.album_art };
+    /* The artist id is what recommendations key on and a feed row does not
+       carry one. Take it from any record already in the crate by the same
+       artist — free, offline, and right nearly always. It deliberately does
+       NOT ask Spotify: a background lookup that fails calls showGate(), so an
+       optional enrichment would put a "can't reach Spotify" banner across the
+       page because somebody answered a card. An absent id costs this record a
+       place among the recommendation seeds and nothing else — artistStats
+       skips a blank id rather than lumping them together. */
+    try {
+      const had = (window.loadAlbums ? loadAlbums() : {})[post.album_id];
+      if (had && had.artistId) meta.artistId = had.artistId;
+      else if (post.album_artist) {
+        const all = window.loadAlbums ? loadAlbums() : {};
+        const sib = Object.keys(all).map(function (k) { return all[k]; }).filter(function (x) {
+          return x && x.artistId && x.artist === post.album_artist;
+        })[0];
+        if (sib) meta.artistId = sib.artistId;
+      }
+    } catch (e) {}
+    saveAlbum(meta, score);
+    renderActions(div, post);
+    measureFoot(div);
+    div.classList.add('cf-answered');
+    setTimeout(function () { div.classList.remove('cf-answered'); }, 900);
+    if (window.buzz) buzz('good');
+    // Everyone else's card for this record now has one more dot on it.
+    refreshSpreads(post.album_id);
+  }
+
+  /* One answer changes the room on every card showing that record, including
+     the ones already on screen. Re-reads rather than patching in place so the
+     number on the card and the number in the database cannot drift. */
+  async function refreshSpreads(albumId) {
+    if (!window.Cloud || !Cloud.fetchAlbumScores) return;
+    const fresh = await Cloud.fetchAlbumScores([albumId]);
+    Object.assign(_scores, fresh);
+    feedEl.querySelectorAll('.cf-card[data-album-id="' + (window.CSS && CSS.escape ? CSS.escape(albumId) : albumId) + '"]').forEach(function (card) {
+      const post = _feedCache.filter(function (p) { return p.id === card.dataset.feedId; })[0];
+      if (post) { renderSpread(card, post, _scores); measureFoot(card); }
+    });
   }
 
   function wireCard(div, post) {
     /* open album page on art / meta / note click */
     div.addEventListener('click', function(e){
-      if(e.target.closest('[data-action],[data-uid]'))return;
+      if(e.target.closest('[data-action],[data-uid],.cf-foot'))return;
       openAlbumPage(post);
     });
     /* username → profile */
     div.querySelectorAll('.cf-username').forEach(function(el){
       el.addEventListener('click',function(e){e.stopPropagation();viewUserProfile(el.dataset.uid);});
     });
-    /* like */
-    const likeBtn = div.querySelector('[data-action="like"]');
-    likeBtn.addEventListener('click',async function(e){
-      e.stopPropagation();
-      if(!window.Cloud||!Cloud.isOn||!Cloud.isOn()){Cloud.openAuth();return;}
-      likeBtn.disabled=true;
-      const res=await Cloud.toggleLike(post.id);
-      likeBtn.disabled=false;
-      if(res&&res.error)return;
-      const liked=res&&res.liked;
-      likeBtn.classList.toggle('liked',liked);
-      likeBtn.querySelector('.heart').textContent=liked?'❤\uFE0F':'🤍';
-      if(!_likesMap[post.id])_likesMap[post.id]=[];
-      const me=Cloud.getUser();
-      if(liked){if(!_likesMap[post.id].includes(me.id))_likesMap[post.id].push(me.id);}
-      else{_likesMap[post.id]=_likesMap[post.id].filter(function(x){return x!==me.id;});}
-      updateLikeCount(div,post.id);
-      likeBtn.querySelector('.heart').style.transform='scale(1.6)';
-      setTimeout(function(){likeBtn.querySelector('.heart').style.transform='';},220);
+    /* everything in the footer, delegated — the bar is rebuilt on every answer
+       and per-button listeners would be re-bound each time. */
+    div.addEventListener('click', function (e) {
+      const btn = e.target.closest('[data-action]');
+      if (!btn || !div.contains(btn)) return;
+      const act = btn.dataset.action;
+      if (act === 'ap') { e.stopPropagation(); openAlbumPage(post); return; }
+      if (act === 'call') { e.stopPropagation(); openCall(div, post); return; }
+      if (act === 'save') { e.stopPropagation(); commitCall(div, post); return; }
+      if (act === 'cancel') { e.stopPropagation(); renderActions(div, post); measureFoot(div); return; }
+      if (act === 'heard') {
+        e.stopPropagation();
+        if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { if (window.Cloud) Cloud.openAuth(); return; }
+        if (shortlistHas(post.album_id)) shortlistRemove(post.album_id);
+        else shortlistAdd({ id: post.album_id, name: post.album_name, artist: post.album_artist, art: post.album_art },
+                          post.username ? ('from ' + post.username) : '');
+        renderActions(div, post);
+        measureFoot(div);
+        return;
+      }
     });
-    /* comment / album page button */
-    div.querySelector('[data-action="ap"]').addEventListener('click',function(e){
-      e.stopPropagation();
-      openAlbumPage(post);
-    });
-    /* rate this album */
-    div.querySelector('[data-action="rate"]').addEventListener('click',function(e){
-      e.stopPropagation();
-      openAlbum({id:post.album_id,name:post.album_name,artist:post.album_artist,art:post.album_art});
-    });
-  }
-
-  function updateLikeCount(div, feedId){
-    const lc=div.querySelector('.like-count');
-    const n=(_likesMap[feedId]||[]).length;
-    if(lc)lc.textContent=n>0?n:'';
   }
 
   /* ---------- shimmer loading state ---------- */
@@ -9587,26 +10164,62 @@ window.handleGrooveLink=handleGrooveLink;
       .filter(function(p){return !(window.isBlocked&&isBlocked(p.user_id));});
     if(_offset===0){feedEl.innerHTML='';}
     if(!posts.length&&_offset===0){if(emptyEl)emptyEl.style.display='block';_loading=false;return;}
-    // fetch likes in one batch
-    const ids=posts.map(function(p){return p.id;});
-    const likes=window.Cloud&&Cloud.isOn&&Cloud.isOn()?await Cloud.fetchLikes(ids):{};
-    Object.assign(_likesMap,likes);
+ /* Every score the room has given the records on this page, in one trip.
+       Unlike the likes it replaced this does not need a session: the spread is
+       worth seeing logged out, and it is the only thing on a card that says
+       anything about the record rather than about the poster. */
+    const albumIds=posts.map(function(p){return p.album_id;}).filter(Boolean);
+    const scores=window.Cloud?await Cloud.fetchAlbumScores(albumIds):{};
+    Object.assign(_scores,scores);
     const me=window.Cloud&&Cloud.getUser&&Cloud.getUser();
     _myId=me?me.id:null;
     posts.forEach(function(post,i){
-      const likedByMe=_myId&&(_likesMap[post.id]||[]).includes(_myId);
-      const card=buildCard(post,likedByMe);
+      const card=buildCard(post,_scores);
       card.style.animationDelay=(i*0.04)+'s';
       feedEl.appendChild(card);
-      // populate like counts
-      updateLikeCount(card,post.id);
+      measureFoot(card);
     });
     _feedCache=_feedCache.concat(posts);
     _offset+=posts.length;
     if(loadMoreBtn)loadMoreBtn.style.display=posts.length>=PAGE?'block':'none';
     _loading=false;
+    renderShortlist();
     renderTrending();
   }
+
+  /* The shortlist. Records somebody you follow rated highly enough to post and
+     you admitted you had not heard — which makes this the only recommendation
+     list in the app that a person built rather than an algorithm. Rating one
+     takes it off, so the list empties by being used. */
+  function renderShortlist(){
+    const host=document.getElementById('crate-shortlist');
+    const block=document.getElementById('crate-shortlist-block');
+    const nEl=document.getElementById('crate-shortlist-n');
+    if(!host||!block)return;
+    const items=Object.values(window.loadShortlist?loadShortlist():{})
+      .sort(function(a,b){return (b.savedAt||0)-(a.savedAt||0);});
+    block.style.display=items.length?'':'none';
+    if(nEl)nEl.textContent=items.length?String(items.length):'';
+    if(!items.length){host.innerHTML='';return;}
+    host.innerHTML=items.slice(0,12).map(function(it){
+      return '<div class="crate-trending-row sl-row" data-sl="'+esc(it.id)+'">'+
+        '<img class="crate-trending-art" src="'+esc(it.art||'')+'" alt="" onerror="this.style.opacity=0">'+
+        '<div style="min-width:0;"><div class="crate-trending-name">'+esc(it.name)+'</div>'+
+        '<div class="crate-trending-meta">'+esc(it.artist||'')+(it.why?' · '+esc(it.why):'')+'</div></div>'+
+        '<button class="sl-drop" data-sl-drop="'+esc(it.id)+'" aria-label="Remove">&times;</button>'+
+      '</div>';
+    }).join('');
+    host.querySelectorAll('[data-sl-drop]').forEach(function(b){
+      b.addEventListener('click',function(e){e.stopPropagation();shortlistRemove(b.dataset.slDrop);});
+    });
+    host.querySelectorAll('[data-sl]').forEach(function(row){
+      row.addEventListener('click',function(){
+        const it=(window.loadShortlist?loadShortlist():{})[row.dataset.sl];
+        if(it&&window.openAlbum)openAlbum({id:it.id,name:it.name,artist:it.artist,art:it.art});
+      });
+    });
+  }
+  window.renderShortlist=renderShortlist;
 
   async function renderTrending(){
     if(!trendingEl||!window.Cloud)return;
@@ -10824,7 +11437,11 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     sober:      { name: 'I CAN’T SPELL SOBER',    cost: 7000 },
     maybach:    { name: 'M-M-M-MAYBACH MUSIC',    cost: 8000 },
     biscuits:   { name: 'IT’S BISCUITS, IT’S GRAVY', cost: 8000 },
-    fuckumean:  { name: 'FUCKUMEAN',              cost: 8000 },
+    /* The key stays `fuckumean` — it is what `shop_items`, `owned_tags` and
+       `active_tag` hold, and renaming it would orphan anyone who owns one.
+       Only the label is rendered, and only from this map: loadPrices() reads
+       cost and nothing else. */
+    fuckumean:  { name: 'FUKUMEAN',               cost: 8000 },
     profit:     { name: 'I GOT TOO MUCH PROFIT',  cost: 9000 },
     drizzy:     { name: 'DRIZZY',                 cost: 9000 },
     carti:      { name: 'CASH CARTI B!TCH',       cost: 10000 },
@@ -15633,6 +16250,9 @@ window.renderAdminStats = renderAdminStats;
     // Called after anything that moves the shelf. Buying, selling, claiming a
     // pick — all of them change a number that is on screen somewhere else.
     refresh: function () { _worthTried = true; return fetchWorth(); },
+    // What is actually on the shelf, synchronously, for anything that needs
+    // the rows rather than the total. Empty until the Collection has loaded.
+    mine: function () { return _mine || []; },
     set: function (v) {
       if (v == null) return;
       _worth = Number(v) || 0;
@@ -15652,6 +16272,37 @@ window.renderAdminStats = renderAdminStats;
     var picks = (window.Wallet && Wallet.get) ? (Wallet.get().album_picks || 0) : 0;
     h.textContent = (_mine ? n(w) + ' Discs across ' + _mine.length + ' record' + (_mine.length === 1 ? '' : 's') : '') +
       (picks > 0 ? (_mine ? ' · ' : '') + picks + ' free pick' + (picks === 1 ? '' : 's') : '');
+  }
+
+  var SHELF_SORTS = [
+    { k: 'value',  label: 'Value' },
+    { k: 'held',   label: 'Longest held' },
+    { k: 'rating', label: 'Your rating' },
+    { k: 'riser',  label: 'Grown on you' }
+  ];
+  var _shelfSort = 'value';
+  function myRec(id) { try { return (window.loadAlbums ? loadAlbums() : {})[id] || null; } catch (e) { return null; } }
+  function sortShelf(rows) {
+    try { return sortShelfInner(rows); } catch (e) { return rows; }
+  }
+  function sortShelfInner(rows) {
+    if (_shelfSort === 'held') {
+      return rows.sort(function (a, b) { return new Date(a.bought_at || 0) - new Date(b.bought_at || 0); });
+    }
+    if (_shelfSort === 'rating') {
+      return rows.sort(function (a, b) {
+        var x = myRec(a.album_id), y = myRec(b.album_id);
+        return ((y && y.score) || -1) - ((x && x.score) || -1);
+      });
+    }
+    if (_shelfSort === 'riser') {
+      return rows.sort(function (a, b) {
+        var mx = window.scoreMove ? scoreMove(myRec(a.album_id)) : null;
+        var my = window.scoreMove ? scoreMove(myRec(b.album_id)) : null;
+        return ((my && my.delta) || -999) - ((mx && mx.delta) || -999);
+      });
+    }
+    return rows.sort(function (a, b) { return (b.price || 0) - (a.price || 0); });
   }
 
   function card(a, opts) {
@@ -15682,8 +16333,39 @@ window.renderAdminStats = renderAdminStats;
       (a.price != null
         ? '<div class="col-price">' + n(a.price) + ' <small>Discs</small></div>'
         : '<div class="col-price col-unpriced">price on request</div>') +
+      (opts.owned ? provenance(a) : '') +
       '</div>' + action +
     '</div>';
+  }
+
+  /* What a shelf has that a portfolio does not: every record remembers when
+     you got it and what you have thought of it since. A price says what the
+     world thinks; this line is the only thing on the card that is about you.
+     Owning a record you have never rated is called out rather than hidden —
+     it is the one state on this page worth acting on, and a collection full
+     of records you have never had an opinion about is a portfolio again. */
+  function provenance(a) {
+    // Wrapped whole: this line is an ornament on a card, and an ornament that
+    // throws would take the entire shelf down with it.
+    try { return provenanceLine(a); } catch (e) { return ''; }
+  }
+  function provenanceLine(a) {
+    var held = '';
+    try {
+      if (a.bought_at) held = 'Held since ' + new Date(a.bought_at).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    } catch (e) {}
+    var rec = null;
+    try { rec = (window.loadAlbums ? loadAlbums() : {})[a.album_id]; } catch (e) {}
+    if (!rec || typeof rec.score !== 'number') {
+      return '<div class="col-prov col-prov-gap" data-rate-own="' + esc(a.album_id) + '">' +
+        (held ? esc(held) + ' &middot; ' : '') + 'never rated &mdash; say something</div>';
+    }
+    var mv = window.scoreMove ? scoreMove(rec) : null;
+    return '<div class="col-prov">' + (held ? esc(held) + ' &middot; ' : '') +
+      'you gave it <b>' + rec.score + '</b>' +
+      (mv ? ' <span class="col-mv ' + (mv.delta > 0 ? 'up' : 'down') + '">' +
+        (mv.delta > 0 ? '&uarr;' : '&darr;') + Math.abs(mv.delta) + ' from ' + mv.from + '</span>' : '') +
+      '</div>';
   }
 
   async function render() {
@@ -15722,12 +16404,19 @@ window.renderAdminStats = renderAdminStats;
         return;
       }
       var w = worthOf(mine);
+      /* A shelf you can only sort by price is a portfolio. These are the other
+         orders a person actually walks their records in: what they have had
+         longest, what they think most of, and what has grown on them. */
+      var sorted = sortShelf(mine.slice());
       body.innerHTML =
         '<div class="col-worth-box"><div class="cw-v">' + n(w) + '</div>' +
         '<div class="cw-k">Net worth</div>' +
         '<div class="cw-s">' + mine.length + ' record' + (mine.length === 1 ? '' : 's') +
         ' · best is ' + esc(mine[0].name) + '</div></div>' +
-        '<div class="col-grid">' + mine.map(function (a) { return card(a, { owned: true }); }).join('') + '</div>';
+        '<div class="col-sorts">' + SHELF_SORTS.map(function (o) {
+          return '<button class="col-sort' + (o.k === _shelfSort ? ' active' : '') + '" data-shelf-sort="' + o.k + '">' + o.label + '</button>';
+        }).join('') + '</div>' +
+        '<div class="col-grid">' + sorted.map(function (a) { return card(a, { owned: true }); }).join('') + '</div>';
       wire(body);
       return;
     }
@@ -15792,6 +16481,17 @@ window.renderAdminStats = renderAdminStats;
   }
 
   function wire(body) {
+    body.querySelectorAll('[data-shelf-sort]').forEach(function (b2) {
+      b2.addEventListener('click', function () { _shelfSort = b2.dataset.shelfSort; render(); });
+    });
+    // "Never rated" is the one line on a shelf worth acting on, so it acts.
+    body.querySelectorAll('[data-rate-own]').forEach(function (p) {
+      p.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var row = (_mine || []).filter(function (x) { return x.album_id === p.dataset.rateOwn; })[0];
+        if (row && window.openAlbum) openAlbum({ id: row.album_id, name: row.name, artist: row.artist, art: row.art });
+      });
+    });
     var clear = body.querySelector('#col-clear');
     if (clear) clear.addEventListener('click', function (ev) {
       ev.preventDefault();
@@ -17989,6 +18689,96 @@ window.track = function (name, props) {
     return out.filter(Boolean);
   }
 
+  /* Second thoughts — the one card in this stack that nobody else could show
+     you. Every other finder points at something you did once; this one points
+     at something you decided, a long time ago, and asks whether it is still
+     true. It only exists because scores are kept with their dates, it only
+     gets better the longer the account runs, and the answer is worth having
+     either way: "still 71" is a fact about you and so is 71 → 84.
+
+     Six months is the floor deliberately. Any sooner and it is a nag about a
+     record you have barely lived with; at six months the question is real.
+     ratedAt is what gates the repeat, so answering it — including answering
+     "still" — buys another six months of quiet. */
+  var RETHINK_AFTER = 180 * DAY;
+  function findSecondThoughts() {
+    var out = [], al = albums(), now = Date.now();
+    Object.keys(al).forEach(function (k) {
+      var a = al[k];
+      if (!a || !a.id || typeof a.score !== 'number') return;
+      var looked = Math.max(a.ratedAt || 0, a.savedAt || 0);
+      if (!looked || now - looked < RETHINK_AFTER) return;
+      out.push({ type: 'rethink', item: itemFromAlbum(a), was: a.score, when: looked,
+                 move: (window.scoreMove ? scoreMove(a) : null) });
+    });
+    return out;
+  }
+
+  function rethinkCard(d) {
+    /* "300d ago" is a measurement; "in November 2025" is a place you can
+       remember being. This card is asking you to cast your mind back, so it
+       names the month rather than counting the days to it. */
+    var ago;
+    try {
+      ago = 'in ' + new Date(d.when).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    } catch (e) { ago = window.timeAgo ? timeAgo(d.when) + ' ago' : 'a long time ago'; }
+    var mv = d.move;
+    return '<div class="td-card td-rethink" data-meta="' + esc2(JSON.stringify(d.item)) + '" data-was="' + d.was + '">' +
+      cardHead('Second thoughts', 'You gave this <b>' + d.was + '</b> ' + esc2(ago) + '.') +
+      itemStrip(d.item) +
+      (mv && mv.turns ? '<div class="td-rethink-hist">' + mv.from + ' → ' + mv.to + ' already, over ' + mv.turns + ' change' + (mv.turns === 1 ? '' : 's') + '</div>' : '') +
+      '<div class="td-rethink-row">' +
+        '<input class="td-rethink-slider" type="range" min="1" max="100" value="' + d.was + '" aria-label="Your score now">' +
+        '<output class="td-rethink-num">' + d.was + '</output>' +
+      '</div>' +
+      '<div class="td-row">' +
+        '<button class="td-rethink-save" type="button">Still ' + d.was + '</button>' +
+        '<button class="td-next" type="button">Next →</button>' +
+      '</div></div>';
+  }
+
+  /* The slider and the button are one control: the button always says what
+     pressing it will do, so there is no separate "confirm" and no way to
+     move the slider and then not notice you had not saved. */
+  function wireRethink(slot, entry) {
+    var card = slot.querySelector('.td-rethink');
+    if (!card) return;
+    var slider = card.querySelector('.td-rethink-slider');
+    var num = card.querySelector('.td-rethink-num');
+    var save = card.querySelector('.td-rethink-save');
+    var was = +card.dataset.was;
+    if (!slider || !save) return;
+    slider.addEventListener('input', function () {
+      var v = +slider.value;
+      num.textContent = v;
+      try { num.style.color = window.albumColor ? albumColor(v) : ''; } catch (e) {}
+      save.textContent = v === was ? 'Still ' + was : 'Make it ' + v;
+      save.classList.toggle('changed', v !== was);
+    });
+    save.addEventListener('click', function () {
+      var v = +slider.value;
+      var item = entry.d.item;
+      try {
+        var all = window.loadAlbums ? loadAlbums() : {};
+        var rec = all[item.id];
+        // Re-save through the normal path so the feed row, the history and the
+        // award all behave exactly as they do anywhere else in the app.
+        if (window.saveAlbum) saveAlbum({
+          id: item.id, name: item.name, artist: item.artist, art: item.art,
+          artistId: (rec && rec.artistId) || '', year: (rec && rec.year) || '', genre: (rec && rec.genre) || ''
+        }, v);
+      } catch (e) {}
+      var msg = v === was
+        ? 'Still ' + was + '. Noted.'
+        : (v > was ? 'Up ' + (v - was) : 'Down ' + (was - v)) + ' — ' + was + ' → ' + v;
+      card.innerHTML = '<div class="td-kicker">Second thoughts</div><div class="td-line">' + esc2(msg) + '</div>' +
+        itemStrip(item) + '<div class="td-row"><button class="td-next" type="button">Next →</button></div>';
+      card.querySelector('.td-next').addEventListener('click', function () { advance(); });
+      if (window.buzz) buzz(v === was ? 'good' : 'big');
+      setTimeout(function () { advance(); }, 2200);
+    });
+  }
+
   function buildQueue() {
     // The two listening finders go first because they are the strongest thing
     // in the pool when there is any listening data at all, and return nothing
@@ -18019,6 +18809,17 @@ window.track = function (name, props) {
       return true;
     });
 
+    /* Claimed before the ask pool, for the same reason receipts are: every
+       rated record is in the ask pool via findAnyRated, so a filter running
+       after it would find every id already taken and never show a single
+       one of these. */
+    var rethinks = shuffle(findSecondThoughts()).filter(function (r) {
+      var k = 'album:' + r.item.id;
+      if (seen[k]) return false;
+      seen[k] = 1;
+      return true;
+    }).slice(0, 6);
+
     shuffle(raw).forEach(function (d) {
       if (!d || !d.item) return;
       var k = d.item.kind + ':' + d.item.id;
@@ -18028,10 +18829,14 @@ window.track = function (name, props) {
     });
 
     var out = [];
+    // One up front when there is one: it is the strongest card in the stack
+    // and the only one that cannot be built on a first visit.
+    if (rethinks.length) out.push({ t: 'rethink', d: rethinks.shift() });
     pool.forEach(function (d, i) {
       out.push({ t: 'ask', d: d });
       if (i % 5 === 4 && receipts.length) out.push({ t: 'ask', d: receipts.shift() });
       if (i % 9 === 8) out.push({ t: 'game' });
+      if (i % 7 === 6 && rethinks.length) out.push({ t: 'rethink', d: rethinks.shift() });
     });
     while (receipts.length) out.push({ t: 'ask', d: receipts.shift() });
     return out;
@@ -18116,6 +18921,7 @@ window.track = function (name, props) {
     if (!entry) return quietCard();
     if (entry.t === 'game') return gameCard();
     if (entry.t === 'revisit') return revisitCard(entry.d);
+    if (entry.t === 'rethink') return rethinkCard(entry.d);
     return questionCard(entry.d, entry.d.type === 'receipt' ? 'You said this once' : 'VINALL noticed');
   }
 
@@ -18240,6 +19046,13 @@ window.track = function (name, props) {
       try { meta = JSON.parse(card.dataset.meta); } catch (e) {}
       if (meta && window.openAlbum) openAlbum(meta);
     });
+
+    if (entry.t === 'rethink') {
+      wireRethink(slot, entry);
+      var rn = slot.querySelector('.td-next');
+      if (rn) rn.addEventListener('click', function () { advance(); });
+      return;
+    }
 
     if (entry.t !== 'ask' || !d) return;
 
@@ -18527,7 +19340,8 @@ window.track = function (name, props) {
   function loreCount() {
     return (_loreList || []).filter(function (r) { return r && !r.skipped && r.choice; }).length;
   }
-  window.VinallLore = { load: loadLore, save: saveAnswer, questions: QUESTIONS, count: loreCount };
+  window.VinallLore = { load: loadLore, save: saveAnswer, questions: QUESTIONS, count: loreCount,
+                        items: function () { return _loreList || []; } };
 })();
 </script>
 </body>
