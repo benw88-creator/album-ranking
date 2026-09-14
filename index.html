@@ -606,6 +606,12 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
   margin-top: 10px; font: 700 11px/1 var(--font-mono);
   letter-spacing: .1em; text-transform: uppercase; color: var(--gold);
 }
+/* Why a claim did not go through, on the card that failed. Wraps, because the
+   alternative is raw Postgres text spilling across the grid. */
+.ach-err {
+  margin-top: 8px; font-size: 12px; line-height: 1.4; color: var(--red);
+  border-top: 1px solid var(--border); padding-top: 8px;
+}
 
 .disc-particle {
   position: fixed; z-index: 500; pointer-events: none;
@@ -7441,6 +7447,24 @@ async function claimAch(btn){
   if(res.error){
     btn.disabled=false;btn.textContent=was;
     if(window.reportIssue)reportIssue('milestone claim failed',{key:btn.dataset.claim,error:res.error});
+    /* Say something. This used to reset the button and nothing else, so a
+       failed claim was three dots and then the button back as it was —
+       indistinguishable from a dead button, and exactly the "handled error
+       with no report" this codebase has been bitten by before. Raw Postgres
+       text has no business on a card either: PGRST202 means the migration has
+       not been run, which is true, useless to a player, and the single most
+       likely cause on a fresh deploy. */
+    const raw=String(res.error||'');
+    const msg=/schema cache|PGRST202|Could not find/i.test(raw)
+      ? 'Milestone rewards are not switched on yet.'
+      : /Not there yet|at least two/i.test(raw) ? raw
+      : /Not signed in/i.test(raw) ? 'Log in to claim this.'
+      : 'That did not go through. Try again in a moment.';
+    const card=btn.closest('.ach')||btn.parentNode;
+    let err=card.querySelector('.ach-err');
+    if(!err){err=document.createElement('div');err.className='ach-err';card.appendChild(err);}
+    err.textContent=msg;
+    setTimeout(function(){if(err.parentNode)err.remove();},5000);
     return;
   }
   logActivity(ICONS.trophy,'Unlocked',btn.dataset.label);
