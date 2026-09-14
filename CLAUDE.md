@@ -627,6 +627,69 @@ report is worse than an unhandled one**, because an exception at least reaches a
 That gap where a `groove_members` row could be updated by its own member — including their
 role — is closed. See Groove roles below.
 
+## Daily Drop
+
+One album puzzle and one song puzzle a day, six guesses each, scored Wordle-style across
+five attributes. Client code is one IIFE near the bottom of `index.html`
+(`window.openDailyDrop`); there is no schema and no server route.
+
+Two invariants hold it together. Breaking either is how the first version broke:
+
+- **Every attribute is static data, baked into `ALBUM_ROWS` / `SONG_ROWS` in that IIFE.**
+  Nothing is looked up at play time, so the game needs no token, works offline, scores
+  instantly and scores the same on every device. The previous version resolved the answer
+  through Spotify search on each load, which failed twice over: Spotify stopped returning
+  `popularity`, so the tie-break that chose between a 1971 master, a 1997 compilation cut
+  and a 2021 remix silently became "whatever came back first", and the day's answer then
+  differed between loads. Rows replayed from localStorage were re-scored against a
+  different record than the one they were played against, which is how a board ends up
+  self-contradictory — one guess green on Length and a closer one grey. Two concurrent
+  loads (flip Album/Song mid-fetch) could also interleave rows from both answers into the
+  same list.
+- **You guess from the same list the answer is drawn from**, searched locally. Searching
+  the whole of Spotify while the answer came from a hidden hundred is not difficulty, it is
+  a raffle: no clue can eliminate anything, because the candidate set is unbounded. With a
+  closed list the board narrows, and the status line prints how many records still fit
+  every clue on screen — computed by re-scoring each candidate through the same
+  `scoreGuess`, so it can never promise a candidate the board contradicts.
+
+The rest:
+
+- **`render()` is synchronous and rebuilds everything from storage.** There is no in-flight
+  state, so switching mode, reopening, and reloading all land in the same place, and the
+  old race cannot come back.
+- **Genres are curated, not fetched.** Twelve buckets, one per artist with a few per-record
+  overrides. Apple's `primaryGenreName` is what the app uses elsewhere, but it is missing
+  for streaming-only records, erratic across one artist's catalogue, and a game needs the
+  same buckets every day for a green Genre tile to mean anything. `FAMILIES` groups
+  neighbouring buckets so Rock against Alternative reads amber rather than a flat no.
+- **The day's pick is a seeded shuffle indexed by day number**, not `hash(date) % length`:
+  the modulo version can repeat a record within a fortnight, a shuffled cycle plays the
+  whole list first. Both halves are pure, so every device agrees without a server.
+- **Storage keys are `vinal_drop2_<mode>_<date>`.** The v1 keys held Spotify ids and mean
+  nothing to this version.
+- Two free hints, on a timer rather than a button (decade after three guesses, first letter
+  and word count after five) — being stuck with no way forward is a dead end, not
+  difficulty, and nobody should have to decide whether taking a hint is cheating.
+- **Column widths are weighted, and the song board swaps columns 4 and 5.** Five equal
+  columns do not survive a 375px phone: the two prose columns (Artist, Genre) need more
+  than the small integers, and the wide numeric value is Runtime for albums but Length for
+  songs. Sizes step down by the *longest single word*, not the whole string, because that
+  word is what has to fit on one line.
+- `baseName`, `collapseEditions` and the iTunes `artistGenre` lookup used to live in this
+  module and are still used by Earworm and the diary; they moved to their own IIFE
+  underneath it and still export as `window.VinalTitles` / `window.VinalGenre`.
+
+Refreshing the baked data means re-resolving each pool entry against Spotify (search limit
+**10** — anything larger is a 400) for year, track count, runtime, duration and track
+number, then spot-checking: a song that lands on a greatest-hits package or a box set takes
+the compilation's year and track number, and an album that exists only as a later remaster
+takes the remaster's year.
+
+Finishing a guess buzzes, and a win pays through `Wallet.awardGame('drop')` and
+`notePlay('drop')` like every other game — never `awardDiscs`, which now reports itself as
+an issue.
+
 ## Bid Wars
 
 A 1v1 sealed-bid auction, reachable from its own nav tab (`view-wars`) and from a card in
