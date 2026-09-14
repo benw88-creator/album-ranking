@@ -10850,7 +10850,12 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       const target = document.getElementById('shop-open-btn');
       const reduced = !!(window.matchMedia &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-      if (!target || !fromEl || reduced) { resolve(); return; }
+      /* A hidden tab produces no frames, so CSS animations freeze at t=0 and
+         `animationend` never fires — the whole flight would sit motionless and
+         the balance would wait on the deadline below before moving. Somebody
+         who claims and immediately switches tab should just find the Discs
+         there. An animation nobody can see must never gate a number. */
+      if (!target || !fromEl || reduced || document.hidden) { resolve(); return; }
 
       let a, b;
       try { a = fromEl.getBoundingClientRect(); b = target.getBoundingClientRect(); }
