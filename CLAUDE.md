@@ -1271,6 +1271,40 @@ the working copy held in browser storage, retention per data type, the UK/EU leg
 and moderation records), where the data is held (Supabase eu-west-1, Vercel global), and
 the right to complain to the ICO.
 
+### A profile showed twelve albums out of forty
+
+Three faults compounding, fixed together. Worth reading whole, because only one of
+them was visible and the other two were the ones that lose data.
+
+**1. `.slice(0, 12)` on the profile album grid.** A hard cap with no button to lift it and
+nothing on screen admitting it existed, so somebody who had rated forty albums read as having
+rated twelve. Gone — every album renders, highest first. That is also the consistent choice:
+the owner's own Crate has no paging, so a capped profile was the odd one out rather than the
+careful one.
+
+**2. `fetchUserRatings` had no pagination.** PostgREST caps a response at **1000 rows** by
+default and reports nothing — a 200 and a short array. Albums and songs share the `ratings`
+table, so a crate with a few hundred rated tracks sails past that and the songs simply stop
+arriving. It pages now. **A silent truncation is the worst failure shape available**: it is
+indistinguishable from "they rated fewer".
+
+**3. `backfillRatingsOnce` was three bugs stacked, and is now `reconcileRatings`.**
+
+- **The batching did nothing.** It built `jobs.push(syncRating(...))` then awaited the array
+  ten at a time — but calling an async function *starts* it, so every request was already in
+  flight before the loop began. The array held hundreds of running promises; the loop was
+  decorative. A big library fired hundreds of simultaneous upserts on login.
+- **`syncRating` swallows every error**, so whichever of those failed, failed silently.
+- **The flag was set regardless of outcome.** A half-written backfill was permanent on that
+  browser, because it never ran again.
+
+Burst, silence, flag. The replacement runs **every login**, diffs ids rather than trusting a
+flag, and pushes only what is genuinely missing — so an account already broken by the old code
+repairs itself on next open, with no migration and no flag to bump. It bails rather than
+re-pushing everything if the diff query fails, bulk-upserts 200 rows per request instead of one
+per rating, and calls `reportIssue` when a chunk fails, because the old version's defining
+characteristic was being quiet.
+
 ### Correction: the ratings sync is fine
 
 An earlier note in this file called ratings a dangerous dual source of truth. That was

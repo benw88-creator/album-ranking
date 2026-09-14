@@ -7889,7 +7889,8 @@ const Cloud=(function(){
 
   async function onAuthed(u){
     user=u;refreshUI();await pullAndMerge();
-    backfillRatingsOnce();
+    // Not awaited: a slow diff must never hold up the rest of the login.
+    reconcileRatings();
     if(window.Wallet)try{await Wallet.load();}catch(e){}
     // The day's reward is NOT claimed automatically. Discs that arrive while
     // you are looking elsewhere are Discs you never saw arrive — the press is
@@ -7899,24 +7900,81 @@ const Cloud=(function(){
     try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderRecommendations();renderArtistHero();if(window.renderToday)renderToday(true);if(window.renderDiary)renderDiary();}if(currentMode==='profile'&&window.renderProfile)renderProfile();}catch(e){}
     flashSaved();
   }
-  /* One-time-per-browser backfill: people who rated albums before the
-     friends/public ratings feature existed only have data in localStorage,
-     never in the per-row `ratings` table. Push everything up once so their
-     existing ratings become visible too, not just new ones going forward. */
-  async function backfillRatingsOnce(){
-    const flagKey='crate_ratings_backfilled_'+(user&&user.id);
-    try{if(localStorage.getItem(flagKey))return;}catch(e){}
+  /* Reconcile, not backfill — and the difference is the whole point.
+
+     Your own ratings live in localStorage. Other people see them through the
+     per-row `ratings` table, written by syncRating() on every save. Those two
+     can drift, and when they do the only symptom is "they rated fewer albums
+     than they did", which nobody reads as a bug.
+
+     The version this replaces was a once-per-browser backfill with three
+     faults stacked on each other, and it is worth naming all three because
+     each one alone would have been survivable:
+
+       1. **The batching did nothing.** It built `jobs.push(syncRating(...))`
+          and then awaited the array ten at a time — but calling an async
+          function *starts* it, so every request was already in flight before
+          the loop began. The array held hundreds of running promises. A big
+          library fired hundreds of simultaneous upserts on login.
+       2. **syncRating swallows every error.** So whichever of those failed,
+          failed silently.
+       3. **The flag was set regardless of outcome.** `localStorage.setItem`
+          ran after the loop whether anything had succeeded or not — so a
+          half-written backfill was permanent on that browser. It never ran
+          again.
+
+     Burst, silence, flag. Forty albums rated, twelve public, forever.
+
+     This runs every login instead of once, diffs ids rather than trusting a
+     flag, and only pushes what is genuinely missing — so an account already
+     broken by the old code repairs itself on next open with no migration and
+     no flag to bump. Costs one id-only select per login. */
+  async function reconcileRatings(){
+    if(!isOn())return;
+    let albums={},songs={};
     try{
-      const albums=JSON.parse(localStorage.getItem('crate_albums_v1')||'{}');
-      const songs=JSON.parse(localStorage.getItem('crate_songs_v1')||'{}');
-      const jobs=[];
-      Object.keys(albums).forEach(function(id){jobs.push(syncRating('album',id,albums[id]));});
-      Object.keys(songs).forEach(function(id){jobs.push(syncRating('song',id,songs[id]));});
-      // run in small batches so a big library doesn't fire hundreds of
-      // simultaneous requests at once
-      for(let i=0;i<jobs.length;i+=10){await Promise.all(jobs.slice(i,i+10));}
-      try{localStorage.setItem(flagKey,'1');}catch(e){}
-    }catch(e){}
+      albums=JSON.parse(localStorage.getItem('crate_albums_v1')||'{}');
+      songs=JSON.parse(localStorage.getItem('crate_songs_v1')||'{}');
+    }catch(e){return;}
+
+    // What is already public. Ids only — this is a diff, not a download.
+    const have={},PAGE=1000;
+    try{
+      for(let from=0;;from+=PAGE){
+        const res=await sb.from('ratings').select('kind,item_id')
+          .eq('user_id',user.id).range(from,from+PAGE-1);
+        // Cannot diff against an unknown remote, so do nothing rather than
+        // re-push the entire library on a transient failure.
+        if(res.error)return;
+        const rows=res.data||[];
+        rows.forEach(function(r){have[r.kind+'|'+r.item_id]=1;});
+        if(rows.length<PAGE||from>20000)break;
+      }
+    }catch(e){return;}
+
+    const now=new Date().toISOString(),missing=[];
+    Object.keys(albums).forEach(function(id){
+      if(!have['album|'+id])missing.push({user_id:user.id,kind:'album',item_id:id,data:albums[id],updated_at:now});
+    });
+    Object.keys(songs).forEach(function(id){
+      if(!have['song|'+id])missing.push({user_id:user.id,kind:'song',item_id:id,data:songs[id],updated_at:now});
+    });
+    if(!missing.length)return;
+
+    // One request per 200 rows, sequentially. Bulk upsert takes an array, so
+    // this is a handful of requests rather than one per rating.
+    let failed=0;
+    for(let i=0;i<missing.length;i+=200){
+      const chunk=missing.slice(i,i+200);
+      try{
+        const res=await sb.from('ratings').upsert(chunk,{onConflict:'user_id,kind,item_id'});
+        if(res.error)failed+=chunk.length;
+      }catch(e){failed+=chunk.length;}
+    }
+    // Loud, because the old version's defining feature was being quiet.
+    if(failed&&window.reportIssue){
+      reportIssue('ratings reconcile incomplete',{missing:missing.length,failed:failed});
+    }
   }
   async function logout(){try{await sb.auth.signOut();}catch(e){}user=null;refreshUI();}
 
@@ -8082,7 +8140,30 @@ const Cloud=(function(){
   async function followCounts(uid){if(!sb)return{followers:0,following:0};try{const a=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',uid);const b=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',uid);return{followers:a.count||0,following:b.count||0};}catch(e){return{followers:0,following:0};}}
   async function followingList(uid){if(!sb)return[];try{const f=await sb.from('follows').select('following_id').eq('follower_id',uid);const ids=(f.data||[]).map(function(r){return r.following_id;});if(!ids.length)return[];const p=await sb.from('profiles').select('id,username,avatar_url,bio,top3').in('id',ids);return p.data||[];}catch(e){return[];}}
   async function followersList(uid){if(!sb)return[];try{const f=await sb.from('follows').select('follower_id').eq('following_id',uid);const ids=(f.data||[]).map(function(r){return r.follower_id;});if(!ids.length)return[];const p=await sb.from('profiles').select('id,username,avatar_url,bio,top3').in('id',ids);return p.data||[];}catch(e){return[];}}
-  async function fetchUserRatings(uid){if(!sb)return{albums:{},songs:{}};try{const res=await sb.from('ratings').select('kind,item_id,data').eq('user_id',uid);const albums={},songs={};(res.data||[]).forEach(function(r){if(r.kind==='album')albums[r.item_id]=r.data;else if(r.kind==='song')songs[r.item_id]=r.data;});return{albums:albums,songs:songs};}catch(e){return{albums:{},songs:{}};}}
+  /* Paged, because PostgREST caps a response at 1000 rows by default and says
+     nothing about it — you get a 200 and a short array. Albums and songs share
+     this table, so a crate of 40 albums with a few hundred rated tracks sails
+     past that and the songs simply stop arriving. A silent truncation is the
+     worst failure shape available: it looks exactly like "they rated fewer". */
+  async function fetchUserRatings(uid){
+    if(!sb)return{albums:{},songs:{}};
+    const albums={},songs={},PAGE=1000;
+    try{
+      for(let from=0;;from+=PAGE){
+        const res=await sb.from('ratings').select('kind,item_id,data')
+          .eq('user_id',uid).range(from,from+PAGE-1);
+        if(res.error)break;
+        const rows=res.data||[];
+        rows.forEach(function(r){
+          if(r.kind==='album')albums[r.item_id]=r.data;
+          else if(r.kind==='song')songs[r.item_id]=r.data;
+        });
+        // A short page is the last page. Guard the runaway case too.
+        if(rows.length<PAGE||from>20000)break;
+      }
+    }catch(e){}
+    return{albums:albums,songs:songs};
+  }
   /* Writes a single rating row (one album or song) so friends/public viewers
      can see it via RLS — separate from the bulk localStorage blob sync above,
      which only ever syncs back to you, not to other people's queries. */
@@ -8528,7 +8609,18 @@ async function drawProfile(host,prof,isOwner){
     host.querySelectorAll('.top3-slot').forEach(function(el){el.addEventListener('click',function(){const t=top3[+el.dataset.slot];if(t&&t.id)openAlbum(t);});});
     const grid=document.getElementById('prof-rankings');
     if(grid){
-      const list=albumsArr.sort(function(a,b){return b.score-a.score;}).slice(0,12);
+      /* Every album, highest first.
+
+         This was `.slice(0, 12)` — a cap with no button to lift it and nothing
+         on screen saying it existed, so somebody who had rated forty albums
+         showed twelve and read as having rated twelve. A profile is the one
+         page whose entire job is showing what somebody built.
+
+         Rendering all of them is also the consistent choice: the owner's own
+         Crate has no paging either, so a capped profile was the odd one out
+         rather than the careful one. `.slice()` before sorting because the old
+         line sorted `albumsArr` in place. */
+      const list=albumsArr.slice().sort(function(a,b){return b.score-a.score;});
       grid.innerHTML=list.map(function(a){return'<div class="card" data-pid="'+esc(a.id)+'" style="--score:'+albumColor(a.score)+';">'+
         '<div class="art-wrap">'+
         '<img class="art" src="'+esc(a.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
