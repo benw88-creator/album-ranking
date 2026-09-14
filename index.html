@@ -10865,7 +10865,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       layer.className = 'disc-fly-layer';
       document.body.appendChild(layer);
 
-      let landed = 0;
+      let landed = 0, slowest = 0;
       for (let i = 0; i < n; i++) {
         const d = document.createElement('i');
         d.className = 'disc-fly';
@@ -10882,8 +10882,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         d.style.setProperty('--my', ((ty - sy) * 0.45 - Math.abs(lift) * 0.8) + 'px');
         d.style.setProperty('--tx', (tx - sx) + 'px');
         d.style.setProperty('--ty', (ty - sy) + 'px');
-        d.style.animationDelay = (i * 28 + Math.random() * 60) + 'ms';
-        d.style.animationDuration = (620 + Math.random() * 260) + 'ms';
+        const delay = i * 28 + Math.random() * 60, dur = 620 + Math.random() * 260;
+        slowest = Math.max(slowest, delay + dur);
+        d.style.animationDelay = delay + 'ms';
+        d.style.animationDuration = dur + 'ms';
         layer.appendChild(d);
         d.addEventListener('animationend', function () {
           landed++;
@@ -10900,11 +10902,15 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
           }
         });
       }
-      // Never leave a caller hanging on an animation the browser skipped.
+      /* Never leave a caller hanging on an animation the browser skipped — but
+         derive the deadline from the flight rather than picking a number. This
+         was a flat 1800ms, which for eighteen discs (up to ~564ms of stagger
+         plus an 880ms flight) left barely 350ms of headroom, so a slow frame
+         would yank the last discs mid-air and resolve early. */
       setTimeout(function () {
         if (layer.parentNode) layer.remove();
         resolve();
-      }, 1800);
+      }, slowest + 700);
     });
   }
   window.flyDiscs = flyDiscs;
