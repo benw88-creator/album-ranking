@@ -3235,8 +3235,38 @@ body.entering-done #artist-hero {
   padding: 4px 7px; border-radius: 999px; vertical-align: 1px; margin-left: 4px;
   white-space: nowrap;
 }
-.groove-role.pres { background: var(--gold); color: #1a1508; }
-.groove-role.vp { background: var(--surface-4); color: var(--text); }
+/* Gold and silver, and they move. A role badge is the only status symbol a
+   groove has, so it is worth reading as metal rather than as a coloured pill.
+   Literal gold/silver ramps, not --gold: the accent colour follows whatever
+   theme is equipped, and a pink "PRESIDENT" chip is not a gold one.
+
+   The sheen is small ambient brand motion of the sort the policy note near
+   the top of this file keeps on for everyone — a slow highlight crossing a
+   50px pill, no large-area movement, nothing to trigger on. */
+.groove-role.pres {
+  background: linear-gradient(100deg,
+    #7a5c10 0%, #c9a227 16%, #f7e08a 30%, #fffbe6 38%,
+    #f0cf63 46%, #c9a227 64%, #7a5c10 100%);
+  background-size: 320% 100%;
+  color: #2a1f04;
+  border: 1px solid rgba(255,242,186,0.55);
+  box-shadow: 0 0 12px rgba(212,175,55,0.35), inset 0 1px 0 rgba(255,255,255,0.45);
+  animation: roleSheen 4.5s linear infinite;
+}
+.groove-role.vp {
+  background: linear-gradient(100deg,
+    #626973 0%, #a7b0bb 16%, #e9eef4 30%, #ffffff 38%,
+    #ccd4de 46%, #a7b0bb 64%, #626973 100%);
+  background-size: 320% 100%;
+  color: #1d2127;
+  border: 1px solid rgba(233,238,244,0.5);
+  box-shadow: 0 0 10px rgba(190,202,216,0.28), inset 0 1px 0 rgba(255,255,255,0.5);
+  animation: roleSheen 6s linear infinite;
+}
+@keyframes roleSheen {
+  from { background-position: 320% 50%; }
+  to   { background-position: 0% 50%; }
+}
 .groove-acts { display: flex; gap: 6px; flex-shrink: 0; }
 .groove-kick { color: var(--text-faint); }
 .groove-kick:hover { color: var(--red); }
@@ -4033,6 +4063,11 @@ button.rw-day {
 .hl-btn:hover:not(:disabled) { border-color: var(--gold-dim); background: var(--surface); }
 .hl-btn:active:not(:disabled) { transform: scale(.96); }
 .hl-btn:disabled { opacity: .45; cursor: default; }
+/* Which one you pressed, held through the reveal. Without it the only
+   feedback for a tap is a number appearing somewhere else on the card. */
+.hl-btn.chosen { border-color: var(--gold-dim); background: var(--surface); opacity: 1; }
+.hl-runs { margin-top: 8px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .02em; }
+#hl-go:disabled { opacity: .5; cursor: default; }
 .hl-side.right-correct { border-color: var(--green, #4fb477); }
 .hl-side.right-wrong { border-color: var(--red); }
 .hl-verdict { text-align: center; margin-top: 14px; min-height: 22px; font-weight: 600; font-size: 14px; }
@@ -5157,6 +5192,9 @@ window.ICONS = {
         <button data-hl-mode="rating">Your ratings</button>
       </div>
       <p class="reco-note" id="hl-blurb"></p>
+      <!-- Three runs a day, and the count is on the start screen rather than
+           discovered by pressing a button that does nothing. -->
+      <p class="reco-note hl-runs" id="hl-runs"></p>
       <button class="btn-primary" id="hl-go" style="margin-top:12px;">Start the run</button>
       <div id="hl-load" class="reco-note" style="display:none;margin-top:12px;"></div>
     </div>
@@ -8426,7 +8464,43 @@ const Cloud=(function(){
   // Roles ride along with the member list so the modal can badge people and
   // decide what to offer without a second round trip.
   async function grooveMembers(grooveId){if(!sb)return[];try{const m=await sb.from('groove_members').select('user_id,status,role').eq('groove_id',grooveId).eq('status','member');const rows=m.data||[];const ids=rows.map(function(r){return r.user_id;});if(!ids.length)return[];const roleBy={};rows.forEach(function(r){roleBy[r.user_id]=r.role||'member';});const p=await sb.from('profiles').select('id,username,avatar_url,bio').in('id',ids);const order={president:0,vp:1,member:2};return(p.data||[]).map(function(x){x.role=roleBy[x.id]||'member';return x;}).sort(function(a,b){return(order[a.role]-order[b.role])||String(a.username||'').localeCompare(String(b.username||''));});}catch(e){return[];}}
-  async function inviteToGroove(grooveId,targetId,grooveName){if(!isOn())return{error:'not logged in'};try{const ins=await sb.from('groove_members').insert({groove_id:grooveId,user_id:targetId,status:'invited',invited_by:user.id});if(ins.error)return{error:ins.error.message};let me=null;try{me=await fetchProfile(user.id);}catch(e){}try{await sb.from('notifications').insert({user_id:targetId,actor_id:user.id,type:'groove_invite',data:{username:(me&&me.username)||'someone',avatar_url:(me&&me.avatar_url)||'',groove_id:grooveId,groove_name:grooveName}});}catch(e){}return{ok:true};}catch(e){return{error:String(e&&e.message||e)};}}
+  // Every row of a groove, whatever its status — so the invite list can say
+  // who is already a member and who has an invite sitting unanswered, rather
+  // than finding out by failing an insert.
+  async function grooveRoster(grooveId){if(!sb)return{};try{const m=await sb.from('groove_members').select('user_id,status').eq('groove_id',grooveId);const out={};(m.data||[]).forEach(function(r){out[r.user_id]=r.status||'member';});return out;}catch(e){return{};}}
+  async function grooveRowStatus(grooveId,targetId){if(!sb)return null;try{const r=await sb.from('groove_members').select('status').eq('groove_id',grooveId).eq('user_id',targetId).maybeSingle();return(r.data&&r.data.status)||null;}catch(e){return null;}}
+  async function notifyGrooveInvite(targetId,grooveId,grooveName){let me=null;try{me=await fetchProfile(user.id);}catch(e){}try{await sb.from('notifications').insert({user_id:targetId,actor_id:user.id,type:'groove_invite',data:{username:(me&&me.username)||'someone',avatar_url:(me&&me.avatar_url)||'',groove_id:grooveId,groove_name:grooveName}});}catch(e){}}
+
+  /* "Already in" used to be the label for any unique-key clash, which made it
+     wrong most of the time it appeared. A clash means a row exists, and that
+     row is a *pending invite* far more often than a membership — the list
+     offered an Invite button to people who had already been sent one, so the
+     second click reported them as being in a groove they had never joined.
+
+     Look before inserting, name which of the two it actually is, and treat a
+     repeat click on a pending invite as a nudge rather than an error. */
+  async function inviteToGroove(grooveId,targetId,grooveName){
+    if(!isOn())return{error:'not logged in'};
+    try{
+      const existing=await grooveRowStatus(grooveId,targetId);
+      if(existing==='member')return{already:'member'};
+      if(existing){await notifyGrooveInvite(targetId,grooveId,grooveName);return{ok:true,resent:true};}
+      const ins=await sb.from('groove_members').insert({groove_id:grooveId,user_id:targetId,status:'invited',invited_by:user.id});
+      if(ins.error){
+        /* A clash here is either a race with another leader or a row RLS will
+           not show us. Re-read; if it is still invisible it cannot be a
+           membership, because grooveMembers() can see those and the caller
+           has already filtered them out of the list. */
+        if(/duplicate|unique|already exists|23505/i.test(ins.error.message||'')){
+          const again=await grooveRowStatus(grooveId,targetId);
+          return again==='member'?{already:'member'}:{already:'invited'};
+        }
+        return{error:ins.error.message};
+      }
+      await notifyGrooveInvite(targetId,grooveId,grooveName);
+      return{ok:true};
+    }catch(e){return{error:String(e&&e.message||e)};}
+  }
   async function acceptGrooveInvite(grooveId){if(!isOn())return{error:'not logged in'};try{const r=await sb.from('groove_members').update({status:'member'}).eq('groove_id',grooveId).eq('user_id',user.id);return r.error?{error:r.error.message}:{ok:true};}catch(e){return{error:String(e&&e.message||e)};}}
   async function leaveGroove(grooveId){if(!isOn())return{error:'not logged in'};try{const r=await sb.from('groove_members').delete().eq('groove_id',grooveId).eq('user_id',user.id);return r.error?{error:r.error.message}:{ok:true};}catch(e){return{error:String(e&&e.message||e)};}}
   async function fetchGroove(grooveId){if(!sb)return null;try{const r=await sb.from('grooves').select('*').eq('id',grooveId).single();return r.data||null;}catch(e){return null;}}
@@ -8474,6 +8548,7 @@ const Cloud=(function(){
          fetchLists:fetchLists,saveList:saveList,deleteList:deleteList,
          fetchNotifications:fetchNotifications,unreadCount:unreadCount,markNotificationsRead:markNotificationsRead,sendSuggestion:sendSuggestion,
          createGroove:createGroove,myGrooves:myGrooves,grooveMembers:grooveMembers,inviteToGroove:inviteToGroove,
+         grooveRoster:grooveRoster,
          setGrooveRole:setGrooveRole,removeGrooveMember:removeGrooveMember,
          acceptGrooveInvite:acceptGrooveInvite,leaveGroove:leaveGroove,fetchGroove:fetchGroove,
          submitLeaderboardTime:submitLeaderboardTime,fetchLeaderboard:fetchLeaderboard,fetchMyBestTime:fetchMyBestTime,
@@ -9137,13 +9212,47 @@ async function openGroove(grooveId){
   if(inviteBtn)inviteBtn.style.display=iLead?'':'none';
 }
 
+/* The invite list says where everybody already stands.
+
+   It used to list everyone you follow behind an identical Invite button and
+   then discover the truth by failing: a clash on the unique key came back as
+   "Already in", which is the wrong words for a pending invite and the wrong
+   words again for someone who is genuinely a member and should never have
+   been offered the button. Read the roster first, label each person with what
+   is actually true of them, and let a second click on a pending invite re-send
+   the notification, because that is what pressing it again means. */
 async function drawGrooveInviteList(filter){
   const host=document.getElementById('groove-invite-list');const me=Cloud.getUser();
-  const people=await Cloud.followingList(me.id);const f=(filter||'').toLowerCase();
-  const shown=f?people.filter(function(p){return(p.username||'').toLowerCase().indexOf(f)!==-1;}):people;
-  if(!shown.length){host.innerHTML='<div class="reco-note">No one to invite. Follow people first.</div>';return;}
-  host.innerHTML=shown.map(function(p){return'<div class="ptop-row" data-inv="'+esc(p.id)+'"><img src="'+esc(avatarSrc(p.avatar_url))+'" alt=""><div style="flex:1;"><div class="nm">'+esc(p.username||'user')+'</div></div><span class="suggest-send">Invite</span></div>';}).join('');
-  host.querySelectorAll('[data-inv]').forEach(function(el){el.addEventListener('click',async function(){const s=el.querySelector('.suggest-send');s.textContent='\u2026';const res=await Cloud.inviteToGroove(_currentGroove.id,el.dataset.inv,_currentGroove.name);s.textContent=res&&res.ok?'Invited \u2713':(res.error&&/duplicate/i.test(res.error)?'Already in':'Error');s.classList.add('sent');});});
+  const gid=_currentGroove&&_currentGroove.id;
+  if(!gid){host.innerHTML='<div class="reco-note">Open a groove first.</div>';return;}
+  const both=await Promise.all([Cloud.followingList(me.id),Cloud.grooveRoster(gid)]);
+  const people=both[0]||[],roster=both[1]||{};
+  const f=(filter||'').toLowerCase();
+  const shown=(f?people.filter(function(p){return(p.username||'').toLowerCase().indexOf(f)!==-1;}):people)
+    .filter(function(p){return !(window.isBlocked&&isBlocked(p.id));});
+  if(!shown.length){host.innerHTML='<div class="reco-note">'+(f?'No one by that name.':'No one to invite. Follow people first.')+'</div>';return;}
+  host.innerHTML=shown.map(function(p){
+    const st=roster[p.id]||'';
+    const member=st==='member';
+    // A member is not a button. There is nothing inviting them would do.
+    return'<div class="ptop-row"'+(member?'':' data-inv="'+esc(p.id)+'"')+'>'+
+      '<img src="'+esc(avatarSrc(p.avatar_url))+'" alt=""><div style="flex:1;"><div class="nm">'+esc(p.username||'user')+'</div></div>'+
+      '<span class="suggest-send'+(st?' sent':'')+'">'+(member?'Member':(st?'Invited':'Invite'))+'</span></div>';
+  }).join('');
+  host.querySelectorAll('[data-inv]').forEach(function(el){el.addEventListener('click',async function(){
+    if(el.dataset.busy)return;
+    el.dataset.busy='1';
+    const s=el.querySelector('.suggest-send');const was=s.textContent;
+    s.textContent='…';
+    const r=await Cloud.inviteToGroove(gid,el.dataset.inv,_currentGroove.name);
+    if(r&&r.ok){s.textContent=r.resent?'Reminded ✓':'Invited ✓';s.classList.add('sent');delete el.dataset.busy;}
+    else if(r&&r.already==='member'){s.textContent='Already a member';s.classList.add('sent');}
+    else if(r&&r.already){s.textContent='Invite pending';s.classList.add('sent');delete el.dataset.busy;}
+    /* A real failure is not a state — say so and put the row back, rather
+       than leaving a greyed label that reads like something happened. */
+    else{s.textContent='Failed — retry';delete el.dataset.busy;
+      if(window.reportIssue)reportIssue('groove invite failed',{groove:gid,error:(r&&r.error)||'unknown'});}
+  });});
 }
 
 (function wireGrooves(){
@@ -14740,11 +14849,14 @@ window.renderAdminStats = renderAdminStats;
     'drop-card':        { need: 0,  label: 'Daily Drop' },
     'ew-card':          { need: 3,  label: 'Earworm' },
     'cover':            { need: 5,  label: 'Guess the Cover' },
-    'hl-card':          { need: 8,  label: 'Higher or Lower' },
     'tracklist':        { need: 10, label: 'Guess from Tracklist' },
     'year':             { need: 12, label: 'Guess the Year' },
     'coverx':           { need: 20, label: 'Cover EXTREME' },
-    'war-card':         { need: 25, label: 'Bid Wars' }
+    'war-card':         { need: 25, label: 'Bid Wars' },
+    // Higher or Lower asks how well you know your own crate, and a crate of
+    // eight was not enough of one for the question to mean anything — the
+    // pool ran out inside a single run. It sits with Bid Wars now.
+    'hl-card':          { need: 25, label: 'Higher or Lower' }
   };
   var SEEN_KEY = 'crate_unlocks_seen';
 
@@ -15890,23 +16002,46 @@ window.renderAdminStats = renderAdminStats;
                   and the skill is remembering what you thought. Needs no
                   network at all, which makes it the mode that works on a train.
 
-     Streams mode pre-fetches its whole pool in one batched request before the
-     first round. Fetching per round would put a second of dead air between
-     every guess, and a chain game lives or dies on rhythm.
+     Streams mode pre-fetches its pool in batched requests, the first before
+     the first round and the rest in the background as the run eats through
+     it. Fetching per round would put a second of dead air between every
+     guess, and a chain game lives or dies on rhythm.
+
+     Three rules that were added after it shipped:
+
+       * An album is asked about once per run. nextRight() used to exclude
+         only the two records on screen, so a run of fifteen on a pool of
+         twelve was mostly repeats — which reads as broken however correct
+         the answers are. A `used` set enforces it, and the pool tops itself
+         up so a good run is not cut short by the rule.
+       * Every pause is skippable. Tap, click or press a key while a verdict
+         is up and the next round comes immediately; the old fixed 950ms wait
+         was most of why this felt sticky.
+       * Three runs a day, gated at 25 rated albums. The runs are counted by
+         game_start_run() in ..._20260914233000_game_play_limits.sql, with a
+         localStorage mirror for signed-out play.
      ================================================================ -->
 <script>
 (function () {
   var modal = document.getElementById('hl-modal');
   if (!modal) return;
 
-  var POOL_TARGET = 12;   // how many we ask the batch endpoint to value
+  var BATCH        = 12;  // what one /api/album-streams request will value
+  var MAX_BATCHES  = 4;   // ceiling on the fetching a single run may do
   var MIN_PLAYABLE = 6;   // below this there is no game worth starting
+  var MIN_RATED    = 25;  // the unlock gate, mirrored in GATES
+  var DAILY_RUNS   = 3;   // runs a day, and it is the runs that are capped
   var BEST_KEY = 'crate_hl_best';
+  var RUNS_KEY = 'crate_hl_runs';
 
   var mode = 'streams';
   // `score` is the streak — how many in a row, and what drives both the
   // multiplier and the difficulty. `points` is what the run was worth.
-  var pool = [], left = null, right = null, score = 0, points = 0, busy = false;
+  var pool = [], queue = [], used = new Set(), left = null, right = null;
+  var score = 0, points = 0;
+  var busy = false, starting = false, batches = 0, topPromise = null;
+  var advanceTimer = null, advanceNow = null;
+  var runsLeft = null;    // null until we have asked; the server owns it
 
   function el(id) { return document.getElementById(id); }
   function albums() { try { return window.loadAlbums ? loadAlbums() : {}; } catch (e) { return {}; } }
@@ -15937,6 +16072,71 @@ window.renderAdminStats = renderAdminStats;
     });
     return out;
   }
+  function scoredAlbums() { return rated().filter(function (a) { return a.score != null; }); }
+
+  /* ---- Three a day -------------------------------------------------------
+
+     The Discs cap has always been three, but the *game* was unlimited, so the
+     fourth run onwards paid nothing and the only signal was a toast telling
+     you to play for the love of it. Capping the runs instead makes the limit
+     a rule rather than a disappointment, and it keeps a chain game scarce
+     enough to be worth sitting down for.
+
+     Server-owned, like every other daily counter here, with a local mirror
+     for signed-out play and for a browser running against a database where
+     ..._20260914233000_game_play_limits.sql has not been applied yet. The
+     mirror is a courtesy, not a defence: clearing localStorage buys more
+     runs, and the payout cap is what actually bounds that. */
+  function today() { return new Date().toISOString().slice(0, 10); }
+  function localRuns() {
+    try { var r = JSON.parse(localStorage.getItem(RUNS_KEY)) || {}; return r.d === today() ? (r.n || 0) : 0; }
+    catch (e) { return 0; }
+  }
+  function bumpLocalRuns() {
+    var n = localRuns() + 1;
+    try { localStorage.setItem(RUNS_KEY, JSON.stringify({ d: today(), n: n })); } catch (e) {}
+    return n;
+  }
+
+  function rpc(name, args) {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return Promise.resolve({ offline: true });
+    try {
+      return Cloud.client().rpc(name, args || {}).then(
+        function (r) { return r.error ? { error: r.error.message } : { data: r.data }; },
+        function (e) { return { error: String((e && e.message) || e) }; });
+    } catch (e) { return Promise.resolve({ error: String((e && e.message) || e) }); }
+  }
+  // A function the database has never heard of is a migration that has not
+  // been applied, not a fault — fall through to the mirror quietly.
+  function missing(err) { return /does not exist|could not find|schema cache|PGRST202|404/i.test(err || ''); }
+  function complain(what, err) {
+    if (err && !missing(err) && window.reportIssue) reportIssue(what, { error: err });
+  }
+
+  async function refreshRuns() {
+    var r = await rpc('game_plays_left', { p_game: 'higherlower' });
+    if (r.data && r.data.remaining != null) { runsLeft = r.data.remaining; return runsLeft; }
+    complain('game_plays_left failed', r.error);
+    runsLeft = Math.max(0, DAILY_RUNS - localRuns());
+    return runsLeft;
+  }
+
+  // Called once the pool is known to be playable, so a failed fetch never
+  // costs somebody one of their three.
+  async function claimRun() {
+    var r = await rpc('game_start_run', { p_game: 'higherlower' });
+    if (r.data && r.data.allowed != null) {
+      runsLeft = r.data.remaining != null
+        ? r.data.remaining
+        : Math.max(0, (r.data.cap || DAILY_RUNS) - (r.data.used || 0));
+      if (r.data.allowed) bumpLocalRuns();
+      return !!r.data.allowed;
+    }
+    complain('game_start_run failed', r.error);
+    if (localRuns() >= DAILY_RUNS) { runsLeft = 0; return false; }
+    runsLeft = Math.max(0, DAILY_RUNS - bumpLocalRuns());
+    return true;
+  }
 
   function paintCard() {
     var s = el('hl-card-status');
@@ -15945,7 +16145,9 @@ window.renderAdminStats = renderAdminStats;
     var parts = [];
     if (b.streams) parts.push('Streams ' + b.streams);
     if (b.rating) parts.push('Ratings ' + b.rating);
-    s.textContent = parts.length ? 'Best — ' + parts.join(' · ') : '';
+    var line = parts.length ? 'Best — ' + parts.join(' · ') : '';
+    if (runsLeft != null) line += (line ? ' · ' : '') + (runsLeft === 0 ? 'none left today' : runsLeft + ' left today');
+    s.textContent = line;
   }
 
   function setMode(m) {
@@ -15953,12 +16155,31 @@ window.renderAdminStats = renderAdminStats;
     el('hl-mode').querySelectorAll('button').forEach(function (b) {
       b.classList.toggle('active', b.dataset.hlMode === m);
     });
-    var n = rated().length;
-    var scored = rated().filter(function (a) { return a.score != null; }).length;
-    el('hl-blurb').textContent = m === 'streams'
+    paintStart();
+  }
+
+  /* The start screen is the only place that knows whether you may play, so it
+     owns both gates: enough albums rated, and a run left today. */
+  function paintStart() {
+    var n = rated().length, scored = scoredAlbums().length;
+    el('hl-blurb').textContent = mode === 'streams'
       ? 'Which of your records has more plays? Drawn from the ' + n + ' album' + (n === 1 ? '' : 's') + ' in your crate.'
       : 'Which did you score higher? ' + scored + ' of your albums have a rating.';
     el('hl-best').textContent = best();
+
+    var go = el('hl-go'), note = el('hl-runs');
+    if (scored < MIN_RATED) {
+      var short = MIN_RATED - scored;
+      note.textContent = 'Rate ' + short + ' more album' + (short === 1 ? '' : 's') + ' — this opens at ' + MIN_RATED + '.';
+      go.disabled = true; go.textContent = 'Locked';
+      return;
+    }
+    if (starting) { go.disabled = true; go.textContent = 'Dealing…'; return; }
+    go.disabled = runsLeft === 0;
+    go.textContent = runsLeft === 0 ? 'Back tomorrow' : 'Start the run';
+    note.textContent = runsLeft == null ? ''
+      : runsLeft === 0 ? 'That’s your ' + DAILY_RUNS + ' runs for today. Back tomorrow.'
+      : runsLeft + ' run' + (runsLeft === 1 ? '' : 's') + ' left today.';
   }
 
   function show(view) {
@@ -15967,28 +16188,34 @@ window.renderAdminStats = renderAdminStats;
     });
   }
 
-  function open() {
+  async function open() {
     modal.classList.add('open');
-    setMode(mode);
     show('hl-start');
     el('hl-load').style.display = 'none';
+    setMode(mode);
+    await refreshRuns();
+    paintStart();
+    paintCard();
   }
-  function close() { modal.classList.remove('open'); }
+  function close() { clearAdvance(); modal.classList.remove('open'); }
+  function playing() { return el('hl-play').style.display !== 'none'; }
 
-  async function buildPool() {
-    var src = shuffle(rated());
+  /* ---- The pool ----------------------------------------------------------
 
-    if (mode === 'rating') {
-      // Everything needed is already on the device.
-      return src.filter(function (a) { return a.score != null; })
-                .map(function (a) { return { a: a, v: a.score }; });
-    }
+     One album is never asked about twice in a run. It used to be: nextRight()
+     excluded only the two records on screen, so with a pool of twelve the
+     same cover came back every few rounds and a long run was mostly repeats —
+     which reads as the game being broken even when the answer is right.
 
-    var picks = src.slice(0, POOL_TARGET);
+     Keeping a `used` set means a run can outlast its pool, so the pool grows:
+     the first twelve are valued before the first round and the next twelve
+     are fetched in the background as you close on the end of what is left.
+     Pre-fetching is the whole point — a request between rounds is a second of
+     dead air, and a chain game lives on rhythm. */
+  async function valueBatch(picks) {
     if (!picks.length) return [];
-    var load = el('hl-load');
-    load.style.display = 'block';
-    load.textContent = 'Counting plays for ' + picks.length + ' records…';
+    if (mode === 'rating') return picks.map(function (a) { return { a: a, v: a.score }; });
+    batches++;
     try {
       // Authenticated, and records on one of your own live Bid War boards come
       // back `sealed` and get dropped from the pool like any other album that
@@ -16002,19 +16229,64 @@ window.renderAdminStats = renderAdminStats;
       (j.results || []).forEach(function (x) { byId[x.album_id] = x; });
       // An album kworb could not match is dropped rather than valued at zero —
       // a zero would be an answer, and a wrong one.
-      return picks.map(function (a) {
+      var out = picks.map(function (a) {
         var v = byId[a.id];
         return (v && v.ok && v.total > 0) ? { a: a, v: v.total } : null;
       }).filter(Boolean);
+      preload(out);
+      return out;
     } catch (e) {
       return [];
-    } finally {
-      load.style.display = 'none';
     }
   }
 
+  // Covers in the cache before they are needed. Art swapping in a beat late
+  // is most of what made a correct answer feel like a stall.
+  function preload(entries) {
+    entries.forEach(function (e) { if (e.a.art) { var i = new Image(); i.src = e.a.art; } });
+  }
+
+  async function buildPool() {
+    pool = []; used = new Set(); batches = 0; topPromise = null;
+    queue = shuffle(rated());
+
+    if (mode === 'rating') {
+      // Everything needed is already on the device.
+      pool = queue.filter(function (a) { return a.score != null; }).map(function (a) { return { a: a, v: a.score }; });
+      queue = [];
+      preload(pool);
+      return pool;
+    }
+
+    var load = el('hl-load');
+    load.style.display = 'block';
+    // Keep going until there is a game here, rather than giving up on one
+    // unlucky batch of albums kworb happens not to know.
+    while (pool.length < MIN_PLAYABLE && queue.length && batches < MAX_BATCHES) {
+      var picks = queue.splice(0, BATCH);
+      load.textContent = 'Counting plays for ' + picks.length + ' records…';
+      pool = pool.concat(await valueBatch(picks));
+    }
+    load.style.display = 'none';
+    return pool;
+  }
+
+  function fresh() { return pool.filter(function (p) { return p !== left && !used.has(p); }); }
+
+  function topUp() {
+    if (mode !== 'streams' || topPromise || !queue.length || batches >= MAX_BATCHES) return topPromise;
+    topPromise = valueBatch(queue.splice(0, BATCH)).then(function (more) {
+      topPromise = null;
+      if (more.length) { pool = pool.concat(more); return; }
+      return topUp();   // that batch valued nothing; the next one might
+    }, function () { topPromise = null; });
+    return topPromise;
+  }
+
   function paintSide(side, entry, hideValue) {
-    el('hl-' + side + '-art').src = entry.a.art || '';
+    var img = el('hl-' + side + '-art');
+    var src = entry.a.art || '';
+    if (img.getAttribute('src') !== src) img.src = src;
     el('hl-' + side + '-nm').textContent = entry.a.name;
     el('hl-' + side + '-ar').textContent = entry.a.artist || '';
     var v = el('hl-' + side + '-val');
@@ -16042,8 +16314,7 @@ window.renderAdminStats = renderAdminStats;
   }
 
   function nextRight() {
-    var options = pool.filter(function (p) { return p !== left && p !== right; });
-    if (!options.length) options = pool.filter(function (p) { return p !== left; });
+    var options = fresh();
     if (!options.length) return null;
     if (!left) return options[Math.floor(Math.random() * options.length)];
 
@@ -16052,7 +16323,7 @@ window.renderAdminStats = renderAdminStats;
     // the ratio we are after, in log space so 2x-above and 2x-below are
     // treated as equally close.
     var lv = Math.max(1, left.v);
-    var scored = options.map(function (p) {
+    var ranked = options.map(function (p) {
       var ratio = Math.max(p.v, 1) / lv;
       if (ratio < 1) ratio = 1 / ratio;
       return { p: p, d: Math.abs(Math.log(ratio) - Math.log(want)) };
@@ -16060,7 +16331,7 @@ window.renderAdminStats = renderAdminStats;
 
     // Out of the three closest, pick one at random — otherwise the same pool
     // produces the same sequence every run.
-    var top = scored.slice(0, Math.min(3, scored.length));
+    var top = ranked.slice(0, Math.min(3, ranked.length));
     return top[Math.floor(Math.random() * top.length)].p;
   }
 
@@ -16083,7 +16354,7 @@ window.renderAdminStats = renderAdminStats;
     if (s) s.textContent = score + ' in a row';
   }
 
-  function flashMult(mult) {
+  function flashMult() {
     var m = el('hl-mult');
     if (!m) return;
     m.classList.remove('bump');
@@ -16091,40 +16362,105 @@ window.renderAdminStats = renderAdminStats;
     m.classList.add('bump');
   }
 
+  /* Nothing the game does to itself is allowed to block the next input.
+
+     Every pause is a timer you can jump: tap, click or press a key while the
+     verdict is up and the next round arrives immediately. The old fixed 950ms
+     was most of why this felt sticky — you knew the answer, you had read the
+     verdict, and it still made you wait. */
+  function clearAdvance() {
+    if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
+    advanceNow = null;
+  }
+  function after(ms, fn) {
+    clearAdvance();
+    advanceNow = function () { clearAdvance(); fn(); };
+    advanceTimer = setTimeout(function () { if (advanceNow) advanceNow(); }, ms);
+  }
+  function skipWait() { if (advanceNow) advanceNow(); }
+
   function round() {
     busy = false;
     el('hl-verdict').textContent = '';
     el('hl-verdict').className = 'hl-verdict';
     el('hl-right').className = 'hl-side';
+    el('hl-higher').classList.remove('chosen');
+    el('hl-lower').classList.remove('chosen');
     paintSide('left', left, false);
     paintSide('right', right, true);
     el('hl-higher').disabled = false;
     el('hl-lower').disabled = false;
     paintScore();
+    // Fetch the next twelve while there is still something to play, not once
+    // the pool has already run dry.
+    if (fresh().length <= 4) topUp();
   }
 
   async function start() {
-    show('hl-play');
-    score = 0; points = 0;
-    pool = await buildPool();
-    if (pool.length < MIN_PLAYABLE) {
+    if (starting || busy) return;
+    if (scoredAlbums().length < MIN_RATED) { paintStart(); return; }
+    if (runsLeft === 0) { paintStart(); return; }
+
+    starting = true;
+    paintStart();
+    var built = await buildPool();
+    starting = false;
+
+    if (built.length < MIN_PLAYABLE) {
       show('hl-start');
+      paintStart();
       el('hl-load').style.display = 'block';
       el('hl-load').textContent = mode === 'streams'
-        ? 'Not enough of your records could be counted — rate a few more and try again.'
-        : 'Rate at least ' + MIN_PLAYABLE + ' albums and this opens up.';
+        ? 'Not enough of your records could be counted — try the ratings mode, or add a few more.'
+        : 'Not enough rated albums to build a round.';
       return;
     }
+
+    // The run is spent here and nowhere earlier: a pool that failed to build
+    // is not a run played.
+    if (!(await claimRun())) {
+      show('hl-start');
+      paintStart(); paintCard();
+      return;
+    }
+    paintCard();
+
+    score = 0; points = 0;
     left = pool[Math.floor(Math.random() * pool.length)];
+    used.add(left);
     right = nextRight();
+    if (!right) { show('hl-start'); paintStart(); return; }
+    used.add(right);
+    show('hl-play');
+    round();
+  }
+
+  async function advance() {
+    left = right;
+    right = nextRight();
+    if (!right) {
+      // A top-up may still be in the air. Wait for it rather than calling the
+      // crate exhausted one album early.
+      var p = topUp() || topPromise;
+      if (p) {
+        el('hl-verdict').textContent = 'Finding more records…';
+        el('hl-verdict').className = 'hl-verdict';
+        await p;
+        right = nextRight();
+      }
+    }
+    if (!right) { over(true); return; }
+    used.add(right);
     round();
   }
 
   function answer(saidHigher) {
     if (busy || !left || !right) return;
     busy = true;
+    clearAdvance();
     el('hl-higher').disabled = true;
     el('hl-lower').disabled = true;
+    el(saidHigher ? 'hl-higher' : 'hl-lower').classList.add('chosen');
 
     var v = el('hl-right-val');
     v.textContent = fmt(right.v);
@@ -16150,7 +16486,7 @@ window.renderAdminStats = renderAdminStats;
       // correct answer — otherwise the loud thing happens every round and
       // stops being loud.
       if (nextMult > mult) {
-        flashMult(nextMult);
+        flashMult();
         if (window.burst) burst(side, { count: 26, spread: 150 });
         if (window.buzz) buzz('big');
       } else {
@@ -16158,22 +16494,19 @@ window.renderAdminStats = renderAdminStats;
         if (window.buzz) buzz('good');
       }
       paintScore();
-      setTimeout(function () {
-        left = right;
-        right = nextRight();
-        if (!right) { over(); return; }
-        round();
-      }, 950);
+      after(620, advance);
     } else {
       side.classList.add('right-wrong');
       verdict.textContent = 'No — that’s ' + fmt(right.v) + ' against ' + fmt(left.v);
       verdict.className = 'hl-verdict bad';
       if (window.buzz) buzz('bad');
-      setTimeout(over, 1400);
+      after(1250, function () { over(false); });
     }
   }
 
-  function over() {
+  function over(exhausted) {
+    clearAdvance();
+    busy = false;
     // The best is the points total now, not the streak — the streak is the
     // input, the points are what the run was actually worth.
     var wasBest = points > best();
@@ -16181,10 +16514,15 @@ window.renderAdminStats = renderAdminStats;
     paintCard();
     show('hl-over');
     el('hl-over-score').textContent = points;
-    el('hl-over-sub').textContent = score === 0
-      ? 'Straight out. It happens.'
-      : score + ' in a row, up to ×' + multFor(Math.max(score - 1, 0)) + '. ' +
-        (wasBest ? 'A new best.' : 'Best is ' + best() + '.');
+    el('hl-over-sub').textContent = exhausted
+      ? 'That is your whole crate — ' + score + ' in a row, and nothing left to ask you about.'
+      : score === 0
+        ? 'Straight out. It happens.'
+        : score + ' in a row, up to ×' + multFor(Math.max(score - 1, 0)) + '. ' +
+          (wasBest ? 'A new best.' : 'Best is ' + best() + '.');
+    var again = el('hl-again');
+    again.disabled = runsLeft === 0;
+    again.textContent = runsLeft === 0 ? 'Back tomorrow' : 'Go again';
     if (wasBest && score >= 3 && typeof celebrate === 'function') {
       celebrate('New best run', points + ' points, ' + score + ' in a row');
     }
@@ -16197,19 +16535,54 @@ window.renderAdminStats = renderAdminStats;
     // run played, and "favourite minigame" should count what you reach for,
     // not what you were good at.
     if (window.notePlay) notePlay('higherlower');
-    if (window.track) track('higherlower_run', { mode: mode, score: score, points: points });
+    if (window.track) track('higherlower_run', { mode: mode, score: score, points: points, exhausted: !!exhausted });
   }
 
   el('hl-mode').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-hl-mode]');
-    if (b) setMode(b.dataset.hlMode);
+    if (b && !playing()) setMode(b.dataset.hlMode);
   });
   el('hl-go').addEventListener('click', start);
-  el('hl-again').addEventListener('click', function () { show('hl-start'); setMode(mode); });
+  el('hl-again').addEventListener('click', async function () {
+    show('hl-start');
+    el('hl-load').style.display = 'none';
+    await refreshRuns();
+    setMode(mode);
+    paintCard();
+  });
   el('hl-higher').addEventListener('click', function (ev) { if (window.ripple) ripple(this, ev); answer(true); });
   el('hl-lower').addEventListener('click', function (ev) { if (window.ripple) ripple(this, ev); answer(false); });
   el('hl-close').addEventListener('click', close);
-  modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+
+  // Tapping the board while a verdict is up skips the rest of the pause.
+  el('hl-play').addEventListener('click', function (e) {
+    if (busy && !(e.target.closest && e.target.closest('.hl-btn'))) skipWait();
+  });
+
+  /* Clicking the backdrop closes every other modal in this app and should
+     here too — except mid-run, where a stray tap beside the panel would throw
+     away both the score and one of your three runs. */
+  modal.addEventListener('click', function (e) {
+    if (e.target !== modal) return;
+    if (playing()) { skipWait(); return; }
+    close();
+  });
+
+  // Up and down are the two answers, so the arrow keys are the two answers.
+  document.addEventListener('keydown', function (e) {
+    if (!modal.classList.contains('open')) return;
+    if (/^(input|textarea|select)$/i.test(e.target && e.target.tagName || '')) return;
+    var k = e.key;
+    if (k === 'Escape') { if (!playing()) close(); return; }
+    if (playing() && !busy) {
+      if (k === 'ArrowUp' || k === 'h' || k === 'H') { e.preventDefault(); answer(true); return; }
+      if (k === 'ArrowDown' || k === 'l' || k === 'L') { e.preventDefault(); answer(false); return; }
+    }
+    if (busy && (k === 'Enter' || k === ' ')) { e.preventDefault(); skipWait(); return; }
+    if (k === 'Enter' && el('hl-start').style.display !== 'none' && !el('hl-go').disabled) {
+      e.preventDefault(); start();
+    }
+  });
 
   var card = document.getElementById('hl-card');
   if (card) card.addEventListener('click', open);

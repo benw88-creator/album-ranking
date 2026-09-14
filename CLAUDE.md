@@ -816,16 +816,48 @@ Two modes that are different games, not a setting:
   remembering what you thought. **Needs no network at all**, which makes it the mode that
   works on a train and the mode that works on day one.
 
-Streams mode pre-fetches its whole pool in one batched `?albums=` request before the first
-round. Per-round fetching puts a second of dead air between guesses and a chain game lives on
+Streams mode pre-fetches its pool in batched `?albums=` requests — the first twelve before
+the first round, the next twelve in the background once four playable records are left.
+Per-round fetching puts a second of dead air between guesses and a chain game lives on
 rhythm. An album kworb cannot match is dropped rather than valued at zero — a zero is an
 answer and a wrong one. Ties go to the player, because ratings collide constantly and losing
 a run to two albums you both scored 84 would feel like a cheat.
+
+Three rules added after it shipped, every one of them something it looked broken without:
+
+- **No album is asked about twice in a run.** `nextRight()` used to exclude only the two
+  records on screen, so on a pool of twelve a run of fifteen was mostly repeats — which
+  reads as the game being broken however correct the answers are. A `used` set enforces it;
+  the background top-up is what stops the rule from cutting a good run short, and when the
+  crate genuinely runs out the run ends saying so rather than starting again.
+- **Every pause is skippable.** Tap, click, press Enter or press space while a verdict is up
+  and the next round comes immediately. The correct-answer wait is 620ms rather than 950 and
+  the wrong-answer wait 1250 rather than 1400, arrow up / arrow down answer, and covers are
+  preloaded so the art does not swap in a beat late. The fixed unskippable wait was most of
+  why this felt sticky. Clicking the backdrop mid-run skips the wait instead of closing,
+  because a stray tap beside the panel should not cost a score and a run.
+- **Three runs a day, unlocked at 25 rated albums** (`GATES['hl-card']`, was 8 — a crate of
+  eight is not enough of a crate for "how well do you know your own records" to mean
+  anything, and the pool ran dry inside a single run). The runs are counted by
+  `game_start_run()` in `..._20260914233000_game_play_limits.sql`, which is a **play** limit
+  and not the payout cap. `wallet_award_game` already capped Higher or Lower at three
+  payouts a day, so the fourth run was allowed, paid nothing, and said so only in a toast —
+  a limit you find by hitting it is a disappointment, a limit on the start screen is a rule.
+  A localStorage mirror (`crate_hl_runs`) covers signed-out play and a browser running
+  against a database where that migration has not been applied; it is a courtesy, not a
+  defence, and the payout cap is still what bounds the money.
+
+The run is spent by `claimRun()` **after** the pool is known to be playable, so a failed
+`/api/album-streams` never costs somebody one of their three.
 
 ## Groove roles
 
 Migration `supabase/migrations/20260908120000_groove_roles.sql` (apply it by hand in the SQL
 editor, like the others).
+
+The badges are literal gold and silver with a slow sheen across them, not `var(--gold)` —
+the accent colour follows whatever theme is equipped, and a pink "PRESIDENT" chip is not a
+gold one.
 
 `groove_members.role` is `president` | `vp` | `member`. Whoever creates a groove is its
 president; a president or vice president may promote a member to VP, demote a VP, remove a
@@ -863,6 +895,31 @@ visit with no `onConflict`, so a second visit either errored or added a duplicat
 row depending on keys this file cannot see, and it silently promoted an `invited` row to
 `member` without the person ever seeing the invite. It now selects first and inserts only
 when there is genuinely no row, leaving any existing row alone.
+
+### The invite list says what is true, not what failed
+
+`inviteToGroove` used to blind-insert and report any unique-key clash as **"Already in"**.
+A clash means a row exists, and that row is a *pending invite* far more often than a
+membership — the list offered an identical Invite button to everyone you follow, including
+people who had already been sent one on a previous visit, so clicking again labelled them
+as being in a groove they had never joined. Three greyed "Already in" rows on a two-member
+groove is exactly that, and nothing in the UI could tell you which of the two it meant.
+
+Now `Cloud.grooveRoster()` reads every row of the groove before the list renders, and each
+person is labelled **Member** (not a button — there is nothing inviting them would do),
+**Invited**, or **Invite**. A second click on someone already invited re-sends the
+notification and says "Reminded", because that is what pressing it again means. A clash
+that still happens — a race with another leader, or a row RLS will not show us — is re-read
+and named rather than guessed at; a genuine failure puts the row back instead of leaving a
+greyed label that reads like something happened.
+
+`..._20260914234500_groove_invite_visibility.sql` adds a permissive select policy so a
+leader can see the `invited` rows of their own groove. The select policies on
+`groove_members` predate this repo's migrations and are recorded nowhere, so whether that
+was already allowed is unknown — a permissive policy ORs with whatever exists, so the worst
+case is that it is redundant. The client does not depend on it: a row it cannot see is
+still named correctly, because `grooveMembers()` can see every membership and the list has
+already filtered those out.
 
 One consequence worth deciding on rather than discovering: a member removed by a leader can
 rejoin instantly with the same link. Fixing that needs a tombstone (a removed-members table,
