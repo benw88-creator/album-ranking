@@ -5824,7 +5824,8 @@ window.ICONS = {
 
     <div id="blitz-lobby">
       <div class="bl-lobby-top">
-        <button class="btn-primary" id="blitz-solo">Play solo</button>
+        <button class="btn-primary" id="blitz-daily">Today&rsquo;s Blitz</button>
+        <button class="btn-mini" id="blitz-solo">Play solo</button>
         <button class="btn-mini" id="blitz-challenge">Challenge a mate</button>
         <div class="bl-best">Best <b id="blitz-best">0</b></div>
       </div>
@@ -8693,7 +8694,26 @@ function renderAuthArea(connected){
     _lbEntryEl.textContent='\u23F1\ufe0f Time submitted to the leaderboard \u2014 '+(elapsedMs/1000).toFixed(1)+'s';
   }
 
-  function renderBests(){document.querySelectorAll('.gc-best').forEach(function(el){let b=0;try{b=parseInt(localStorage.getItem('crate_best_'+el.dataset.best)||'0',10);}catch(e){}el.textContent=b>0?('Best '+b+'/5'):'';});}
+  /* `.gc-best[data-best]` and not `.gc-best`. The five-round games keep their
+     best in `crate_best_<key>` and are painted from here; the Daily Drop,
+     Earworm, Album Blitz and Higher or Lower each carry a status line their own
+     module writes — today's result, runs left, whose turn it is — in the same
+     `.gc-best` slot with no `data-best` on it. The unscoped selector picked
+     those four up too, read `crate_best_undefined`, found nothing and blanked
+     them. This runs from `setMode('games')`, so it fired on the way INTO the
+     only view those cards appear in: each module painted its line at load and
+     this wiped it a moment before anybody could see it.
+
+     Scoping the selector stops the wipe. Calling the four painters afterwards is
+     what makes them show, because nothing else repaints them on entering the
+     view — so a result from this morning was only ever visible if you happened
+     to be looking at the grid at the moment its module wrote it. */
+  function renderBests(){
+    document.querySelectorAll('.gc-best[data-best]').forEach(function(el){let b=0;try{b=parseInt(localStorage.getItem('crate_best_'+el.dataset.best)||'0',10);}catch(e){}el.textContent=b>0?('Best '+b+'/5'):'';});
+    ['paintDropCard','paintEarwormCard','paintBlitzCard','paintHigherLowerCard'].forEach(function(k){
+      try{if(window[k])window[k]();}catch(e){}
+    });
+  }
   window.renderGameBests=renderBests;
 
   startBtn.addEventListener('click',function(){start();});
@@ -15114,6 +15134,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (card) card.addEventListener('click', ewOpen);
     ewCardStatus();
     window.openEarworm = ewOpen;
+    window.paintEarwormCard = ewCardStatus;
   }
 
   ewInit();
@@ -15887,7 +15908,10 @@ function playDismissAnimation(gateEl, callback) {
     var btn = document.getElementById('drop-share-btn');
     if (btn) btn.addEventListener('click', function () {
       var txt = shareGrid();
-      if (navigator.clipboard) navigator.clipboard.writeText(txt);
+      // A refused clipboard write REJECTS rather than throwing, so a try/catch
+      // around it catches nothing and the button claims 'Copied' over an empty
+      // clipboard. Same fix as the Blitz share button.
+      if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(function () { btn.textContent = 'Copy failed'; });
       btn.textContent = 'Copied ✓';
       setTimeout(function () { btn.textContent = 'Copy result'; }, 1600);
     });
@@ -16021,6 +16045,7 @@ function playDismissAnimation(gateEl, callback) {
     if (card) card.addEventListener('click', openDrop);
     updateCardStatus();
     window.openDailyDrop = openDrop;
+    window.paintDropCard = updateCardStatus;
   }
 
   /* The pool, for anything else that needs records everybody knows. Album Blitz
@@ -17354,6 +17379,7 @@ window.renderAdminStats = renderAdminStats;
      is why the newly-open card is marked and celebrated rather than simply
      becoming clickable. */
   function paintUnlocks(announce) {
+    if (window.paintBlitzCard) paintBlitzCard();
     var n = ratedCount();
     var was = seen(), now = {}, fresh = [];
 
@@ -19208,6 +19234,7 @@ window.renderAdminStats = renderAdminStats;
 
   paintCard();
   window.openHigherLower = open;
+  window.paintHigherLowerCard = paintCard;
 })();
 
 /* ================================================================
@@ -19446,9 +19473,43 @@ window.renderAdminStats = renderAdminStats;
     return out;
   }
 
+  /* The daily. Everybody gets the same ten from the day number, which makes a
+     score comparable without a match existing — the Wordle trade: one puzzle,
+     one go, and the comparing happens wherever you paste it. That is why the
+     share text is spoiler-free: a row of filled and empty circles says how you
+     did and never which records came up. */
+  var DAILY_KEY = 'crate_blitz_daily';
+  function dayNo() {
+    var d = new Date();
+    return Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(2020, 0, 1)) / 86400000);
+  }
+  function dailySeed() {
+    // Offset so today's daily is not the same ten questions as any solo run
+    // that happened to use the day number.
+    var n = dayNo();
+    return ((n * 2654435761) ^ 0x5bf03635) >>> 0;
+  }
+  function dailyDone() {
+    try {
+      var r = JSON.parse(localStorage.getItem(DAILY_KEY) || 'null');
+      return (r && r.day === dayNo()) ? r : null;
+    } catch (e) { return null; }
+  }
+  function saveDaily(rec) {
+    rec.day = dayNo();
+    try { localStorage.setItem(DAILY_KEY, JSON.stringify(rec)); } catch (e) {}
+  }
+  function shareText(rec) {
+    var marks = (rec.marks || []).map(function (ok) { return ok ? '\u25cf' : '\u25cb'; }).join('');
+    return 'Album Blitz #' + rec.day + ' \u2014 ' + (rec.score || 0).toLocaleString('en-GB') + '\n' +
+      marks + '  ' + (rec.correct || 0) + '/' + ROUNDS + '\n' + 'wildcrate.xyz';
+  }
+
   window.Blitz = {
     ROUNDS: ROUNDS, PERFECT: PERFECT, BEST_KEY: BEST_KEY,
     build: build, shape: shape, multFor: multFor, rng: rng,
+    dayNo: dayNo, dailySeed: dailySeed, dailyDone: dailyDone,
+    saveDaily: saveDaily, shareText: shareText,
     best: function () { try { return +localStorage.getItem(BEST_KEY) || 0; } catch (e) { return 0; } },
     setBest: function (n) {
       try { if (n > (+localStorage.getItem(BEST_KEY) || 0)) localStorage.setItem(BEST_KEY, String(n)); } catch (e) {}
@@ -19470,6 +19531,7 @@ window.renderAdminStats = renderAdminStats;
 
   var qs = [], i = 0, score = 0, streak = 0, bestStreak = 0, correct = 0;
   var busy = false, deadline = 0, tick = null, match = null, mode = 'solo';
+  var marks = [];   // one true/false per round, for the daily's share row
 
   function el(id) { return document.getElementById(id); }
   function n(v) { return (Number(v) || 0).toLocaleString('en-GB'); }
@@ -19484,9 +19546,10 @@ window.renderAdminStats = renderAdminStats;
     stopClock();
     show('blitz-lobby');
     el('blitz-best').textContent = n(Blitz.best());
+    paintDaily();
     paintLobby();
   }
-  function close() { stopClock(); modal.classList.remove('open'); }
+  function close() { stopClock(); modal.classList.remove('open'); paintCard(); }
 
   async function paintLobby() {
     var host = el('blitz-matches');
@@ -19534,6 +19597,22 @@ window.renderAdminStats = renderAdminStats;
   }
 
   /* ---------- the run ---------- */
+  /* Everybody gets the same ten today, and one go at them. The cap is what
+     makes a shared score worth pasting: "2,450" means nothing if the other
+     person could sit there until they got it. */
+  function startDaily() {
+    var done = Blitz.dailyDone();
+    if (done) { paintDaily(); return; }
+    match = null; mode = 'daily';
+    begin(Blitz.dailySeed());
+  }
+  function paintDaily() {
+    var b = el('blitz-daily'), done = Blitz.dailyDone();
+    if (!b) return;
+    b.disabled = !!done;
+    b.textContent = done ? ('Today\u2019s Blitz \u2014 ' + n(done.score)) : 'Today\u2019s Blitz';
+  }
+
   async function startSolo() {
     match = null; mode = 'solo';
     // Solo is the same engine on a throwaway seed, so practice is the real game
@@ -19553,7 +19632,7 @@ window.renderAdminStats = renderAdminStats;
   function begin(seed) {
     qs = Blitz.build(seed);
     if (!qs.length) { note('Could not build a round.'); return; }
-    i = 0; score = 0; streak = 0; bestStreak = 0; correct = 0; busy = false;
+    i = 0; score = 0; streak = 0; bestStreak = 0; correct = 0; busy = false; marks = [];
     show('blitz-play');
     round();
   }
@@ -19635,6 +19714,7 @@ window.renderAdminStats = renderAdminStats;
       else if (idx === k) b.classList.add('wrong');
     });
 
+    marks.push(right);
     if (right) {
       var mult = Blitz.multFor(streak);
       gained = Math.round((100 + Math.round(100 * left)) * mult);
@@ -19662,8 +19742,26 @@ window.renderAdminStats = renderAdminStats;
     el('blitz-sub').textContent = correct + ' of ' + Blitz.ROUNDS + ' · best run ' + bestStreak +
       (score >= Blitz.PERFECT ? ' · flawless' : '');
     el('blitz-vs').innerHTML = '';
-    el('blitz-again').textContent = mode === 'match' ? 'Back to matches' : 'Go again';
+    el('blitz-again').textContent = mode === 'match' ? 'Back to matches'
+      : mode === 'daily' ? 'Done' : 'Go again';
 
+    if (mode === 'daily') {
+      Blitz.saveDaily({ score: score, correct: correct, streak: bestStreak, marks: marks.slice() });
+      var rec = Blitz.dailyDone();
+      el('blitz-vs').innerHTML =
+        '<div class="bl-vs"><b>Today\u2019s Blitz</b><span>#' + rec.day + ' \u00b7 same ten for everybody</span></div>' +
+        '<button class="btn-mini" id="blitz-share" style="margin-top:10px;">Copy result</button>';
+      var shb = el('blitz-share');
+      if (shb) shb.addEventListener('click', function () {
+        var txt = Blitz.shareText(rec);
+        try {
+          // A rejected clipboard promise escapes the try, so it needs its own catch.
+          if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(function () { shb.textContent = 'Copy failed'; });
+          shb.textContent = 'Copied';
+        } catch (e) { shb.textContent = 'Copy failed'; }
+        setTimeout(function () { shb.textContent = 'Copy result'; }, 1600);
+      });
+    }
     if (window.notePlay) notePlay('blitz');
     if (window.Wallet && Wallet.awardGame) Wallet.awardGame('blitz', { reason: 'Album Blitz' });
     if (window.track) track('blitz_run', { mode: mode, score: score, correct: correct });
@@ -19741,9 +19839,10 @@ window.renderAdminStats = renderAdminStats;
   modal.addEventListener('click', function (e) { if (e.target === modal && !busy) close(); });
   el('blitz-solo').addEventListener('click', startSolo);
   el('blitz-challenge').addEventListener('click', openPick);
+  el('blitz-daily').addEventListener('click', startDaily);
   el('blitz-again').addEventListener('click', function () {
-    if (mode === 'match') { show('blitz-lobby'); paintLobby(); }
-    else startSolo();
+    if (mode === 'solo') { startSolo(); return; }
+    show('blitz-lobby'); paintDaily(); paintLobby();
   });
 
   // Number keys answer, because a game about speed should not need the mouse.
@@ -19754,8 +19853,28 @@ window.renderAdminStats = renderAdminStats;
     if (k >= 1 && k <= 4) { e.preventDefault(); answer(k - 1); }
   });
 
+  async function paintCard() {
+    var s = document.getElementById('blitz-card-status');
+    if (!s) return;
+    var bits = [];
+    if (!Blitz.dailyDone()) bits.push('Today\u2019s ready');
+    if (Blitz.best()) bits.push('Best ' + n(Blitz.best()));
+    s.textContent = bits.join(' \u00b7 ');
+    if (!on()) return;
+    try {
+      var rows = await Cloud.blitzList(), me = meId(), turns = 0;
+      rows.forEach(function (m) {
+        var mine = m.initiator_id === me;
+        if (m.status !== 'resolved' && (mine ? m.initiator_score : m.opponent_score) == null) turns++;
+      });
+      if (turns) s.textContent = turns + (turns === 1 ? ' match' : ' matches') + ' waiting on you';
+    } catch (e) {}
+  }
+
   var card = document.getElementById('blitz-card');
   if (card) card.addEventListener('click', open);
+  window.paintBlitzCard = paintCard;
+  paintCard();
   window.openAlbumBlitz = open;
 })();
 </script>
