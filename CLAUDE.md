@@ -1244,15 +1244,24 @@ What makes it playable:
 - `ew-card-status` had been in the markup since the game shipped with nothing ever writing
   to it. It now carries today's result on the Minigames card, like the Drop's — though
 neither was actually visible until the `.gc-best` selector was scoped. See **The status
-line on the card** under Album Blitz.
+line on the card** under Cover Fire.
 
 The card is gated on three rated albums (see the unlock gates), so `window.openEarworm()`
 opens it in a fresh browser where clicking the card will not.
 
-## Album Blitz
+## Cover Fire
 
-Ten rounds of album covers, about a minute a go. Three ways to play and one engine
-underneath: **Today's Blitz**, solo, and head to head against somebody you follow.
+Ten sleeves, about a minute a go. Three ways to play and one engine underneath:
+**Today's Ten**, solo, and head to head against somebody you follow.
+
+**It was called Album Blitz and the rename is display only.** Every id, table,
+RPC, award key, notification type and localStorage key is still `blitz` —
+`blitz_matches`, `wallet_award_game('blitz')`, `crate_blitz_daily`, the lot. A key
+is what the server, the wallet and everybody's saved state hold, and renaming one
+orphans all three; the producer tags make the same point from the other end, where
+the chip says FUKUMEAN and the key never will. The display name lives in one
+constant, `NAME`, which the share line reads from so anything a person copies out
+cannot drift from the heading above it.
 `..._20260916180000_album_blitz.sql`, plus the `Blitz` module (questions) and the
 lobby/run IIFE under it in `index.html`.
 
@@ -1280,11 +1289,15 @@ that cap a ten-round match could ask "which one is by X" four times, every quest
 technically different and the match still repetitive, because what people notice is the
 *shape* of the question and not the records in it.
 
-### Today's Blitz
+### Today's Ten
 
 Everybody gets the same ten, seeded by day number, **one go**. That is the whole Wordle
 trade, and the cap is the half that makes it work: "2,450" means nothing if the other
 person could sit there until they got it.
+
+It is called Today’s Ten rather than Today’s Cover Fire: the copy beside it
+already says "same ten for everybody", and the long form does not fit a chip next to
+two other buttons.
 
 `dailySeed()` runs the day number through a multiply-and-xor rather than using it raw, so
 today's daily is not the ten questions a solo run would build from the same number.
@@ -1306,7 +1319,7 @@ score is affected.
 never which records came up:
 
 ```
-Album Blitz #2449 — 1,163
+Cover Fire #2449 — 1,163
 ○●●●○●●○○●  6/10
 wildcrate.xyz
 ```
@@ -1330,6 +1343,131 @@ at round two — which is what makes the last three rounds tense rather than a f
 Escalation runs on three dials at once and none is announced: choices 2 → 3 → 4, clock
 7s → 6s → 5s, and comparisons narrowing from decades apart to a year or two (`tight`).
 Difficulty you feel and cannot read is the kind people keep playing.
+
+### RISK, and the one decision in the run
+
+Streaks and a multiplier are not risk and reward. They are reward with a *tax* on
+failure: the ladder climbs by itself and a miss knocks it down, and at no point
+does the player choose anything. There was no decision anywhere in the run.
+
+**RISK is one tap, once per run.** Arm it during a round (the chip, or `R`) and
+that round doubles if you get it right, and costs you `100 x multiplier` if you
+do not — on top of the streak you were going to lose anyway.
+
+The interesting part is not the double, it is **when**. Spend it at round two and
+it is nearly free and worth about 200. Hold it to round ten at a nine-streak and
+it is worth 600 — but you are spending it on four choices and five seconds, with
+the whole run behind it. That decision is available from the first round and gets
+more expensive to keep putting off, which is the shape you want: no extra screen,
+no menu, no second currency, and a reason for the last three rounds to be tense
+rather than a formality.
+
+Details that matter:
+
+- **The chip prints this round's actual numbers**, not the rule. `RISK x2 -450` at
+  a three-streak and `RISK x2 -100` at the start are the same rule, and only the
+  first one tells you why you are hesitating.
+- **The penalty is priced before the streak moves**, so it costs what the
+  multiplier was when you took the risk, not what the answer just did to it.
+- **Score floors at zero.** A negative number is not a position in a game anybody
+  can read, and it would break the share row besides.
+- **A wrong risk is a red `-450`, not a smaller green number.** Same element,
+  opposite read — a penalty that looks like a gain is a penalty nobody notices.
+- It disarms every round and cannot be re-armed once spent; the chip then says
+  which round it went on.
+
+**The ceiling moved and the server had to be told.** A flawless run is 3,600 and
+always was; RISK on the best possible round — the tenth, at a nine-streak, worth
+200 x 3 — adds another 600. So the ceiling is **4,200**, and `blitz_submit` clamps
+to exactly that (`..._20260916210000_cover_fire_risk.sql`). `Blitz.MAX_SCORE`
+mirrors it; change one and you must change the other, the same arrangement as
+`LADDER` against `v_ladder`.
+
+Leaving the clamp at 3,600 would not have errored. It would have filed a great run
+as a worse one and decided a head to head on the wrong number — a silent
+truncation, which this file already calls the worst failure shape available. So
+**the client compares what came back with what it sent** and calls `reportIssue`
+on a gap, which means an unapplied migration says so in `client_errors` instead of
+quietly costing people matches.
+
+### Fourteen kinds, and why adding one needed a column
+
+The original nine ask about release order, track counts, runtime, artist,
+song-to-album, genre and year. Five more were added with Cover Fire, all built
+from the same seven columns — **no fetch, no table, no token**, because the pool
+being static is what makes a round instant, offline and identically scored on
+every device, and a kind that needed the network would spend all three:
+
+| | |
+|---|---|
+| `notgenre` / `notartist` | odd one out — *which is NOT* |
+| `decade` | from the 1990s, a wider net than an exact year |
+| `avgtrack` | runtime / tracks |
+| `opener` | which record opens with this song |
+
+**The negation is the point of the first two.** Every other kind asks you to find
+the match, and the eye gets very good at that very quickly — you learn to stop
+reading at the first sleeve that fits. *Which is NOT* makes you check all four.
+They are barred below three choices, where they collapse back into the question
+they are the inverse of.
+
+`avgtrack` is the only comparison on this pool that cannot be done by eye: a
+40-minute record with eight tracks and a 40-minute record with twenty look
+identical on every other question. It returns null rather than Infinity for a
+trackless row, so `compareBy`'s `typeof` filter drops it instead of ranking it
+top.
+
+**Adding a kind changes every question built from every seed**, which is the whole
+reason `blitz_matches.build_v` exists. `shuffled` draws one random number per
+element, so a longer list orders the ten differently — it is not that the new
+kinds get mixed in, it is that the old ones come out somewhere else. A match
+created before the deploy where one player had already played would have dealt the
+second player a different ten, and the two scores would have been compared as
+though they answered the same questions, with nothing anywhere saying otherwise.
+
+So `KINDS_V1` is frozen — contents **and** order — existing matches carry
+`build_v = 1` and replay against it, and new ones take the column's default of 2.
+No function changed for this: `blitz_create` returns the whole row so the column
+rides back on its own, and `blitzList` selects `*`. The client defaults to **1**
+and not to the newest when the field is missing, so a database without the
+migration puts both players on v1 together rather than silently re-dealing matches
+that were already half played.
+
+The one-time cost is the day of the deploy: two people playing Today's Ten either
+side of it get different tens. A daily already played is unaffected, because the
+record stores its score and marks rather than re-deriving them.
+
+### Solo is the mode about your own crate
+
+`qYouHigh` and `qYouLow` — *which did you rate higher*, *which did you rate lowest*
+— drawn from `crate_albums_v1` with your own artwork.
+
+**They are barred from the daily and from a head to head, and that is not a
+limitation, it is the rule that makes a shared seed mean anything**: a shared seed
+has to produce a shared *question*, and two people do not have the same ratings.
+Which turns solo from a warm-up into the one mode that is about your records
+rather than the canon.
+
+A personal kind that cannot be served is left **out of the list** rather than
+allowed to return null from inside it — the list's length decides how many random
+numbers `shuffled` draws, so a dead entry would still move every other question
+along. Needs ten rated albums; below that, solo is simply the shared set.
+
+### Streams and a shared rating question are deliberately absent
+
+Both were asked for and neither is in. Worth recording so they are not
+rediscovered as oversights:
+
+- **Streams.** The data exists (`album_plays`, `/api/album-streams`) but the pool
+  carries no stream totals, and the endpoint requires a Supabase JWT. A live fetch
+  would cost the game offline play and, worse, break the shared seed — one player
+  with the data and one without get different questions. Doing it properly means
+  baking a `streams` column into `ALBUM_ROWS` in the same pass that refreshes the
+  rest, which needs a machine that can reach the API. Until then a streams round
+  would have to invent a number, and a wrong stream total reads as a bug — the
+  same line Bid Wars draws against Discogs prices.
+- **A rating question everyone gets.** Ratings are personal, so this can only ever
+  be the solo kinds above. There is no version of it that survives a shared seed.
 
 ### The seed is the fairness mechanism, and it is sealed
 
@@ -1384,7 +1522,7 @@ otherwise land last and win with the older number.
 **Fixing it exposed the reason no card status was ever visible.** `renderBests()` ran
 `document.querySelectorAll('.gc-best')` — *every* one of them — read `crate_best_<data-best>`
 and blanked anything that came back empty. The five-round games carry `data-best`; the Daily
-Drop, Earworm, Album Blitz and Higher or Lower each write their own status line into the same
+Drop, Earworm, Cover Fire and Higher or Lower each write their own status line into the same
 `.gc-best` slot **with no `data-best` on it**, so all four were read as `crate_best_undefined`
 and wiped.
 

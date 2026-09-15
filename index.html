@@ -4512,7 +4512,7 @@ button.rw-day {
 .rw-card p { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
 
 /* ---- Higher or Lower ------------------------------------------------- */
-/* ---- Album Blitz -------------------------------------------------------
+/* ---- Cover Fire -------------------------------------------------------
    The sleeves are the game, so they get the room and everything else is a
    thin line around them: the HUD is one row, the clock is 4px, and the prompt
    is one sentence. A quiz that needs reading is not a fast game. */
@@ -4544,13 +4544,46 @@ button.rw-day {
 .bl-tag.lost { background: rgba(226,75,74,0.15); color: var(--red); }
 .bl-tag.draw { background: var(--surface-3); color: var(--text-dim); }
 
-.bl-hud { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.bl-hud { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+/* The row fitted on one line until RISK joined it, and at 375px the chip
+   pushed two of the ten dots off the panel — a progress indicator that stops
+   short is worse than none, because the count is the whole of what it says.
+   Wrapping instead: the dots keep `margin-left: auto` so they stay hard right
+   on a wide screen and drop to their own full line when they cannot. */
+.bl-hud > .bl-dots { min-width: 0; }
+@media (max-width: 420px) { .bl-hud > .bl-dots { flex-basis: 100%; justify-content: flex-end; } }
 .bl-score { font-family: var(--font-mono); }
 .bl-score span { font: 700 24px/1 var(--font-mono); color: var(--gold); }
 .bl-score small { display: block; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
 .bl-mult { font: 700 20px/1 var(--font-mono); color: var(--text-dim); transition: color .25s var(--ease); }
 .bl-mult.warm { color: #ff9f43; }
 .bl-mult.hot { color: #ff4d6d; text-shadow: 0 0 16px rgba(255,77,109,.5); }
+
+/* RISK. It has to read as the one thing on the board you may choose, and it
+   has to stop reading that way the instant it is spent or the run is over —
+   a control that still looks live after it has been used is the tile that
+   kept glowing after a tap. */
+.bl-risk {
+  font: 700 11px/1 var(--font-mono); letter-spacing: .08em; white-space: nowrap;
+  padding: 7px 10px; border-radius: 999px; cursor: pointer;
+  color: #ffd166; background: rgba(255,209,102,.09);
+  border: 1px solid rgba(255,209,102,.45);
+  transition: transform .12s var(--ease), background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease);
+}
+.bl-risk:hover:not(:disabled) { background: rgba(255,209,102,.18); transform: translateY(-1px); }
+.bl-risk:active:not(:disabled) { transform: translateY(0) scale(.96); }
+.bl-risk.armed {
+  color: #14100a; background: #ffd166; border-color: #ffd166;
+  animation: blRisk 1s var(--ease) infinite;
+}
+.bl-risk:disabled { opacity: .3; cursor: default; color: var(--text-dim); border-color: var(--line); background: none; }
+@keyframes blRisk {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,209,102,.55); }
+  50%      { box-shadow: 0 0 0 7px rgba(255,209,102,0); }
+}
+@media (prefers-reduced-motion: reduce) { .bl-risk.armed { animation: none; } }
+/* A penalty has to look nothing like a gain — same element, opposite read. */
+.bl-float.down { color: #ff4d6d; }
 .bl-dots { display: flex; gap: 4px; margin-left: auto; }
 .bl-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--surface-3); }
 .bl-dots i.done { background: var(--text-faint); }
@@ -5438,7 +5471,7 @@ window.ICONS = {
            is not a minigame, it is the currency's other half. -->
       <div class="game-card" id="blitz-card">
         <div class="gc-emoji" data-icon="trophy"></div>
-        <h3>Album Blitz</h3>
+        <h3>Cover Fire</h3>
         <p>Ten rounds of sleeves against a mate. Fast, and the streak is where the points are.</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" id="blitz-card-status"></div>
@@ -5824,11 +5857,11 @@ window.ICONS = {
   <div class="modal-panel">
     <button class="modal-close" id="blitz-close" aria-label="Close">&times;</button>
     <div class="modal-head"><span class="mh-emoji" data-icon="trophy"></span>
-      <div><h2>Album Blitz</h2><p>Ten rounds. Speed and streaks.</p></div></div>
+      <div><h2>Cover Fire</h2><p>Ten sleeves. Speed, streaks, and one risk.</p></div></div>
 
     <div id="blitz-lobby">
       <div class="bl-lobby-top">
-        <button class="btn-primary" id="blitz-daily">Today&rsquo;s Blitz</button>
+        <button class="btn-primary" id="blitz-daily">Today&rsquo;s Ten</button>
         <button class="btn-mini" id="blitz-solo">Play solo</button>
         <button class="btn-mini" id="blitz-challenge">Challenge a mate</button>
         <div class="bl-best">Best <b id="blitz-best">0</b></div>
@@ -5842,6 +5875,9 @@ window.ICONS = {
       <div class="bl-hud">
         <div class="bl-score"><span id="blitz-score">0</span><small>points</small></div>
         <div class="bl-mult" id="blitz-mult">&times;1</div>
+        <!-- One per run. The decision is WHEN, which is why it is a chip on
+             the board and not a mode you pick before playing. -->
+        <button class="bl-risk" id="blitz-risk" type="button"></button>
         <div class="bl-dots" id="blitz-dots"></div>
       </div>
       <div class="bl-timer"><i id="blitz-bar"></i></div>
@@ -8700,7 +8736,7 @@ function renderAuthArea(connected){
 
   /* `.gc-best[data-best]` and not `.gc-best`. The five-round games keep their
      best in `crate_best_<key>` and are painted from here; the Daily Drop,
-     Earworm, Album Blitz and Higher or Lower each carry a status line their own
+     Earworm, Cover Fire and Higher or Lower each carry a status line their own
      module writes — today's result, runs left, whose turn it is — in the same
      `.gc-best` slot with no `data-best` on it. The unscoped selector picked
      those four up too, read `crate_best_undefined`, found nothing and blanked
@@ -9928,7 +9964,7 @@ const Cloud=(function(){
     }catch(e){return out;}
   }
 
-  /* ---- Album Blitz ---- */
+  /* ---- Cover Fire ---- */
   async function blitzCreate(oppId){if(!isOn())return null;try{const r=await sb.rpc('blitz_create',{p_opponent:oppId});return r.error?null:r.data;}catch(e){return null;}}
   // The only route to a match's seed. See the migration: blitz_seeds has RLS
   // on and no policies, so the questions cannot be read ahead of playing.
@@ -10884,7 +10920,7 @@ window.renderProfile=renderProfile;
 /* ================================================================
    13. NOTIFICATIONS + SUGGESTIONS
    ================================================================ */
-function notifText(n){const who=esc((n.data&&n.data.username)||'Someone');if(n.type==='follow')return who+' followed you';if(n.type==='suggestion'){const it=(n.data&&n.data.item)||{};const kind=(n.data&&n.data.kind)||'album';const label=kind==='list'?'the list':(kind==='song'?'the song':'the album');return who+' recommended '+label+' <b>'+esc(it.name||'')+'</b>'+(it.artist?' by '+esc(it.artist):'');}if(n.type==='groove_invite')return who+' invited you to a Groove';if(n.type==='blitz_challenge')return who+' challenged you to <b>Album Blitz</b>';if(n.type==='blitz_turn')return who+' scored <b>'+esc(String((n.data&&n.data.score)||0))+'</b> in Album Blitz \u2014 your go';if(n.type==='blitz_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' at Album Blitz'):o==='lost'?(who+' beat you at Album Blitz'):('You and '+who+' tied at Album Blitz');}if(n.type==='bid_war_challenge')return who+' challenged you to a <b>Bid War</b>';if(n.type==='bid_war_turn')return who+' has bid &mdash; your move';if(n.type==='bid_war_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' in a Bid War'):o==='lost'?(who+' beat you in a Bid War'):('Your Bid War with '+who+' ended level');}return who+' did something';}
+function notifText(n){const who=esc((n.data&&n.data.username)||'Someone');if(n.type==='follow')return who+' followed you';if(n.type==='suggestion'){const it=(n.data&&n.data.item)||{};const kind=(n.data&&n.data.kind)||'album';const label=kind==='list'?'the list':(kind==='song'?'the song':'the album');return who+' recommended '+label+' <b>'+esc(it.name||'')+'</b>'+(it.artist?' by '+esc(it.artist):'');}if(n.type==='groove_invite')return who+' invited you to a Groove';if(n.type==='blitz_challenge')return who+' challenged you to <b>Cover Fire</b>';if(n.type==='blitz_turn')return who+' scored <b>'+esc(String((n.data&&n.data.score)||0))+'</b> in Cover Fire \u2014 your go';if(n.type==='blitz_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' at Cover Fire'):o==='lost'?(who+' beat you at Cover Fire'):('You and '+who+' tied at Cover Fire');}if(n.type==='bid_war_challenge')return who+' challenged you to a <b>Bid War</b>';if(n.type==='bid_war_turn')return who+' has bid &mdash; your move';if(n.type==='bid_war_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' in a Bid War'):o==='lost'?(who+' beat you in a Bid War'):('Your Bid War with '+who+' ended level');}return who+' did something';}
 function notifEmoji(t){return t==='follow'?ICONS.people:t==='suggestion'?ICONS.note:t==='groove_invite'?ICONS.groove:(t==='bid_war_challenge'||t==='bid_war_turn'||t==='bid_war_result'||t==='blitz_challenge'||t==='blitz_turn'||t==='blitz_result')?ICONS.trophy:ICONS.bell;}
 
 async function renderNotifications(){
@@ -16079,7 +16115,7 @@ function playDismissAnimation(gateEl, callback) {
     window.paintDropCard = updateCardStatus;
   }
 
-  /* The pool, for anything else that needs records everybody knows. Album Blitz
+  /* The pool, for anything else that needs records everybody knows. Cover Fire
      builds every one of its questions from these two tables rather than baking
      a second copy: they already carry year, genre, track count, runtime, and
      for a song the album it is off and that album's artwork. Exporting beats
@@ -17385,7 +17421,7 @@ window.renderAdminStats = renderAdminStats;
     // Blitz asks about records everybody knows rather than yours, so it needs
     // no crate at all — but a game grid where everything is open on day one is
     // a wall again. Five is one sitting.
-    'blitz-card':       { need: 5,  label: 'Album Blitz' }
+    'blitz-card':       { need: 5,  label: 'Cover Fire' }
   };
   var SEEN_KEY = 'crate_unlocks_seen';
 
@@ -19317,8 +19353,21 @@ window.renderAdminStats = renderAdminStats;
 (function () {
   'use strict';
 
+  /* The display name. Every id, table, RPC, localStorage key and award key
+     stays `blitz` — a key is what the server, the wallet and everybody's saved
+     state hold, and renaming one orphans all three. Same rule the producer
+     tags follow, where the chip says FUKUMEAN and the key never will. */
+  var NAME = 'Cover Fire';
+
   var ROUNDS = 10;
   var PERFECT = 3600;          // ten right, all instant, multiplier climbing
+  /* The ceiling with RISK spent on the best possible round: round ten at a
+     nine-streak is 200 x 3, and doubling it adds 600. `blitz_submit` clamps to
+     this exact number, so the two have to agree — the same arrangement as
+     LADDER against v_ladder, and the client reports a mismatch rather than
+     quietly accepting a truncated score. */
+  var MAX_SCORE = 4200;
+  var BUILD_V = 2;             // mirrored by blitz_matches.build_v
   var BEST_KEY = 'crate_blitz_best';
 
   // round index -> choices, seconds, and how close the comparisons may get
@@ -19360,15 +19409,22 @@ window.renderAdminStats = renderAdminStats;
      another kind. Nothing throws: a round that cannot be built falls back to
      the simplest comparison rather than ending the match. */
 
-  // Comparison over a numeric column, N ways.
-  function compare(r, sh, idx, label, want) {
-    var pool = albums().filter(function (a) { return typeof a[idx] === 'number'; });
+  /* Comparison over a number, N ways. `val` reads it off a row rather than
+     naming a column, so a DERIVED figure (average track length) costs no more
+     than a stored one; and `gaps` is per kind because 18 is a wide spread in
+     years and almost nothing in seconds.
+
+     The body below is otherwise untouched on purpose. It draws random numbers,
+     and anything that changes HOW MANY it draws changes every question built
+     from every seed — see the note on build_v. */
+  function compareBy(r, sh, val, label, want, gaps) {
+    var pool = albums().filter(function (a) { return typeof val(a) === 'number'; });
     if (pool.length < sh.n + 4) return null;
     // Early rounds want an obvious winner; late rounds want it close.
-    var gapMin = [18, 7, 2][sh.tight];
+    var gapMin = (gaps || [18, 7, 2])[sh.tight];
     for (var attempt = 0; attempt < 40; attempt++) {
       var set = shuffled(r, pool).slice(0, sh.n);
-      var vals = set.map(function (a) { return a[idx]; });
+      var vals = set.map(val);
       var top = want === 'max' ? Math.max.apply(null, vals) : Math.min.apply(null, vals);
       var rest = vals.filter(function (v) { return v !== top; });
       if (rest.length !== sh.n - 1) continue;          // a tie for the answer
@@ -19377,6 +19433,10 @@ window.renderAdminStats = renderAdminStats;
       return { prompt: label, choices: set.map(card), correct: vals.indexOf(top) };
     }
     return null;
+  }
+
+  function compare(r, sh, idx, label, want) {
+    return compareBy(r, sh, function (a) { return a[idx]; }, label, want);
   }
 
   function qFirst(r, sh)  { return compare(r, sh, 2, 'Which came out first?', 'min'); }
@@ -19471,14 +19531,159 @@ window.renderAdminStats = renderAdminStats;
     return null;
   }
 
+  /* ---- the kinds added in v2 ---------------------------------------------
+     All of them are built from the same seven columns the originals use. None
+     adds a fetch, a table or a token: the pool being static is what makes a
+     round instant, offline and identically scored on every device, and a
+     question kind that needed the network would spend all three. */
+
+  /* Odd one out. The negation is the whole point — every other kind asks you
+     to find the match, and the eye gets very good at that very quickly, so you
+     learn to stop reading at the first sleeve that fits. "Which is NOT" makes
+     you check all four. Barred below three choices, where it collapses back
+     into the question it is the inverse of. */
+  function oddOneOut(r, sh, col, label) {
+    if (sh.n < 3) return null;
+    var pool = albums();
+    for (var attempt = 0; attempt < 40; attempt++) {
+      var v = pick(r, pool)[col];
+      var same = pool.filter(function (a) { return a[col] === v; });
+      var diff = pool.filter(function (a) { return a[col] !== v; });
+      if (same.length < sh.n - 1 || !diff.length) continue;
+      var odd = pick(r, diff);
+      var set = shuffled(r, shuffled(r, same).slice(0, sh.n - 1).concat([odd]));
+      return { prompt: label(v), choices: set.map(card), correct: set.indexOf(odd) };
+    }
+    return null;
+  }
+  function qNotGenre(r, sh)  { return oddOneOut(r, sh, 3, function (v) { return 'Which one is NOT ' + v + '?'; }); }
+  function qNotArtist(r, sh) { return oddOneOut(r, sh, 1, function (v) { return 'Which one is NOT by ' + v + '?'; }); }
+
+  /* A decade is a wider net than qYear, so it can ask about a period nothing
+     in the pool came out in exactly. Printed in full — "the 1990s", never
+     "the 90s" — because 2000 reads as "the 0s" under every shorthand going. */
+  function qDecade(r, sh) {
+    var pool = albums().filter(function (a) { return typeof a[2] === 'number'; });
+    for (var attempt = 0; attempt < 40; attempt++) {
+      var d = Math.floor(pick(r, pool)[2] / 10) * 10;
+      var inside  = pool.filter(function (a) { return Math.floor(a[2] / 10) * 10 === d; });
+      var outside = pool.filter(function (a) { return Math.floor(a[2] / 10) * 10 !== d; });
+      if (!inside.length || outside.length < sh.n - 1) continue;
+      var right = pick(r, inside);
+      var set = shuffled(r, [right].concat(shuffled(r, outside).slice(0, sh.n - 1)));
+      return { prompt: 'Which one is from the ' + d + 's?', choices: set.map(card), correct: set.indexOf(right) };
+    }
+    return null;
+  }
+
+  /* Runtime divided by tracks — the one comparison on this pool that cannot be
+     done by eye, because a 40-minute record with eight tracks and a 40-minute
+     record with twenty look identical on every other question. Returns null
+     rather than Infinity for a trackless row, so compareBy's `typeof` filter
+     drops it like any other missing number instead of ranking it top. */
+  function avgTrack(a) {
+    return (typeof a[5] === 'number' && typeof a[4] === 'number' && a[4] > 0) ? a[5] / a[4] : null;
+  }
+  function qAvgTrack(r, sh) {
+    return compareBy(r, sh, avgTrack, 'Which has the longest songs on average?', 'max', [70, 30, 12]);
+  }
+
+  /* Which record opens with this. The same shape as qFromSong but pinned to
+     track one, which is a different thing to know: an opener is the track
+     people actually recognise a sleeve by. */
+  function qOpener(r, sh) {
+    var ss = songs().filter(function (x) { return x[5] === 1 && x[6] && x[7]; });
+    var pool = albums();
+    if (!ss.length || pool.length < sh.n + 2) return null;
+    for (var attempt = 0; attempt < 40; attempt++) {
+      var song = pick(r, ss);
+      var right = { name: song[6], artist: song[1], art: song[7] };
+      var others = pool.filter(function (a) { return a[0] !== song[6]; });
+      if (sh.tight >= 1) {
+        var same = others.filter(function (a) { return a[1] === song[1]; });
+        if (same.length >= sh.n - 1) others = same;
+      }
+      if (others.length < sh.n - 1) continue;
+      var set = shuffled(r, [right].concat(shuffled(r, others).slice(0, sh.n - 1).map(card)));
+      return {
+        prompt: 'Which album opens with \u201c' + song[0] + '\u201d?',
+        note: song[1], choices: set, correct: set.indexOf(right)
+      };
+    }
+    return null;
+  }
+
+  /* ---- personal kinds, solo only -----------------------------------------
+     These read your own crate, so two people cannot be asked the same one —
+     which is exactly why they are barred from the daily and from a head to
+     head. A shared seed has to produce a shared question or the comparison it
+     exists for is a lie.
+
+     It also gives solo a reason to exist beyond practice: it becomes the mode
+     that is about your records rather than about the canon. */
+  function myRated() {
+    try {
+      var al = window.loadAlbums ? loadAlbums() : {};
+      return Object.keys(al).map(function (k) { return al[k]; })
+        .filter(function (a) { return a && typeof a.score === 'number' && a.name && a.art; });
+    } catch (e) { return []; }
+  }
+  function mineReady() { return myRated().length >= 10; }
+  function yourScore(r, sh, label, want) {
+    var mine = myRated();
+    if (mine.length < sh.n + 4) return null;
+    var gapMin = [14, 7, 3][sh.tight];
+    for (var attempt = 0; attempt < 40; attempt++) {
+      var set = shuffled(r, mine).slice(0, sh.n);
+      var vals = set.map(function (a) { return a.score; });
+      var top = want === 'max' ? Math.max.apply(null, vals) : Math.min.apply(null, vals);
+      var rest = vals.filter(function (v) { return v !== top; });
+      if (rest.length !== sh.n - 1) continue;
+      var nearest = want === 'max' ? Math.max.apply(null, rest) : Math.min.apply(null, rest);
+      if (Math.abs(top - nearest) < gapMin) continue;
+      return {
+        prompt: label, note: 'from your crate',
+        choices: set.map(function (a) { return { name: a.name, artist: a.artist || '', art: a.art }; }),
+        correct: vals.indexOf(top)
+      };
+    }
+    return null;
+  }
+  function qYouHigh(r, sh) { return yourScore(r, sh, 'Which did you rate higher?', 'max'); }
+  function qYouLow(r, sh)  { return yourScore(r, sh, 'Which did you rate lowest?', 'min'); }
   // `kid` so the builder can count a kind without comparing function bodies.
-  var KINDS = [qFirst, qLatest, qTracks, qShort, qLong, qArtist, qFromSong, qGenre, qYear];
-  ['first','latest','tracks','short','long','artist','fromsong','genre','year']
-    .forEach(function (id, k) { KINDS[k].kid = id; });
+  function tag(list, ids) { list.forEach(function (f, k) { f.kid = ids[k]; }); return list; }
+
+  /* KINDS_V1 is frozen — contents AND order. `shuffled` draws one random number
+     per element, so a longer list builds a different ten from the same seed.
+     That means a match dealt before these kinds existed has to be replayed
+     against the list it was dealt from, or the second player to open it is
+     asked different questions from the first and nothing anywhere says so.
+     `blitz_matches.build_v` is what carries that. Do not edit this line. */
+  var KINDS_V1 = tag([qFirst, qLatest, qTracks, qShort, qLong, qArtist, qFromSong, qGenre, qYear],
+                     ['first','latest','tracks','short','long','artist','fromsong','genre','year']);
+  var KINDS_V2 = KINDS_V1.concat(tag([qNotGenre, qNotArtist, qDecade, qAvgTrack, qOpener],
+                     ['notgenre','notartist','decade','avgtrack','opener']));
+  var PERSONAL = tag([qYouHigh, qYouLow], ['youhigh','youlow']);
+  PERSONAL.forEach(function (f) { f.ready = mineReady; });
 
   /* Ten questions from one seed. The same seed gives the same ten on any
      device, which is the entire basis of a head-to-head. */
-  function build(seed) {
+  function build(seed, opts) {
+    opts = opts || {};
+    /* `v` picks the frozen list or the current one — see KINDS_V1. `personal`
+       appends the crate kinds and is set by solo alone, because a question
+       drawn from your own ratings cannot be asked of two people.
+
+       A personal kind that cannot be served is left OUT of the list rather
+       than allowed to return null from inside it: the list's length decides
+       how many random numbers `shuffled` draws, so an entry that never
+       produces anything would still move every other question along. */
+    var kinds = (opts.v === 1 ? KINDS_V1 : KINDS_V2);
+    if (opts.personal) {
+      var extra = PERSONAL.filter(function (f) { return f.ready(); });
+      if (extra.length) kinds = kinds.concat(extra);
+    }
     var r = rng(seed), out = [], usedPrompts = {}, usedKind = {};
     for (var i = 0; i < ROUNDS; i++) {
       var sh = shape(i), q = null;
@@ -19487,7 +19692,7 @@ window.renderAdminStats = renderAdminStats;
          times — every question different and the match still repetitive,
          because what people notice is the SHAPE of the question and not the
          records in it. */
-      var order = shuffled(r, KINDS).sort(function (a, b) {
+      var order = shuffled(r, kinds).sort(function (a, b) {
         return (usedKind[a.kid] || 0) - (usedKind[b.kid] || 0);
       });
       for (var k = 0; k < order.length && !q; k++) {
@@ -19538,12 +19743,13 @@ window.renderAdminStats = renderAdminStats;
   }
   function shareText(rec) {
     var marks = (rec.marks || []).map(function (ok) { return ok ? '\u25cf' : '\u25cb'; }).join('');
-    return 'Album Blitz #' + rec.day + ' \u2014 ' + (rec.score || 0).toLocaleString('en-GB') + '\n' +
+    return NAME + ' #' + rec.day + ' \u2014 ' + (rec.score || 0).toLocaleString('en-GB') + '\n' +
       marks + '  ' + (rec.correct || 0) + '/' + ROUNDS + '\n' + 'wildcrate.xyz';
   }
 
   window.Blitz = {
-    ROUNDS: ROUNDS, PERFECT: PERFECT, BEST_KEY: BEST_KEY,
+    ROUNDS: ROUNDS, PERFECT: PERFECT, MAX_SCORE: MAX_SCORE, BEST_KEY: BEST_KEY,
+    NAME: NAME, BUILD_V: BUILD_V,
     build: build, shape: shape, multFor: multFor, rng: rng,
     dayNo: dayNo, dailySeed: dailySeed, dailyDone: dailyDone,
     saveDaily: saveDaily, shareText: shareText,
@@ -19569,6 +19775,7 @@ window.renderAdminStats = renderAdminStats;
   var qs = [], i = 0, score = 0, streak = 0, bestStreak = 0, correct = 0;
   var busy = false, deadline = 0, tick = null, match = null, mode = 'solo';
   var marks = [];   // one true/false per round, for the daily's share row
+  var riskArmed = false, riskRound = -1;   // -1 until spent, then the round it went on
 
   function el(id) { return document.getElementById(id); }
   function n(v) { return (Number(v) || 0).toLocaleString('en-GB'); }
@@ -19615,7 +19822,8 @@ window.renderAdminStats = renderAdminStats;
       var theirScore = mine ? m.opponent_score : m.initiator_score;
       var s = slot(m), cls = s === 0 ? 'turn' : s === 1 ? 'wait' : 'done';
       var right;
-      if (s === 0) right = '<button class="btn-mini blitz-go" data-play="' + esc(m.id) + '">Play</button>';
+      if (s === 0) right = '<button class="btn-mini blitz-go" data-play="' + esc(m.id) + '"' +
+        ' data-bv="' + esc(String(m.build_v || 1)) + '">Play</button>';
       else if (s === 1) right = '<span class="bl-tag wait">Waiting on them</span>';
       else {
         var verdict = m.winner_id == null ? 'Level' : (m.winner_id === me ? 'You won' : 'You lost');
@@ -19629,7 +19837,7 @@ window.renderAdminStats = renderAdminStats;
     }).join('');
 
     host.querySelectorAll('[data-play]').forEach(function (b) {
-      b.addEventListener('click', function (e) { e.stopPropagation(); startMatch(b.dataset.play); });
+      b.addEventListener('click', function (e) { e.stopPropagation(); startMatch(b.dataset.play, +b.dataset.bv || 1); });
     });
   }
 
@@ -19647,29 +19855,41 @@ window.renderAdminStats = renderAdminStats;
     var b = el('blitz-daily'), done = Blitz.dailyDone();
     if (!b) return;
     b.disabled = !!done;
-    b.textContent = done ? ('Today\u2019s Blitz \u2014 ' + n(done.score)) : 'Today\u2019s Blitz';
+    b.textContent = done ? ('Today\u2019s Ten \u2014 ' + n(done.score)) : 'Today\u2019s Ten';
   }
 
+  /* Solo is the same engine on a throwaway seed, so practice is the real game
+     rather than a simplified one — and it is the ONLY mode that gets the
+     personal kinds, because a question about your own ratings cannot be put to
+     two people. That turns solo from a warm-up into the mode about your crate. */
   async function startSolo() {
     match = null; mode = 'solo';
-    // Solo is the same engine on a throwaway seed, so practice is the real game
-    // rather than a simplified one.
-    begin(Math.floor(Math.random() * 2147483647));
+    begin(Math.floor(Math.random() * 2147483647), { personal: true });
   }
-  async function startMatch(id) {
-    var go = el('blitz-lobby');
+
+  /* `buildV` comes off the match row, not from this build. A match dealt before
+     the v2 kinds existed has to be replayed against the list it was dealt from,
+     or the second player to open it gets different questions from the first and
+     nothing anywhere says so.
+
+     It defaults to 1 rather than to BUILD_V on purpose: a database without the
+     build_v column returns undefined, and both players then land on v1
+     together, which is consistent. Defaulting to the newest would be consistent
+     too, but it would silently re-deal matches that were already half played. */
+  async function startMatch(id, buildV) {
     try {
       var seed = await Cloud.blitzStart(id);
       if (seed == null) { note('Could not start that one.'); return; }
       match = id; mode = 'match';
-      begin(Number(seed));
+      begin(Number(seed), { v: buildV || 1 });
     } catch (e) { note(String((e && e.message) || e)); }
   }
 
-  function begin(seed) {
-    qs = Blitz.build(seed);
+  function begin(seed, opts) {
+    qs = Blitz.build(seed, opts);
     if (!qs.length) { note('Could not build a round.'); return; }
     i = 0; score = 0; streak = 0; bestStreak = 0; correct = 0; busy = false; marks = [];
+    riskArmed = false; riskRound = -1;
     show('blitz-play');
     round();
   }
@@ -19712,6 +19932,29 @@ window.renderAdminStats = renderAdminStats;
     el('blitz-dots').innerHTML = qs.map(function (_, k) {
       return '<i class="' + (k < i ? 'done' : k === i ? 'now' : '') + '"></i>';
     }).join('');
+    paintRisk();
+  }
+
+  /* The chip prints the actual numbers for the round in front of you rather
+     than the rule in the abstract. "x2 / -450" at a three-streak and
+     "x2 / -100" at the start is the same rule, and only the first one tells
+     you why you are hesitating. */
+  function riskPenalty() { return Math.round(100 * Blitz.multFor(streak)); }
+  function paintRisk() {
+    var b = el('blitz-risk');
+    if (!b) return;
+    var spent = riskRound >= 0;
+    b.disabled = spent || busy;
+    b.classList.toggle('armed', riskArmed);
+    b.textContent = riskArmed ? '×2 LIVE'
+          : spent ? 'RISK R' + (riskRound + 1)
+          : 'RISK ×2 −' + n(riskPenalty());
+  }
+  function armRisk() {
+    if (busy || riskRound >= 0 || !qs[i]) return;
+    riskArmed = true; riskRound = i;
+    if (window.buzz) buzz('good');
+    paintRisk();
   }
 
   function startClock(secs) {
@@ -19752,21 +19995,36 @@ window.renderAdminStats = renderAdminStats;
     });
 
     marks.push(right);
+    /* The risk is settled before the streak moves, so the penalty is priced at
+       the multiplier you were standing on when you took it — not the one the
+       answer just gave or took away. */
+    var risked = riskArmed;
+    var f = el('blitz-float');
     if (right) {
       var mult = Blitz.multFor(streak);
       gained = Math.round((100 + Math.round(100 * left)) * mult);
+      if (risked) gained *= 2;
       score += gained; streak++; correct++;
       if (streak > bestStreak) bestStreak = streak;
-      var f = el('blitz-float');
-      f.textContent = '+' + n(gained);
+      f.textContent = '+' + n(gained) + (risked ? ' ×2' : '');
       f.className = 'bl-float in';
       setTimeout(function () { f.className = 'bl-float'; }, 700);
-      if (window.buzz) buzz(Blitz.multFor(streak) > mult ? 'big' : 'good');
-      if (window.burst && Blitz.multFor(streak) > mult) burst(btns[k], { count: 22, spread: 130 });
+      if (window.buzz) buzz(risked || Blitz.multFor(streak) > mult ? 'big' : 'good');
+      if (window.burst && (risked || Blitz.multFor(streak) > mult)) burst(btns[k], { count: risked ? 40 : 22, spread: 130 });
     } else {
+      if (risked) {
+        // Never below zero. A negative score is a number nobody can read as a
+        // position in a game, and it would break the share row besides.
+        var lost = Math.min(score, riskPenalty());
+        score -= lost;
+        f.textContent = '−' + n(lost);
+        f.className = 'bl-float in down';
+        setTimeout(function () { f.className = 'bl-float'; }, 700);
+      }
       streak = 0;
       if (window.buzz) buzz('bad');
     }
+    riskArmed = false;
     paintHud();
     setTimeout(function () { i++; round(); }, right ? 520 : 900);
   }
@@ -19786,7 +20044,7 @@ window.renderAdminStats = renderAdminStats;
       Blitz.saveDaily({ score: score, correct: correct, streak: bestStreak, marks: marks.slice() });
       var rec = Blitz.dailyDone();
       el('blitz-vs').innerHTML =
-        '<div class="bl-vs"><b>Today\u2019s Blitz</b><span>#' + rec.day + ' \u00b7 same ten for everybody</span></div>' +
+        '<div class="bl-vs"><b>Today\u2019s Ten</b><span>#' + rec.day + ' \u00b7 same ten for everybody</span></div>' +
         '<button class="btn-mini" id="blitz-share" style="margin-top:10px;">Copy result</button>';
       var shb = el('blitz-share');
       if (shb) shb.addEventListener('click', function () {
@@ -19800,7 +20058,7 @@ window.renderAdminStats = renderAdminStats;
       });
     }
     if (window.notePlay) notePlay('blitz');
-    if (window.Wallet && Wallet.awardGame) Wallet.awardGame('blitz', { reason: 'Album Blitz' });
+    if (window.Wallet && Wallet.awardGame) Wallet.awardGame('blitz', { reason: 'Cover Fire' });
     if (window.track) track('blitz_run', { mode: mode, score: score, correct: correct });
 
     if (mode !== 'match' || !match) return;
@@ -19810,6 +20068,16 @@ window.renderAdminStats = renderAdminStats;
       var me = meId(), mine = m.initiator_id === me;
       var theirs = mine ? m.opponent_score : m.initiator_score;
       var foeId = mine ? m.opponent_id : m.initiator_id;
+      /* blitz_submit clamps, and a clamp is a SILENT truncation — a 200 and a
+         smaller number. If the ceiling there is still 3,600 while RISK can reach
+         4,200, a great run is quietly filed as a worse one and the head to head
+         is decided on the wrong figure. So compare what came back with what went
+         up and report the gap rather than accepting it. */
+      var stored = mine ? m.initiator_score : m.opponent_score;
+      if (stored != null && stored < score && window.reportIssue) {
+        reportIssue('blitz_submit clamped ' + score + ' to ' + stored +
+                    ' — server ceiling is behind Blitz.MAX_SCORE (' + Blitz.MAX_SCORE + ')');
+      }
       if (theirs == null) {
         el('blitz-vs').innerHTML = '<div class="bl-vs wait">Sent. They have not played yet — you will be told when they do.</div>';
         return;
@@ -19827,7 +20095,7 @@ window.renderAdminStats = renderAdminStats;
         var rb = el('blitz-rematch');
         if (rb) rb.addEventListener('click', async function () {
           rb.disabled = true; rb.textContent = '…';
-          try { var nm = await Cloud.blitzCreate(foeId); if (nm) { startMatch(nm.id); return; } } catch (e) {}
+          try { var nm = await Cloud.blitzCreate(foeId); if (nm) { startMatch(nm.id, nm.build_v); return; } } catch (e) {}
           rb.disabled = false; rb.textContent = 'Rematch';
         });
       }
@@ -19865,7 +20133,7 @@ window.renderAdminStats = renderAdminStats;
         s.textContent = '…';
         try {
           var m = await Cloud.blitzCreate(row.dataset.chal);
-          if (m) { host.style.display = 'none'; startMatch(m.id); return; }
+          if (m) { host.style.display = 'none'; startMatch(m.id, m.build_v); return; }
         } catch (e) {}
         s.textContent = 'Failed'; delete row.dataset.busy;
       });
@@ -19877,6 +20145,7 @@ window.renderAdminStats = renderAdminStats;
   el('blitz-solo').addEventListener('click', startSolo);
   el('blitz-challenge').addEventListener('click', openPick);
   el('blitz-daily').addEventListener('click', startDaily);
+  el('blitz-risk').addEventListener('click', armRisk);
   el('blitz-again').addEventListener('click', function () {
     if (mode === 'solo') { startSolo(); return; }
     show('blitz-lobby'); paintDaily(); paintLobby();
@@ -19886,6 +20155,9 @@ window.renderAdminStats = renderAdminStats;
   document.addEventListener('keydown', function (e) {
     if (!modal.classList.contains('open')) return;
     if (el('blitz-play').style.display === 'none') return;
+    // R for the risk, because a game about speed should not need the mouse for
+    // the one decision in it either.
+    if (e.key === 'r' || e.key === 'R') { e.preventDefault(); armRisk(); return; }
     var k = parseInt(e.key, 10);
     if (k >= 1 && k <= 4) { e.preventDefault(); answer(k - 1); }
   });
