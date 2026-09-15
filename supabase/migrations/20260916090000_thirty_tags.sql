@@ -121,13 +121,22 @@ end $$;
 
 -- Nobody was holding a tag that no longer exists. This finds anyone who is,
 -- which would mean a key was dropped rather than renamed.
+--
+-- `unnest(...) as u(tag)` and not `unnest(...) t`: with a bare alias on a
+-- single-column function Postgres can read `t` as a whole-row reference rather
+-- than the column, refuse to compare a record to text, and take the entire
+-- migration down with it — which is exactly what the first version of this
+-- file did. The insert above had already succeeded and was rolled back with
+-- it, so the symptom was a script that reported an error and changed nothing.
+-- **Name the column.**
 do $$
 declare v_orphans integer;
 begin
-  select count(*) into v_orphans from public.profiles p
+  select count(*) into v_orphans
+    from public.profiles p
    where exists (
-     select 1 from unnest(coalesce(p.owned_tags, '{}'::text[])) t
-      where t not in (select key from public.shop_items where kind = 'tag'));
+     select 1 from unnest(coalesce(p.owned_tags, '{}'::text[])) as u(tag)
+      where u.tag not in (select s.key from public.shop_items s where s.kind = 'tag'));
   if v_orphans > 0 then
     raise warning '% account(s) hold a tag with no shop_items row — they will render as a blank chip', v_orphans;
   end if;
