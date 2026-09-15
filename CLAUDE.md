@@ -169,6 +169,91 @@ Longest held, Your rating, Grown on you. Both helpers are wrapped in try/catch a
 back to returning nothing and to the original order — they are ornaments on a card, and an
 ornament that throws would take the whole shelf down with it.
 
+### Taste match — the one number that is about two people
+
+Everything else on a profile describes one person. This is the only thing in the app
+that describes a pair, and it is the thing a rating site can compute that a streaming
+service cannot: two libraries of scores out of 100 over the same records.
+
+**Overlap is not agreement**, which is why this is not "artists you both like". Two
+people who both own Blonde have told you nothing. Two people who scored it 94 and 51
+have told you everything. So the match is about the distance between the numbers and
+nothing else.
+
+**The measure, and why it is not `100 − average gap`.** That arithmetic flatters
+everybody: ratings cluster in the 60s to 90s, so two strangers already "agree" to about
+85% and the number means nothing at 88. Instead the gap is measured against what
+coincidence would have produced — `chanceBaseline` is the mean distance between your
+scores and theirs *paired at random*, the gap two people with exactly your two rating
+habits would get by luck:
+
+```
+edge  = 1 − (actual mean gap / chance baseline)
+match = sqrt(edge)
+```
+
+100% is identical opinions, 0% is no better than coincidence, and both are true of
+`edge` before the square root. **The square root is presentation and is admitted as
+such in the code**: `edge` alone is unusable as a gauge, because two people who
+genuinely share a taste still land near 0.3, so a raw scale reports nearly every real
+pair between 0 and 30 and the feature reads as broken. The curve spreads the range
+people actually occupy and moves neither anchor. Verified against synthetic libraries:
+identical 100, near-twin 95, close 78, similar 43, unrelated 0, inverted 0.
+
+Two corrections that matter more than they look:
+
+- **`FLOOR` (14) stops the denominator collapsing.** Somebody who scores everything
+  between 70 and 90 has a tiny chance baseline, and dividing by it would punish a
+  narrow rater for being consistent.
+- **`chanceBaseline` strides rather than samples.** A match that came out 74% and then
+  71% on the next render would be read as a bug, and that reading would be correct.
+
+**Five shared records minimum.** Four is a coincidence with a percentage printed on it.
+Below the floor `compare` returns `enough: false` and every caller says how many are
+missing instead of inventing confidence. Above it, the chip prints the shared count
+beside the percentage and greys out below twelve — 91% on six is a rumour and 74% on
+ninety is a fact, and a chip that hides which one it is teaches people to trust the
+wrong number.
+
+**The percentage is never alone.** A number with no evidence under it is a horoscope.
+Under it: the records you are furthest apart on, the ones you are dead on, and the ones
+they rate highly that you have never heard — which go straight to the **shortlist**,
+the same place "Not heard" goes from a Crate card, carrying *why* ("charlie gave it
+94"). That last list is the point of the whole block: the reason to follow somebody
+whose taste is not yours is the records you would never otherwise reach.
+
+One bug found while building it: the first version only printed disagreements of ten or
+more, so a **well-matched pair got a percentage with no evidence under it at all** —
+exactly the horoscope the design was meant to avoid. The widest gap now always renders;
+the floor only trims the second and third rows.
+
+Where it appears, all from one primitive:
+
+| surface | source | cost |
+|---|---|---|
+| somebody's profile | the `ratings` rows already fetched to draw their grid | none |
+| People, ordered by it | `Cloud.fetchScoresByUsers` | one paged trip |
+| username search result | same | one trip |
+| the poster on a Crate card | same | one trip per page of feed |
+| Groove members | same | one trip |
+
+A 45 from somebody you agree with nine times in ten is different information from a 45
+by a stranger, and a Crate card had no way of saying so. Grooves have promised "see
+everyone's taste" since they shipped and listed names.
+
+**Privacy.** The profile block computes from `fetchUserRatings`, so it inherits that
+query's RLS: somebody with private rankings returns nothing here for the same reason
+their grid is empty. The batched path reads `crate_feed`, which is public — posting is
+public and the spread already renders every score — so it is gated in the client on
+`ratings_visibility === 'public'`. Scores being public one at a time is not the same as
+consenting to a portrait assembled out of them.
+
+**`fetchAlbumScores` had the 1000-row bug** and it is fixed in the same pass. 120
+albums is 120 rows only if every record has exactly one rating; at nine raters each it
+is over the PostgREST cap, and the cap is not an error — it is a short array and a 200.
+The spread would simply have stopped showing people. Same failure shape as
+*A profile showed twelve albums out of forty*, one section down, and the same fix.
+
 ### What was deliberately not done
 
 - **No "how many still fit" counter in the Crate**, and no second currency. The Disc

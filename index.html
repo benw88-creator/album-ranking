@@ -3635,6 +3635,66 @@ body.entering-done #artist-hero {
   .stg-tier { font-size: 23px; }
   .stg-deep { margin-left: 0; }
 }
+/* Taste match — the same card shape as Standing because they are the same
+   kind of thing, an argument rather than a count. Cyan rather than gold:
+   Standing is about you and this one is about a pair, and two gold cards
+   stacked would read as one block. */
+.tm-card {
+  border: 1px solid var(--border-strong); border-radius: 16px;
+  background: linear-gradient(150deg, var(--c-cyan-dim), var(--surface) 62%);
+  padding: 18px 20px; margin-top: 10px;
+}
+.tm-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.tm-pct {
+  font-family: var(--font-display); font-size: 34px; font-weight: 800;
+  letter-spacing: -0.03em; color: var(--c-cyan); line-height: 1;
+}
+.tm-shared { font: 12px/1 var(--font-mono); color: var(--text-dim); margin-left: auto; }
+.tm-shared b { color: var(--text); font-size: 15px; }
+.tm-blurb { font-size: 13.5px; color: var(--text-dim); margin-top: 8px; }
+.tm-bar { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; margin: 14px 0 0; }
+.tm-bar i { display: block; height: 100%; background: var(--c-cyan); border-radius: 999px; transition: width 0.5s var(--ease); }
+/* Every row of evidence is a record with two numbers on it. The gap is the
+   point, so it is the only coloured thing in the row. */
+.tm-sub {
+  font: 11px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-faint); border-top: 1px solid var(--border);
+  margin-top: 16px; padding-top: 12px;
+}
+.tm-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 13px; }
+.tm-row img { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
+.tm-row .tm-nm { flex: 1; min-width: 0; }
+.tm-row .tm-nm b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-row .tm-nm span { display: block; color: var(--text-faint); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Their score, in the same colour the rest of the app gives that number. It
+   replaced "they gave it 99", which spent forty pixels on words and left a
+   phone about nine characters for the album name. */
+.tm-score { font: 700 15px/1 var(--font-mono); flex-shrink: 0; min-width: 24px; text-align: right; }
+.tm-nums { font: 12px/1.35 var(--font-mono); color: var(--text-dim); text-align: right; flex-shrink: 0; }
+.tm-nums b { color: var(--text); }
+.tm-d { font: 700 13px/1 var(--font-mono); flex-shrink: 0; min-width: 34px; text-align: right; }
+.tm-d.up { color: var(--green, #4fb477); }
+.tm-d.down { color: var(--red); }
+.tm-add { flex-shrink: 0; }
+.tm-note { font-size: 12px; line-height: 1.5; color: var(--text-faint); margin-top: 10px; }
+/* The compact form, for a row in a list: "78% · 31". It has to survive being
+   put next to a username at 360px, so it never wraps and never grows. */
+.tm-chip {
+  font: 700 11px/1 var(--font-mono); letter-spacing: 0.02em;
+  padding: 4px 7px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;
+  background: var(--c-cyan-dim); color: var(--c-cyan); border: 1px solid transparent;
+}
+.tm-chip.thin { background: var(--surface-3); color: var(--text-faint); }
+.tm-chip span { opacity: 0.65; font-weight: 400; }
+@media (max-width: 520px) {
+  .tm-card { padding: 16px 14px; }
+  .tm-pct { font-size: 29px; }
+  .tm-shared { margin-left: 0; }
+  .tm-row { gap: 8px; }
+  .tm-row img { width: 30px; height: 30px; }
+  .tm-nums { font-size: 11px; }
+  .tm-add { padding: 5px 8px; font-size: 11px; }
+}
 .done-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 10px; margin-top: 10px; }
 .done-tile {
   background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px;
@@ -6636,6 +6696,180 @@ window.removeSong = removeSong;
 })();
 
 /* ================================================================
+   TASTE MATCH — how two people's opinions line up, and where they don't.
+
+   Everything else on a profile is about one person. This is the only number
+   in the app that is about a pair, and it is the one thing a rating site can
+   compute that a streaming service cannot: two libraries of scores out of 100
+   over the same records.
+
+   WHY NOT "% OF ARTISTS YOU BOTH LIKE"
+
+   Because overlap is not agreement. Two people who both own Blonde tell you
+   nothing; two people who scored it 94 and 51 tell you everything. This app
+   already thinks in numbers, so the match is about the *distance between the
+   numbers* and nothing else.
+
+   THE MEASURE, AND WHY IT IS NOT JUST 100 - AVERAGE GAP
+
+   The naive version — 100 minus the mean gap — flatters everybody. Ratings
+   cluster in the 60s to 90s, so two people picked at random already "agree"
+   to about 85% by that arithmetic, and a number that reads 85 for strangers
+   is a number that means nothing at 88.
+
+   So the gap is measured against what coincidence would have produced. For
+   the records you share, `chanceBaseline` is the mean distance between your
+   scores and theirs *paired at random* — the gap two people with exactly your
+   two rating habits would get by luck. Then:
+
+       edge  = 1 - (your actual mean gap / that baseline)
+       match = sqrt(edge)
+
+   100% is identical opinions and 0% is no better than coincidence, and both of
+   those are true of `edge` on its own. The square root is there because
+   `edge` is unusable as a gauge without it: two people who genuinely share a
+   taste in music still land around 0.3, so a raw scale would report almost
+   every real pair between 0 and 30 and the feature would read as broken. The
+   curve spreads the range people actually occupy across the dial while moving
+   neither end. Both anchors still mean exactly what they say — which is why
+   these numbers sit lower than the ones on sites that count how many records
+   you both own.
+
+   One correction on top: somebody who scores everything between 70 and 90 has
+   a small baseline, and dividing by it would punish a narrow rater for being
+   consistent. `FLOOR` stops the denominator collapsing.
+
+   The sampling in `chanceBaseline` strides rather than randomises, on purpose.
+   A match that came out 74% then 71% on the next render would be read as a
+   bug, and it would be right to read it that way.
+
+   MINIMUM FIVE RECORDS. Four shared albums is a coincidence with a percentage
+   printed on it. Below the floor this returns `enough: false` and the callers
+   say how many are missing instead of inventing confidence.
+
+   The percentage is deliberately never the whole block. What makes it worth
+   looking at is the evidence underneath: the record you are furthest apart on
+   is an argument, and the ones they rate highly that you have never heard are
+   the reason to follow somebody whose taste is not yours.
+   ================================================================ */
+(function () {
+  var MIN_SHARED = 5;    // below this it is a coincidence, not a match
+  var FLOOR      = 14;   // the denominator cannot collapse on a narrow rater
+  var BASE_CAP   = 120;  // cross-pairs are O(n*m); stride down past this
+  var SPLIT_MIN  = 10;   // below this a gap is not worth a second and third row
+  var AGREE_MAX  = 4;    // and one smaller than this is agreement
+  var LOVE_MIN   = 85;   // what counts as "they rate this highly"
+
+  /* Accepts either shape: the rating objects held in localStorage and the
+     `ratings` table ({id: {score, name, ...}}) or the flat id->score map that
+     comes back from crate_feed. Anything unscored is not an opinion. */
+  function toScores(obj) {
+    var out = {};
+    if (!obj) return out;
+    Object.keys(obj).forEach(function (k) {
+      var v = obj[k];
+      var s = (v && typeof v === 'object') ? v.score : v;
+      if (typeof s === 'number' && s > 0) out[k] = s;
+    });
+    return out;
+  }
+
+  // Deterministic thinning. Random sampling would make the same two libraries
+  // report a different percentage on every render.
+  function stride(arr, k) {
+    if (arr.length <= k) return arr;
+    var out = [], step = arr.length / k;
+    for (var i = 0; i < k; i++) out.push(arr[Math.floor(i * step)]);
+    return out;
+  }
+
+  // The gap two people with these two rating habits would get by luck: the
+  // mean distance between every one of your scores and every one of theirs.
+  function chanceBaseline(a, b) {
+    var A = stride(a, BASE_CAP), B = stride(b, BASE_CAP);
+    if (!A.length || !B.length) return 0;
+    var sum = 0;
+    for (var i = 0; i < A.length; i++) {
+      for (var j = 0; j < B.length; j++) sum += Math.abs(A[i] - B[j]);
+    }
+    return sum / (A.length * B.length);
+  }
+
+  /* The band names carry the whole tone of the feature. A low match is not a
+     failure — somebody who hears records differently from you is the most
+     useful person to follow — so none of these read as a score out of ten. */
+  function band(pct) {
+    if (pct >= 80) return 'You are hard to tell apart.';
+    if (pct >= 60) return 'The same broad taste, with real arguments in it.';
+    if (pct >= 40) return 'You own a lot of the same records and rate them differently.';
+    if (pct >= 20) return 'Different ears. That is the useful kind of person to follow.';
+    return 'You disagree about nearly everything you both know.';
+  }
+
+  /* mine / theirs: either rating-object maps or id->score maps.
+     meta: id -> {name, artist, art}, for naming the records in the evidence.
+           Falls back to whatever `theirs` carries when it holds full objects,
+           so a profile needs to pass nothing. */
+  function compare(mine, theirs, meta) {
+    var A = toScores(mine), B = toScores(theirs);
+    meta = meta || {};
+    function nameOf(id) {
+      var m = meta[id] || (theirs && theirs[id]) || (mine && mine[id]) || {};
+      return { id: id, name: m.name || '', artist: m.artist || '', art: m.art || '' };
+    }
+
+    var ids = Object.keys(B).filter(function (id) { return A[id] != null; });
+    var shared = ids.length;
+    if (shared < MIN_SHARED) {
+      return { enough: false, shared: shared, need: MIN_SHARED - shared, pct: null };
+    }
+
+    var pairs = ids.map(function (id) {
+      var r = nameOf(id);
+      r.you = A[id]; r.them = B[id]; r.d = A[id] - B[id];
+      return r;
+    });
+
+    var mad = pairs.reduce(function (n, p) { return n + Math.abs(p.d); }, 0) / shared;
+    var denom = Math.max(chanceBaseline(pairs.map(function (p) { return p.you; }),
+                                        pairs.map(function (p) { return p.them; })), FLOOR);
+    // sqrt, for the reason in the header: the honest ratio puts every real
+    // pair in the bottom third of the dial.
+    var edge = Math.max(0, Math.min(1, 1 - mad / denom));
+    var pct = Math.round(100 * Math.sqrt(edge));
+
+    /* The widest gaps, and there is always at least one. The first version
+       only showed disagreements of ten or more, which meant a well-matched
+       pair got a percentage with no evidence under it at all — the exact
+       horoscope this block is not supposed to be. "Your biggest argument is
+       six points" is a real thing to learn about two people, so the floor
+       only trims the second and third rows, never the headline one. */
+    var ranked = pairs.slice().sort(function (x, y) { return Math.abs(y.d) - Math.abs(x.d); });
+    var splits = ranked.slice(0, 3).filter(function (p) { return Math.abs(p.d) >= SPLIT_MIN; });
+    if (!splits.length && ranked.length) splits = ranked.slice(0, 1);
+
+    // Agreement is only interesting when you both rate it highly. Two people
+    // agreeing that something is a 41 is not common ground worth printing.
+    var agreed = pairs.filter(function (p) { return Math.abs(p.d) <= AGREE_MAX; })
+      .sort(function (x, y) { return Math.min(y.you, y.them) - Math.min(x.you, x.them); })
+      .slice(0, 2);
+
+    // The discovery payoff, and the reason this is not just a stat: records
+    // they rate highly that you have never had an opinion about.
+    var unheard = Object.keys(B).filter(function (id) { return A[id] == null && B[id] >= LOVE_MIN; })
+      .sort(function (x, y) { return B[y] - B[x]; }).slice(0, 6)
+      .map(function (id) { var r = nameOf(id); r.them = B[id]; return r; });
+
+    return {
+      enough: true, shared: shared, pct: pct, gap: Math.round(mad * 10) / 10,
+      blurb: band(pct), splits: splits, agreed: agreed, unheard: unheard
+    };
+  }
+
+  window.TasteMatch = { compare: compare, MIN_SHARED: MIN_SHARED };
+})();
+
+/* ================================================================
    5. RECOMMENDATIONS
    ================================================================ */
 let _recsDirty = true;
@@ -8754,7 +8988,7 @@ const Cloud=(function(){
   async function unfollow(targetId){if(!isOn())return{error:'not logged in'};try{const res=await sb.from('follows').delete().eq('follower_id',user.id).eq('following_id',targetId);return res.error?{error:res.error.message}:{ok:true};}catch(e){return{error:String(e&&e.message||e)};}}
   async function isFollowing(targetId){if(!isOn())return false;try{const res=await sb.from('follows').select('following_id').eq('follower_id',user.id).eq('following_id',targetId).maybeSingle();return!!(res.data);}catch(e){return false;}}
   async function followCounts(uid){if(!sb)return{followers:0,following:0};try{const a=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',uid);const b=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',uid);return{followers:a.count||0,following:b.count||0};}catch(e){return{followers:0,following:0};}}
-  async function followingList(uid){if(!sb)return[];try{const f=await sb.from('follows').select('following_id').eq('follower_id',uid);const ids=(f.data||[]).map(function(r){return r.following_id;});if(!ids.length)return[];const p=await sb.from('profiles').select('id,username,avatar_url,bio,top3').in('id',ids);return p.data||[];}catch(e){return[];}}
+  async function followingList(uid){if(!sb)return[];try{const f=await sb.from('follows').select('following_id').eq('follower_id',uid);const ids=(f.data||[]).map(function(r){return r.following_id;});if(!ids.length)return[];const p=await sb.from('profiles').select('id,username,avatar_url,bio,top3,ratings_visibility').in('id',ids);return p.data||[];}catch(e){return[];}}
   async function followersList(uid){if(!sb)return[];try{const f=await sb.from('follows').select('follower_id').eq('following_id',uid);const ids=(f.data||[]).map(function(r){return r.follower_id;});if(!ids.length)return[];const p=await sb.from('profiles').select('id,username,avatar_url,bio,top3').in('id',ids);return p.data||[];}catch(e){return[];}}
   /* Paged, because PostgREST caps a response at 1000 rows by default and says
      nothing about it — you get a 200 and a short array. Albums and songs share
@@ -8827,16 +9061,61 @@ const Cloud=(function(){
      visitor should still see that a record divides people. */
   async function fetchAlbumScores(albumIds){
     if(!sb||!albumIds||!albumIds.length)return{};
+    const out={},PAGE=1000;
     try{
-      const res=await sb.from('crate_feed').select('album_id,user_id,score').in('album_id',albumIds.slice(0,120));
-      const out={};
-      (res.data||[]).forEach(function(r){
-        if(r.score==null)return;
-        if(window.isBlocked&&isBlocked(r.user_id))return;
-        (out[r.album_id]=out[r.album_id]||[]).push({u:r.user_id,s:r.score});
-      });
+      /* Paged. 120 albums is 120 rows only if every record has exactly one
+         rating; at nine raters each it is over the PostgREST cap, and the
+         cap is not an error — it is a short array and a 200. The spread
+         would simply have stopped showing people, which is the failure
+         shape ..._twelve-albums-out-of-forty was about. */
+      for(let from=0;;from+=PAGE){
+        const res=await sb.from('crate_feed').select('album_id,user_id,score')
+          .in('album_id',albumIds.slice(0,120)).range(from,from+PAGE-1);
+        if(res.error)break;
+        const rows=res.data||[];
+        rows.forEach(function(r){
+          if(r.score==null)return;
+          if(window.isBlocked&&isBlocked(r.user_id))return;
+          (out[r.album_id]=out[r.album_id]||[]).push({u:r.user_id,s:r.score});
+        });
+        if(rows.length<PAGE||from>20000)break;
+      }
       return out;
-    }catch(e){return{};}
+    }catch(e){return out;}
+  }
+
+  /* Every album score for a set of people, in one paged round trip, for Taste
+     Match. crate_feed is a complete mirror of album ratings rather than a
+     recent slice — saveAlbum posts every one and postToFeed upserts on
+     (user, album) — so a match computed from it is the whole library.
+
+     It carries `vis` as well. Somebody who set their rankings to private has
+     said they do not want their library read, and a taste match is a reading
+     of it: the scores are public in crate_feed because posting is public, but
+     aggregating them into a portrait of somebody who opted out is not what
+     that setting means. Callers show nothing unless this says 'public'. */
+  async function fetchScoresByUsers(userIds){
+    const out={scores:{},meta:{},vis:{}};
+    if(!sb||!userIds||!userIds.length)return out;
+    const ids=userIds.slice(0,60),PAGE=1000;
+    try{
+      for(let from=0;;from+=PAGE){
+        const res=await sb.from('crate_feed')
+          .select('user_id,album_id,score,album_name,album_artist,album_art')
+          .in('user_id',ids).range(from,from+PAGE-1);
+        if(res.error)break;
+        const rows=res.data||[];
+        rows.forEach(function(r){
+          if(r.score==null)return;
+          (out.scores[r.user_id]=out.scores[r.user_id]||{})[r.album_id]=r.score;
+          if(!out.meta[r.album_id])out.meta[r.album_id]={id:r.album_id,name:r.album_name||'',artist:r.album_artist||'',art:r.album_art||''};
+        });
+        if(rows.length<PAGE||from>40000)break;
+      }
+      const p=await sb.from('profiles').select('id,ratings_visibility').in('id',ids);
+      (p.data||[]).forEach(function(x){out.vis[x.id]=x.ratings_visibility||'public';});
+    }catch(e){}
+    return out;
   }
   async function fetchFeed(opts){
     if(!sb)return[];
@@ -9016,7 +9295,8 @@ const Cloud=(function(){
          submitLeaderboardTime:submitLeaderboardTime,fetchLeaderboard:fetchLeaderboard,fetchMyBestTime:fetchMyBestTime,
          syncRating:syncRating,deleteRating:deleteRating,setRatingsVisibility:setRatingsVisibility,
          postToFeed:postToFeed,removeFromFeed:removeFromFeed,fetchFeed:fetchFeed,fetchTrending:fetchTrending,
-         toggleLike:toggleLike,fetchLikes:fetchLikes,fetchAlbumScores:fetchAlbumScores,addComment:addComment,fetchComments:fetchComments,
+         toggleLike:toggleLike,fetchLikes:fetchLikes,fetchAlbumScores:fetchAlbumScores,
+         fetchScoresByUsers:fetchScoresByUsers,addComment:addComment,fetchComments:fetchComments,
          fetchAlbumPageRatings:fetchAlbumPageRatings};
 })();
 window.Cloud=Cloud;
@@ -9082,6 +9362,65 @@ async function renderProfile(){
   await drawProfile(host,prof,true);
 }
 
+/* Taste match, the block that only exists on somebody else's profile.
+
+   It is computed from `albumsObj` — the ratings already fetched to draw their
+   rankings grid — so it costs no extra round trip and, more importantly, it
+   inherits that query's RLS. Somebody whose rankings are private returns
+   nothing here for the same reason their grid is empty, rather than being
+   compared behind their back through crate_feed, which is public.
+
+   The percentage is never alone. A number with no evidence under it is a
+   horoscope, and the evidence is the part worth reading: the record you are
+   furthest apart on is an argument to have, and the ones they rate highly
+   that you have never heard are the reason following somebody you disagree
+   with is worth doing. Those go straight to the shortlist, which is where
+   "not heard" already goes from the Crate. */
+function tasteMatchHtml(tm,uname){
+  if(!tm)return'';
+  const title='<div class="prof-section-title" style="margin-top:26px;">Taste match</div>';
+  if(!tm.enough){
+    // Say what is missing rather than printing a percentage off four records.
+    return title+'<div class="tm-card"><div class="tm-blurb">'+
+      (tm.shared
+        ? 'Only <b>'+tm.shared+'</b> record'+(tm.shared===1?'':'s')+' in common so far. Rate <b>'+tm.need+
+          '</b> more of what '+esc(uname)+' has rated and this fills in.'
+        : 'Nothing in common yet — rate some of the records below and this fills in.')+
+      '</div></div>';
+  }
+  function row(r,right){
+    return'<div class="tm-row">'+
+      '<img src="'+esc(r.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+      '<div class="tm-nm"><b>'+esc(r.name||'Unknown')+'</b><span>'+esc(r.artist||'')+'</span></div>'+
+      right+'</div>';
+  }
+  function pair(r){
+    return row(r,'<div class="tm-nums">you <b>'+r.you+'</b><br>them <b>'+r.them+'</b></div>'+
+      '<div class="tm-d '+(r.d>0?'up':'down')+'">'+(r.d>0?'+':'')+r.d+'</div>');
+  }
+  let h=title+'<div class="tm-card">'+
+    '<div class="tm-top"><div class="tm-pct">'+tm.pct+'%</div>'+
+      '<div class="tm-shared"><b>'+tm.shared+'</b> records in common</div></div>'+
+    '<div class="tm-blurb">'+esc(tm.blurb)+'</div>'+
+    '<div class="tm-bar"><i style="width:'+tm.pct+'%"></i></div>';
+  if(tm.splits.length)
+    h+='<div class="tm-sub">Furthest apart</div>'+tm.splits.map(pair).join('');
+  if(tm.agreed.length)
+    h+='<div class="tm-sub">Dead on</div>'+tm.agreed.map(pair).join('');
+  if(tm.unheard.length)
+    h+='<div class="tm-sub">They rate these highly — you haven’t heard them</div>'+
+      tm.unheard.map(function(r){
+        return row(r,'<div class="tm-score" style="color:'+albumColor(r.them)+'">'+r.them+'</div>'+
+          '<button class="btn-mini tm-add" data-tmadd="'+esc(r.id)+'">'+
+          (window.shortlistHas&&shortlistHas(r.id)?'Shortlisted':'+ Shortlist')+'</button>');
+      }).join('');
+  h+='<div class="tm-note">100% is identical opinions. 0% is no closer than two people '+
+     'picked at random who rate the way you two do — which is why these numbers sit '+
+     'lower than the ones on sites that count how many records you both own.</div>'+
+    '</div>';
+  return h;
+}
+
 async function drawProfile(host,prof,isOwner){
   let albumsObj,songsObj;
   if(isOwner){albumsObj=loadAlbums();songsObj=loadSongs();}
@@ -9106,6 +9445,11 @@ async function drawProfile(host,prof,isOwner){
   const following=(!isOwner&&me)?await Cloud.isFollowing(prof.id):false;
   const badges=computeBadges(prof,nAlbums,isOwner);
   const lists=await Cloud.fetchLists(prof.id);
+  /* Against your own crate, not the server's copy of it: local is the newest
+     and this is the one screen where the two could differ by a rating you
+     made thirty seconds ago. */
+  const taste=(!isOwner&&me&&window.TasteMatch&&nAlbums)
+    ? TasteMatch.compare(loadAlbums(),albumsObj) : null;
 
   function albumSlot(t,i){if(t)return'<div class="top3-slot" data-slot="'+i+'"><img src="'+esc(t.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div class="rank">#'+(i+1)+'</div></div>';return'<div class="top3-slot" data-slot="'+i+'">'+(isOwner?'+ pick #'+(i+1):'\u2014')+'</div>';}
   const slots=[0,1,2].map(function(i){return albumSlot(top3[i],i);}).join('');
@@ -9283,6 +9627,7 @@ async function drawProfile(host,prof,isOwner){
       '</div>'+actionBtn+
     '</div>'+
     doneHtml+
+    tasteMatchHtml(taste,prof.username||'they')+
     '<div class="prof-section-title">Top 3 albums</div>'+
     '<div class="top3" id="prof-top3">'+slots+'</div>'+
     ((topNow.length||isOwner)?'<div class="prof-section-title">Top 5 songs right now</div>'+songRows(topNow,isOwner?'Pick your current rotation in Edit profile.':'Nothing here yet.'):'')+
@@ -9296,6 +9641,18 @@ async function drawProfile(host,prof,isOwner){
           '<div class="reco-note">'+esc(prof.username)+'\u2019s rankings are friends-only \u2014 you both need to follow each other.</div>':
           '<div class="reco-note">No rankings visible yet \u2014 '+esc(prof.username)+' may not have synced their ratings. Ask them to log out and back in.</div>')):'');
 
+  if(taste&&taste.enough&&taste.unheard.length){
+    const byId={};taste.unheard.forEach(function(r){byId[r.id]=r;});
+    host.querySelectorAll('[data-tmadd]').forEach(function(b){b.addEventListener('click',function(ev){
+      ev.stopPropagation();
+      const r=byId[b.dataset.tmadd];if(!r||b.disabled)return;
+      // The reason is kept with it. A shortlist of bare covers is a list you
+      // stop trusting; "Ben gave it 94" is why it is there.
+      shortlistAdd(r,esc(prof.username||'someone')+' gave it '+r.them);
+      b.textContent='Shortlisted';b.disabled=true;
+      if(window.buzz)buzz('good');
+    });});
+  }
   const sf=document.getElementById('stat-followers');if(sf)sf.addEventListener('click',function(){openFollowModal(prof.id,'followers',prof.username);});
   const sg=document.getElementById('stat-following');if(sg)sg.addEventListener('click',function(){openFollowModal(prof.id,'following',prof.username);});
   host.querySelectorAll('.list-card').forEach(function(el){el.addEventListener('click',function(){const l=lists.find(function(x){return x.id===el.dataset.list;});if(l)openListView(l,isOwner);});});
@@ -9408,10 +9765,52 @@ async function renderPeople(){
   // behind a notice, which is what a block is supposed to feel like.
   const list=(await Cloud.followingList(me.id)).filter(function(p){return !isBlocked(p.id);});
   if(!list.length){fhost.innerHTML='<div class="reco-note">You\u2019re not following anyone yet. Find someone by username above.</div>';return;}
-  fhost.innerHTML=list.map(function(p){return personRow(p);}).join('');
+  /* Ordered by how much you agree with them, which is the only ordering this
+     list could have that means anything — the alternative is whatever order
+     Postgres felt like. People with too little overlap to measure go last
+     rather than to the top on a zero they did not earn. */
+  const chips=await tasteFor(list.map(function(p){return p.id;}));
+  list.sort(function(a,b){
+    const A=chips[a.id],B=chips[b.id];
+    if(A&&B)return B.pct-A.pct;
+    if(A)return -1;
+    if(B)return 1;
+    return String(a.username||'').localeCompare(String(b.username||''));
+  });
+  fhost.innerHTML=(Object.keys(chips).length?'<div class="reco-note" style="margin-bottom:8px;">Ordered by taste match \u2014 the percentage, then how many records it is based on.</div>':'')+
+    list.map(function(p){return personRow(p,chips[p.id]);}).join('');
   wirePersonRows(fhost);
 }
-function personRow(p){return'<div class="ptop-row" data-uid="'+esc(p.id)+'"><img src="'+esc(avatarSrc(p.avatar_url))+'" alt=""><div style="flex:1;"><div class="nm">'+esc(p.username||'user')+'</div>'+(p.bio?'<div class="ar">'+esc(p.bio.slice(0,60))+'</div>':'')+' </div><span style="color:var(--text-faint);font-size:18px;">\u2192</span></div>';}
+/* The compact taste match, for a row in a list. It prints the shared count
+   next to the percentage and greys out below a dozen records, because 91% on
+   six is a rumour and 74% on ninety is a fact — and a chip that hides which
+   one it is teaches people to trust the wrong number. */
+function tasteChip(tm){
+  if(!tm||!tm.enough)return'';
+  return'<span class="tm-chip'+(tm.shared<12?' thin':'')+'" title="'+tm.pct+'% taste match across '+
+    tm.shared+' records you have both rated">'+tm.pct+'%<span> \u00b7 '+tm.shared+'</span></span>';
+}
+window.tasteChip=tasteChip;
+/* Taste match for a list of people in one round trip, or {} when it cannot be
+   had. Never throws and never blocks the list: a row with no chip is a row. */
+async function tasteFor(ids){
+  const out={};
+  try{
+    if(!ids.length||!window.TasteMatch||!window.Cloud||!Cloud.fetchScoresByUsers)return out;
+    const bulk=await Cloud.fetchScoresByUsers(ids);
+    const mineNow=loadAlbums();
+    ids.forEach(function(id){
+      // Rankings set to private means "do not read my library", and a taste
+      // match is a reading of it even though crate_feed would answer.
+      if((bulk.vis[id]||'public')!=='public')return;
+      const tm=TasteMatch.compare(mineNow,bulk.scores[id]||{},bulk.meta);
+      if(tm.enough)out[id]=tm;
+    });
+  }catch(e){}
+  return out;
+}
+window.tasteFor=tasteFor;
+function personRow(p,tm){return'<div class="ptop-row" data-uid="'+esc(p.id)+'"><img src="'+esc(avatarSrc(p.avatar_url))+'" alt=""><div style="flex:1;min-width:0;"><div class="nm">'+esc(p.username||'user')+'</div>'+(p.bio?'<div class="ar">'+esc(p.bio.slice(0,60))+'</div>':'')+' </div>'+tasteChip(tm)+'<span style="color:var(--text-faint);font-size:18px;">\u2192</span></div>';}
 function wirePersonRows(host){host.querySelectorAll('[data-uid]').forEach(function(el){el.addEventListener('click',function(){viewUserProfile(el.dataset.uid);});});}
 function viewUserProfile(uid){const url=location.pathname+'?u='+uid;history.pushState(null,'',url);setMode('profile');renderProfile();}
 async function doPeopleSearch(uname){
@@ -9424,7 +9823,8 @@ async function doPeopleSearch(uname){
   // back to you with a Follow button.
   if(!prof||(window.isBlocked&&isBlocked(prof.id))){host.innerHTML='<div class="reco-note">No user called \u201C'+esc(uname)+'\u201D.</div>';return;}
   if(me&&prof.id===me.id){host.innerHTML='<div class="reco-note">That\u2019s you!</div>';return;}
-  host.innerHTML=personRow(prof);wirePersonRows(host);
+  const chip=(me&&window.tasteFor)?(await tasteFor([prof.id]))[prof.id]:null;
+  host.innerHTML=personRow(prof,chip);wirePersonRows(host);
 }
 (function wirePeople(){const s=document.getElementById('people-search');if(s)s.addEventListener('input',function(){clearTimeout(_peopleTimer);const v=this.value.trim();_peopleTimer=setTimeout(function(){doPeopleSearch(v);},350);});})();
 window.renderPeople=renderPeople;
@@ -9659,6 +10059,11 @@ async function openGroove(grooveId){
   // able to invite or promote.
   document.getElementById('groove-leave-btn').style.display=myRole==='president'?'none':'inline-block';
   document.getElementById('groove-sub').textContent=members.length+(members.length===1?' member':' members');
+  /* The card on the Grooves page has always said "see everyone's taste". Up
+     to now it listed names. */
+  const gchips=(me&&window.tasteFor)
+    ? await tasteFor(members.filter(function(p){return p.id!==me.id;}).map(function(p){return p.id;}))
+    : {};
 
   function roleBadge(r){
     if(r==='president')return'<span class="groove-role pres">President</span>';
@@ -9675,7 +10080,8 @@ async function openGroove(grooveId){
     }
     return'<div class="ptop-row groove-member"><img src="'+esc(avatarSrc(p.avatar_url))+'" alt="" data-guid="'+esc(p.id)+'">'+
       '<div style="flex:1;min-width:0;" data-guid="'+esc(p.id)+'"><div class="nm">'+esc(p.username||'user')+' '+roleBadge(p.role)+'</div>'+
-      (p.bio?'<div class="ar">'+esc(p.bio.slice(0,50))+'</div>':'')+'</div>'+ctrl+'</div>';
+      (p.bio?'<div class="ar">'+esc(p.bio.slice(0,50))+'</div>':'')+'</div>'+
+      (window.tasteChip?tasteChip(gchips[p.id]):'')+ctrl+'</div>';
   }).join('');
 
   const mhost=document.getElementById('groove-members');
@@ -9870,6 +10276,7 @@ window.handleGrooveLink=handleGrooveLink;
 
   let _feedCache = [];         // cards already rendered
   let _scores = {};            // albumId -> [{u,s}, ...]  every rating the room has given
+  let _match  = {};            // userId  -> taste match with you, for the poster pill
   let _myId = null;
   let _offset = 0;
   let _loading = false;
@@ -9914,7 +10321,8 @@ window.handleGrooveLink=handleGrooveLink;
         '<img class="cf-avatar" src="' + esc(post.avatar_url||DEFAULT_AVATAR) + '" alt="" onerror="this.src=\'' + DEFAULT_AVATAR + '\'">' +
         '<div>' +
           '<div class="cf-username" data-uid="' + esc(post.user_id) + '">' + esc(post.username) + '</div>' +
-          '<div class="cf-time">' + esc(relTime(post.created_at)) + '</div>' +
+          '<div class="cf-time">' + esc(relTime(post.created_at)) +
+            (_match[post.user_id] ? ' \u00b7 <b>' + _match[post.user_id].pct + '%</b> match' : '') + '</div>' +
         '</div>' +
       '</div>' +
       /* note pill top-right */
@@ -10173,6 +10581,14 @@ window.handleGrooveLink=handleGrooveLink;
     Object.assign(_scores,scores);
     const me=window.Cloud&&Cloud.getUser&&Cloud.getUser();
     _myId=me?me.id:null;
+    /* Who is telling you this. A 45 from somebody you agree with nine times
+       out of ten is a different piece of information from a 45 by a stranger,
+       and the card had no way of saying so. One trip for the whole page. */
+    if(_myId&&window.tasteFor){
+      const posters=[];
+      posts.forEach(function(p){if(p.user_id&&p.user_id!==_myId&&posters.indexOf(p.user_id)===-1)posters.push(p.user_id);});
+      Object.assign(_match,await tasteFor(posters));
+    }
     posts.forEach(function(post,i){
       const card=buildCard(post,_scores);
       card.style.animationDelay=(i*0.04)+'s';
