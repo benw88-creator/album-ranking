@@ -4512,6 +4512,97 @@ button.rw-day {
 .rw-card p { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
 
 /* ---- Higher or Lower ------------------------------------------------- */
+/* ---- Album Blitz -------------------------------------------------------
+   The sleeves are the game, so they get the room and everything else is a
+   thin line around them: the HUD is one row, the clock is 4px, and the prompt
+   is one sentence. A quiz that needs reading is not a fast game. */
+.blitz-modal .modal-panel { max-width: 560px; }
+.bl-lobby-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bl-best { margin-left: auto; font: 12px/1 var(--font-mono); color: var(--text-dim); }
+.bl-best b { color: var(--gold); font-size: 15px; }
+
+.bl-row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.bl-row:last-child { border-bottom: 0; }
+.bl-row img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--surface-3); }
+.bl-row-meta { flex: 1; min-width: 0; }
+.bl-nm { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl-sc { font: 11px/1.3 var(--font-mono); color: var(--text-faint); }
+/* The row that says somebody is waiting on you is the reason to open this at
+   all, so it is the only one with a colour. */
+.bl-row.turn { border-left: 2px solid var(--c-cyan); padding-left: 9px; }
+.bl-tag { font: 700 10px/1 var(--font-mono); letter-spacing: .06em; text-transform: uppercase;
+  padding: 5px 8px; border-radius: 999px; white-space: nowrap; }
+.bl-tag.wait { background: var(--surface-3); color: var(--text-faint); }
+.bl-tag.won  { background: rgba(79,180,119,0.15); color: var(--green, #4fb477); }
+.bl-tag.lost { background: rgba(226,75,74,0.15); color: var(--red); }
+.bl-tag.draw { background: var(--surface-3); color: var(--text-dim); }
+
+.bl-hud { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.bl-score { font-family: var(--font-mono); }
+.bl-score span { font: 700 24px/1 var(--font-mono); color: var(--gold); }
+.bl-score small { display: block; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
+.bl-mult { font: 700 20px/1 var(--font-mono); color: var(--text-dim); transition: color .25s var(--ease); }
+.bl-mult.warm { color: #ff9f43; }
+.bl-mult.hot { color: #ff4d6d; text-shadow: 0 0 16px rgba(255,77,109,.5); }
+.bl-dots { display: flex; gap: 4px; margin-left: auto; }
+.bl-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--surface-3); }
+.bl-dots i.done { background: var(--text-faint); }
+.bl-dots i.now { background: var(--gold); transform: scale(1.35); }
+
+.bl-timer { height: 4px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.bl-timer i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--gold), #ff4d6d); }
+.bl-prompt { font-family: var(--font-display); font-size: 19px; font-weight: 700; margin: 14px 0 2px; line-height: 1.25; }
+.bl-note { font: 12px/1 var(--font-mono); color: var(--text-faint); margin-bottom: 6px; }
+
+.bl-grid { display: grid; gap: 10px; margin-top: 12px; }
+.bl-grid.n2 { grid-template-columns: 1fr 1fr; }
+.bl-grid.n3 { grid-template-columns: 1fr 1fr 1fr; }
+.bl-grid.n4 { grid-template-columns: 1fr 1fr; }
+.bl-pick {
+  display: block; width: 100%; padding: 0; border: 2px solid transparent; border-radius: 14px;
+  background: var(--surface-2); cursor: pointer; overflow: hidden; text-align: left;
+  font-family: inherit; color: var(--text); transition: transform .1s var(--ease), border-color .12s;
+}
+.bl-pick img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--surface-3); }
+.bl-pick-nm { display: block; font-weight: 700; font-size: 12.5px; padding: 7px 9px 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl-pick-ar { display: block; font-size: 11px; color: var(--text-faint); padding: 1px 9px 8px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl-pick:hover:not(:disabled) { border-color: var(--border-strong); transform: translateY(-2px); }
+.bl-pick:active:not(:disabled) { transform: scale(.97); }
+.bl-pick:disabled { cursor: default; }
+/* The answer is always shown, win or lose. A quiz that tells you only that you
+   were wrong teaches nothing and is the reason people stop playing. */
+.bl-pick.right { border-color: var(--green, #4fb477); }
+.bl-pick.wrong { border-color: var(--red); opacity: .55; }
+
+.bl-float {
+  position: absolute; left: 50%; top: 42%; transform: translateX(-50%);
+  font: 700 30px/1 var(--font-mono); color: var(--gold); opacity: 0; pointer-events: none;
+}
+.bl-float.in { animation: blFloat .7s var(--ease); }
+@keyframes blFloat {
+  0%   { opacity: 0; transform: translate(-50%, 8px) scale(.85); }
+  25%  { opacity: 1; transform: translate(-50%, -6px) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%, -34px) scale(1); }
+}
+.bl-final { font: 700 52px/1 var(--font-mono); color: var(--gold); text-align: center; margin: 10px 0 4px; }
+.bl-vs { text-align: center; border-radius: 14px; padding: 13px; margin-top: 10px; background: var(--surface-2); }
+.bl-vs b { display: block; font-family: var(--font-display); font-size: 21px; }
+.bl-vs span { font: 13px/1 var(--font-mono); color: var(--text-dim); }
+.bl-vs.won  { background: rgba(79,180,119,0.12); }
+.bl-vs.lost { background: rgba(226,75,74,0.12); }
+.bl-rec { text-align: center; font: 12px/1 var(--font-mono); color: var(--text-dim); margin-top: 10px; }
+.bl-rec b { color: var(--gold); font-size: 14px; }
+@media (max-width: 520px) {
+  .bl-grid.n3 { grid-template-columns: 1fr 1fr; }
+  .bl-prompt { font-size: 17px; }
+  .bl-final { font-size: 42px; }
+}
+@media (prefers-reduced-motion: reduce) { .bl-float.in { animation: none; } }
 .hl-mode { display: inline-flex; gap: 4px; background: var(--surface-2); border-radius: 999px; padding: 4px; }
 .hl-mode button {
   border: none; background: none; color: var(--text-dim); cursor: pointer;
@@ -5341,6 +5432,13 @@ window.ICONS = {
       </div>
       <!-- The Draw's card was here. It lives on the Discs page only now: it
            is not a minigame, it is the currency's other half. -->
+      <div class="game-card" id="blitz-card">
+        <div class="gc-emoji" data-icon="trophy"></div>
+        <h3>Album Blitz</h3>
+        <p>Ten rounds of sleeves against a mate. Fast, and the streak is where the points are.</p>
+        <div class="gc-go">Play &rarr;</div>
+        <div class="gc-best" id="blitz-card-status"></div>
+      </div>
       <div class="game-card" id="hl-card">
         <div class="gc-emoji" data-icon="fire"></div>
         <h3>Higher or Lower</h3>
@@ -5710,6 +5808,52 @@ window.ICONS = {
      Drawn only from albums you have rated, deliberately. A higher-or-lower on
      the global charts is a trivia game about strangers' music; on your own
      crate it is a question about how well you know the things you chose. -->
+<!-- ===================== ALBUM BLITZ =====================
+     Ten rounds of album covers against somebody you follow. Every question is
+     generated from the Daily Drop's static tables, so it needs no token and —
+     the part the competitive half rests on — two phones given the same seed
+     build the same ten questions.
+
+     Three states in one modal because a match is sixty seconds: a lobby that
+     is one tap from playing, the run, and the result with the rematch on it. -->
+<div class="modal blitz-modal" id="blitz-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="blitz-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="trophy"></span>
+      <div><h2>Album Blitz</h2><p>Ten rounds. Speed and streaks.</p></div></div>
+
+    <div id="blitz-lobby">
+      <div class="bl-lobby-top">
+        <button class="btn-primary" id="blitz-solo">Play solo</button>
+        <button class="btn-mini" id="blitz-challenge">Challenge a mate</button>
+        <div class="bl-best">Best <b id="blitz-best">0</b></div>
+      </div>
+      <div class="reco-note" id="blitz-lobby-note" style="display:none;"></div>
+      <div id="blitz-opps" style="display:none;margin-top:10px;"></div>
+      <div id="blitz-matches" style="margin-top:14px;"></div>
+    </div>
+
+    <div id="blitz-play" style="display:none;">
+      <div class="bl-hud">
+        <div class="bl-score"><span id="blitz-score">0</span><small>points</small></div>
+        <div class="bl-mult" id="blitz-mult">&times;1</div>
+        <div class="bl-dots" id="blitz-dots"></div>
+      </div>
+      <div class="bl-timer"><i id="blitz-bar"></i></div>
+      <div class="bl-prompt" id="blitz-prompt"></div>
+      <div class="bl-note" id="blitz-note" style="display:none;"></div>
+      <div class="bl-grid n2" id="blitz-grid"></div>
+      <div class="bl-float" id="blitz-float"></div>
+    </div>
+
+    <div id="blitz-over" style="display:none;">
+      <div class="bl-final" id="blitz-final">0</div>
+      <p class="reco-note" id="blitz-sub"></p>
+      <div id="blitz-vs"></div>
+      <button class="btn-primary" id="blitz-again" style="margin-top:12px;">Go again</button>
+    </div>
+  </div>
+</div>
 <div class="modal hl-modal" id="hl-modal">
   <div class="modal-panel">
     <button class="modal-close" id="hl-close" aria-label="Close">&times;</button>
@@ -9733,6 +9877,29 @@ const Cloud=(function(){
     }catch(e){return out;}
   }
 
+  /* ---- Album Blitz ---- */
+  async function blitzCreate(oppId){if(!isOn())return null;try{const r=await sb.rpc('blitz_create',{p_opponent:oppId});return r.error?null:r.data;}catch(e){return null;}}
+  // The only route to a match's seed. See the migration: blitz_seeds has RLS
+  // on and no policies, so the questions cannot be read ahead of playing.
+  async function blitzStart(id){if(!isOn())return null;try{const r=await sb.rpc('blitz_start',{p_match:id});return r.error?null:r.data;}catch(e){return null;}}
+  async function blitzSubmit(id,score,streak,correct){if(!isOn())return null;try{const r=await sb.rpc('blitz_submit',{p_match:id,p_score:score,p_streak:streak,p_correct:correct});return r.error?null:r.data;}catch(e){return null;}}
+  async function blitzRecord(otherId){if(!isOn())return null;try{const r=await sb.rpc('blitz_record',{p_other:otherId});return r.error?null:r.data;}catch(e){return null;}}
+  /* Matches plus both usernames. Two queries rather than a join, because the
+     FK is to auth.users and PostgREST cannot follow that to profiles. */
+  async function blitzList(){
+    if(!isOn())return[];
+    try{
+      const r=await sb.from('blitz_matches').select('*').order('created_at',{ascending:false}).limit(24);
+      const rows=r.data||[];
+      if(!rows.length)return[];
+      const ids={};rows.forEach(function(m){ids[m.initiator_id]=1;ids[m.opponent_id]=1;});
+      const p=await sb.from('profiles').select('id,username,avatar_url').in('id',Object.keys(ids));
+      const by={};(p.data||[]).forEach(function(x){by[x.id]=x;});
+      rows.forEach(function(m){m.init=by[m.initiator_id]||null;m.opp=by[m.opponent_id]||null;});
+      return rows;
+    }catch(e){return[];}
+  }
+
   /* Every album score for a set of people, in one paged round trip, for Taste
      Match. crate_feed is a complete mirror of album ratings rather than a
      recent slice — saveAlbum posts every one and postToFeed upserts on
@@ -9939,6 +10106,8 @@ const Cloud=(function(){
          fetchNotifications:fetchNotifications,unreadCount:unreadCount,markNotificationsRead:markNotificationsRead,sendSuggestion:sendSuggestion,
          createGroove:createGroove,myGrooves:myGrooves,grooveMembers:grooveMembers,inviteToGroove:inviteToGroove,
          grooveRoster:grooveRoster,
+         blitzCreate:blitzCreate,blitzStart:blitzStart,blitzSubmit:blitzSubmit,
+         blitzRecord:blitzRecord,blitzList:blitzList,
          setGrooveRole:setGrooveRole,removeGrooveMember:removeGrooveMember,
          acceptGrooveInvite:acceptGrooveInvite,leaveGroove:leaveGroove,fetchGroove:fetchGroove,
          submitLeaderboardTime:submitLeaderboardTime,fetchLeaderboard:fetchLeaderboard,fetchMyBestTime:fetchMyBestTime,
@@ -10664,8 +10833,8 @@ window.renderProfile=renderProfile;
 /* ================================================================
    13. NOTIFICATIONS + SUGGESTIONS
    ================================================================ */
-function notifText(n){const who=esc((n.data&&n.data.username)||'Someone');if(n.type==='follow')return who+' followed you';if(n.type==='suggestion'){const it=(n.data&&n.data.item)||{};const kind=(n.data&&n.data.kind)||'album';const label=kind==='list'?'the list':(kind==='song'?'the song':'the album');return who+' recommended '+label+' <b>'+esc(it.name||'')+'</b>'+(it.artist?' by '+esc(it.artist):'');}if(n.type==='groove_invite')return who+' invited you to a Groove';if(n.type==='bid_war_challenge')return who+' challenged you to a <b>Bid War</b>';if(n.type==='bid_war_turn')return who+' has bid &mdash; your move';if(n.type==='bid_war_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' in a Bid War'):o==='lost'?(who+' beat you in a Bid War'):('Your Bid War with '+who+' ended level');}return who+' did something';}
-function notifEmoji(t){return t==='follow'?ICONS.people:t==='suggestion'?ICONS.note:t==='groove_invite'?ICONS.groove:(t==='bid_war_challenge'||t==='bid_war_turn'||t==='bid_war_result')?ICONS.trophy:ICONS.bell;}
+function notifText(n){const who=esc((n.data&&n.data.username)||'Someone');if(n.type==='follow')return who+' followed you';if(n.type==='suggestion'){const it=(n.data&&n.data.item)||{};const kind=(n.data&&n.data.kind)||'album';const label=kind==='list'?'the list':(kind==='song'?'the song':'the album');return who+' recommended '+label+' <b>'+esc(it.name||'')+'</b>'+(it.artist?' by '+esc(it.artist):'');}if(n.type==='groove_invite')return who+' invited you to a Groove';if(n.type==='blitz_challenge')return who+' challenged you to <b>Album Blitz</b>';if(n.type==='blitz_turn')return who+' scored <b>'+esc(String((n.data&&n.data.score)||0))+'</b> in Album Blitz \u2014 your go';if(n.type==='blitz_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' at Album Blitz'):o==='lost'?(who+' beat you at Album Blitz'):('You and '+who+' tied at Album Blitz');}if(n.type==='bid_war_challenge')return who+' challenged you to a <b>Bid War</b>';if(n.type==='bid_war_turn')return who+' has bid &mdash; your move';if(n.type==='bid_war_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' in a Bid War'):o==='lost'?(who+' beat you in a Bid War'):('Your Bid War with '+who+' ended level');}return who+' did something';}
+function notifEmoji(t){return t==='follow'?ICONS.people:t==='suggestion'?ICONS.note:t==='groove_invite'?ICONS.groove:(t==='bid_war_challenge'||t==='bid_war_turn'||t==='bid_war_result'||t==='blitz_challenge'||t==='blitz_turn'||t==='blitz_result')?ICONS.trophy:ICONS.bell;}
 
 async function renderNotifications(){
   const host=document.getElementById('notif-list');if(!host)return;
@@ -15854,6 +16023,13 @@ function playDismissAnimation(gateEl, callback) {
     window.openDailyDrop = openDrop;
   }
 
+  /* The pool, for anything else that needs records everybody knows. Album Blitz
+     builds every one of its questions from these two tables rather than baking
+     a second copy: they already carry year, genre, track count, runtime, and
+     for a song the album it is off and that album's artwork. Exporting beats
+     duplicating for the usual reason — a second list is a list that drifts. */
+  window.VinalPool = { albums: ALBUM_ROWS, songs: SONG_ROWS };
+
   init();
 })();
 </script>
@@ -17149,7 +17325,11 @@ window.renderAdminStats = renderAdminStats;
     // Higher or Lower asks how well you know your own crate, and a crate of
     // eight was not enough of one for the question to mean anything — the
     // pool ran out inside a single run. It sits with Bid Wars now.
-    'hl-card':          { need: 25, label: 'Higher or Lower' }
+    'hl-card':          { need: 25, label: 'Higher or Lower' },
+    // Blitz asks about records everybody knows rather than yours, so it needs
+    // no crate at all — but a game grid where everything is open on day one is
+    // a wall again. Five is one sitting.
+    'blitz-card':       { need: 5,  label: 'Album Blitz' }
   };
   var SEEN_KEY = 'crate_unlocks_seen';
 
@@ -19028,6 +19208,555 @@ window.renderAdminStats = renderAdminStats;
 
   paintCard();
   window.openHigherLower = open;
+})();
+
+/* ================================================================
+   ALBUM BLITZ — ten rounds of album covers, against a mate.
+
+   The covers are the game. Every round is a prompt and two to four sleeves,
+   and the answer is a tap: which came first, which has more tracks, which
+   album this song is off, which of these is Radiohead. Two choices and seven
+   seconds at the start, four choices and five seconds by the end. About a
+   minute a match.
+
+   WHERE THE QUESTIONS COME FROM
+
+   `window.VinalPool` — the same static ALBUM_ROWS and SONG_ROWS the Daily Drop
+   bakes in. No token, no network, instant scoring, works on a train. Crucially
+   it also scores **identically on two different phones**, which is the property
+   the competitive half is built on and the reason this could not be driven off
+   anybody's crate.
+
+   Higher or Lower already asks "which of YOUR records has more streams" and
+   keeps that. Blitz asks about records everybody knows, from a shared list, so
+   two people can be asked the same question — which a game drawn from a
+   personal crate can never do.
+
+   TEN FIXED ROUNDS, NO LIVES
+
+   Sudden death is the obvious shape and the wrong one: if a match ends when you
+   miss, two players answer a different number of questions and the scores stop
+   being comparable. **A fixed ten is what makes "2,400 to 2,050" mean
+   anything.** A miss costs the streak instead, which is where all the points
+   are.
+
+   THE MULTIPLIER IS THE GAME
+
+   100 for right, up to 100 more for speed, all times a streak multiplier that
+   steps 1 / 1.5 / 2 / 3 at three, five and eight in a row. A flawless run is
+   exactly 3,600 and the back half is worth more than double the front, so a
+   miss at round nine hurts far more than one at round two — which is what
+   makes the last three rounds tense rather than a formality.
+
+   Escalation is on three dials at once and none of them is announced: choices
+   go 2 → 3 → 4, the clock drops 7s → 6s → 5s, and the comparisons narrow from
+   decades apart to a year or two. Difficulty you can feel and not read is the
+   kind people keep playing.
+   ================================================================ */
+(function () {
+  'use strict';
+
+  var ROUNDS = 10;
+  var PERFECT = 3600;          // ten right, all instant, multiplier climbing
+  var BEST_KEY = 'crate_blitz_best';
+
+  // round index -> choices, seconds, and how close the comparisons may get
+  function shape(i) {
+    if (i < 3)  return { n: 2, secs: 7, tight: 0 };
+    if (i < 7)  return { n: 3, secs: 6, tight: 1 };
+    return { n: 4, secs: 5, tight: 2 };
+  }
+  function multFor(streak) { return streak >= 8 ? 3 : streak >= 5 ? 2 : streak >= 3 ? 1.5 : 1; }
+
+  /* mulberry32. Deterministic across engines — integer ops and Math.imul only,
+     no float accumulation — which matters because two phones have to generate
+     the same ten questions from the same seed or the match is meaningless. */
+  function rng(seed) {
+    var s = seed >>> 0;
+    return function () {
+      s = (s + 0x6D2B79F5) >>> 0;
+      var t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function pick(r, arr) { return arr[Math.floor(r() * arr.length)]; }
+  function shuffled(r, arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+
+  // ALBUM_ROWS: [title, artist, year, genre, tracks, runtimeSec, art]
+  // SONG_ROWS:  [title, artist, year, genre, secs, trackNo, albumName, art]
+  function albums() { try { return (window.VinalPool && VinalPool.albums) || []; } catch (e) { return []; } }
+  function songs()  { try { return (window.VinalPool && VinalPool.songs)  || []; } catch (e) { return []; } }
+  function card(a) { return { name: a[0], artist: a[1], art: a[6] }; }
+
+  /* ---- the question types ------------------------------------------------
+     Each returns { prompt, note, choices[], correct } or null when the pool
+     cannot serve it at this difficulty, in which case the builder tries
+     another kind. Nothing throws: a round that cannot be built falls back to
+     the simplest comparison rather than ending the match. */
+
+  // Comparison over a numeric column, N ways.
+  function compare(r, sh, idx, label, want) {
+    var pool = albums().filter(function (a) { return typeof a[idx] === 'number'; });
+    if (pool.length < sh.n + 4) return null;
+    // Early rounds want an obvious winner; late rounds want it close.
+    var gapMin = [18, 7, 2][sh.tight];
+    for (var attempt = 0; attempt < 40; attempt++) {
+      var set = shuffled(r, pool).slice(0, sh.n);
+      var vals = set.map(function (a) { return a[idx]; });
+      var top = want === 'max' ? Math.max.apply(null, vals) : Math.min.apply(null, vals);
+      var rest = vals.filter(function (v) { return v !== top; });
+      if (rest.length !== sh.n - 1) continue;          // a tie for the answer
+      var nearest = want === 'max' ? Math.max.apply(null, rest) : Math.min.apply(null, rest);
+      if (Math.abs(top - nearest) < gapMin) continue;
+      return { prompt: label, choices: set.map(card), correct: vals.indexOf(top) };
+    }
+    return null;
+  }
+
+  function qFirst(r, sh)  { return compare(r, sh, 2, 'Which came out first?', 'min'); }
+  function qLatest(r, sh) { return compare(r, sh, 2, 'Which is the most recent?', 'max'); }
+  function qTracks(r, sh) { return compare(r, sh, 4, 'Which has the most tracks?', 'max'); }
+  function qShort(r, sh)  { return compare(r, sh, 4, 'Which has the fewest tracks?', 'min'); }
+  function qLong(r, sh)   { return compare(r, sh, 5, 'Which album runs longest?', 'max'); }
+
+  // Which of these is by X. Decoys are by other artists, so it is recognition
+  // rather than arithmetic — the one type that rewards knowing a sleeve.
+  function qArtist(r, sh) {
+    var pool = albums();
+    if (pool.length < sh.n + 4) return null;
+    for (var attempt = 0; attempt < 40; attempt++) {
+      var right = pick(r, pool);
+      var others = shuffled(r, pool).filter(function (a) { return a[1] !== right[1]; });
+      // Late rounds draw decoys from the same era, which is most of the work.
+      if (sh.tight >= 2) {
+        var near = others.filter(function (a) { return Math.abs(a[2] - right[2]) <= 6; });
+        if (near.length >= sh.n - 1) others = near;
+      }
+      if (others.length < sh.n - 1) continue;
+      var seen = {}, decoys = [];
+      for (var i = 0; i < others.length && decoys.length < sh.n - 1; i++) {
+        if (seen[others[i][1]]) continue;
+        seen[others[i][1]] = 1; decoys.push(others[i]);
+      }
+      if (decoys.length < sh.n - 1) continue;
+      var set = shuffled(r, [right].concat(decoys));
+      return { prompt: 'Which one is by ' + right[1] + '?', choices: set.map(card), correct: set.indexOf(right) };
+    }
+    return null;
+  }
+
+  // The song-to-album round. SONG_ROWS carries the album's own artwork, so the
+  // answer is a real sleeve rather than a line of text.
+  function qFromSong(r, sh) {
+    var ss = songs().filter(function (s) { return s[6] && s[7]; });
+    var pool = albums();
+    if (!ss.length || pool.length < sh.n + 2) return null;
+    for (var attempt = 0; attempt < 40; attempt++) {
+      var song = pick(r, ss);
+      var right = { name: song[6], artist: song[1], art: song[7] };
+      var others = pool.filter(function (a) { return a[0] !== song[6]; });
+      if (sh.tight >= 1) {
+        // Decoys by the same artist where possible: knowing the band is not
+        // the same as knowing which record the song is off.
+        var same = others.filter(function (a) { return a[1] === song[1]; });
+        if (same.length >= sh.n - 1) others = same;
+      }
+      if (others.length < sh.n - 1) continue;
+      var decoys = shuffled(r, others).slice(0, sh.n - 1).map(card);
+      var set = shuffled(r, [right].concat(decoys));
+      return {
+        prompt: 'Which album is “' + song[0] + '” off?',
+        note: song[1],
+        choices: set, correct: set.indexOf(right)
+      };
+    }
+    return null;
+  }
+
+  function qGenre(r, sh) {
+    var pool = albums();
+    for (var attempt = 0; attempt < 40; attempt++) {
+      var right = pick(r, pool);
+      var g = right[3];
+      var others = pool.filter(function (a) { return a[3] !== g; });
+      if (others.length < sh.n - 1) continue;
+      var set = shuffled(r, [right].concat(shuffled(r, others).slice(0, sh.n - 1)));
+      if (set.filter(function (a) { return a[3] === g; }).length !== 1) continue;
+      return { prompt: 'Which one is ' + g + '?', choices: set.map(card), correct: set.indexOf(right) };
+    }
+    return null;
+  }
+
+  function qYear(r, sh) {
+    var pool = albums();
+    for (var attempt = 0; attempt < 40; attempt++) {
+      var right = pick(r, pool);
+      var y = right[2];
+      var others = pool.filter(function (a) { return a[2] !== y; });
+      if (sh.tight >= 1) {
+        var near = others.filter(function (a) { return Math.abs(a[2] - y) <= 4; });
+        if (near.length >= sh.n - 1) others = near;
+      }
+      if (others.length < sh.n - 1) continue;
+      var set = shuffled(r, [right].concat(shuffled(r, others).slice(0, sh.n - 1)));
+      if (set.filter(function (a) { return a[2] === y; }).length !== 1) continue;
+      return { prompt: 'Which came out in ' + y + '?', choices: set.map(card), correct: set.indexOf(right) };
+    }
+    return null;
+  }
+
+  // `kid` so the builder can count a kind without comparing function bodies.
+  var KINDS = [qFirst, qLatest, qTracks, qShort, qLong, qArtist, qFromSong, qGenre, qYear];
+  ['first','latest','tracks','short','long','artist','fromsong','genre','year']
+    .forEach(function (id, k) { KINDS[k].kid = id; });
+
+  /* Ten questions from one seed. The same seed gives the same ten on any
+     device, which is the entire basis of a head-to-head. */
+  function build(seed) {
+    var r = rng(seed), out = [], usedPrompts = {}, usedKind = {};
+    for (var i = 0; i < ROUNDS; i++) {
+      var sh = shape(i), q = null;
+      /* Kinds not yet used come first, and none may appear more than twice.
+         Without the cap a ten-round match could ask "which one is by X" four
+         times — every question different and the match still repetitive,
+         because what people notice is the SHAPE of the question and not the
+         records in it. */
+      var order = shuffled(r, KINDS).sort(function (a, b) {
+        return (usedKind[a.kid] || 0) - (usedKind[b.kid] || 0);
+      });
+      for (var k = 0; k < order.length && !q; k++) {
+        if ((usedKind[order[k].kid] || 0) >= 2) continue;
+        var got = order[k](r, sh);
+        // Never the same prompt twice either — it reads as a bug even when the
+        // records differ.
+        if (got && !usedPrompts[got.prompt]) { q = got; q.kid = order[k].kid; }
+      }
+      if (!q) q = qFirst(r, { n: 2, secs: sh.secs, tight: 0 }) || qArtist(r, sh);
+      if (!q) break;
+      usedPrompts[q.prompt] = 1;
+      if (q.kid) usedKind[q.kid] = (usedKind[q.kid] || 0) + 1;
+      q.secs = sh.secs;
+      out.push(q);
+    }
+    return out;
+  }
+
+  window.Blitz = {
+    ROUNDS: ROUNDS, PERFECT: PERFECT, BEST_KEY: BEST_KEY,
+    build: build, shape: shape, multFor: multFor, rng: rng,
+    best: function () { try { return +localStorage.getItem(BEST_KEY) || 0; } catch (e) { return 0; } },
+    setBest: function (n) {
+      try { if (n > (+localStorage.getItem(BEST_KEY) || 0)) localStorage.setItem(BEST_KEY, String(n)); } catch (e) {}
+    }
+  };
+})();
+/* ================================================================
+   ALBUM BLITZ — the screen.
+
+   Three states in one modal: the lobby (solo, or challenge somebody, plus every
+   match waiting on you), the run, and the result. A match is a minute, so the
+   lobby has to be one tap from playing — anything that asks you to choose a
+   mode, a length and an opponent before a sixty-second game is a menu tax.
+   ================================================================ */
+(function () {
+  'use strict';
+  var modal = document.getElementById('blitz-modal');
+  if (!modal) return;
+
+  var qs = [], i = 0, score = 0, streak = 0, bestStreak = 0, correct = 0;
+  var busy = false, deadline = 0, tick = null, match = null, mode = 'solo';
+
+  function el(id) { return document.getElementById(id); }
+  function n(v) { return (Number(v) || 0).toLocaleString('en-GB'); }
+  function show(v) { ['blitz-lobby', 'blitz-play', 'blitz-over'].forEach(function (x) { el(x).style.display = x === v ? 'block' : 'none'; }); }
+  function sb() { return (window.Cloud && Cloud.client) ? Cloud.client() : null; }
+  function on() { return !!(window.Cloud && Cloud.isOn && Cloud.isOn()); }
+  function meId() { try { return Cloud.getUser().id; } catch (e) { return null; } }
+
+  /* ---------- lobby ---------- */
+  async function open() {
+    modal.classList.add('open');
+    stopClock();
+    show('blitz-lobby');
+    el('blitz-best').textContent = n(Blitz.best());
+    paintLobby();
+  }
+  function close() { stopClock(); modal.classList.remove('open'); }
+
+  async function paintLobby() {
+    var host = el('blitz-matches');
+    if (!on()) { host.innerHTML = '<div class="reco-note">Log in to challenge somebody. Solo still works.</div>'; return; }
+    host.innerHTML = '<div class="reco-note">Loading…</div>';
+    var rows = [];
+    try { rows = await Cloud.blitzList(); } catch (e) {}
+    var me = meId();
+    if (!rows.length) { host.innerHTML = '<div class="reco-note">No matches yet. Challenge somebody and it appears here.</div>'; return; }
+
+    /* Your turn first, then waiting, then settled. The whole point of the
+       lobby is the row that says somebody is waiting on you. */
+    function slot(m) {
+      var mine = m.initiator_id === me;
+      var myScore = mine ? m.initiator_score : m.opponent_score;
+      var theirScore = mine ? m.opponent_score : m.initiator_score;
+      if (m.status === 'resolved') return 2;
+      return myScore == null ? 0 : 1;
+    }
+    rows.sort(function (a, b) { return slot(a) - slot(b) || (new Date(b.created_at) - new Date(a.created_at)); });
+
+    host.innerHTML = rows.slice(0, 12).map(function (m) {
+      var mine = m.initiator_id === me;
+      var foe = mine ? m.opp : m.init;
+      var myScore = mine ? m.initiator_score : m.opponent_score;
+      var theirScore = mine ? m.opponent_score : m.initiator_score;
+      var s = slot(m), cls = s === 0 ? 'turn' : s === 1 ? 'wait' : 'done';
+      var right;
+      if (s === 0) right = '<button class="btn-mini blitz-go" data-play="' + esc(m.id) + '">Play</button>';
+      else if (s === 1) right = '<span class="bl-tag wait">Waiting on them</span>';
+      else {
+        var verdict = m.winner_id == null ? 'Level' : (m.winner_id === me ? 'You won' : 'You lost');
+        right = '<span class="bl-tag ' + (m.winner_id == null ? 'draw' : (m.winner_id === me ? 'won' : 'lost')) + '">' + verdict + '</span>';
+      }
+      return '<div class="bl-row ' + cls + '" data-match="' + esc(m.id) + '">' +
+        '<img src="' + esc(avatarSrc(foe && foe.avatar_url)) + '" alt="">' +
+        '<div class="bl-row-meta"><div class="bl-nm">' + esc((foe && foe.username) || 'someone') + '</div>' +
+        '<div class="bl-sc">' + (myScore == null ? 'not played' : n(myScore)) +
+          ' · ' + (theirScore == null ? '—' : n(theirScore)) + '</div></div>' + right + '</div>';
+    }).join('');
+
+    host.querySelectorAll('[data-play]').forEach(function (b) {
+      b.addEventListener('click', function (e) { e.stopPropagation(); startMatch(b.dataset.play); });
+    });
+  }
+
+  /* ---------- the run ---------- */
+  async function startSolo() {
+    match = null; mode = 'solo';
+    // Solo is the same engine on a throwaway seed, so practice is the real game
+    // rather than a simplified one.
+    begin(Math.floor(Math.random() * 2147483647));
+  }
+  async function startMatch(id) {
+    var go = el('blitz-lobby');
+    try {
+      var seed = await Cloud.blitzStart(id);
+      if (seed == null) { note('Could not start that one.'); return; }
+      match = id; mode = 'match';
+      begin(Number(seed));
+    } catch (e) { note(String((e && e.message) || e)); }
+  }
+
+  function begin(seed) {
+    qs = Blitz.build(seed);
+    if (!qs.length) { note('Could not build a round.'); return; }
+    i = 0; score = 0; streak = 0; bestStreak = 0; correct = 0; busy = false;
+    show('blitz-play');
+    round();
+  }
+
+  function round() {
+    var q = qs[i];
+    if (!q) return finish();
+    busy = false;
+    el('blitz-prompt').textContent = q.prompt;
+    el('blitz-note').textContent = q.note || '';
+    el('blitz-note').style.display = q.note ? '' : 'none';
+    paintHud();
+
+    var grid = el('blitz-grid');
+    grid.className = 'bl-grid n' + q.choices.length;
+    grid.innerHTML = q.choices.map(function (c, k) {
+      return '<button class="bl-pick" data-k="' + k + '">' +
+        '<img src="' + esc(c.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+        '<span class="bl-pick-nm">' + esc(c.name) + '</span>' +
+        '<span class="bl-pick-ar">' + esc(c.artist || '') + '</span></button>';
+    }).join('');
+    grid.querySelectorAll('.bl-pick').forEach(function (b) {
+      b.addEventListener('click', function () { answer(+b.dataset.k); });
+    });
+
+    // The next round's sleeves, while this one is being read. A cover fading in
+    // after the prompt is the difference between fast and nearly fast.
+    var nx = qs[i + 1];
+    if (nx) nx.choices.forEach(function (c) { if (c.art) { var im = new Image(); im.src = c.art; } });
+
+    startClock(q.secs);
+  }
+
+  function paintHud() {
+    el('blitz-score').textContent = n(score);
+    var m = Blitz.multFor(streak);
+    var mel = el('blitz-mult');
+    mel.textContent = '×' + (m % 1 ? m.toFixed(1) : m);
+    mel.className = 'bl-mult' + (m >= 3 ? ' hot' : m >= 2 ? ' warm' : '');
+    el('blitz-dots').innerHTML = qs.map(function (_, k) {
+      return '<i class="' + (k < i ? 'done' : k === i ? 'now' : '') + '"></i>';
+    }).join('');
+  }
+
+  function startClock(secs) {
+    stopClock();
+    deadline = Date.now() + secs * 1000;
+    var bar = el('blitz-bar');
+    bar.style.transition = 'none';
+    bar.style.width = '100%';
+    /* `void offsetWidth` and not requestAnimationFrame. rAF fires before the
+       style recalculation, so the reset to 100% and the transition to 0% land
+       in the same computed style and the browser sees no change to animate —
+       the bar simply sat there full for the whole round, which is worse than
+       having no clock at all because it says you have time. Reading
+       offsetWidth forces the reflow that commits the 100%, so the next line
+       has something to transition FROM. Same idiom as the multiplier bump in
+       Higher or Lower. */
+    void bar.offsetWidth;
+    bar.style.transition = 'width ' + secs + 's linear';
+    bar.style.width = '0%';
+    tick = setTimeout(function () { if (!busy) answer(-1); }, secs * 1000);
+  }
+  function stopClock() { if (tick) { clearTimeout(tick); tick = null; } }
+
+  function answer(k) {
+    if (busy) return;
+    busy = true;
+    stopClock();
+    var q = qs[i];
+    var left = Math.max(0, deadline - Date.now()) / (q.secs * 1000);
+    var right = k === q.correct;
+    var gained = 0;
+
+    var btns = el('blitz-grid').querySelectorAll('.bl-pick');
+    btns.forEach(function (b, idx) {
+      b.disabled = true;
+      if (idx === q.correct) b.classList.add('right');
+      else if (idx === k) b.classList.add('wrong');
+    });
+
+    if (right) {
+      var mult = Blitz.multFor(streak);
+      gained = Math.round((100 + Math.round(100 * left)) * mult);
+      score += gained; streak++; correct++;
+      if (streak > bestStreak) bestStreak = streak;
+      var f = el('blitz-float');
+      f.textContent = '+' + n(gained);
+      f.className = 'bl-float in';
+      setTimeout(function () { f.className = 'bl-float'; }, 700);
+      if (window.buzz) buzz(Blitz.multFor(streak) > mult ? 'big' : 'good');
+      if (window.burst && Blitz.multFor(streak) > mult) burst(btns[k], { count: 22, spread: 130 });
+    } else {
+      streak = 0;
+      if (window.buzz) buzz('bad');
+    }
+    paintHud();
+    setTimeout(function () { i++; round(); }, right ? 520 : 900);
+  }
+
+  async function finish() {
+    stopClock();
+    show('blitz-over');
+    Blitz.setBest(score);
+    el('blitz-final').textContent = n(score);
+    el('blitz-sub').textContent = correct + ' of ' + Blitz.ROUNDS + ' · best run ' + bestStreak +
+      (score >= Blitz.PERFECT ? ' · flawless' : '');
+    el('blitz-vs').innerHTML = '';
+    el('blitz-again').textContent = mode === 'match' ? 'Back to matches' : 'Go again';
+
+    if (window.notePlay) notePlay('blitz');
+    if (window.Wallet && Wallet.awardGame) Wallet.awardGame('blitz', { reason: 'Album Blitz' });
+    if (window.track) track('blitz_run', { mode: mode, score: score, correct: correct });
+
+    if (mode !== 'match' || !match) return;
+    try {
+      var m = await Cloud.blitzSubmit(match, score, bestStreak, correct);
+      if (!m) return;
+      var me = meId(), mine = m.initiator_id === me;
+      var theirs = mine ? m.opponent_score : m.initiator_score;
+      var foeId = mine ? m.opponent_id : m.initiator_id;
+      if (theirs == null) {
+        el('blitz-vs').innerHTML = '<div class="bl-vs wait">Sent. They have not played yet — you will be told when they do.</div>';
+        return;
+      }
+      var won = score > theirs, drew = score === theirs;
+      el('blitz-vs').innerHTML =
+        '<div class="bl-vs ' + (drew ? 'draw' : won ? 'won' : 'lost') + '">' +
+          '<b>' + (drew ? 'Dead level' : won ? 'You won' : 'You lost') + '</b>' +
+          '<span>' + n(score) + ' to ' + n(theirs) + '</span></div>';
+      var rec = await Cloud.blitzRecord(foeId);
+      if (rec) {
+        el('blitz-vs').innerHTML += '<div class="bl-rec">Against them: <b>' + rec.won + 'W</b> ' +
+          rec.lost + 'L ' + rec.drawn + 'D</div>' +
+          '<button class="btn-primary" id="blitz-rematch" style="margin-top:10px;">Rematch</button>';
+        var rb = el('blitz-rematch');
+        if (rb) rb.addEventListener('click', async function () {
+          rb.disabled = true; rb.textContent = '…';
+          try { var nm = await Cloud.blitzCreate(foeId); if (nm) { startMatch(nm.id); return; } } catch (e) {}
+          rb.disabled = false; rb.textContent = 'Rematch';
+        });
+      }
+      if (won && typeof celebrate === 'function') celebrate('You took it', n(score) + ' to ' + n(theirs));
+    } catch (e) { note(String((e && e.message) || e)); }
+  }
+
+  function note(msg) {
+    var l = el('blitz-lobby-note');
+    if (l) { l.textContent = msg; l.style.display = ''; }
+  }
+
+  /* ---------- challenging ---------- */
+  async function openPick() {
+    if (!on()) { Cloud.openAuth(); return; }
+    var host = el('blitz-opps');
+    host.style.display = '';
+    host.innerHTML = '<div class="reco-note">Loading…</div>';
+    var people = [];
+    try { people = await Cloud.followingList(meId()); } catch (e) {}
+    await (window.loadBlocks ? loadBlocks() : Promise.resolve());
+    people = people.filter(function (p) { return !(window.isBlocked && isBlocked(p.id)); });
+    if (!people.length) { host.innerHTML = '<div class="reco-note">Follow somebody first.</div>'; return; }
+    host.innerHTML = people.map(function (p) {
+      return '<div class="ptop-row" data-chal="' + esc(p.id) + '">' +
+        '<img src="' + esc(avatarSrc(p.avatar_url)) + '" alt=""><div style="flex:1;min-width:0;">' +
+        '<div class="nm">' + esc(p.username || 'user') + '</div></div>' +
+        '<span class="suggest-send">Challenge</span></div>';
+    }).join('');
+    host.querySelectorAll('[data-chal]').forEach(function (row) {
+      row.addEventListener('click', async function () {
+        if (row.dataset.busy) return;
+        row.dataset.busy = '1';
+        var s = row.querySelector('.suggest-send');
+        s.textContent = '…';
+        try {
+          var m = await Cloud.blitzCreate(row.dataset.chal);
+          if (m) { host.style.display = 'none'; startMatch(m.id); return; }
+        } catch (e) {}
+        s.textContent = 'Failed'; delete row.dataset.busy;
+      });
+    });
+  }
+
+  el('blitz-close').addEventListener('click', close);
+  modal.addEventListener('click', function (e) { if (e.target === modal && !busy) close(); });
+  el('blitz-solo').addEventListener('click', startSolo);
+  el('blitz-challenge').addEventListener('click', openPick);
+  el('blitz-again').addEventListener('click', function () {
+    if (mode === 'match') { show('blitz-lobby'); paintLobby(); }
+    else startSolo();
+  });
+
+  // Number keys answer, because a game about speed should not need the mouse.
+  document.addEventListener('keydown', function (e) {
+    if (!modal.classList.contains('open')) return;
+    if (el('blitz-play').style.display === 'none') return;
+    var k = parseInt(e.key, 10);
+    if (k >= 1 && k <= 4) { e.preventDefault(); answer(k - 1); }
+  });
+
+  var card = document.getElementById('blitz-card');
+  if (card) card.addEventListener('click', open);
+  window.openAlbumBlitz = open;
 })();
 </script>
 

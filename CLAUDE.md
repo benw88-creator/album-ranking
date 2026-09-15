@@ -1247,6 +1247,89 @@ What makes it playable:
 The card is gated on three rated albums (see the unlock gates), so `window.openEarworm()`
 opens it in a fresh browser where clicking the card will not.
 
+## Album Blitz
+
+Ten rounds of album covers against somebody you follow, about a minute a match.
+`..._20260916180000_album_blitz.sql`, plus the `Blitz` module (questions) and the
+lobby/run IIFE under it in `index.html`.
+
+**It creates no new music data.** Every question is generated from `ALBUM_ROWS` and
+`SONG_ROWS` — the static tables the Daily Drop already bakes in, now exported as
+`window.VinalPool` rather than copied. They carry title, artist, year, genre, track count
+and runtime for albums, and for songs the album they are off *and that album's artwork*,
+which is what makes the song-to-album round a wall of real sleeves rather than a list of
+titles. No token, works offline, scores instantly.
+
+**It is not Higher or Lower.** That asks which of *your* records has more streams and it
+keeps that. Blitz asks about records everybody knows, from a shared list, so two people can
+be asked the same question — which a game drawn from a personal crate can never do.
+
+### Ten fixed rounds, no lives
+
+Sudden death is the obvious shape for a fast quiz and the wrong one here: if a match ends
+when you miss, two players answer a different number of questions and the scores stop being
+comparable. **A fixed ten is what makes "2,400 to 2,050" mean anything.** A miss costs the
+streak instead, which is where all the points are.
+
+Nine question kinds — first/latest, most/fewest tracks, longest, by-this-artist,
+this-song's-album, genre, year. **No kind appears more than twice in a match**: without
+that cap a ten-round match could ask "which one is by X" four times, every question
+technically different and the match still repetitive, because what people notice is the
+*shape* of the question and not the records in it.
+
+### The multiplier is the game
+
+100 for right, up to 100 more for speed, all times a streak multiplier stepping 1 / 1.5 /
+2 / 3 at three, five and eight in a row. **A flawless run is exactly 3,600** and the back
+half is worth more than double the front, so a miss at round nine costs far more than one
+at round two — which is what makes the last three rounds tense rather than a formality.
+
+Escalation runs on three dials at once and none is announced: choices 2 → 3 → 4, clock
+7s → 6s → 5s, and comparisons narrowing from decades apart to a year or two (`tight`).
+Difficulty you feel and cannot read is the kind people keep playing.
+
+### The seed is the fairness mechanism, and it is sealed
+
+Both players must get the same ten questions, so the match carries a seed and each client
+builds the identical set from it with a mulberry32 — integer ops only, so two phones agree.
+Verified over 200 seeds: same seed gives byte-identical questions, no kind repeats more
+than twice, every correct index in range, every choice has artwork.
+
+**`blitz_seeds` has RLS on and no policies at all**, exactly like `bid_war_values`. On the
+match row anybody could read the seed, build the ten questions at their leisure, look the
+answers up and then play. `blitz_start()` is the only route to it and refuses once you have
+submitted. There is a guard in the migration that fails if a policy is ever added to that
+table, and another if `blitz_matches` gains a write policy — scores may only come from
+`blitz_submit()`.
+
+That is not proof against a determined cheat; the game runs in a browser and the score is
+client-reported, the same posture as every other minigame. `blitz_submit` clamps to 3,600
+because a flawless run is the arithmetic ceiling, and the daily cap does the rest.
+
+### Both players are paid the same, deliberately
+
+Winning pays no more than losing. Bid Wars had to reason hard about collusion because its
+payout differs by outcome; here there is no differential to farm, so two accounts playing
+each other all day earn exactly what one account playing alone earns. **The prize for
+winning is the head-to-head record** (`blitz_record`), which is the thing people replay
+for — the result screen leads with "Against them: 4W 2L 1D" and a Rematch button.
+
+1,600 × 3/day through `wallet_award_game('blitz')`, the same as Higher or Lower.
+
+### Two things that cost time
+
+- **The timer bar did not animate.** `transition: none` + `width: 100%` then a
+  `requestAnimationFrame` to set the transition and `0%` — rAF fires *before* style
+  recalculation, so both landed in one computed style and the browser saw nothing to
+  animate. The bar sat full for the whole round, which is worse than no clock because it
+  says you have time. `void bar.offsetWidth` forces the reflow that commits the 100% so
+  the next line has something to transition from — the same idiom as the multiplier bump
+  in Higher or Lower.
+- **A throttled tab lies about transitions.** `getBoundingClientRect()` on the draining bar
+  returned a constant width while a `CSSTransition` was demonstrably running, because the
+  pane was not painting. A screenshot forces a paint and showed the truth. Measure animation
+  with a screenshot, not a rect, when the tab may be in the background.
+
 ## Bid Wars
 
 A 1v1 sealed-bid auction, reachable from its own nav tab (`view-wars`) and from a card in
