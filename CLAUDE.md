@@ -726,6 +726,44 @@ valuation, so knowing what a record is worth pays off in two different games.
   functions.
 - `collection` is in `delete_my_data()`. See the note there: missing that line is how
   `app_state` survived account deletion for weeks.
+### Completion is on the album page, and open
+
+`primeCompletion` used to render a teaser with a **Show progress** button and load the
+discography only when it was pressed. Nobody pressed it, because it sits under the tracklist
+and below the fold. It draws itself now: what is left to rank by an artist you are already
+looking at is the most actionable thing on that page.
+
+It costs nothing to open — `fetchStudioAlbums` caches per artist in memory *and*
+localStorage, so only the first visit to an artist is a request, and `openAlbum` has already
+made one for the tracklist by then. A Spotify outage gates the page either way, so this adds
+no new exposure to the `showGate` trap that caught `commitCall`.
+
+**Every row carries the sleeve.** A discography as a column of titles is a spreadsheet; the
+cover is how anybody recognises a record they have not got round to, and it is the thing the
+list is asking them to go and rate. A rated row dims its art and ticks green, an unrated one
+stays at full strength — so the gaps are what the eye lands on rather than the ticks.
+
+### One free spin a day
+
+`profiles.spin_free_date` (`..._20260916140000_daily_free_spin.sql`), the same shape as
+`login_last_date`. `wallet_spin` sets the cost to 0 and stamps the date in the same
+transaction that grants the prize, so there is no window where a second call is also free,
+and **the column is pinned** — without that line in `pin_profile_economy` a client clears the
+date and spins free on every reload.
+
+`spin_free_available()` exists only to label the button, and a database without the migration
+answers with an error, which the client reads as "not free" rather than promising a free spin
+it cannot deliver.
+
+**What it costs, because a faucet should be a decision rather than a discovery:** the pool's
+expected return is 2,993, so a free spin a day is **1,800–3,000 Discs per user per day** —
+the low end for a fresh account, which wins *items* where a complete one wins Disc
+duplicates. At the top of that range it is **~21,000 a week, more than the entire login
+ladder**, and it gives back a good part of what `..._20260915140000` took out of the income
+mix. It does **not** break the sink rule: 2,993 against 5,000 is what a *paid* spin returns
+and that is untouched. This is a faucet beside the sink, not a change to it — but it is the
+largest one after the login ladder, and the first place to look on the next numbers pass.
+
 - **Album picks** (`profiles.album_picks`, Mythic only, three at a time) claim any record for
   nothing. `/api/collection-buy` takes `pick: true` and calls `collection_claim_pick_from`
   instead of `collection_buy_from` — the route decides *which function*, never whether the
@@ -1603,7 +1641,16 @@ Pieces:
 
 - **Undo lives in the header**, next to Refresh — not on the card. With auto-advance on, the
   card you want to take back has already slid away by the time you want to take it back, which
-  makes the card the one place the button cannot be. It undoes the last answer wherever you
+  makes the card the one place the button cannot be.
+  - **It does not expire.** `advance()` used to call `clearUndoable()`, so the button lived
+    for exactly `AUTO_MS` — about a second — and the moment you reach for it is the moment
+    after the card has gone. **A window that closes before you have finished reading is not
+    an undo, it is a reflex test.** The only things that retire it now are another answer
+    taking its place and the undo happening. The machinery already supported this:
+    `undoLast` handles the card having slid away, and the button carries the record's name
+    in its `title` so it still says what it would take back once nothing is on screen.
+
+  It undoes the last answer wherever you
   are: if that card is still live it restores its options, and if it has gone the answer is
   simply deleted and the question returns to the pool on the next rebuild. Undo really deletes
   the `lore_answers` row — safe because `award_lore_disc` fires on INSERT only and is capped at

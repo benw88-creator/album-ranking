@@ -1958,6 +1958,30 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 
 /* ---- COMPLETION TRACKER ---- */
 .comp { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin: 24px 0; }
+/* A discography as a column of titles is a spreadsheet. The sleeve is how
+   anybody recognises a record they have not got round to, and it is what the
+   list is asking them to go and rate — so a rated row dims and an unrated one
+   stays at full strength, and the gaps are what the eye lands on. */
+.comp-chip {
+  display: flex; align-items: center; gap: 11px; padding: 7px 0; cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+.comp-chip:last-child { border-bottom: 0; }
+.comp-chip:hover .comp-nm { color: var(--section); }
+.comp-art {
+  width: 38px; height: 38px; border-radius: 6px; object-fit: cover; flex-shrink: 0;
+  background: var(--surface-3); transition: opacity .15s;
+}
+.comp-chip.done .comp-art { opacity: 0.4; }
+.comp-tick { width: 16px; text-align: center; flex-shrink: 0; color: var(--text-faint); }
+.comp-chip.done .comp-tick { color: var(--green, #4fb477); }
+.comp-nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: color .15s; }
+.comp-chip.done .comp-nm { color: var(--text-dim); }
+.comp-yr { color: var(--text-faint); font-size: 12px; flex-shrink: 0; }
+@media (max-width: 520px) {
+  .comp-art { width: 32px; height: 32px; }
+  .comp-chip { gap: 9px; }
+}
 .comp.done { border-color: rgba(79,180,119,0.4); }
 .comp-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .comp-title { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: -0.01em; }
@@ -8929,16 +8953,20 @@ function openMissing(artistId){
   });
   modal.classList.add('open');
 }
+/* Completion draws itself now rather than sitting behind a "Show progress"
+   button below the fold, which is where nobody found it. What is left to rank
+   by an artist you are already looking at is the most actionable thing on this
+   page, and a button is a poor place to keep it.
+
+   It costs nothing to open: fetchStudioAlbums caches per artist in memory AND
+   localStorage, so only the first visit to an artist is a request — and the
+   page has already made one for the tracklist by then, so a Spotify outage
+   gates the page either way and this adds no new exposure. */
 function primeCompletion(meta){
   const host=document.getElementById('detail-completion');if(!host)return;
   _compState=null;
   if(!meta||!meta.artistId){host.innerHTML='';return;}
-  host.innerHTML='<div class="comp"><div class="comp-head">'+
-    '<div class="comp-title">'+esc(meta.artist)+' completion</div>'+
-    '<button class="btn-mini" id="comp-load">Show progress</button></div>'+
-    '<div class="comp-missing">See how many of '+esc(meta.artist)+'\u2019s studio albums you\u2019ve rated.</div></div>';
-  const b=document.getElementById('comp-load');
-  if(b)b.addEventListener('click',function(){host.innerHTML='<div class="comp"><div class="comp-title">Loading '+esc(meta.artist)+'\u2019s discography\u2026</div></div>';renderCompletion(meta);});
+  renderCompletion(meta);
 }
 
 async function renderCompletion(meta){
@@ -8979,7 +9007,18 @@ function drawCompletion(){
   const Y=studio.length,pct=Math.round(X/Y*100),complete=X>=Y;
   const missing=studio.filter(function(s){return!ratedBases[baseAlbumTitle(s.name)];});
   const list=compUnratedOnly?missing:studio;
-  const chips=list.length?list.map(function(s){const done=ratedBases[baseAlbumTitle(s.name)];return'<div class="comp-chip" data-album="'+s.id+'" style="display:flex;align-items:center;gap:9px;padding:8px 0;cursor:pointer;border-bottom:1px solid var(--border);">'+'<span style="color:'+(done?'var(--green)':'var(--text-faint)')+';width:16px;text-align:center;">'+(done?'\u2713':'\u25CB')+'</span>'+'<span style="flex:1;'+(done?'color:var(--text-dim);':'')+'">'+ esc(s.name)+'</span>'+'<span style="color:var(--text-faint);font-size:12px;">'+(s.year||'')+'</span></div>';}).join(''):'<div class="comp-missing">All studio albums rated \u2014 nice work.</div>';
+  /* The sleeve on every row. A discography as a column of titles is a
+     spreadsheet; the cover is how anybody actually recognises a record they
+     have not got round to, and it is the thing this list is asking them to go
+     and rate. A rated one is dimmed, so the gaps are what the eye lands on. */
+  const chips=list.length?list.map(function(s){
+    const done=ratedBases[baseAlbumTitle(s.name)];
+    return'<div class="comp-chip'+(done?' done':'')+'" data-album="'+esc(s.id)+'">'+
+      '<img class="comp-art" src="'+esc(s.art||'')+'" alt="" loading="lazy">'+
+      '<span class="comp-tick">'+(done?'\u2713':'\u25CB')+'</span>'+
+      '<span class="comp-nm">'+esc(s.name)+'</span>'+
+      '<span class="comp-yr">'+esc(s.year||'')+'</span></div>';
+  }).join(''):'<div class="comp-missing">All studio albums rated \u2014 nice work.</div>';
   host.innerHTML='<div class="comp '+(complete?'done':'')+'">'+
     '<div class="comp-head"><div class="comp-title">'+esc(meta.artist)+' \u00b7 '+X+' / '+Y+' albums rated</div>'+
       (complete?'<span class="comp-badge">\u{1F3C6} '+esc(meta.artist)+' Completionist</span>':'<div class="comp-pct" style="color:'+albumColor(pct)+'">'+pct+'%</div>')+' </div>'+
@@ -17955,13 +17994,37 @@ window.renderAdminStats = renderAdminStats;
     el('draw-result').innerHTML = '';
   }
 
+  /* Whether today's free spin is still there. Read from the server rather than
+     worked out here: the client knowing is display, and wallet_spin is what
+     actually decides and stamps the date — the same relationship LADDER has
+     with wallet_daily_login. Null until the first answer lands, so the button
+     reads as a paid spin until told otherwise rather than promising a free one
+     it cannot deliver. */
+  var _freeSpin = null;
+  async function checkFree() {
+    try {
+      if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { _freeSpin = false; return; }
+      var r = await Cloud.client().rpc('spin_free_available');
+      // A database without ..._20260916140000 applied answers with an error,
+      // and the button quietly goes back to costing 5,000.
+      _freeSpin = r.error ? false : !!r.data;
+    } catch (e) { _freeSpin = false; }
+    paintBalance();
+  }
+
   function paintBalance() {
     var st = W() && W().get ? W().get() : null;
     if (!st) return;
     el('draw-balance').textContent = st.is_admin
       ? 'Admin — free spins'
       : (st.discs || 0).toLocaleString('en-GB') + ' Discs';
-    el('draw-go').disabled = !st.is_admin && (st.discs || 0) < COST;
+    var go = el('draw-go');
+    go.disabled = !st.is_admin && !_freeSpin && (st.discs || 0) < COST;
+    if (!busy) go.textContent = spinLabel(st);
+  }
+  function spinLabel(st) {
+    if (_freeSpin) return 'Your free spin — open it';
+    return 'Open for ' + COST.toLocaleString() + ' Discs';
   }
 
   /* The odds panel that used to live here is gone at the owner's request,
@@ -17992,6 +18055,7 @@ window.renderAdminStats = renderAdminStats;
     // A resting strip so the window is never empty before the first spin.
     el('draw-strip').innerHTML = buildStrip(pool, weightedPick(pool)).slice(0, 20).map(tileHTML).join('');
     paintBalance();
+    checkFree();   // paints again when it answers
   }
   /* The reel lives on the Discs page and nowhere else, so opening it means
      going there and scrolling to it. The scroll is what makes this worth a
@@ -18028,7 +18092,7 @@ window.renderAdminStats = renderAdminStats;
     if (res.error) {
       busy = false;
       el('draw-window').classList.remove('spinning');
-      go.textContent = 'Open for ' + COST.toLocaleString() + ' Discs';
+      go.textContent = spinLabel();
       paintBalance();
       el('draw-result').innerHTML = '<div class="dr-sub">' + esc(res.error) + '</div>';
       if (window.reportIssue) reportIssue('wallet_spin failed', { error: res.error });
@@ -18081,6 +18145,10 @@ window.renderAdminStats = renderAdminStats;
           : 'Unlocked — equip it in the Shop') + '</div>';
 
       applyFeedback(won);
+      // The free spin has just been taken, so the button has to stop offering
+      // it. The server said which it was in `won.free`; asking again is one
+      // cheap call and cannot disagree with the row that was actually written.
+      checkFree();
       paintBalance();
       /* Deliberately NOT calling renderRewards() here, even though winning
          album picks changes what the page above says. renderRewards() would
@@ -20119,7 +20187,12 @@ window.track = function (name, props) {
   function setUndoable(item, q) {
     _undoItem = item; _undoQ = q;
     var b = document.getElementById('today-undo');
-    if (b) { b.style.display = ''; b.disabled = false; b.textContent = 'Undo'; }
+    if (b) {
+      b.style.display = ''; b.disabled = false; b.textContent = 'Undo';
+      // Once the card has gone the button is the only thing left naming what
+      // it would take back, so the record is on it.
+      b.title = 'Undo your answer about ' + ((item && item.name) || 'that record');
+    }
   }
   function clearUndoable() {
     _undoItem = null; _undoQ = null; _undoRestore = null;
@@ -20153,8 +20226,15 @@ window.track = function (name, props) {
   }
 
   function advance() {
-    // A new card means the previous answer is no longer the thing Undo means.
-    clearUndoable();
+    /* Undo is NOT cleared here. It used to be, which meant the button lived
+       for exactly AUTO_MS — about a second — and the one moment you reach for
+       it is the moment after the card has gone. A window that closes before
+       you have finished reading is not an undo, it is a reflex test.
+
+       undoLast() already handles the card having slid away: the answer is
+       deleted and the question returns to the pool on the next rebuild. So
+       the only thing that should retire an Undo is another answer taking its
+       place, or the undo happening. */
     _qi++;
     if (_qi >= _queue.length) {
       // Endless: the finders re-run, and anything just answered drops out.
