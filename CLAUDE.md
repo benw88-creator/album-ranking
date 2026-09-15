@@ -1242,14 +1242,17 @@ What makes it playable:
   before anything repeats, and storage moved to `vinal_earworm2_<date>` — the v1 key
   belongs to a pool with no genre or artwork and a different pick for any given date.
 - `ew-card-status` had been in the markup since the game shipped with nothing ever writing
-  to it. It now carries today's result on the Minigames card, like the Drop's.
+  to it. It now carries today's result on the Minigames card, like the Drop's — though
+neither was actually visible until the `.gc-best` selector was scoped. See **The status
+line on the card** under Album Blitz.
 
 The card is gated on three rated albums (see the unlock gates), so `window.openEarworm()`
 opens it in a fresh browser where clicking the card will not.
 
 ## Album Blitz
 
-Ten rounds of album covers against somebody you follow, about a minute a match.
+Ten rounds of album covers, about a minute a go. Three ways to play and one engine
+underneath: **Today's Blitz**, solo, and head to head against somebody you follow.
 `..._20260916180000_album_blitz.sql`, plus the `Blitz` module (questions) and the
 lobby/run IIFE under it in `index.html`.
 
@@ -1277,6 +1280,46 @@ that cap a ten-round match could ask "which one is by X" four times, every quest
 technically different and the match still repetitive, because what people notice is the
 *shape* of the question and not the records in it.
 
+### Today's Blitz
+
+Everybody gets the same ten, seeded by day number, **one go**. That is the whole Wordle
+trade, and the cap is the half that makes it work: "2,450" means nothing if the other
+person could sit there until they got it.
+
+`dailySeed()` runs the day number through a multiply-and-xor rather than using it raw, so
+today's daily is not the ten questions a solo run would build from the same number.
+
+**The one go is only as good as its storage, so `crate_blitz_daily` is in `SYNC_KEYS`.**
+Without that the cap was one device deep — the same ten were a fresh attempt on a phone,
+which is exactly what a shared score is supposed to rule out. It needed a merge rule of
+its own, like every other key there: a newer `day` supersedes, and on the **same** day the
+**earlier** attempt wins, because the first go is the honest one and taking the later would
+turn a second device into a retry. Same direction as the Earworm best taking the smaller
+row count. Records written before `at` existed have none, read as 0 and therefore win —
+which is right, since they were written before anything carrying a stamp.
+
+A determined person can still clear their own storage. That is fine and is not worth
+defending against: there is no payout difference between the three modes and nobody else's
+score is affected.
+
+**The share text is spoiler-free.** A row of filled and empty circles says how you did and
+never which records came up:
+
+```
+Album Blitz #2449 — 1,163
+○●●●○●●○○●  6/10
+wildcrate.xyz
+```
+
+`marks[]` is pushed one per round in `answer()` and reset in `begin()`.
+
+**A rejected `writeText` escapes the `try` around it**, so every clipboard call in the app
+carries its own `.catch` now — the Blitz share, the Earworm share, the Daily Drop share, the
+profile link and the Groove join link. A clipboard write is refused by *rejecting*, not by
+throwing (no permission, not a user gesture, insecure context), so the surrounding code sees
+nothing and the button cheerfully says "Copied" over an empty clipboard. Four of the five
+were written that way.
+
 ### The multiplier is the game
 
 100 for right, up to 100 more for speed, all times a streak multiplier stepping 1 / 1.5 /
@@ -1302,6 +1345,11 @@ submitted. There is a guard in the migration that fails if a policy is ever adde
 table, and another if `blitz_matches` gains a write policy — scores may only come from
 `blitz_submit()`.
 
+**A table with RLS on and no policies returns an empty result, not an error.** Zero rows
+back from a probe is the seal working, and a check that calls that a leak is a check that
+is wrong — which is how the first probe of this table read. The migration's own guard is
+the stronger proof anyway, because it raises rather than reporting.
+
 That is not proof against a determined cheat; the game runs in a browser and the score is
 client-reported, the same posture as every other minigame. `blitz_submit` clamps to 3,600
 because a flawless run is the arithmetic ceiling, and the daily cap does the rest.
@@ -1315,6 +1363,45 @@ winning is the head-to-head record** (`blitz_record`), which is the thing people
 for — the result screen leads with "Against them: 4W 2L 1D" and a Rematch button.
 
 1,600 × 3/day through `wallet_award_game('blitz')`, the same as Higher or Lower.
+
+**Win streaks were deliberately not added.** The head-to-head record already carries the
+rivalry, and a streak would need its own column and its own reset rules to say the same
+thing a second time.
+
+### The status line on the card, and the selector that wiped all four
+
+`#blitz-card-status` shipped in the markup with nothing writing to it — precisely what
+`ew-card-status` did for the whole life of Earworm, and the second time this exact defect
+has been introduced. It says whether today's is unplayed, the best score, and — replacing
+both once a fetch answers — **how many matches are waiting on you**, which is the only line
+on that grid that is a reason to open the app rather than a statistic. The local half is
+written first and unconditionally, so the card says something without the network, and
+nothing is ever inferred from a cached count: "2 waiting on you" when there are none is the
+stale-field shape that cost this app a week over `login_last_date`. The fetch is tokened,
+because entering the view and closing the modal can both start one and the slower would
+otherwise land last and win with the older number.
+
+**Fixing it exposed the reason no card status was ever visible.** `renderBests()` ran
+`document.querySelectorAll('.gc-best')` — *every* one of them — read `crate_best_<data-best>`
+and blanked anything that came back empty. The five-round games carry `data-best`; the Daily
+Drop, Earworm, Album Blitz and Higher or Lower each write their own status line into the same
+`.gc-best` slot **with no `data-best` on it**, so all four were read as `crate_best_undefined`
+and wiped.
+
+What makes it worse than a wasted element is *when* it ran. `setMode('games')` calls
+`renderGameBests()`, so the wipe fired on the way **into** the only view those cards appear
+in — each module painted its line at load and this cleared it a moment before anybody could
+see it. Today's Drop result, your Earworm score, runs left on Higher or Lower: all four had
+been invisible since they shipped, and each looked like its own separate never-implemented
+feature rather than one shared cause.
+
+So the selector is scoped to `.gc-best[data-best]`, and `renderBests()` then calls the four
+painters (`paintDropCard`, `paintEarwormCard`, `paintBlitzCard`, `paintHigherLowerCard`).
+Scoping alone only stops the wipe — calling them is what makes the lines *show*, because
+nothing else repaints them on entering the view. **One function now means "repaint the game
+cards"**, which is also why the repaint was taken back out of `paintUnlocks()`: that paints
+the lock overlays, it runs immediately after `renderGameBests()` on the same view change, and
+having both call it gave the Blitz card two `blitzList()` round trips per visit.
 
 ### Two things that cost time
 
@@ -1502,100 +1589,6 @@ Two things the removal had to touch, and both would have been silent failures:
 - `GATES` in the unlock painter had a `tourney-card` entry. `paintUnlocks` does guard with
   `if (!card) return;`, so this one was harmless, but a gate for a card that cannot exist is a
   gate that can never be passed. Removed.
-
-## Album Blitz
-
-Ten questions about records, four seconds a go, in a modal off the Minigames grid
-(`..._20260916180000_album_blitz.sql`, `window.openAlbumBlitz`). Three ways to play it
-and one engine underneath: **Today's Blitz**, solo, and head to head against somebody
-you follow.
-
-**It is the only game here that asks about records rather than about you.** Higher or
-Lower is your own crate, the Drop and Earworm are one puzzle a day; this is the one
-somebody can play on their first visit and the one two people can argue about. Hence
-the gate at five rated albums rather than twenty-five — enough to have seen the app,
-not enough to be a wall.
-
-- **The pool is the Daily Drop's baked rows**, exported as `window.VinalPool`
-  (`albums`: 121, `songs`: 118). No network, no token, instant scoring, identical on
-  every device — the same invariant the Drop has and for the same reasons. Adding a
-  question kind means adding a function to `KINDS`; it needs no new data.
-- **Nine question kinds**, each carrying a `kid`, and **no kind may appear more than
-  twice in a match.** The first version had three "which one is by X" in ten rounds and
-  read as broken however correct each one was — the same failure shape as Higher or
-  Lower repeating albums.
-- **It gets harder as it goes**: `shape(i)` steps from two choices and seven seconds, to
-  three and six, to four and five, and tightens how close the wrong answers are. A quiz
-  at one difficulty is a quiz you stop playing at round four.
-- **Streaks multiply** — 1.5x at three, 2x at five, 3x at eight — so the run is worth
-  more than the sum of its rounds and one miss costs more than one round. `PERFECT` is
-  3,600, which is ten right with the multiplier ladder taken whole.
-- It pays through `Wallet.awardGame('blitz')` and `notePlay('blitz')` like every other
-  game, capped server-side in `wallet_award_game`.
-
-### Today's Blitz
-
-Everybody gets the same ten, seeded by day number, **one go**. That is the whole Wordle
-trade: the cap is what makes a score worth pasting, because "2,450" means nothing if the
-other person could sit there until they got it.
-
-`dailySeed()` is the day number run through a multiply-and-xor rather than used raw, so
-today's daily is not the same ten a solo run would get from the same number. The record
-lives in `crate_blitz_daily` keyed by day, so a reload cannot buy a second attempt on the
-same device — a determined person can clear their own storage, and that is fine: there is
-no payout difference and nobody else's score is affected.
-
-**The share text is spoiler-free.** A row of filled and empty circles says how you did and
-never which records came up:
-
-```
-Album Blitz #2449 — 1,163
-○●●●○●●○○●  6/10
-wildcrate.xyz
-```
-
-`marks[]` is pushed one per round in `answer()` and reset in `begin()`. A rejected
-`writeText` promise escapes the `try` around it, so the clipboard call carries its own
-`.catch` — without it a denied clipboard says "Copied".
-
-### Head to head
-
-`blitz_matches` holds one row per match; `blitz_seeds` holds the seed and has **RLS on and
-no policies**, exactly like `bid_war_values`, so the questions cannot be read ahead of
-playing. `blitz_start` is the only route to it and it hands the seed over only to a player
-of that match who has not yet scored.
-
-Note that a table with RLS on and no policies returns an **empty result, not an error** —
-0 rows from a probe is the seal working, not a leak. That is worth remembering before
-writing a check that reports the opposite.
-
-`blitz_submit` resolves the match when the second score lands, in the same transaction,
-and stores `winner_id`. `blitz_record(other)` is the W/L/D against one person, which is
-what the result screen offers a rematch off.
-
-**Win streaks were deliberately not added.** The head-to-head record already carries the
-rivalry and a streak would need its own column and its own reset rules for a second way to
-say the same thing.
-
-### `#blitz-card-status`
-
-It shipped in the markup with nothing writing to it — precisely what `ew-card-status` did
-for the whole life of Earworm, and the second time this exact defect has been introduced.
-It now says whether today's is unplayed, the best score, and — above both — **how many
-matches are waiting on you**, which is the only line on that grid that is a reason to open
-the app rather than a statistic.
-
-It paints at module load, when no session has restored yet, so `paintUnlocks()` repaints it
-on every visit to Minigames and `close()` repaints it on leaving the modal. A count fetched
-once at load would be permanently absent for the signed-in case it exists for.
-
-### The timer bar, and `void offsetWidth`
-
-The clock is one element with a `width` transition, reset to 100% and sent to 0% each
-round. It did not animate at first: `requestAnimationFrame` fires **before** style
-recalculation, so the reset and the transition landed in one computed style and the bar
-simply sat there. `void bar.offsetWidth` between them forces the reflow. Do not replace it
-with a second rAF — that is the version that looked correct and did nothing.
 
 ## Higher or Lower
 

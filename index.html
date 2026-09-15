@@ -4518,6 +4518,10 @@ button.rw-day {
    is one sentence. A quiz that needs reading is not a fast game. */
 .blitz-modal .modal-panel { max-width: 560px; }
 .bl-lobby-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* Today's Blitz is one go, so the button spends itself. Without this it
+   stays a full-strength primary button that silently does nothing when
+   pressed — the same failure as a tile that keeps glowing after a tap. */
+#blitz-daily:disabled { opacity: 0.45; cursor: default; }
 .bl-best { margin-left: auto; font: 12px/1 var(--font-mono); color: var(--text-dim); }
 .bl-best b { color: var(--gold); font-size: 15px; }
 
@@ -9434,7 +9438,7 @@ const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const Cloud=(function(){
   let sb=null,user=null,ready=false;
-  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1'];
+  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily'];
   const pending={};
   function isOn(){return!!(sb&&user);}
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
@@ -9450,6 +9454,21 @@ const Cloud=(function(){
   function itemStamp(x){return Math.max((x&&x.ratedAt)||0,(x&&x.savedAt)||0);}
   function mergeItemMap(localObj,cloudObj){const out=Object.assign({},cloudObj||{});const loc=localObj||{};Object.keys(loc).forEach(function(id){const a=loc[id],b=out[id];if(!b||itemStamp(a)>=itemStamp(b))out[id]=a;});return out;}
   function mergeClaimed(a,b){return Object.assign({},b||{},a||{});}
+  /* Today's Blitz is one go, and until this was synced that cap was one
+     device deep — the same ten questions were a fresh attempt on a phone,
+     which is exactly what the shared score is supposed to rule out.
+
+     Different day: the newer record supersedes. Same day: the EARLIER
+     attempt wins, because the first go is the honest one and taking the
+     later would turn a second device into a retry. Same direction as the
+     Earworm best taking the smaller row count. A record written before
+     `at` existed has none, reads as 0 and therefore wins — which is right,
+     since it was written before anything carrying a stamp. */
+  function mergeBlitzDaily(a,b){
+    if(!a)return b||null; if(!b)return a;
+    if((a.day||0)!==(b.day||0))return (a.day||0)>(b.day||0)?a:b;
+    return (a.at||0)<=(b.at||0)?a:b;
+  }
   function mergeActivity(a,b){const all=(a||[]).concat(b||[]);const seen={};const out=[];all.sort(function(x,y){return(y.t||0)-(x.t||0);});all.forEach(function(e){const k=e.t+'|'+e.h;if(!seen[k]){seen[k]=1;out.push(e);}});return out.slice(0,60);}
   /* Play counts and the Earworm best. Field by field, because the two halves
      want opposite comparisons — a bigger play count wins, a *smaller* Earworm
@@ -9480,7 +9499,9 @@ const Cloud=(function(){
     // The shortlist is keyed by album id and carries savedAt, so it merges with
     // the same per-item rule the ratings use.
     lsSetRaw('crate_shortlist_v1',mergeItemMap(lsGet('crate_shortlist_v1')||{},cloud['crate_shortlist_v1']||{}));
-    ['crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year'].forEach(function(k){const a=lsGet(k)||0,b=cloud[k]||0;if(Math.max(a,b))lsSetRaw(k,Math.max(a,b));});
+    ['crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_blitz_best'].forEach(function(k){const a=lsGet(k)||0,b=cloud[k]||0;if(Math.max(a,b))lsSetRaw(k,Math.max(a,b));});
+    const mBd=mergeBlitzDaily(lsGet('crate_blitz_daily'),cloud['crate_blitz_daily']);
+    if(mBd)lsSetRaw('crate_blitz_daily',mBd);
     /* The game log merges per field rather than newest-wins: play counts take
        the larger of the two, and the Earworm best takes the *smaller* row
        count, because fewer guesses is better. A whole-blob merge would throw
@@ -10543,7 +10564,7 @@ async function drawProfile(host,prof,isOwner){
 
   if(isOwner){
     document.getElementById('prof-edit').addEventListener('click',openProfileEdit);
-    document.getElementById('prof-share').addEventListener('click',function(){navigator.clipboard&&navigator.clipboard.writeText(shareUrl);const b=document.getElementById('prof-share');b.textContent='Copied!';setTimeout(function(){b.textContent='Copy share link';},1500);});
+    document.getElementById('prof-share').addEventListener('click',function(){const b=document.getElementById('prof-share');navigator.clipboard&&navigator.clipboard.writeText(shareUrl).catch(function(){b.textContent='Copy failed';});b.textContent='Copied!';setTimeout(function(){b.textContent='Copy share link';},1500);});
     host.querySelectorAll('.top3-slot').forEach(function(el){el.addEventListener('click',openProfileEdit);});
     const al=document.getElementById('prof-add-list');if(al)al.addEventListener('click',function(){openListEditor(null);});
     const fp=document.getElementById('fav-artist-pick');if(fp)fp.addEventListener('click',openFavArtistPicker);
@@ -11042,7 +11063,7 @@ async function drawGrooveInviteList(filter){
   document.getElementById('groove-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
   document.getElementById('groove-invite-btn').addEventListener('click',function(){const p=document.getElementById('groove-invite-panel');const showing=p.style.display!=='none';p.style.display=showing?'none':'block';if(!showing){document.getElementById('groove-invite-search').value='';drawGrooveInviteList('');}});
   document.getElementById('groove-invite-search').addEventListener('input',function(){clearTimeout(_grooveInviteTimer);const v=this.value;_grooveInviteTimer=setTimeout(function(){drawGrooveInviteList(v);},250);});
-  document.getElementById('groove-copy-btn').addEventListener('click',function(){if(!_currentGroove)return;const url=location.origin+location.pathname+'?groove='+_currentGroove.id;if(navigator.clipboard)navigator.clipboard.writeText(url);const b=document.getElementById('groove-copy-btn');b.textContent='Copied!';setTimeout(function(){b.textContent='Copy join link';},1500);});
+  document.getElementById('groove-copy-btn').addEventListener('click',function(){if(!_currentGroove)return;const url=location.origin+location.pathname+'?groove='+_currentGroove.id;const b=document.getElementById('groove-copy-btn');if(navigator.clipboard)navigator.clipboard.writeText(url).catch(function(){b.textContent='Copy failed';});b.textContent='Copied!';setTimeout(function(){b.textContent='Copy join link';},1500);});
   document.getElementById('groove-leave-btn').addEventListener('click',async function(){if(!_currentGroove)return;if(!confirm('Leave '+_currentGroove.name+'?'))return;await Cloud.leaveGroove(_currentGroove.id);document.getElementById('groove-modal').classList.remove('open');renderGrooves();});
 })();
 window.renderGrooves=renderGrooves;
@@ -14980,7 +15001,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       '</div>';
     var copy = document.getElementById('ew-copy');
     if (copy) copy.addEventListener('click', function () {
-      if (navigator.clipboard) navigator.clipboard.writeText(ewShareGrid());
+      if (navigator.clipboard) navigator.clipboard.writeText(ewShareGrid()).catch(function () { copy.textContent = 'Copy failed'; });
       copy.textContent = 'Copied ✓';
       setTimeout(function () { copy.textContent = 'Copy result'; }, 1600);
     });
@@ -17379,7 +17400,6 @@ window.renderAdminStats = renderAdminStats;
      is why the newly-open card is marked and celebrated rather than simply
      becoming clickable. */
   function paintUnlocks(announce) {
-    if (window.paintBlitzCard) paintBlitzCard();
     var n = ratedCount();
     var was = seen(), now = {}, fresh = [];
 
@@ -19497,7 +19517,10 @@ window.renderAdminStats = renderAdminStats;
   }
   function saveDaily(rec) {
     rec.day = dayNo();
+    // Stamped so the merge can tell which device went first on the day.
+    rec.at = Date.now();
     try { localStorage.setItem(DAILY_KEY, JSON.stringify(rec)); } catch (e) {}
+    if (window.Cloud) Cloud.push(DAILY_KEY);
   }
   function shareText(rec) {
     var marks = (rec.marks || []).map(function (ok) { return ok ? '\u25cf' : '\u25cb'; }).join('');
@@ -19512,7 +19535,7 @@ window.renderAdminStats = renderAdminStats;
     saveDaily: saveDaily, shareText: shareText,
     best: function () { try { return +localStorage.getItem(BEST_KEY) || 0; } catch (e) { return 0; } },
     setBest: function (n) {
-      try { if (n > (+localStorage.getItem(BEST_KEY) || 0)) localStorage.setItem(BEST_KEY, String(n)); } catch (e) {}
+      try { if (n > (+localStorage.getItem(BEST_KEY) || 0)) { localStorage.setItem(BEST_KEY, String(n)); if (window.Cloud) Cloud.push(BEST_KEY); } } catch (e) {}
     }
   };
 })();
@@ -19853,19 +19876,32 @@ window.renderAdminStats = renderAdminStats;
     if (k >= 1 && k <= 4) { e.preventDefault(); answer(k - 1); }
   });
 
+  /* The local half is written first and unconditionally, so the card says
+     something without the network; the turn count replaces it only once a
+     fetch has actually answered. Nothing is inferred from a cached count —
+     "2 waiting on you" when there are none is the stale-field shape that cost
+     this app a week over login_last_date.
+
+     The token is because this runs on every entry to the games view and again
+     when the modal closes, so two fetches can be in flight at once and the
+     slower one would otherwise land last and win with the older number. */
+  var cardToken = 0;
   async function paintCard() {
     var s = document.getElementById('blitz-card-status');
     if (!s) return;
+    var token = ++cardToken;
     var bits = [];
-    if (!Blitz.dailyDone()) bits.push('Today\u2019s ready');
+    if (!Blitz.dailyDone()) bits.push('Today’s ready');
     if (Blitz.best()) bits.push('Best ' + n(Blitz.best()));
-    s.textContent = bits.join(' \u00b7 ');
+    s.textContent = bits.join(' · ');
     if (!on()) return;
     try {
-      var rows = await Cloud.blitzList(), me = meId(), turns = 0;
+      var rows = await Cloud.blitzList();
+      if (token !== cardToken || !rows) return;
+      var me = meId(), turns = 0;
       rows.forEach(function (m) {
-        var mine = m.initiator_id === me;
-        if (m.status !== 'resolved' && (mine ? m.initiator_score : m.opponent_score) == null) turns++;
+        var isInit = m.initiator_id === me;
+        if (m.status !== 'resolved' && (isInit ? m.initiator_score : m.opponent_score) == null) turns++;
       });
       if (turns) s.textContent = turns + (turns === 1 ? ' match' : ' matches') + ' waiting on you';
     } catch (e) {}
