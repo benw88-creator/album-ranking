@@ -1,36 +1,52 @@
--- One free spin a day, for everybody.
+-- One free spin a day, paying items in full and Discs at a quarter.
 --
 -- ---------------------------------------------------------------------------
--- What this costs, stated plainly before anything else
+-- Why it is not simply a free spin
 -- ---------------------------------------------------------------------------
--- The Draw's expected return is **2,993 Discs**. A free spin is that much value
--- injected daily with nothing taken out, so at worst case this is
--- **~21,000 Discs a week — more than the entire login ladder (18,000)**, and it
--- undoes a good part of what ..._20260915140000 just did to the income mix.
+-- The Draw's expected return is 2,993. A straight free spin injects that much
+-- daily with nothing taken out — **~21,000 a week, more than the entire login
+-- ladder (18,000)** — and gives back most of what ..._20260915140000 removed
+-- from the income mix. That is not a feature costing a little; it is the second
+-- largest faucet in the app.
 --
--- The realistic figure is lower for an account that does not own every
--- cosmetic, because most of that 2,993 is duplicate payouts: a fresh account
--- wins *items* where a complete one wins Discs. The pure-Disc rows alone are
--- ~1,822 a day. So the honest range is **1,800-3,000 Discs a day**, against a
--- realistic day's play of 7,000-12,000.
+-- So the free spin pays **items in full and Discs at 25%** (`v_share`):
 --
--- **This does not break the sink rule.** That rule is about the ratio a *paid*
--- spin returns, and 2,993 against 5,000 is untouched — a free spin is a faucet
--- sitting next to the sink, not a change to it. But it is a faucet, and it is
--- the biggest single one in the app after the login ladder. If the numbers get
--- another pass, this is the line to look at first.
+--   a theme, banner, flair, frame, tag or album pick you do not own  -> whole
+--   Discs, and the Disc consolation for a duplicate                  -> a quarter
 --
--- It was asked for and it is a good feature: the Draw is the most enjoyable
--- thing in the app and 5,000 a go means most people would see it rarely.
--- Everything above is so the cost is a decision rather than a discovery.
+-- That split is the point rather than a compromise. **Items are sinks, not
+-- currency**: handing somebody their first theme costs the economy nothing and
+-- is the outcome that makes a free spin feel generous. The Disc rows are the
+-- dull result anybody would rather not land on, so quartering them takes the
+-- money out of exactly the outcome nobody is playing for. The jackpot stays a
+-- real moment at 25,000 on a 0.3% roll.
+--
+--   free spin, fresh account (wins items, not duplicates)   ~456 Discs
+--   free spin, owns every drawable cosmetic                 ~748 Discs
+--
+-- **3,200-5,200 a week**, against ~70,000 for a realistic week of play — a
+-- bonus worth having at about 5% of income, where the unscaled version was a
+-- quarter of it.
+--
+-- A paid spin is completely untouched: `v_share` is 1, the pool is the same,
+-- and 2,993 against 5,000 still holds. **The sink rule was never in danger
+-- here** — that rule is about what a paid spin returns — but the faucet beside
+-- it was, and this is the number that bounds it.
 --
 -- ---------------------------------------------------------------------------
 -- How it works
 -- ---------------------------------------------------------------------------
 -- `profiles.spin_free_date` holds the day the free spin was last taken, in UTC,
 -- the same shape as `login_last_date` and `game_awards_date`. wallet_spin sets
--- v_cost to 0 and stamps the date in the same transaction that grants the
--- prize, so there is no window where a second call is also free.
+-- the cost to 0, the share to a quarter and stamps the date in the same
+-- transaction that grants the prize, so there is no window where a second call
+-- is also free.
+--
+-- `v_pay` is computed once from the item and used at all three places a Disc
+-- payout happens — the Disc rows, the tag consolation and the cosmetic
+-- duplicate. **The picks branch is deliberately untouched**: `amount` is a
+-- count of records there and not money, so scaling it would quietly turn three
+-- free albums into one.
 --
 -- **The server decides, never the caller.** The browser asks
 -- `spin_free_available()` only to label the button, exactly as the ladder draws
@@ -38,9 +54,9 @@
 --
 -- **The column is pinned.** Without that line in pin_profile_economy a client
 -- clears the date and takes a free spin on every reload — the same hole the
--- daily award counters would have had. This is a create-or-replace of the
--- trigger as it stands after ..._20260914233000_game_play_limits.sql with two
--- lines added and nothing else touched.
+-- daily award counters would have had. What follows is a create-or-replace of
+-- the trigger as it stands after ..._20260914233000_game_play_limits.sql with
+-- two lines added and nothing else touched.
 
 alter table public.profiles
   add column if not exists spin_free_date date;
@@ -169,6 +185,11 @@ declare
   v_cost   integer := 5000;
   v_today  date := (now() at time zone 'utc')::date;
   v_free   boolean := false;
+  -- What a free spin pays in DISCS. Items are unaffected: a cosmetic or an
+  -- album pick you do not own arrives whole, because those are sinks rather
+  -- than currency and handing one over costs the economy nothing.
+  v_share  numeric := 1;
+  v_pay    integer;
   v_total  integer;
   v_roll   integer;
   v_acc    integer := 0;
@@ -183,12 +204,11 @@ begin
   select * into p from public.profiles where id = v_me for update;
   if p.id is null then raise exception 'No profile'; end if;
 
-  -- One free spin a day. Decided here and not by the caller: the browser
-  -- knowing whether it is owed one is display, the same relationship the
-  -- ladder has with wallet_daily_login.
+  -- One free spin a day, decided here and never by the caller.
   if p.spin_free_date is distinct from v_today then
-    v_free := true;
-    v_cost := 0;
+    v_free  := true;
+    v_cost  := 0;
+    v_share := 0.25;
     p.spin_free_date := v_today;
   end if;
 
@@ -214,10 +234,13 @@ begin
 
   v_ref   := v_item.ref;
   v_shown := v_item.label;
+  -- greatest(...,1) so the smallest prize on a free spin can never round to
+  -- nothing, which would read as the machine taking a turn and giving zero.
+  v_pay   := greatest(round(v_item.amount * v_share)::integer, 1);
 
   if v_item.kind = 'discs' then
-    p.discs := p.discs + v_item.amount;
-    v_gain := v_item.amount;
+    p.discs := p.discs + v_pay;
+    v_gain := v_pay;
 
   elsif v_item.kind = 'picks' then
     p.album_picks := coalesce(p.album_picks, 0) + v_item.amount;
@@ -235,8 +258,8 @@ begin
     if v_ref is null then
       v_dupe := true;
       v_ref  := null;
-      p.discs := p.discs + v_item.amount;
-      v_gain := v_item.amount;
+      p.discs := p.discs + v_pay;
+      v_gain := v_pay;
     else
       select name into v_shown from public.shop_items where kind = 'tag' and key = v_ref;
       p.owned_tags := (select array(select distinct unnest(coalesce(p.owned_tags, '{}'::text[]) || v_ref)));
@@ -250,8 +273,8 @@ begin
            when 'flair'  then p.owned_flairs
            else p.owned_frames end, '{}'::text[])) then
       v_dupe := true;
-      p.discs := p.discs + v_item.amount;
-      v_gain := v_item.amount;
+      p.discs := p.discs + v_pay;
+      v_gain := v_pay;
     elsif v_item.kind = 'theme' then
       p.owned_themes := (select array(select distinct unnest(coalesce(p.owned_themes, '{}'::text[]) || v_ref)));
     elsif v_item.kind = 'banner' then
@@ -295,17 +318,27 @@ grant execute on function public.wallet_spin() to authenticated;
 
 -- ------------------------------------------------------------------- guards
 do $$
+declare v_src text;
 begin
   if not exists (select 1 from information_schema.columns
                   where table_schema='public' and table_name='profiles'
                     and column_name='spin_free_date') then
     raise exception 'profiles.spin_free_date missing';
   end if;
+
   if (select prosrc from pg_proc where proname='pin_profile_economy') not like '%spin_free_date%' then
     raise exception 'pin_profile_economy does not pin spin_free_date — a client could clear it and spin free every reload';
   end if;
-  if (select prosrc from pg_proc where proname='wallet_spin') not like '%spin_free_date%' then
+
+  select prosrc into v_src from pg_proc where proname='wallet_spin';
+  if v_src not like '%spin_free_date%' then
     raise exception 'wallet_spin does not stamp spin_free_date — the free spin would never be spent';
   end if;
-  raise notice 'One free spin a day. Expected cost to the economy: ~1,800-3,000 Discs per user per day.';
+  -- The scaling has to reach every payout site. If any `v_item.amount` is still
+  -- being added straight to discs, a free spin pays that row in full.
+  if v_src like '%p.discs := p.discs + v_item.amount%' then
+    raise exception 'wallet_spin still pays a raw v_item.amount somewhere — that row would pay full price on a free spin';
+  end if;
+
+  raise notice 'Free spin: one a day, items in full and Discs at a quarter (~456-748 a day).';
 end $$;

@@ -743,7 +743,7 @@ cover is how anybody recognises a record they have not got round to, and it is t
 list is asking them to go and rate. A rated row dims its art and ticks green, an unrated one
 stays at full strength — so the gaps are what the eye lands on rather than the ticks.
 
-### One free spin a day
+### One free spin a day, items in full and Discs at a quarter
 
 `profiles.spin_free_date` (`..._20260916140000_daily_free_spin.sql`), the same shape as
 `login_last_date`. `wallet_spin` sets the cost to 0 and stamps the date in the same
@@ -755,14 +755,35 @@ date and spins free on every reload.
 answers with an error, which the client reads as "not free" rather than promising a free spin
 it cannot deliver.
 
-**What it costs, because a faucet should be a decision rather than a discovery:** the pool's
-expected return is 2,993, so a free spin a day is **1,800–3,000 Discs per user per day** —
-the low end for a fresh account, which wins *items* where a complete one wins Disc
-duplicates. At the top of that range it is **~21,000 a week, more than the entire login
-ladder**, and it gives back a good part of what `..._20260915140000` took out of the income
-mix. It does **not** break the sink rule: 2,993 against 5,000 is what a *paid* spin returns
-and that is untouched. This is a faucet beside the sink, not a change to it — but it is the
-largest one after the login ladder, and the first place to look on the next numbers pass.
+**The quarter is the whole design, not a compromise.** A straight free spin injects the
+pool's full 2,993 daily — ~21,000 a week, more than the entire login ladder, and most of
+what `..._20260915140000` had just removed from the income mix. So `v_share` scales the
+**Disc** payouts only:
+
+| | |
+|---|---|
+| a theme, banner, flair, frame, tag or album pick you do not own | whole |
+| Discs, and the Disc consolation for a duplicate | a quarter |
+
+**Items are sinks, not currency.** Handing somebody their first theme costs the economy
+nothing and is the outcome that makes a free spin feel generous; the Disc rows are the dull
+result nobody is playing for, so quartering them takes the money out of exactly the outcome
+you would rather not land on. The jackpot survives as a real moment at 25,000 on a 0.3%
+roll.
+
+That lands it at **~456 Discs a day for a fresh account** (which wins items, not duplicates)
+and **~748 for one that owns every drawable cosmetic** — 3,200–5,200 a week against ~70,000
+for a realistic week of play, so about 5% of income rather than a quarter of it.
+
+A **paid** spin is untouched: `v_share` is 1, the pool is the same, 2,993 against 5,000
+still holds. The sink rule was never in danger — that rule is about what a paid spin returns
+— but the faucet beside it was.
+
+`v_pay` is computed once and used at all three places a Disc payout happens. **The picks
+branch is deliberately left alone**: `amount` is a count of records there and not money, so
+scaling it would quietly turn three free albums into one. There is a guard that fails the
+migration if any raw `v_item.amount` is still being added to `discs`, because a single
+missed site means that row pays full price on a free spin.
 
 - **Album picks** (`profiles.album_picks`, Mythic only, three at a time) claim any record for
   nothing. `/api/collection-buy` takes `pick: true` and calls `collection_claim_pick_from`

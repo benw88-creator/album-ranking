@@ -1962,6 +1962,9 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
    anybody recognises a record they have not got round to, and it is what the
    list is asking them to go and rate — so a rated row dims and an unrated one
    stays at full strength, and the gaps are what the eye lands on. */
+.draw-free-note {
+  font: 11px/1.4 var(--font-mono); color: var(--c-cyan); margin-top: 8px; text-align: center;
+}
 .comp-chip {
   display: flex; align-items: center; gap: 11px; padding: 7px 0; cursor: pointer;
   border-bottom: 1px solid var(--border);
@@ -5439,6 +5442,9 @@ window.ICONS = {
 
       <div class="draw-cost">
         <button class="btn-primary" id="draw-go">Open for 5,000 Discs</button>
+        <!-- Only while a free spin is waiting. What it pays differently is
+             said before the spin, not after it. -->
+        <div class="draw-free-note" id="draw-free-note" style="display:none;"></div>
       </div>
     </div>
     </div>
@@ -18020,10 +18026,21 @@ window.renderAdminStats = renderAdminStats;
       : (st.discs || 0).toLocaleString('en-GB') + ' Discs';
     var go = el('draw-go');
     go.disabled = !st.is_admin && !_freeSpin && (st.discs || 0) < COST;
-    if (!busy) go.textContent = spinLabel(st);
+    if (!busy) go.textContent = spinLabel();
+    /* Said on the button, not discovered in the result. A free spin that
+       quietly pays a quarter reads as the machine short-changing you; one that
+       says so first reads as a free spin. */
+    go.title = _freeSpin
+      ? 'Today’s free spin. Anything you do not own comes whole — Discs pay a quarter.'
+      : '';
+    var note = el('draw-free-note');
+    if (note) {
+      note.style.display = _freeSpin ? '' : 'none';
+      note.textContent = 'Free spin — records and cosmetics in full, Discs at a quarter.';
+    }
   }
-  function spinLabel(st) {
-    if (_freeSpin) return 'Your free spin — open it';
+  function spinLabel() {
+    if (_freeSpin) return 'Your free spin';
     return 'Open for ' + COST.toLocaleString() + ' Discs';
   }
 
