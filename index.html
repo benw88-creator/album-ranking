@@ -5211,7 +5211,7 @@ window.ICONS = {
       <div class="draw-result" id="draw-result"></div>
 
       <div class="draw-cost">
-        <button class="btn-primary" id="draw-go">Open for 1,000 Discs</button>
+        <button class="btn-primary" id="draw-go">Open for 5,000 Discs</button>
       </div>
     </div>
     </div>
@@ -11778,12 +11778,12 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   const THEMES = {
     classic:  { name: 'Crate',    cost: 0,    desc: 'The original — near-black, gold and ember.' },
-    sundown:  { name: 'Sundown',  cost: 3000, desc: 'Plum dusk, hot orange, pink neon edge.' },
-    cassette: { name: 'Cassette', cost: 3000, desc: 'Deep graphite with turquoise and blue.' },
-    citrus:   { name: 'Citrus',   cost: 5000, desc: 'Espresso dark, blood orange and lime.' },
-    vhs:      { name: 'VHS Tracking', cost: 6000, desc: 'Bottle-green black with phosphor green and hot pink.' },
-    bone:     { name: 'Bone China',   cost: 6000, desc: 'Warm off-white on soot. Quiet, and the only pale one.' },
-    neon:     { name: 'Neon Vault', cost: 7000, desc: 'Indigo black, magenta and cyan. Loud.' },
+    sundown:  { name: 'Sundown',  cost: 15000, desc: 'Plum dusk, hot orange, pink neon edge.' },
+    cassette: { name: 'Cassette', cost: 15000, desc: 'Deep graphite with turquoise and blue.' },
+    citrus:   { name: 'Citrus',   cost: 25000, desc: 'Espresso dark, blood orange and lime.' },
+    vhs:      { name: 'VHS Tracking', cost: 30000, desc: 'Bottle-green black with phosphor green and hot pink.' },
+    bone:     { name: 'Bone China',   cost: 30000, desc: 'Warm off-white on soot. Quiet, and the only pale one.' },
+    neon:     { name: 'Neon Vault', cost: 35000, desc: 'Indigo black, magenta and cyan. Loud.' },
   };
   const SWATCH = {
     classic:  'linear-gradient(135deg,#0a0908 20%,#F5C842 60%,#ff7a4d)',
@@ -11796,12 +11796,12 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   };
   const BANNERS = {
     none:   { name: 'None',      cost: 0,   desc: 'No banner — the plain profile header.', gradient: 'transparent' },
-    aurora: { name: 'Aurora',    cost: 2000, desc: 'A cool blue-to-gold wash behind your header.', gradient: 'linear-gradient(120deg, rgba(94,184,255,0.28), rgba(245,200,66,0.16))' },
-    ember:  { name: 'Ember',     cost: 2000, desc: 'Warm orange-red, low and moody.', gradient: 'linear-gradient(120deg, rgba(232,118,63,0.30), rgba(226,75,74,0.16))' },
-    mono:   { name: 'Mono Fade', cost: 1600,  desc: 'A quiet fade to nothing — subtle depth.', gradient: 'linear-gradient(120deg, rgba(255,255,255,0.10), transparent)' },
-    tape:   { name: 'Tape Loop', cost: 2800, desc: 'Phosphor green bleeding into black.', gradient: 'linear-gradient(120deg, rgba(61,255,171,0.24), rgba(255,79,163,0.12))' },
-    dusk:   { name: 'Dusk',      cost: 2800, desc: 'The last twenty minutes of light.', gradient: 'linear-gradient(120deg, rgba(120,90,190,0.28), rgba(255,150,90,0.14))' },
-    static: { name: 'Static',    cost: 3600, desc: 'Snow on a dead channel.', gradient: 'repeating-linear-gradient(115deg, rgba(255,255,255,0.09) 0 2px, transparent 2px 5px)' },
+    aurora: { name: 'Aurora',    cost: 10000, desc: 'A cool blue-to-gold wash behind your header.', gradient: 'linear-gradient(120deg, rgba(94,184,255,0.28), rgba(245,200,66,0.16))' },
+    ember:  { name: 'Ember',     cost: 10000, desc: 'Warm orange-red, low and moody.', gradient: 'linear-gradient(120deg, rgba(232,118,63,0.30), rgba(226,75,74,0.16))' },
+    mono:   { name: 'Mono Fade', cost: 8000,  desc: 'A quiet fade to nothing — subtle depth.', gradient: 'linear-gradient(120deg, rgba(255,255,255,0.10), transparent)' },
+    tape:   { name: 'Tape Loop', cost: 14000, desc: 'Phosphor green bleeding into black.', gradient: 'linear-gradient(120deg, rgba(61,255,171,0.24), rgba(255,79,163,0.12))' },
+    dusk:   { name: 'Dusk',      cost: 14000, desc: 'The last twenty minutes of light.', gradient: 'linear-gradient(120deg, rgba(120,90,190,0.28), rgba(255,150,90,0.14))' },
+    static: { name: 'Static',    cost: 18000, desc: 'Snow on a dead channel.', gradient: 'repeating-linear-gradient(115deg, rgba(255,255,255,0.09) 0 2px, transparent 2px 5px)' },
   };
   // The real banner gradients above are deliberately subtle overlays meant to
   // sit on top of a full profile page. At 44px swatch-chip size with nothing
@@ -11841,29 +11841,29 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      No `desc`. A tag is three words on a chip; explaining it underneath is
      explaining the joke. */
   const TAGS = {
-    pluh:       { name: 'pluh',                   cost: 4000 },
-    lit:        { name: 'IT’S LIT',               cost: 4000 },
-    justbeatit: { name: 'JUST BEAT IT',           cost: 4000 },
-    twentyone:  { name: '21',                     cost: 4500 },
-    beef:       { name: '1738',                   cost: 5000 },
-    mustard:    { name: 'MUSTARD',                cost: 6000 },
-    pluto:      { name: 'PLUTO',                  cost: 6000 },
-    astro:      { name: 'ASTRO',                  cost: 6000 },
-    sremm:      { name: 'SREMMLIFE!',             cost: 7000 },
-    sober:      { name: 'I CAN’T SPELL SOBER',    cost: 7000 },
-    maybach:    { name: 'M-M-M-MAYBACH MUSIC',    cost: 8000 },
-    biscuits:   { name: 'IT’S BISCUITS, IT’S GRAVY', cost: 8000 },
+    pluh:       { name: 'pluh',                   cost: 48000 },
+    lit:        { name: 'IT’S LIT',               cost: 48000 },
+    justbeatit: { name: 'JUST BEAT IT',           cost: 48000 },
+    twentyone:  { name: '21',                     cost: 54000 },
+    beef:       { name: '1738',                   cost: 60000 },
+    mustard:    { name: 'MUSTARD',                cost: 72000 },
+    pluto:      { name: 'PLUTO',                  cost: 72000 },
+    astro:      { name: 'ASTRO',                  cost: 72000 },
+    sremm:      { name: 'SREMMLIFE!',             cost: 84000 },
+    sober:      { name: 'I CAN’T SPELL SOBER',    cost: 84000 },
+    maybach:    { name: 'M-M-M-MAYBACH MUSIC',    cost: 96000 },
+    biscuits:   { name: 'IT’S BISCUITS, IT’S GRAVY', cost: 96000 },
     /* The key stays `fuckumean` — it is what `shop_items`, `owned_tags` and
        `active_tag` hold, and renaming it would orphan anyone who owns one.
        Only the label is rendered, and only from this map: loadPrices() reads
        cost and nothing else. */
-    fuckumean:  { name: 'FUKUMEAN',               cost: 8000 },
-    profit:     { name: 'I GOT TOO MUCH PROFIT',  cost: 9000 },
-    drizzy:     { name: 'DRIZZY',                 cost: 9000 },
-    carti:      { name: 'CASH CARTI B!TCH',       cost: 10000 },
-    taykeith:   { name: 'TAY KEITH, FTNU',        cost: 12000 },
-    pierre:     { name: 'YO PIERRE, YOU WANNA COME OUT HERE?', cost: 14000 },
-    metro:      { name: 'IF YOUNG METRO DON’T TRUST YOU', cost: 16000 },
+    fuckumean:  { name: 'FUKUMEAN',               cost: 96000 },
+    profit:     { name: 'I GOT TOO MUCH PROFIT',  cost: 108000 },
+    drizzy:     { name: 'DRIZZY',                 cost: 108000 },
+    carti:      { name: 'CASH CARTI B!TCH',       cost: 120000 },
+    taykeith:   { name: 'TAY KEITH, FTNU',        cost: 144000 },
+    pierre:     { name: 'YO PIERRE, YOU WANNA COME OUT HERE?', cost: 168000 },
+    metro:      { name: 'IF YOUNG METRO DON’T TRUST YOU', cost: 192000 },
   };
 
   /* Every tag gets its own colours and one of three motions.
@@ -11911,12 +11911,12 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      layout change, deliberately: a cosmetic that moves the profile header
      around is a cosmetic that breaks somebody else's page. */
   const FLAIRS = {
-    foil:     { name: 'Gold Foil',    cost: 4500,  desc: 'Your name pressed into the sleeve.' },
-    chrome:   { name: 'Chrome',       cost: 4500,  desc: 'Mirror-polished, like a 12″ label.' },
-    phosphor: { name: 'Phosphor',     cost: 6000, desc: 'Green-screen burn-in.' },
-    ember:    { name: 'Ember',        cost: 6000, desc: 'Warm, and it breathes.' },
-    bleed:    { name: 'Ink Bleed',    cost: 8000, desc: 'Red spreading through cheap paper.' },
-    holo:     { name: 'Holographic',  cost: 12000, desc: 'Never the same colour twice.' },
+    foil:     { name: 'Gold Foil',    cost: 22500,  desc: 'Your name pressed into the sleeve.' },
+    chrome:   { name: 'Chrome',       cost: 22500,  desc: 'Mirror-polished, like a 12″ label.' },
+    phosphor: { name: 'Phosphor',     cost: 30000, desc: 'Green-screen burn-in.' },
+    ember:    { name: 'Ember',        cost: 30000, desc: 'Warm, and it breathes.' },
+    bleed:    { name: 'Ink Bleed',    cost: 40000, desc: 'Red spreading through cheap paper.' },
+    holo:     { name: 'Holographic',  cost: 60000, desc: 'Never the same colour twice.' },
   };
   const FLAIR_SWATCH = {
     foil:     'linear-gradient(135deg,#8a6b1f,#F5C842 55%,#fff4cc)',
@@ -11929,11 +11929,11 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   /* ---- Avatar frames ----------------------------------------------------- */
   const FRAMES = {
-    sleeve:  { name: 'Card Sleeve', cost: 3500,  desc: 'A square paper sleeve behind a round record.' },
-    groove:  { name: 'Groove',      cost: 4500,  desc: 'Concentric rings, cut from the outside in.' },
-    gold:    { name: 'Gold Ring',   cost: 6000, desc: 'One solid band. Nothing clever.' },
-    splice:  { name: 'Splice',      cost: 7000, desc: 'Tape marked up for the edit.' },
-    spindle: { name: 'Spindle',     cost: 8000, desc: 'It turns, slowly, forever.' },
+    sleeve:  { name: 'Card Sleeve', cost: 17500,  desc: 'A square paper sleeve behind a round record.' },
+    groove:  { name: 'Groove',      cost: 22500,  desc: 'Concentric rings, cut from the outside in.' },
+    gold:    { name: 'Gold Ring',   cost: 30000, desc: 'One solid band. Nothing clever.' },
+    splice:  { name: 'Splice',      cost: 35000, desc: 'Tape marked up for the edit.' },
+    spindle: { name: 'Spindle',     cost: 40000, desc: 'It turns, slowly, forever.' },
   };
   const FRAME_SWATCH = {
     sleeve:  'linear-gradient(150deg,#3a3733,#1a1917)',
@@ -11958,7 +11958,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
      Album Banner Pick used to sit beside it. It went with the banner itself. */
   const BOOSTS = {
-    freeze: { name: 'Streak Freeze', cost: 6000, desc: 'Covers one missed day of your rating streak. Stacks — buy as many as you like.' },
+    freeze: { name: 'Streak Freeze', cost: 30000, desc: 'Covers one missed day of your rating streak. Stacks — buy as many as you like.' },
   };
   const BOOST_SWATCH = {
     freeze: 'linear-gradient(135deg,#0b1d2a,#5eb8ff)',
@@ -17118,14 +17118,17 @@ window.renderAdminStats = renderAdminStats;
   var section = document.getElementById('col-draw');
   if (!section) return;
 
-  /* The pool's expected return is ~887 Discs a spin even for somebody who owns
-     every drawable cosmetic and therefore converts every duplicate back to
-     Discs, against this 1,000 cost — so the Draw stays a net sink, which is the
-     only reason the earning rates can be as inflated as they are. Change one
-     and you must change the other; the sum is written out in full at the top of
-     ..._20260913220000_doubling_login_and_inflation.sql. This mirrors v_cost in
-     wallet_spin() and is display only — the server is what charges. */
-  var COST = 1000;
+  /* The pool's expected return is ~2,993 Discs a spin even for somebody who
+     owns every drawable cosmetic and therefore converts every duplicate back to
+     Discs, against this 5,000 cost — a ratio of 0.60, where it was 0.89 before
+     ..._20260915100000_harder_progression.sql. The Draw stays a net sink, which
+     is the only reason the earning rates can be as inflated as they are. Change
+     one and you must change the other; the sum is written out in full at the top
+     of that migration, and a `do $$` block at the bottom of it recomputes the
+     same number from the table and refuses to apply if it ever reaches the cost.
+     This mirrors v_cost in wallet_spin() and is display only — the server is
+     what charges. */
+  var COST = 5000;
   var TILE = 130;        // 120px wide + 2×5px margin, must match the CSS
   var STRIP_LEN = 70;
   var WIN_INDEX = 62;    // far enough in that it reads as a real run

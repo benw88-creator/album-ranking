@@ -320,6 +320,15 @@ That is safe — every one of them is idempotent, using `create or replace`,
 exactly this reason**, because "applied by hand and not recorded" is the normal case here,
 not the exception.
 
+**Two of them were not, and the pattern that fixes it is worth copying.** The inflation
+passes ran bare `update shop_items set cost = cost * 4` and `* 5`, so applying either
+twice multiplies twice and there is no way to tell from the data which happened.
+`..._20260915100000_harder_progression.sql` guards its multiply on a sentinel — the most
+expensive tag is 16,000 before it and 192,000 after, so the block cannot fire twice, and
+it raises rather than guessing if it finds neither. **Any migration that multiplies a
+stored value rather than setting it needs that guard**, because a multiply is the one
+shape where re-running is silently wrong instead of merely redundant.
+
 The school laptop has **no Node, no npm, no Supabase CLI and no working Python**, so nothing
 there can reach Supabase or Vercel directly. Migrations written on that machine have to be
 pasted into the SQL editor by hand, and JS changes cannot be executed before they ship —
@@ -388,16 +397,20 @@ somebody owns everything.** It is safe only alongside a sink.
 - **Rates** (`..._20260914160000_play_pays_properly.sql`): ratings 400 × 10/day, lore 250 ×
   20/day, Earworm 2,000 × 3, Daily Drop 3,000, achievements 1,600 × 5, Higher or Lower
   1,600 × 3, Tournament 1,600 × 2 (parked). **A day of everything is 30,800.**
-  - The sizing rule is *against prices*, not against each other. A spin is 1,000, the cheapest
-    tag 4,000, the whole shop ~262,000 — and rating an album, the core action of the app, paid
-    160, so hitting the daily cap earned a third of the cheapest thing on sale. A realistic
-    session now buys nine spins or two cheap tags; the whole shop is about 8.5 days of maxing
-    every game.
+  - The sizing rule is *against prices*, not against each other — and
+    `..._20260915100000_harder_progression.sql` moved the prices a long way without touching
+    a single rate. A spin is **5,000**, the cheapest tag **48,000**, the whole shop
+    **~2,342,500**. That is about **59 days of maxing every game**, against 8.5 before it.
+    A realistic session buys a spin or two and nothing else; a tag is a thing you save for
+    across days, which is what a status cosmetic should be.
+  - **Prices were the only lever moved**, deliberately. The obvious alternative — halving
+    what a rating pays — is the same arithmetic with a worse feel: the thing you do most
+    often paying less is felt every session, where a distant price is felt once.
   - **Caps are the anti-forgery defence, not the balance lever** — move the amounts, never the
     caps. Every one of these games runs in the browser and a win cannot be verified, so the
     cap is the only thing between a daily payout and a console loop.
-  - Raising earnings cannot break The Draw: its 887-against-1,000 is a ratio between two Disc
-    figures, so the sink holds whatever the faucet does. It *does* make the Collection
+  - Raising earnings cannot break The Draw: its 2,993-against-5,000 is a ratio between two
+    Disc figures, so the sink holds whatever the faucet does. It *does* make the Collection
     cheaper in real terms — Views is now under two days of everything — and the divisor was
     deliberately left alone, because `collection.price` is both what a record cost and what it
     counts for, so re-pricing new buys without re-pricing stored rows makes net worth
@@ -756,24 +769,39 @@ before that stays gone for good: Apple's guideline 3.1.1 wants published odds fo
 loot-box shaped, so an App Store submission needs the panel back (it read from `loadItems()`
 and nothing else, so restoring it is small), and see the paragraph above about paid Discs.
 
-### Mythic, and why the spin costs 1,000
+### Mythic, and why the spin costs 5,000
 
 Mythic is exactly three things: **100,000 Discs** (0.3% absolute — one spin in 333),
 **3 albums of your choice** (3.4%), and **a producer tag** (6%, a random one you do not own).
 Legendary carries **1 album of your choice**, so picks run 1 at Legendary and 3 at Mythic.
 
-The whole pool's expected return is **~887 Discs against a 1,000 cost**, computed for the
+The whole pool's expected return is **~2,993 Discs against a 5,000 cost**, computed for the
 worst case — somebody who owns every drawable cosmetic and therefore converts every duplicate
 to Discs. That margin is the safety property, and it is the reason the earning rates can be as
 inflated as they are. **An economy whose only sink pays out more than it takes is not a sink,
 it is a printer.** Before changing any weight, any `amount`, or `v_cost`, redo the sum; it is
-written out line by line at the top of `..._20260913220000_doubling_login_and_inflation.sql`.
+written out line by line at the top of `..._20260915100000_harder_progression.sql`, **and
+that file now also recomputes it from the table and refuses to apply if it ever reaches the
+cost** — the rule is enforced by the database rather than by a comment somebody has to
+remember to read.
 
-**A duplicate pays 20% of its shop price, not all of it.** That rule changed when the spin
-halved to 1,000 while the shop went up 5x: a 1,000-Disc spin cannot hand back a 6,000-Disc
-theme's worth of Discs thirty times in a hundred and stay a sink. In practice it means
-`spin_items.amount` for every cosmetic is *unchanged* from before the 5x pass — the same
-number, now a fifth of the price.
+**Mythic is the only tier `..._20260915100000` did not multiply.** Every other prize went up
+5x with the cost, which would have held the old 0.89 ratio exactly; leaving Mythic alone is
+what drops it to **0.599**, because 360 of the old 886.6 lived there. The jackpot at 5x would
+be 500,000 and worth 300 of expected return on its own, which would have undone the pass.
+
+**A duplicate pays 20% of its shop price, not all of it.** A 5,000-Disc spin cannot hand back
+a 30,000-Disc theme's worth of Discs thirty times in a hundred and stay a sink. Cosmetic
+`amount`s and cosmetic shop prices have gone up together at every pass, so the fifth holds
+exactly — 1,600/8,000, 3,500/17,500, 4,500/22,500.
+
+**Tags now break that rule and it is deliberate.** They went up 12x while the Mythic tag
+prize's `amount` stayed at 1,000, so a duplicate tag pays about 2% of the cheapest tag. The
+consequence, stated rather than discovered: **once somebody owns all nineteen tags, Mythic's
+most likely outcome pays 1,000 Discs against a 5,000 spin.** That is a bad moment and it is a
+long way off — all nineteen is 1,770,000 Discs of buying — but it is the number to raise when
+anyone gets close, and each 1,000 added costs the pool 60 of expected return, which 0.599
+absorbs easily.
 
 That sum is also why **a record claimed with an album pick cannot be sold**. At the 70%
 refund, free records are pure arbitrage, and enough of it flips the pool from a sink to a
