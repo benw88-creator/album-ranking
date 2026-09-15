@@ -379,21 +379,39 @@ Current numbers set by `..._20260913220000_doubling_login_and_inflation.sql`. Th
 survived every pass: **inflating what you earn, on its own, only brings forward the day
 somebody owns everything.** It is safe only alongside a sink.
 
-- **Daily login** — `wallet_daily_login()`. **1,000 doubling to 32,000 across six days, and
-  day seven pays a free record instead of Discs.** 63,000 and one album per seven-day cycle.
-  Safe to call on every load — it returns `claimed_already` and changes nothing.
+- **Daily login** — `wallet_daily_login()`. **1,500 / 2,000 / 2,500 / 3,000 / 4,000 / 5,000,
+  and day seven pays a free record instead of Discs.** 18,000 and one album per seven-day
+  cycle. Safe to call on every load — it returns `claimed_already` and changes nothing.
   - **It cycles.** Position is `((login_streak - 1) % 7) + 1`. Before this it *plateaued* in
     SQL while the Rewards page drew a cycle, and the two silently disagreed from day eight.
-    Both are now the same expression. A doubling ladder that never reset would also be `2^n`.
+    Both are now the same expression.
   - The ladder is an **array of seven literals** in SQL and the same array in the Rewards
     module. Written as literals rather than a formula on purpose: a mismatch is then visible
     on sight, which is how the last drift should have been caught.
   - No streak freezes here, because a freeze would protect you from not opening an app.
-- **Logging in now pays far more than playing does.** Every game put together caps at ~16,100
-  a day; day six alone is 32,000. The note above about rewarding *opening the app* being
-  weaker than rewarding the rating streak beside it still stands — this inverts it. It was
-  asked for and the rates are due another pass. **If only one number gets revisited, make it
-  this one.**
+- **It used to double, and that was the economy's biggest distortion**
+  (`..._20260915140000_flatten_login_ladder.sql`). 1,000 doubling to 32,000 meant **day six
+  alone paid more than maxing every game in the app pays in a day** — 32,000 against 30,800
+  — for one tap on a button that cannot be done well or badly. Against a realistic session
+  rather than a maximal one it was worse: the old ladder averaged 9,000 a day and a normal
+  day's play is 7,000–12,000, so **logging in paid about the same as playing**.
+  - The reason that mattered here specifically: **it put the two progression systems in
+    opposition.** Standing measures depth and prints its own rule on the profile to say
+    depth is what the app values; the wallet paid best for opening the app and closing it.
+    Someone optimising for Discs was doing nothing VINALL is for.
+  - Flattened rather than cut, so consistency still pays — a full week is 18,000 against the
+    9,000 somebody gets only ever landing on day one, a 2x premium where it was 9x. The
+    miss-a-day cliff falls from 32x to 3.3x, which matters because the design already
+    flinched at it: freezes were refused for this ladder precisely because "a freeze would
+    protect you from not opening an app".
+  - **Day seven is untouched and is the point.** A record of your choice is worth more than
+    the six Disc days together — Views alone is 51,240 — so the reward for a week of turning
+    up is a record rather than a pile of currency, and the Disc days can be modest because
+    of it. Day six is 5,000, which is exactly one spin.
+- **What is still distorted:** Bid War payouts are 30/8/15 and have been since
+  `20260907130000`. Against these numbers they are noise. Scaling them is not a number
+  change — see the Bid Wars section — and it wants its own migration with a capped-award
+  helper. **If one number gets revisited next, make it that one.**
 - **Rates** (`..._20260914160000_play_pays_properly.sql`): ratings 400 × 10/day, lore 250 ×
   20/day, Earworm 2,000 × 3, Daily Drop 3,000, achievements 1,600 × 5, Higher or Lower
   1,600 × 3, Tournament 1,600 × 2 (parked). **A day of everything is 30,800.**
@@ -403,9 +421,14 @@ somebody owns everything.** It is safe only alongside a sink.
     **~2,342,500**. That is about **59 days of maxing every game**, against 8.5 before it.
     A realistic session buys a spin or two and nothing else; a tag is a thing you save for
     across days, which is what a status cosmetic should be.
-  - **Prices were the only lever moved**, deliberately. The obvious alternative — halving
-    what a rating pays — is the same arithmetic with a worse feel: the thing you do most
-    often paying less is felt every session, where a distant price is felt once.
+  - **Rates were not touched by that pass**, deliberately. Halving what a rating pays reaches
+    the same place with a worse feel: the thing you do most often paying less is felt every
+    session, where a distant price is felt once. The income side moved a day later instead,
+    and only where it was rewarding the wrong thing — the login ladder.
+  - **Where the two passes leave it.** Login 18,000 a week plus a record; realistic play
+    ~70,000 a week; maxing everything 215,600. So login is **20% of a realistic week, where
+    it was ~47%**. The cheapest tag is about four days of realistic total income and the
+    whole shop about 27 weeks of it.
   - **Caps are the anti-forgery defence, not the balance lever** — move the amounts, never the
     caps. Every one of these games runs in the browser and a win cannot be verified, so the
     cap is the only thing between a daily payout and a console loop.

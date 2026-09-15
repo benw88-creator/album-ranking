@@ -4048,7 +4048,7 @@ body.entering-done #artist-hero {
 .tagline { margin-top: 7px; }
 /* Every tag carries its own two colours in --t1 / --t2, set inline from
    TAG_STYLE. A single gold chip for all nineteen read as a label rather than as
-   the thing somebody spent 16,000 Discs on — the colours are what make it an
+   the thing somebody spent 192,000 Discs on — the colours are what make it an
    object. The border is a gradient behind the chip rather than a border-image,
    because border-image cannot follow border-radius. */
 .tag-chip {
@@ -11869,7 +11869,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   /* Every tag gets its own colours and one of three motions.
 
      A chip in the same gold as everything else was the problem: on a profile it
-     read as a label rather than as the thing you spent 16,000 Discs on. Two
+     read as a label rather than as the thing you spent 192,000 Discs on. Two
      colours and a motion each is enough to make nineteen of them feel like
      nineteen different objects without nineteen bespoke keyframes — the colours
      ride in as `--t1` / `--t2` custom properties and the motion is a class.
@@ -17440,8 +17440,15 @@ window.renderAdminStats = renderAdminStats;
      so, which is why both are now written as the same seven literals rather
      than as a formula each side has to agree about.
 
-     Day seven pays no Discs. The record is the reward. */
-  var LADDER = [1000, 2000, 4000, 8000, 16000, 32000, 0];
+     Flattened by ..._20260915140000_flatten_login_ladder.sql, from
+     1,000 doubling to 32,000. The doubling meant day six alone paid more than
+     maxing every game in the app pays in a day, which put this ladder in
+     direct opposition to Standing: one measures how deep you have gone and the
+     other paid best for opening the app and closing it.
+
+     Day seven pays no Discs. The record is the reward, it is worth more than
+     the six Disc days together, and that is why they can be modest. */
+  var LADDER = [1500, 2000, 2500, 3000, 4000, 5000, 0];
   function payFor(day) { return LADDER[day - 1]; }
   function n(v) { return (Number(v) || 0).toLocaleString('en-GB'); }
 
