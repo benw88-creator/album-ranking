@@ -408,10 +408,10 @@ somebody owns everything.** It is safe only alongside a sink.
     the six Disc days together — Views alone is 51,240 — so the reward for a week of turning
     up is a record rather than a pile of currency, and the Disc days can be modest because
     of it. Day six is 5,000, which is exactly one spin.
-- **What is still distorted:** Bid War payouts are 30/8/15 and have been since
-  `20260907130000`. Against these numbers they are noise. Scaling them is not a number
-  change — see the Bid Wars section — and it wants its own migration with a capped-award
-  helper. **If one number gets revisited next, make it that one.**
+- **Bid War payouts were the last thing in the old money** and are now 3,000 / 1,500 / 800,
+  capped at three paid settlements a day — see the Bid Wars section for why the cap had to
+  ship in the same file as the amounts. Every part of the economy is now denominated
+  consistently.
 - **Rates** (`..._20260914160000_play_pays_properly.sql`): ratings 400 × 10/day, lore 250 ×
   20/day, Earworm 2,000 × 3, Daily Drop 3,000, achievements 1,600 × 5, Higher or Lower
   1,600 × 3, Tournament 1,600 × 2 (parked). **A day of everything is 30,800.**
@@ -438,14 +438,31 @@ somebody owns everything.** It is safe only alongside a sink.
     deliberately left alone, because `collection.price` is both what a record cost and what it
     counts for, so re-pricing new buys without re-pricing stored rows makes net worth
     incoherent between them.
-- **Bid War payouts are still 30/8/15** and now look absurd next to everything else. Scaling
-  them is not a number change, for two reasons, both written out in section 5 of the
-  migration: `bid_war_submit` has no `create or replace` since `20260907130000`, so touching
-  three integers means re-declaring 150 lines of sealed-bid resolution; and **there is no
-  daily cap on war payouts**, so at a scaled figure two accounts that follow each other can
-  manufacture wars and split the proceeds. A war cannot be *forged*, but it can be
-  *manufactured*, and inflation is what turns that from pointless into profitable. Do it in
-  its own migration with a capped-award helper.
+- **Bid War payouts are 3,000 / 1,500 / 800**, capped at three paid settlements a day
+  (`..._20260915180000_bid_war_payouts.sql`). Exactly 100x the old 30/8/15, so the ratios are
+  untouched — a loss is 27% of a win, a draw is half, and both were deliberate.
+  - It stayed unscaled through four inflation passes for two reasons, and both had to be
+    dealt with in the same file. `bid_war_submit` still has no `create or replace` since
+    `20260907130000`, so the migration re-declares the whole of sealed-bid resolution —
+    **extracted programmatically from that file and diffed against it, not retyped.**
+  - **The cap is the real content.** There was none before, which was fine at 30 Discs and
+    is not at 3,000: a war cannot be *forged*, but it can be *manufactured* — two accounts
+    that follow each other create wars, both bid, split the proceeds. The number that makes
+    three/day safe is that **collusion pays less than honest play**: a colluding pair
+    extracts 3 × (3,000 + 800) = 11,400 between them, 5,700 each, against 30,800 each for
+    simply playing the games. Preserve *that*, not "there is a cap" — a cap that leaves
+    manufacturing profitable just sets the going rate for it.
+  - `war_award()` is one atomic UPDATE with no explicit row lock, and `bid_war_submit`
+    applies the two awards **in uuid order**, so two wars between the same pair settling at
+    once serialise instead of deadlocking on each other's profiles. It shares
+    `game_awards` / `game_awards_date` with `wallet_award_game` under the key `bidwar`;
+    whichever runs first that day sets the date and the other merges.
+  - **`bid_wars.initiator_award` / `opponent_award` record what was actually paid**, and the
+    client renders that instead of the `oc === 'won' ? 30 : …` it used to hardcode. With a
+    cap, inferring the payout from the outcome is not brittle, it is wrong — a capped player
+    gets nothing and the old line announced 3,000. Same lesson as `login_last_date`: the
+    server returns the field. Wars resolved before that migration carry null and get no Disc
+    line rather than an invented one.
 - **The sink is the Collection**, priced off stream counts, and album picks feed it. That is
   the same argument the album banner used to carry — every claim is a different object, so it
   cannot be finished. **If the Collection ever goes, this inflation loses its floor.**
@@ -1048,8 +1065,10 @@ How a war runs:
    seeing the next. Blind, one submission each.
 3. When the second bid lands, `bid_war_submit` resolves the war in that same transaction.
    Higher bid takes each record; equal bids mean nobody takes it.
-4. A record you won is worth its total plays. Most plays wins. Winner +30 Discs, loser +8,
-   draw +15 each.
+4. A record you won is worth its total plays. Most plays wins. Winner +3,000 Discs, loser
+   +800, draw +1,500 each — **capped at three paid settlements a day**, and what was
+   actually paid is stored on the war in `initiator_award` / `opponent_award` rather than
+   inferred by the client from the outcome.
 
 Design decisions worth not undoing:
 

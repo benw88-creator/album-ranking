@@ -5126,7 +5126,7 @@ window.ICONS = {
       <div class="game-card" id="war-card" style="border-color: var(--accent-2-dim); background: linear-gradient(150deg, var(--accent-2-dim), var(--surface) 60%);">
         <div class="gc-emoji" data-icon="trophy"></div>
         <h3>Bid Wars</h3>
-        <p>Outbid a mate on five records, blind. Winner takes 30 Discs.</p>
+        <p>Outbid a mate on five records, blind. Winner takes 3,000 Discs.</p>
         <div class="gc-go">Challenge someone &rarr;</div>
       </div>
       <div class="game-card" id="leaderboard-card">
@@ -15786,14 +15786,34 @@ function playDismissAnimation(gateEl, callback) {
     setTimeout(function () {
       document.getElementById('war-score-me-num').textContent = fmtVal(mineTotal, w);
       document.getElementById('war-score-them-num').textContent = fmtVal(theirsTotal, w);
-      var payout = oc === 'won' ? 30 : oc === 'draw' ? 15 : 8;
-      var tail = oc === 'won' ? '' : (oc === 'draw' ? ' each' : ' for turning up');
+      /* What the server actually paid, read off the war rather than inferred
+         from the outcome. It used to be `oc === 'won' ? 30 : ...` hardcoded
+         here and '30' hardcoded again in the celebrate below — two constants
+         kept in step with SQL by hand, which is the arrangement that produced
+         the payFor() drift and the login-ladder drift before it.
+
+         With a daily cap on war payouts that stops being merely brittle and
+         becomes wrong: a fourth settled war pays nothing and the old line
+         would have announced 3,000 of it.
+
+         Wars resolved before ..._20260915180000_bid_war_payouts.sql carry null
+         and get no Disc line at all, rather than an invented one. */
+      var paid = iAmInit ? w.initiator_award : w.opponent_award;
+      var line = '';
+      if (paid != null) {
+        line = Number(paid) > 0
+          ? '+' + Number(paid).toLocaleString('en-GB') + ' Discs' +
+              (oc === 'lost' ? ' for turning up' : '')
+          : 'No Discs — that’s your three wars for today';
+      }
       verdict.innerHTML = (oc === 'won' ? 'You took it' : (oc === 'lost' ? nameOf(other(w)) + ' took it' : 'Dead even')) +
-        '<small>+' + payout + ' Discs' + tail + '</small>';
+        (line ? '<small>' + line + '</small>' : '');
       verdict.classList.add('in');
       if (window.Wallet && Wallet.refresh) Wallet.refresh();
       if (oc === 'won' && typeof window.celebrate === 'function') {
-        window.celebrate('You won the war', 'Took ' + fmtVal(mineTotal, w) + ' against ' + fmtVal(theirsTotal, w) + '. Plus 30 Discs.');
+        window.celebrate('You won the war',
+          'Took ' + fmtVal(mineTotal, w) + ' against ' + fmtVal(theirsTotal, w) +
+          (Number(paid) > 0 ? '. Plus ' + Number(paid).toLocaleString('en-GB') + ' Discs.' : '.'));
       }
     }, 320 + rows.length * 460 + 260);
   }
