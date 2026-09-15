@@ -254,6 +254,119 @@ is over the PostgREST cap, and the cap is not an error — it is a short array a
 The spread would simply have stopped showing people. Same failure shape as
 *A profile showed twelve albums out of forty*, one section down, and the same fix.
 
+### Certification — the step after owning a record
+
+`..._20260915220000_certification.sql`, plus the `Cert` and `CertPanel` modules.
+
+The progression was Rank → Acquire → Own, and it stopped. A record on the shelf on day
+one looked exactly like one held for two years with every track rated. This is the fourth
+step, and it is deliberately **the only one Discs cannot reach**.
+
+**Records already have a certification ladder and everybody can read it without being
+taught.** The BPI hands out Silver, Gold, Platinum and Diamond and the award stays on the
+sleeve for life. So: no XP, no levels, no bars filling for their own sake. A record
+collects **marks**, the marks make a certification, the certification is a thing you
+display. "Gold" is what anybody would call the good version of an owned record without
+being told, which is the test a name has to pass here — the same test the Draw's rarities
+failed twice before landing on Common/Rare/Epic/Legendary/Mythic.
+
+**Two axes, and keeping them apart is the design:**
+
+- **Certification is earned.** No path in the migration grants a mark for money.
+- **Finishes are bought, and gated by certification.** Once a record is Gold you may spend
+  Discs having it plated. The Discs buy the plating, never the award — nobody sells you
+  the Gold disc, you pay for the frame it goes in.
+
+That split is also what makes it a **bottomless sink**, which the Shop is not: every
+cosmetic there can be finished and an account that owns them all has nowhere to put Discs.
+There is no last record to plate. Same argument the album banner used to carry.
+
+#### The marks, and why none of them are taken on trust
+
+| | |
+|---|---|
+| rated it | 1 |
+| wrote a note on it | 1 |
+| changed your mind, 30+ days apart | 2 |
+| changed it again (3+ distinct scores) | 1 |
+| own it | 2 |
+| held it 90 days | 1 |
+| held it a year | 2 |
+| a Lore answer about it | 1 each, capped at 2 |
+| rated 3 of its songs | 1 |
+| rated 8 of its songs | 1 |
+
+Max 14. **Silver 4 · Gold 6 · Platinum 9 · Diamond 13.**
+
+**Ownership is a gate, not just a mark** — `cert_tier_for(14, false)` is null, and there is
+a guard asserting it. Marks accumulate on a record you have never bought and certify
+nothing until you do, because the step this extends is the one after own.
+
+Diamond is 13 of 14 and one ingredient is a year of holding, so it cannot be hurried by any
+amount of activity in a weekend. That is the point of the number: you should be able to look
+at somebody's Diamond record and know they did not get it this month.
+
+**Every input already lived on the server**, which is why `collection_marks()` computes the
+tier itself rather than believing the browser: `collection.bought_at` for the holding, the
+album's `ratings` row for score, note and the score history the spine gave us, `ratings`
+again for songs by their `albumId`, and `lore_answers`. That matters because **the tier
+gates a purchase** — a client that could name its own tier could press a Diamond finish
+onto a record it had rated once. It is the same rule as `wallet_buy` taking a key and never
+a price, applied to an entitlement instead of a cost.
+
+`collection_certs(user)` returns a whole shelf in one call, because the Collection draws
+dozens of cards and a round trip each would be a round trip each.
+
+The workings are private and the award is not: somebody else's shelf shows what a record is
+certified at, but how close they are to the next rung comes back only for yourself — same
+line Standing and Taste Match draw.
+
+#### The finishes
+
+Silver leaf 8,000 · Gold plate 25,000 · Platinum 60,000 · Holographic 75,000 ·
+Prism 150,000 (Diamond only). `owned_finishes` is **per record**: switching between ones
+already bought for that record is free, because charging twice for something owned makes
+people leave it alone rather than play with it.
+
+`Cert.art()` is the single renderer. The shelf, the album page and a profile showcase all
+go through it, so a finish bought in one place appears in the others with no second
+implementation to keep in step — the mistake themes made for months, where the Shop swatch
+and the real theme were separately invented and drifted.
+
+Two things learned building the visuals:
+
+- **Holographic shipped invisible.** `mix-blend-mode: color-dodge` at 30% over bright
+  artwork is nothing at all — a 75,000-Disc purchase that looked identical to no finish.
+  `overlay` darkens where the art is light and lightens where it is dark, so it reads on
+  anything, and tight repeating bands say *foil* where a smooth wash says *tint*. Then it
+  had to come back **down** to 0.34: at 0.55 the finish was louder than the cover it is
+  supposed to be honouring, and the record is still the thing.
+- Every scrolling gradient here travels in **pixels** at **90deg** with matching first and
+  last stops. See the note on that further up: this app has shipped the percentage version
+  of that bug four times.
+
+#### Inscription, and the Masters
+
+**The inscription is free**, Gold and up, one line, 80 characters. It is the only part of a
+plated record that could not have been bought, and it is the most on-thesis thing in the
+feature — the customisation making a relationship with a record visible rather than a
+purchase visible.
+
+**Masters** are at most three Diamond records, and the cap *is* the feature: a showcase of
+everything is a shelf, and the question this answers is which records **are** you. They
+lead the profile, above Standing and above the top 3, and unlike Standing they render on
+somebody else's profile — `collection` is publicly readable, and a plated record nobody
+else can see is a screensaver.
+
+The panel lives on the **album page under the tracks**, not in the Collection, because
+nearly every mark is earned by something on that screen: you read "rated 3 of its songs —
+not yet" with the tracklist directly above it. It also renders for a record you do **not**
+own, showing the marks waiting on it and saying that owning it is the gate — a progression
+you cannot see until you have paid to enter is a progression nobody knows exists.
+
+`Cert.FINISHES` mirrors `finish_spec()` in SQL. Display against payment, the same
+arrangement as `LADDER` against `v_ladder`: change one and you must change the other.
+
 ### What was deliberately not done
 
 - **No "how many still fit" counter in the Crate**, and no second currency. The Disc

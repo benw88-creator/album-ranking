@@ -3593,6 +3593,209 @@ body.entering-done #artist-hero {
 .cb-o { font-size: 11px; color: var(--text-faint); min-width: 52px; text-align: right; }
 @media (prefers-reduced-motion: reduce) { .col-rec.just-bought { animation: none; } }
 
+/* ================================================================
+   CERTIFICATION — Silver, Gold, Platinum, Diamond on a record you own.
+
+   The metal is literal, never var(--gold): the accent colour follows whatever
+   theme is equipped, and a Gold record that renders pink under Neon Vault is
+   not a gold record. Same decision as the Groove role badges.
+
+   Every scrolling gradient here travels in PIXELS and is 90deg with matching
+   first and last stops. See the note further up this file: a percentage
+   background-position does not mean "shift by that much of the width", so the
+   loop lands on a different image than it started on and visibly snaps. That
+   bug shipped four times in this app; it is not shipping a fifth.
+   ================================================================ */
+.cert-badge {
+  font: 700 9px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 4px 7px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;
+  border: 1px solid transparent; vertical-align: 1px;
+}
+.cert-badge.silver {
+  background: linear-gradient(100deg, #626973, #c3ccd6 34%, #f4f7fa 46%, #c3ccd6 60%, #626973);
+  color: #1d2127; border-color: rgba(244,247,250,0.45);
+}
+.cert-badge.gold {
+  background: linear-gradient(100deg, #7a5c10, #c9a227 30%, #fff3bd 46%, #c9a227 62%, #7a5c10);
+  color: #2a1f04; border-color: rgba(255,242,186,0.5);
+  box-shadow: 0 0 10px rgba(212,175,55,0.3);
+}
+.cert-badge.platinum {
+  background: linear-gradient(100deg, #6b7c8c, #cfe0ee 32%, #ffffff 46%, #cfe0ee 62%, #6b7c8c);
+  color: #121a22; border-color: rgba(255,255,255,0.6);
+  box-shadow: 0 0 12px rgba(190,222,248,0.32);
+}
+/* Diamond differs in KIND, not brightness — Platinum already owns "bright
+   metal", so the top of the ladder had to be a different material entirely.
+   Same reasoning that made the Draw's Mythic prismatic rather than brighter
+   gold. */
+.cert-badge.diamond {
+  background: linear-gradient(100deg, #7be8ff, #b18cff 25%, #ff7ec8 50%, #ffe27a 75%, #7be8ff);
+  background-size: 260px 100%;
+  color: #0e0a18; border-color: rgba(255,255,255,0.55);
+  box-shadow: 0 0 14px rgba(177,140,255,0.4);
+  animation: certScroll 5s linear infinite;
+}
+@keyframes certScroll { from { background-position: 0 0; } to { background-position: 260px 0; } }
+
+/* ---- The plating itself ------------------------------------------------
+   The finish is the frame: a padded wrapper whose background is the metal and
+   whose child is the art. That way it works at any size — 54px on a shelf
+   card, 190px on the album page, 120px in a profile showcase — without a
+   single size-specific rule. */
+.fin { position: relative; display: block; border-radius: 12px; padding: 0; background: none; }
+.fin > img { display: block; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+.fin.on { padding: 3px; }
+.fin.on > img { border-radius: 9px; }
+
+.fin.silverleaf {
+  background: linear-gradient(135deg, #5c636d, #c3ccd6 38%, #f4f7fa 50%, #a7b0bb 64%, #5c636d);
+  box-shadow: 0 0 10px rgba(195,204,214,0.22);
+}
+.fin.goldplate {
+  background: linear-gradient(90deg, #6d5210, #c9a227 20%, #fff3bd 34%, #e8c85c 48%, #c9a227 66%, #6d5210);
+  background-size: 300px 100%;
+  box-shadow: 0 0 16px rgba(212,175,55,0.34);
+  animation: certScrollWide 7s linear infinite;
+}
+.fin.platinum {
+  background: linear-gradient(90deg, #5d6f80, #cfe0ee 20%, #ffffff 34%, #dbe9f5 48%, #cfe0ee 66%, #5d6f80);
+  background-size: 300px 100%;
+  box-shadow: 0 0 18px rgba(190,222,248,0.36);
+  animation: certScrollWide 6s linear infinite;
+}
+@keyframes certScrollWide { from { background-position: 0 0; } to { background-position: 300px 0; } }
+
+/* Holographic and Prism put the treatment on the ART, not only the frame —
+   that is what makes them read as a finish applied to the record rather than
+   a border around it. color-dodge over album artwork keeps the cover legible
+   where a flat overlay would grey it out. */
+/* Holographic is the finish that goes across the ARTWORK rather than around
+   it, so it has to survive being laid over a cover that is already bright.
+   color-dodge at 30% did not — over hot pink art it was invisible, which is a
+   75,000-Disc purchase that looks like nothing. `overlay` darkens where the
+   art is light and lightens where it is dark, so the bands read on anything,
+   and tight repeating bands say "foil" where a smooth wash says "tint". */
+.fin.holo { background: linear-gradient(135deg, #2f343d, #8892a0 46%, #cfd6df 52%, #2f343d); }
+.fin.holo::after {
+  content: ''; position: absolute; inset: 3px; border-radius: 9px; pointer-events: none;
+  background: repeating-linear-gradient(90deg,
+    rgba(123,232,255,0.85) 0px, rgba(177,140,255,0.85) 22px, rgba(255,126,200,0.85) 44px,
+    rgba(255,226,122,0.85) 66px, rgba(123,232,255,0.85) 88px);
+  background-size: 88px 100%;
+  mix-blend-mode: overlay; opacity: 0.34;
+  animation: holoScroll 3.6s linear infinite;
+}
+@keyframes holoScroll { from { background-position: 0 0; } to { background-position: 88px 0; } }
+.fin.prism::after {
+  content: ''; position: absolute; inset: 3px; border-radius: 9px; pointer-events: none;
+  background: linear-gradient(90deg,
+    rgba(123,232,255,0.9), rgba(177,140,255,0.9) 25%, rgba(255,126,200,0.9) 50%,
+    rgba(255,226,122,0.9) 75%, rgba(123,232,255,0.9));
+  background-size: 260px 100%;
+  mix-blend-mode: overlay; opacity: 0.26;
+  animation: certScroll 4.5s linear infinite;
+}
+.fin.prism {
+  background: linear-gradient(90deg, #7be8ff, #b18cff 25%, #ff7ec8 50%, #ffe27a 75%, #7be8ff);
+  background-size: 260px 100%;
+  box-shadow: 0 0 22px rgba(177,140,255,0.45);
+  animation: certScroll 4.5s linear infinite;
+}
+
+/* A record that IS somebody — steady rather than louder, because three of
+   these sitting together all flashing would cancel each other out. */
+.fin.is-master { box-shadow: 0 0 0 1px rgba(255,255,255,0.25), 0 0 26px rgba(255,255,255,0.18); }
+
+/* ---- The panel on the album page --------------------------------------- */
+.cert-card {
+  border: 1px solid var(--border-strong); border-radius: 16px;
+  background: linear-gradient(150deg, var(--surface-2), var(--surface) 62%);
+  padding: 18px 20px; margin: 22px 0 8px;
+}
+.cert-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cert-title { font-family: var(--font-display); font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.cert-marks { font: 12px/1 var(--font-mono); color: var(--text-dim); margin-left: auto; }
+.cert-marks b { color: var(--text); font-size: 15px; }
+.cert-bar { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; margin: 14px 0 7px; }
+.cert-bar i { display: block; height: 100%; border-radius: 999px; transition: width .6s var(--ease);
+  background: linear-gradient(90deg, #c9a227, #fff3bd); }
+.cert-next { font: 11px/1.4 var(--font-mono); color: var(--text-dim); }
+.cert-next b { color: var(--text); }
+
+/* The marks are printed, every one of them, earned or not. A ladder whose
+   steps you cannot see is a ladder people climb by accident — the same reason
+   Standing prints its rule. */
+.cert-marklist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; margin-top: 14px;
+  border-top: 1px solid var(--border); padding-top: 13px; }
+.cert-mark { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--text-faint); }
+.cert-mark.got { color: var(--text-dim); }
+.cert-mark .tick { width: 13px; flex-shrink: 0; font-family: var(--font-mono); color: var(--text-faint); }
+.cert-mark.got .tick { color: var(--green, #4fb477); }
+.cert-mark .pts { margin-left: auto; font: 11px/1 var(--font-mono); color: var(--text-faint); flex-shrink: 0; }
+.cert-mark.got .pts { color: var(--text-dim); }
+
+.cert-sub { font: 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-faint); border-top: 1px solid var(--border); margin-top: 16px; padding-top: 12px; }
+.cert-fins { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.cert-fin {
+  display: flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface-2); cursor: pointer;
+  font-size: 12.5px; font-weight: 600; color: var(--text); transition: border-color .15s, transform .12s;
+}
+.cert-fin:hover:not(:disabled) { border-color: var(--border-strong); transform: translateY(-1px); }
+.cert-fin:disabled { opacity: .45; cursor: default; }
+.cert-fin.equipped { border-color: var(--c-cyan); }
+.cert-fin .swatch { width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; }
+.cert-fin .price { font: 11px/1 var(--font-mono); color: var(--text-faint); }
+.cert-fin.equipped .price { color: var(--c-cyan); }
+
+.cert-insc { display: flex; gap: 8px; margin-top: 10px; }
+.cert-insc input {
+  flex: 1; min-width: 0; background: var(--surface-2); border: 1.5px solid var(--border-strong);
+  border-radius: 10px; color: var(--text); font-family: var(--font-body); font-size: 13px; padding: 9px 12px;
+}
+.cert-plaque {
+  margin-top: 10px; padding: 11px 14px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface-2);
+  font-family: var(--font-display); font-size: 14px; line-height: 1.45;
+}
+.cert-plaque small { display: block; font: 10px/1 var(--font-mono); letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-faint); margin-bottom: 6px; }
+
+/* ---- On a shelf card ---------------------------------------------------- */
+.col-rec .fin { width: 54px; height: 54px; flex-shrink: 0; }
+/* 3px of metal is invisible on a 54px thumbnail, which is the size most
+   people will see most of their shelf at. */
+.col-rec .fin.on { padding: 2.5px; }
+.col-rec .fin.on > img { border-radius: 7px; }
+.col-cert { display: flex; align-items: center; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+.col-insc { font: italic 11px/1.4 var(--font-body); color: var(--text-dim); }
+
+/* ---- The Masters block on a profile ------------------------------------- */
+.mast-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-top: 10px; }
+.mast { text-align: center; }
+.mast .fin { width: 100%; aspect-ratio: 1; }
+.mast-nm { font-weight: 700; font-size: 13.5px; margin-top: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mast-ar { font-size: 12px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mast-insc { font: italic 11.5px/1.4 var(--font-body); color: var(--text-dim); margin-top: 6px; }
+.mast-since { font: 10px/1 var(--font-mono); color: var(--text-faint); margin-top: 5px; }
+
+@media (max-width: 520px) {
+  .cert-card { padding: 16px 14px; }
+  .cert-marklist { grid-template-columns: 1fr; }
+  .cert-marks { margin-left: 0; }
+  .mast-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+}
+/* The metal stays, the movement goes. A still gold frame is still a gold
+   frame; a sweep crossing a 190px cover is the kind of large-area motion the
+   policy note at the top of this file does gate. */
+@media (prefers-reduced-motion: reduce) {
+  .cert-badge.diamond, .fin.goldplate, .fin.platinum, .fin.prism,
+  .fin.holo::after, .fin.prism::after { animation: none; }
+  .fin.holo::after { opacity: 0.4; }
+}
+
 /* ---- profile: Statistics ------------------------------------------------
    Every tile is a number that only goes up, or a personal best. Wider columns
    than before because lifetime Discs runs to seven figures and the favourite
@@ -5275,6 +5478,10 @@ window.ICONS = {
     <div id="detail-completion"></div>
     <div class="tracks-head">Tracks &mdash; rate each 0&ndash;10</div>
     <div id="detail-tracks"></div>
+    <!-- Certification. Under the tracks on purpose: nearly every mark is
+         earned by something on this screen, so the ladder sits where the
+         rungs are. -->
+    <div id="detail-cert"></div>
   </section>
 
 
@@ -6300,6 +6507,9 @@ async function openAlbum(meta) {
   if (existing) updateDetailScore(existing.score);
   else { const el = document.getElementById('detail-current-score'); if (el) el.style.display = 'none'; }
   showDetailNote(existing ? existing.note : '');
+  // Certification. Fires and forgets: it is a panel under the tracks and a
+  // slow round trip for it must never hold up the page above it.
+  if (window.CertPanel) try { CertPanel.open(currentAlbum); } catch (e) {}
 
   try {
     const data = await spotifyGet('/albums/' + encodeURIComponent(meta.id) + '?market=US', { priority: true });
@@ -6552,6 +6762,9 @@ function saveAlbum(meta, score) {
   if (window.Wallet) Wallet.recordRating();
   _recsDirty = true;
   renderAlbums();
+  // Rating it may have moved a mark, so the panel re-reads rather than sitting
+  // there telling you the score you just gave does not count.
+  if (window.CertPanel) try { CertPanel.refresh(meta.id); } catch (e) {}
 }
 function saveSong(track, score, albumMeta) {
   const songs = loadSongs();
@@ -6576,6 +6789,7 @@ function saveSong(track, score, albumMeta) {
   persist(SONGS_KEY, songs);
   _recsDirty = true;
   renderSongs();
+  if (window.CertPanel && albumMeta) try { CertPanel.refresh(albumMeta.id); } catch (e) {}
 }
 function removeAlbum(id) { const a = loadAlbums(); delete a[id]; persist(ALBUMS_KEY, a); if (window.Cloud) Cloud.deleteRating('album', id); if (window.Cloud) Cloud.removeFromFeed(id); _recsDirty = true; renderAlbums(); }
 function removeSong(id)  { const s = loadSongs(); delete s[id]; persist(SONGS_KEY, s); if (window.Cloud) Cloud.deleteRating('song', id); _recsDirty = true; renderSongs(); }
@@ -6693,6 +6907,396 @@ window.removeSong = removeSong;
   }
 
   window.Standing = { get: compute, tiers: TIERS };
+})();
+
+/* ================================================================
+   CERTIFICATION — the step after owning a record.
+
+   The progression this app already has is Rank -> Acquire -> Own, and it
+   stopped there: a record on the shelf on day one looks exactly like one you
+   have held for two years and rated every track of. This is the fourth step,
+   and it is deliberately the ONLY one that cannot be reached with Discs.
+
+   Records already have a certification ladder that everybody can read without
+   being taught — the BPI hands out Silver, Gold, Platinum and Diamond, and the
+   award stays on the sleeve for the rest of the record's life. So there are no
+   levels here, no XP and no bars filling up for their own sake: a record
+   collects MARKS, the marks add up to a certification, and the certification
+   is a thing you display.
+
+   Two axes, and keeping them apart is the whole design:
+
+     Certification is EARNED. No path anywhere grants a mark for Discs.
+     Finishes are BOUGHT, and gated by certification. The Discs buy the
+     plating, never the award — nobody sells you the Gold disc, you pay for
+     the frame it goes in.
+
+   Every mark is computed by collection_marks() in Postgres from data that was
+   already there: collection.bought_at, the album's own ratings row (score,
+   note and the score history the spine gave us), the song ratings that carry
+   an albumId, and lore_answers. **Nothing is taken on trust**, which matters
+   because the tier gates a purchase — a client that could name its own tier
+   could press a Diamond finish onto a record it had rated once.
+
+   THE MARKS (max 14; Silver 4, Gold 6, Platinum 9, Diamond 13)
+
+     rated it 1 · wrote a note 1 · changed your mind 30 days apart 2 ·
+     changed it again 1 · own it 2 · held 90 days 1 · held a year 2 ·
+     a Lore answer about it 1 each to 2 · rated 3 songs 1 · rated 8 songs 1
+
+   Diamond is 13 of 14 and one of the ingredients is a year of holding it, so
+   it cannot be hurried by any amount of activity in a weekend. That is the
+   point of the number: you should be able to look at somebody's Diamond record
+   and know they did not get it this month.
+
+   Ownership is a GATE and not merely a mark — marks accumulate on a record you
+   have never bought and certify nothing until you do.
+   ================================================================ */
+(function () {
+  'use strict';
+
+  var TIERS = {
+    silver:   { name: 'Silver',   at: 4,  blurb: 'Certified. You have done more with this than score it.' },
+    gold:     { name: 'Gold',     at: 6,  blurb: 'A record you have lived with rather than filed.' },
+    platinum: { name: 'Platinum', at: 9,  blurb: 'Years of it, and it is still moving.' },
+    diamond:  { name: 'Diamond',  at: 13, blurb: 'As far as a record goes here. Very few get this far.' }
+  };
+  var ORDER = ['silver', 'gold', 'platinum', 'diamond'];
+  function rank(t) { return t ? ORDER.indexOf(t) + 1 : 0; }
+
+  /* Finishes. Cost and required tier are mirrored from finish_spec() in SQL —
+     display only, the server is what charges and what refuses. Same
+     arrangement as LADDER against v_ladder, and the same warning: change one
+     and you must change the other. */
+  var FINISHES = [
+    { key: 'silverleaf', name: 'Silver leaf', needs: 'silver',   cost: 8000,
+      desc: 'A thin metal edge. The first thing that says this one is different.' },
+    { key: 'goldplate',  name: 'Gold plate',  needs: 'gold',     cost: 25000,
+      desc: 'The real thing, and it moves.' },
+    { key: 'platinum',   name: 'Platinum',    needs: 'platinum', cost: 60000,
+      desc: 'Cooler and brighter than gold, which is the whole difference.' },
+    { key: 'holo',       name: 'Holographic', needs: 'platinum', cost: 75000,
+      desc: 'The finish goes across the artwork, not around it.' },
+    { key: 'prism',      name: 'Prism',       needs: 'diamond',  cost: 150000,
+      desc: 'Diamond only. Nothing else in the app looks like it.' }
+  ];
+  var SWATCH = {
+    silverleaf: 'linear-gradient(135deg,#5c636d,#f4f7fa 50%,#a7b0bb)',
+    goldplate:  'linear-gradient(135deg,#6d5210,#fff3bd 50%,#c9a227)',
+    platinum:   'linear-gradient(135deg,#5d6f80,#ffffff 50%,#cfe0ee)',
+    holo:       'linear-gradient(135deg,#7be8ff,#ff7ec8 50%,#ffe27a)',
+    prism:      'linear-gradient(135deg,#7be8ff,#b18cff 33%,#ff7ec8 66%,#ffe27a)'
+  };
+  function finish(k) { for (var i = 0; i < FINISHES.length; i++) if (FINISHES[i].key === k) return FINISHES[i]; return null; }
+
+  /* What each mark is called, in the order it reads as a story about the
+     record rather than a checklist. `has` reads the server's own breakdown, so
+     the panel can never disagree with the tier printed above it. */
+  function marklist(d) {
+    d = d || {};
+    return [
+      { t: 'Rated it',                     p: 1, got: !!d.rated },
+      { t: 'Wrote a note on it',           p: 1, got: !!d.note },
+      { t: 'Changed your mind, a month apart', p: 2, got: !!d.aged },
+      { t: 'Changed it again',             p: 1, got: (d.turns || 0) >= 2 },
+      { t: 'Own it',                       p: 2, got: !!d.owned },
+      { t: 'Held it 90 days',              p: 1, got: !!d.held90 },
+      { t: 'Held it a year',               p: 2, got: !!d.held365 },
+      { t: 'Answered about it (' + Math.min(d.lore || 0, 2) + '/2)', p: 2, got: (d.lore || 0) >= 2,
+        part: (d.lore || 0) === 1 },
+      { t: 'Rated 3 of its songs',         p: 1, got: (d.songs || 0) >= 3 },
+      { t: 'Rated 8 of its songs',         p: 1, got: (d.songs || 0) >= 8 }
+    ];
+  }
+
+  function sb() { return (window.Cloud && Cloud.client) ? Cloud.client() : null; }
+  function uid() { try { return Cloud.getUser() ? Cloud.getUser().id : null; } catch (e) { return null; } }
+
+  // One record. Used by the album page, where there is exactly one.
+  async function one(albumId, who) {
+    var u = who || uid();
+    if (!u || !sb() || !albumId) return null;
+    try {
+      var r = await sb().rpc('collection_marks', { p_user: u, p_album: albumId });
+      return (r && r.data) || null;
+    } catch (e) { return null; }
+  }
+
+  /* A whole shelf in one call. The Collection draws dozens of cards and a
+     round trip each would be a round trip each. Cached per user, because
+     renderCollection runs on every tab switch. */
+  var _cache = {}, _inflight = {};
+  async function all(who, force) {
+    var u = who || uid();
+    if (!u || !sb()) return {};
+    if (!force && _cache[u]) return _cache[u];
+    if (_inflight[u]) return _inflight[u];
+    _inflight[u] = (async function () {
+      try {
+        var r = await sb().rpc('collection_certs', { p_user: u });
+        _cache[u] = (r && r.data) || {};
+      } catch (e) { _cache[u] = {}; }
+      _inflight[u] = null;
+      return _cache[u];
+    })();
+    return _inflight[u];
+  }
+  function cached(who) { var u = who || uid(); return (u && _cache[u]) || {}; }
+  function bust(who) { var u = who || uid(); if (u) delete _cache[u]; }
+
+  async function rpc(name, args) {
+    if (!sb()) return { error: 'offline' };
+    try {
+      var r = await sb().rpc(name, args || {});
+      return r.error ? { error: r.error.message } : { data: r.data };
+    } catch (e) { return { error: String((e && e.message) || e) }; }
+  }
+
+  /* The art, wearing whatever it is wearing. Every surface that shows a record
+     goes through this, so a finish bought on the album page shows on the shelf
+     and on a profile with no second implementation to keep in step. */
+  function art(src, cert, opts) {
+    opts = opts || {};
+    var f = cert && cert.finish;
+    var cls = 'fin' + (f ? ' on ' + f : '') + (cert && cert.master ? ' is-master' : '');
+    return '<span class="' + cls + '"' + (opts.style ? ' style="' + opts.style + '"' : '') + '>' +
+      '<img src="' + esc(src || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
+      '</span>';
+  }
+  function badge(cert) {
+    var t = cert && cert.tier;
+    if (!t || !TIERS[t]) return '';
+    return '<span class="cert-badge ' + t + '">' + TIERS[t].name + '</span>';
+  }
+
+  // Marks -> the next rung, for the bar on the panel.
+  function progress(marks) {
+    var cur = null, next = null;
+    for (var i = 0; i < ORDER.length; i++) {
+      if (marks >= TIERS[ORDER[i]].at) cur = ORDER[i];
+      else { next = ORDER[i]; break; }
+    }
+    var from = cur ? TIERS[cur].at : 0;
+    var to = next ? TIERS[next].at : from;
+    var pct = next ? Math.max(0, Math.min(100, Math.round(((marks - from) / (to - from)) * 100))) : 100;
+    return { cur: cur, next: next, pct: pct, need: next ? to - marks : 0 };
+  }
+
+  window.Cert = {
+    TIERS: TIERS, ORDER: ORDER, FINISHES: FINISHES, SWATCH: SWATCH,
+    rank: rank, finish: finish, marklist: marklist, progress: progress,
+    one: one, all: all, cached: cached, bust: bust, art: art, badge: badge,
+    press:     function (a, f) { return rpc('collection_press', { p_album: a, p_finish: f }); },
+    setFinish: function (a, f) { return rpc('collection_set_finish', { p_album: a, p_finish: f }); },
+    inscribe:  function (a, t) { return rpc('collection_inscribe', { p_album: a, p_text: t }); },
+    setMaster: function (a, on) { return rpc('collection_set_master', { p_album: a, p_on: !!on }); }
+  };
+})();
+/* ================================================================
+   THE CERTIFICATION PANEL — on the album page, under the tracks.
+
+   It lives here rather than in the Collection because this is the page where
+   you already rate the record, write the note and score the songs. Nearly
+   every mark is earned by something on this screen, so the ladder belongs
+   where the rungs are: you read "rated 3 of its songs — not yet" with the
+   tracklist directly above it.
+
+   The panel renders for a record you do not own too, showing what it WOULD be
+   worth and saying that owning it is the gate. A progression you cannot see
+   until you have paid to enter is a progression nobody knows exists.
+   ================================================================ */
+(function () {
+  'use strict';
+  var host = null, _album = null, _cert = null, _busy = false;
+
+  function el(id) { return document.getElementById(id); }
+  function n(v) { return (Number(v) || 0).toLocaleString('en-GB'); }
+  function discs() { try { return (window.Wallet && Wallet.get) ? (Wallet.get().discs || 0) : 0; } catch (e) { return 0; } }
+  function admin() { try { return !!(window.Wallet && Wallet.get && Wallet.get().is_admin); } catch (e) { return false; } }
+
+  async function open(album) {
+    host = el('detail-cert');
+    if (!host) return;
+    _album = album;
+    if (!album || !album.id) { host.innerHTML = ''; return; }
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) {
+      host.innerHTML = '';
+      return;
+    }
+    host.innerHTML = '<div class="cert-card"><div class="cert-next">Reading this record’s certification…</div></div>';
+    _cert = await Cert.one(album.id);
+    paint();
+  }
+
+  // Re-read after anything that could have moved a mark — a rating, a note, a
+  // song score. Cheap, and the alternative is a panel that tells you the note
+  // you just wrote does not count.
+  async function refresh(albumId) {
+    if (!_album || !host) return;
+    if (albumId && albumId !== _album.id) return;
+    _cert = await Cert.one(_album.id);
+    Cert.bust();
+    paint();
+  }
+
+  function paint() {
+    if (!host) return;
+    if (!_cert) { host.innerHTML = ''; return; }
+    var c = _cert, marks = c.marks || 0, d = c.detail || {};
+    var pr = Cert.progress(c.owned ? marks : 0);
+    var tier = c.tier;
+
+    var head = '<div class="cert-head">' +
+      '<div class="cert-title">' + (tier ? Cert.TIERS[tier].name : 'Uncertified') + '</div>' +
+      (tier ? Cert.badge(c) : '') +
+      '<div class="cert-marks"><b>' + marks + '</b> / 14 marks</div></div>';
+
+    var line;
+    if (!c.owned) {
+      line = '<div class="cert-next">This record has <b>' + marks + '</b> mark' + (marks === 1 ? '' : 's') +
+        ' waiting on it. <b>Certification needs you to own it</b> — buy it in the Collection and they all count at once.</div>';
+    } else if (tier) {
+      line = '<div class="cert-next">' + esc(Cert.TIERS[tier].blurb) +
+        (pr.next ? ' <b>' + pr.need + '</b> more mark' + (pr.need === 1 ? '' : 's') + ' to ' + Cert.TIERS[pr.next].name + '.' : '') +
+        '</div>';
+    } else {
+      line = '<div class="cert-next"><b>' + pr.need + '</b> more mark' + (pr.need === 1 ? '' : 's') + ' and this record is Silver.</div>';
+    }
+
+    var bar = '<div class="cert-bar"><i style="width:' + (c.owned ? pr.pct : 0) + '%"></i></div>';
+
+    var marksHtml = '<div class="cert-marklist">' + Cert.marklist(d).map(function (m) {
+      return '<div class="cert-mark' + (m.got ? ' got' : '') + '">' +
+        '<span class="tick">' + (m.got ? '✓' : (m.part ? '·' : '–')) + '</span>' +
+        '<span>' + esc(m.t) + '</span><span class="pts">+' + m.p + '</span></div>';
+    }).join('') + '</div>';
+
+    var body = head + line + bar + marksHtml;
+
+    if (c.owned) {
+      body += '<div class="cert-sub">Finish</div>' + finishes(c);
+      if (Cert.rank(tier) >= Cert.rank('gold')) body += inscription(c);
+      if (tier === 'diamond') body += master(c);
+    }
+
+    host.innerHTML = '<div class="cert-card">' + body + '</div>';
+    wire();
+  }
+
+  function finishes(c) {
+    var owned = c.owned_finishes || [];
+    var bal = discs(), isAdmin = admin();
+    var rows = Cert.FINISHES.map(function (f) {
+      var have = owned.indexOf(f.key) !== -1;
+      var allowed = Cert.rank(c.tier) >= Cert.rank(f.needs);
+      var on = c.finish === f.key;
+      var can = have ? true : (allowed && (isAdmin || bal >= f.cost));
+      var label = have ? (on ? 'On' : 'Wear it')
+        : !allowed ? Cert.TIERS[f.needs].name + ' only'
+        : n(f.cost);
+      return '<button class="cert-fin' + (on ? ' equipped' : '') + '"' +
+        (can ? '' : ' disabled') +
+        ' data-fin="' + esc(f.key) + '" data-have="' + (have ? '1' : '') + '"' +
+        ' title="' + esc(f.desc) + '">' +
+        '<span class="swatch" style="background:' + Cert.SWATCH[f.key] + '"></span>' +
+        '<span>' + esc(f.name) + '</span>' +
+        '<span class="price">' + esc(label) + '</span></button>';
+    }).join('');
+    var off = c.finish
+      ? '<button class="cert-fin" data-fin="" data-have="1"><span>Take it off</span></button>' : '';
+    return '<div class="cert-fins">' + rows + off + '</div>';
+  }
+
+  function inscription(c) {
+    if (c.inscription) {
+      return '<div class="cert-sub">Inscription</div>' +
+        '<div class="cert-plaque"><small>Inscribed</small>' + esc(c.inscription) + '</div>' +
+        '<div class="cert-insc"><button class="btn-mini" data-insc-edit="1">Change it</button></div>';
+    }
+    return '<div class="cert-sub">Inscription</div>' +
+      '<div class="cert-next">One line of your own on the plaque. Free — it is the only part of a plated record that could not have been bought.</div>' +
+      '<div class="cert-insc"><input id="cert-insc-in" maxlength="80" placeholder="Why this one…">' +
+      '<button class="btn-mini" data-insc-save="1">Inscribe</button></div>';
+  }
+
+  function master(c) {
+    return '<div class="cert-sub">Masters</div>' +
+      '<div class="cert-next">' +
+      (c.master
+        ? 'This is one of your Masters. It leads your profile.'
+        : 'Three records at most can represent you on your profile. This one is eligible.') +
+      '</div><div class="cert-insc"><button class="btn-mini" data-master="' + (c.master ? '0' : '1') + '">' +
+      (c.master ? 'Retire it' : 'Make it a Master') + '</button></div>';
+  }
+
+  function wire() {
+    host.querySelectorAll('[data-fin]').forEach(function (b) {
+      b.addEventListener('click', function () { onFinish(b); });
+    });
+    var save = host.querySelector('[data-insc-save]');
+    if (save) save.addEventListener('click', onInscribe);
+    var edit = host.querySelector('[data-insc-edit]');
+    if (edit) edit.addEventListener('click', function () { _cert.inscription = null; paint(); });
+    var m = host.querySelector('[data-master]');
+    if (m) m.addEventListener('click', function () { onMaster(m.dataset.master === '1'); });
+  }
+
+  async function onFinish(b) {
+    if (_busy) return;
+    var key = b.dataset.fin || null;
+    var have = !!b.dataset.have;
+    _busy = true; b.disabled = true;
+    var res = have ? await Cert.setFinish(_album.id, key) : await Cert.press(_album.id, key);
+    _busy = false;
+    if (res.error) { toastish(res.error); paint(); return; }
+    if (!have) {
+      /* Pressing a finish is a purchase, so it draws a stamp rather than
+         throwing confetti — burst() means a WIN in this app and reusing it
+         here would flatten both. Same rule as the Shop. */
+      if (window.Wallet && Wallet.refresh) Wallet.refresh();
+      if (window.buzz) buzz('good');
+    }
+    Cert.bust();
+    _cert = await Cert.one(_album.id);
+    paint();
+    if (window.renderCollection) try { renderCollection(); } catch (e) {}
+  }
+
+  async function onInscribe() {
+    var input = el('cert-insc-in');
+    if (!input || _busy) return;
+    _busy = true;
+    var res = await Cert.inscribe(_album.id, input.value);
+    _busy = false;
+    if (res.error) { toastish(res.error); return; }
+    Cert.bust();
+    _cert = await Cert.one(_album.id);
+    paint();
+  }
+
+  async function onMaster(on) {
+    if (_busy) return;
+    _busy = true;
+    var res = await Cert.setMaster(_album.id, on);
+    _busy = false;
+    if (res.error) { toastish(res.error); return; }
+    Cert.bust();
+    _cert = await Cert.one(_album.id);
+    paint();
+    // A Master is the one thing here that shows up somewhere else immediately.
+    if (on && typeof window.celebrate === 'function') {
+      window.celebrate('A Master', esc(_album.name) + ' now leads your profile.');
+    }
+  }
+
+  // `toast` is local to the Wallet module, not global — same trap the Lore
+  // undo hit. The message goes on the panel instead of nowhere.
+  function toastish(msg) {
+    var line = host && host.querySelector('.cert-next');
+    if (line) line.innerHTML = '<b>' + esc(String(msg)) + '</b>';
+  }
+
+  window.CertPanel = { open: open, refresh: refresh };
 })();
 
 /* ================================================================
@@ -9376,6 +9980,33 @@ async function renderProfile(){
    that you have never heard are the reason following somebody you disagree
    with is worth doing. Those go straight to the shortlist, which is where
    "not heard" already goes from the Crate. */
+function mastersHtml(rows,isOwner,uname){
+  if(!rows||!rows.length){
+    // Nothing on an empty state for a visitor: a heading saying somebody has
+    // no Masters is worse than the heading not being there.
+    return isOwner
+      ? '<div class="prof-section-title" style="margin-top:26px;">Masters</div>'+
+        '<div class="reco-note">Up to three records can represent you here. A record becomes eligible at '+
+        '<b>Diamond</b> — own it, live with it for a year, and do more with it than score it.</div>'
+      : '';
+  }
+  return '<div class="prof-section-title" style="margin-top:26px;">Masters</div>'+
+    '<div class="reco-note">'+(isOwner?'The three records that represent you.':'The records '+esc(uname)+' chose to represent them.')+'</div>'+
+    '<div class="mast-grid">'+rows.map(function(r){
+      var c=r.cert||{};
+      return '<div class="mast" data-mast="'+esc(r.album_id)+'">'+
+        Cert.art(r.art,c)+
+        '<div class="mast-nm">'+esc(r.name||'')+'</div>'+
+        '<div class="mast-ar">'+esc(r.artist||'')+'</div>'+
+        (c.inscription?'<div class="mast-insc">“'+esc(c.inscription)+'”</div>':'')+
+        (r.bought_at?'<div class="mast-since">Held since '+esc(shortMonth(r.bought_at))+'</div>':'')+
+        '</div>';
+    }).join('')+'</div>';
+}
+function shortMonth(t){
+  try{return new Date(t).toLocaleDateString('en-GB',{month:'short',year:'numeric'});}catch(e){return'';}
+}
+
 function tasteMatchHtml(tm,uname){
   if(!tm)return'';
   const title='<div class="prof-section-title" style="margin-top:26px;">Taste match</div>';
@@ -9450,6 +10081,20 @@ async function drawProfile(host,prof,isOwner){
      made thirty seconds ago. */
   const taste=(!isOwner&&me&&window.TasteMatch&&nAlbums)
     ? TasteMatch.compare(loadAlbums(),albumsObj) : null;
+  /* Masters. Wrapped whole and defaulting to none: this is an ornament at the
+     top of somebody's profile and an ornament that throws would take the page
+     with it. */
+  let masters=[];
+  try{
+    if(window.Cert){
+      const certs=await Cert.all(prof.id,true);
+      const shelf=await Cloud.client().from('collection')
+        .select('album_id,name,artist,art,bought_at,is_master')
+        .eq('user_id',prof.id).eq('is_master',true);
+      masters=(shelf.data||[]).map(function(r){r.cert=certs[r.album_id]||null;return r;})
+        .sort(function(a,b){return new Date(a.bought_at)-new Date(b.bought_at);});
+    }
+  }catch(e){masters=[];}
 
   function albumSlot(t,i){if(t)return'<div class="top3-slot" data-slot="'+i+'"><img src="'+esc(t.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div class="rank">#'+(i+1)+'</div></div>';return'<div class="top3-slot" data-slot="'+i+'">'+(isOwner?'+ pick #'+(i+1):'\u2014')+'</div>';}
   const slots=[0,1,2].map(function(i){return albumSlot(top3[i],i);}).join('');
@@ -9626,6 +10271,7 @@ async function drawProfile(host,prof,isOwner){
           ' </div>'+
       '</div>'+actionBtn+
     '</div>'+
+    mastersHtml(masters,isOwner,prof.username||'they')+
     doneHtml+
     tasteMatchHtml(taste,prof.username||'they')+
     '<div class="prof-section-title">Top 3 albums</div>'+
@@ -9653,6 +10299,10 @@ async function drawProfile(host,prof,isOwner){
       if(window.buzz)buzz('good');
     });});
   }
+  host.querySelectorAll('[data-mast]').forEach(function(el){el.addEventListener('click',function(){
+    const r=masters.filter(function(x){return x.album_id===el.dataset.mast;})[0];
+    if(r)openAlbum({id:r.album_id,name:r.name,artist:r.artist,art:r.art});
+  });});
   const sf=document.getElementById('stat-followers');if(sf)sf.addEventListener('click',function(){openFollowModal(prof.id,'followers',prof.username);});
   const sg=document.getElementById('stat-following');if(sg)sg.addEventListener('click',function(){openFollowModal(prof.id,'following',prof.username);});
   host.querySelectorAll('.list-card').forEach(function(el){el.addEventListener('click',function(){const l=lists.find(function(x){return x.id===el.dataset.list;});if(l)openListView(l,isOwner);});});
@@ -16762,10 +17412,21 @@ window.renderAdminStats = renderAdminStats;
         // cheap is your call to make badly.
         (opts.picks ? '<button class="btn-mini col-pick" data-pick="' + esc(a.album_id) + '">Use a pick</button>' : '');
     }
+    /* The art goes through Cert.art() whatever state it is in, so a finish
+       bought on the album page shows here with no second implementation to
+       keep in step. An unplated record renders exactly as it did. */
+    var cert = null;
+    try { cert = opts.owned ? (Cert.cached()[a.album_id] || null) : null; } catch (e) {}
     return '<div class="col-rec' + (opts.owned ? ' owned' : '') + '" data-rec="' + esc(a.album_id) + '">' +
-      '<img src="' + esc(a.art || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
+      (window.Cert ? Cert.art(a.art, cert)
+                   : '<img src="' + esc(a.art || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">') +
       '<div class="col-meta"><div class="col-nm">' + esc(a.name) + '</div>' +
       '<div class="col-ar">' + esc(a.artist || '') + '</div>' +
+      (cert && (cert.tier || cert.inscription)
+        ? '<div class="col-cert">' + (window.Cert ? Cert.badge(cert) : '') +
+          (cert.inscription ? '<span class="col-insc">“' + esc(cert.inscription) + '”</span>' : '') +
+          '</div>'
+        : '') +
       (a.price != null
         ? '<div class="col-price">' + n(a.price) + ' <small>Discs</small></div>'
         : '<div class="col-price col-unpriced">price on request</div>') +
@@ -16829,6 +17490,8 @@ window.renderAdminStats = renderAdminStats;
     if (tab === 'mine') {
       body.innerHTML = '<p class="reco-note">Loading your shelf…</p>';
       var mine = await loadMine(true);
+      // One call for the whole shelf before any card is built.
+      try { await Cert.all(); } catch (e) {}
       paintHeader();
       if (!mine.length) {
         body.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.disc +
