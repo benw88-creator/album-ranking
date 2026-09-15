@@ -12490,30 +12490,48 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
      No `desc`. A tag is three words on a chip; explaining it underneath is
      explaining the joke. */
+  /* Thirty, ordered by price — the Shop renders them in map order and a ladder
+     that climbs reads as one. Mirrors `shop_items` after
+     ..._20260916090000_thirty_tags.sql; the costs here are a **fallback**,
+     overwritten by loadPrices(), and the two drifted once before when the 4x
+     pass moved the rows and not these.
+
+     Three labels changed and their KEYS did not (taykeith, metro, pluh), so
+     anyone holding one keeps it — the same treatment MUSTARD ON THE BEAT got.
+     A key is what `shop_items`, `owned_tags` and `active_tag` hold, and
+     renaming one orphans everybody who owns it. `fuckumean` is the standing
+     example: the chip says FUKUMEAN and the key never will. */
   const TAGS = {
-    pluh:       { name: 'pluh',                   cost: 48000 },
-    lit:        { name: 'IT’S LIT',               cost: 48000 },
-    justbeatit: { name: 'JUST BEAT IT',           cost: 48000 },
-    twentyone:  { name: '21',                     cost: 54000 },
-    beef:       { name: '1738',                   cost: 60000 },
-    mustard:    { name: 'MUSTARD',                cost: 72000 },
-    pluto:      { name: 'PLUTO',                  cost: 72000 },
-    astro:      { name: 'ASTRO',                  cost: 72000 },
-    sremm:      { name: 'SREMMLIFE!',             cost: 84000 },
-    sober:      { name: 'I CAN’T SPELL SOBER',    cost: 84000 },
-    maybach:    { name: 'M-M-M-MAYBACH MUSIC',    cost: 96000 },
-    biscuits:   { name: 'IT’S BISCUITS, IT’S GRAVY', cost: 96000 },
-    /* The key stays `fuckumean` — it is what `shop_items`, `owned_tags` and
-       `active_tag` hold, and renaming it would orphan anyone who owns one.
-       Only the label is rendered, and only from this map: loadPrices() reads
-       cost and nothing else. */
-    fuckumean:  { name: 'FUKUMEAN',               cost: 96000 },
-    profit:     { name: 'I GOT TOO MUCH PROFIT',  cost: 108000 },
-    drizzy:     { name: 'DRIZZY',                 cost: 108000 },
-    carti:      { name: 'CASH CARTI B!TCH',       cost: 120000 },
-    taykeith:   { name: 'TAY KEITH, FTNU',        cost: 144000 },
-    pierre:     { name: 'YO PIERRE, YOU WANNA COME OUT HERE?', cost: 168000 },
-    metro:      { name: 'IF YOUNG METRO DON’T TRUST YOU', cost: 192000 },
+    twentyone:  { name: '21',                                  cost: 21000 },
+    lit:        { name: 'IT’S LIT',                            cost: 35000 },
+    beef:       { name: '1738',                                cost: 40000 },
+    biscuits:   { name: 'IT’S BISCUITS, IT’S GRAVY',           cost: 45000 },
+    taykeith:   { name: 'TAY KEITH, F****IN’ UP THE BEAT',     cost: 55000 },
+    pluh:       { name: 'PLUH',                                cost: 60000 },
+    wheezy:     { name: 'WHEEZY OUTTA HERE',                   cost: 65000 },
+    maybach:    { name: 'M-M-M-MAYBACH MUSIC',                 cost: 70000 },
+    justbeatit: { name: 'JUST BEAT IT',                        cost: 75000 },
+    astro:      { name: 'ASTRO',                               cost: 80000 },
+    sremm:      { name: 'SREMMLIFE!',                          cost: 85000 },
+    dadope:     { name: 'D.A. GOT THAT DOPE!',                 cost: 90000 },
+    southside:  { name: 'SOUTHSIDE ON THE TRACK',              cost: 95000 },
+    mustard:    { name: 'MUSTARD',                             cost: 100000 },
+    deadpeople: { name: 'I SEE DEAD PEOPLE',                   cost: 100000 },
+    sober:      { name: 'I CAN’T SPELL SOBER',                 cost: 105000 },
+    drizzy:     { name: 'DRIZZY',                              cost: 110000 },
+    metro:      { name: 'METRO BOOMIN WANT SOME MORE',         cost: 120000 },
+    mikewill:   { name: 'MIKE WILL MADE-IT',                   cost: 125000 },
+    coco:       { name: 'I’M IN LOVE WITH THE COCO',           cost: 125000 },
+    carti:      { name: 'CASH CARTI B!TCH',                    cost: 130000 },
+    fweah:      { name: 'FWEAH',                               cost: 140000 },
+    pluto:      { name: 'PLUTO',                               cost: 150000 },
+    smokesome:  { name: 'SMOKE SOME, DRINK SOME, POP ONE',     cost: 160000 },
+    fuckumean:  { name: 'FUKUMEAN',                            cost: 175000 },
+    murda:      { name: 'MURDA ON THE BEAT SO IT’S NOT NICE',  cost: 200000 },
+    turbo:      { name: 'RUN THAT BACK, TURBO!',               cost: 225000 },
+    pierre:     { name: 'YO PIERRE, YOU WANNA COME OUT HERE?', cost: 300000 },
+    f1lthy:     { name: 'WAKE UP, F1LTHY',                     cost: 300000 },
+    profit:     { name: 'I GOT TOO MUCH PROFIT',               cost: 1000000 },
   };
 
   /* Every tag gets its own colours and one of three motions.
@@ -12554,6 +12572,20 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     taykeith:   { a: '#ff4d4d', b: '#4d9dff', m: 'sweep'   },
     pierre:     { a: '#a3e635', b: '#22d3ee', m: 'pulse'   },
     metro:      { a: '#ffd24a', b: '#ff2d6f', m: 'sweep'   },
+    // The eleven added by ..._20260916090000. A tag with no row here falls
+    // back to plain gold, which is exactly the "reads as a label" problem
+    // this map was built to fix, so they arrive together.
+    wheezy:     { a: '#7c3aed', b: '#a3e635', m: 'sweep'   },
+    dadope:     { a: '#22c55e', b: '#fde047', m: 'pulse'   },
+    southside:  { a: '#ff4d4d', b: '#ffb4b4', m: 'flicker' },
+    deadpeople: { a: '#94a3b8', b: '#e2e8f0', m: 'flicker' },
+    mikewill:   { a: '#38bdf8', b: '#f0abfc', m: 'sweep'   },
+    coco:       { a: '#e0f2fe', b: '#7dd3fc', m: 'pulse'   },
+    fweah:      { a: '#f472b6', b: '#facc15', m: 'flicker' },
+    smokesome:  { a: '#84cc16', b: '#fb923c', m: 'sweep'   },
+    murda:      { a: '#dc2626', b: '#fbbf24', m: 'sweep'   },
+    turbo:      { a: '#06b6d4', b: '#f97316', m: 'pulse'   },
+    f1lthy:     { a: '#a855f7', b: '#f43f5e', m: 'flicker' },
   };
 
   /* ---- Name flair --------------------------------------------------------

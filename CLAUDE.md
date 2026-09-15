@@ -540,10 +540,11 @@ somebody owns everything.** It is safe only alongside a sink.
   1,600 × 3, Tournament 1,600 × 2 (parked). **A day of everything is 30,800.**
   - The sizing rule is *against prices*, not against each other — and
     `..._20260915100000_harder_progression.sql` moved the prices a long way without touching
-    a single rate. A spin is **5,000**, the cheapest tag **48,000**, the whole shop
-    **~2,342,500**. That is about **59 days of maxing every game**, against 8.5 before it.
-    A realistic session buys a spin or two and nothing else; a tag is a thing you save for
-    across days, which is what a status cosmetic should be.
+    a single rate, and `..._20260916090000_thirty_tags.sql` re-priced the tags one by one on
+    top of it. A spin is **5,000**, the cheapest tag **21,000**, the whole shop
+    **~4,953,500** — of which 4,381,000 is the thirty tags. A realistic session buys a spin
+    or two and nothing else; the cheapest tag is about a day and the dearest is months,
+    which is what a status cosmetic should be.
   - **Rates were not touched by that pass**, deliberately. Halving what a rating pays reaches
     the same place with a worse feel: the thing you do most often paying less is felt every
     session, where a distant price is felt once. The income side moved a day later instead,
@@ -765,11 +766,26 @@ rows and not the duplicates, and the Shop offered Sundown at 150 while `wallet_b
 600.
 
 - **Producer tags** — a stamped chip under your username, `owned_tags` / `active_tag`.
-  **Nineteen, all real.** Seven invented "house" ones (STRAIGHT OUT THE CRATE, NO SKIPS, PROMO
-  USE ONLY…) were written to fill the cheap end and removed in `..._20260914090000`: the whole
-  appeal of a producer tag is recognition, and an invented one has none to offer. Anyone
-  holding one was **refunded from `shop_items` before the row was deleted** — do it in that
-  order or the price is unrecoverable.
+  **Thirty, all real**, 21,000 to 1,000,000, and **4,381,000 for the lot**
+  (`..._20260916090000_thirty_tags.sql`). Seven invented "house" ones (STRAIGHT OUT THE
+  CRATE, NO SKIPS, PROMO USE ONLY…) were written to fill the cheap end and removed in
+  `..._20260914090000`: the whole appeal of a producer tag is recognition, and an invented
+  one has none to offer. Anyone holding one was **refunded from `shop_items` before the row
+  was deleted** — do it in that order or the price is unrecoverable.
+  - Prices are **set one by one, not multiplied**, which is why the cheapest came *down*
+    from 48,000 to 21,000 while the top went to 1,000,000. The entry price decides whether a
+    tag is a thing anybody ever owns and four days of play for the cheapest was too much.
+  - **I GOT TOO MUCH PROFIT at 1,000,000 is 3.3x the next most expensive thing in the app.**
+    It is set from the list as given; if it was meant to be 100,000 it is one line in that
+    migration and one in `TAGS`.
+  - Renaming a tag **keeps the key**, always: a key is what `shop_items`, `owned_tags` and
+    `active_tag` hold, so changing one orphans everybody who owns it. `fuckumean` is the
+    standing example — the chip says FUKUMEAN and the key never will. Three more were
+    relabelled that way (`taykeith`, `metro`, `pluh`).
+  - **Two older guards now read false on purpose.** `..._20260914090000` asserts exactly
+    nineteen tags, and `..._20260915100000` is sentinelled on metro costing 16,000 or
+    192,000 — it is 120,000 now. Both refuse rather than doing the wrong thing, which is the
+    behaviour those guards exist for, but they are where a `supabase db push` would stop.
   - **These are deliberately not `profiles.badges`.** That column holds status markers — CEO,
     OG, Beta Tester, Verified — which are *awarded*. Putting bought items in the same array
     would make Verified purchasable, which is the one thing a verification marker can never be.
