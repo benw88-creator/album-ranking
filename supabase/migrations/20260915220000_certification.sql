@@ -125,7 +125,10 @@ returns table (cost integer, needs text)
 language sql immutable
 set search_path = public, pg_temp
 as $$
-  select * from (values
+  -- f.cost, f.needs and NOT select *: the values list has three columns and
+  -- this function returns two, so the star handed `key` (text) to `cost`
+  -- (integer) and Postgres refused the whole file at creation time.
+  select f.cost, f.needs from (values
     ('silverleaf',   8000, 'silver'),
     ('goldplate',   25000, 'gold'),
     ('platinum',    60000, 'platinum'),
