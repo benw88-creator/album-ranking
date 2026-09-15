@@ -1642,6 +1642,23 @@ Three rules added after it shipped, every one of them something it looked broken
 The run is spent by `claimRun()` **after** the pool is known to be playable, so a failed
 `/api/album-streams` never costs somebody one of their three.
 
+**`crate_hl_best` is in `SYNC_KEYS`**, and it was the last local score that did not follow
+you between devices — the five-round bests have synced since they shipped, so a best set on
+a phone simply was not there on a laptop and there was no way to tell that from never having
+set one.
+
+It is a **map** (`{ streams, rating }`), not a number, which is why it could not join the
+`crate_best_*` line: the two modes are separate games and separate bests, and a whole-blob
+newest-wins merge would drop whichever device wrote first. It merges per key with the larger
+number winning — the same rule the game log's play counts want, so both now call one
+`maxByKey()` rather than keeping two copies of the same loop. It is deliberately key-agnostic:
+a third mode would merge correctly without that function being touched.
+
+Note the asymmetry inside `mergeGameLog`, which is the reason that merge is field-by-field in
+the first place: the play counts take the **larger** and the Earworm best takes the **smaller**
+row count, because fewer guesses is better. `maxByKey` is only correct for the half that goes
+up. Do not widen it over the other.
+
 ## Groove roles
 
 Migration `supabase/migrations/20260908120000_groove_roles.sql` (apply it by hand in the SQL

@@ -9438,7 +9438,7 @@ const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const Cloud=(function(){
   let sb=null,user=null,ready=false;
-  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily'];
+  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best'];
   const pending={};
   function isOn(){return!!(sb&&user);}
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
@@ -9454,6 +9454,17 @@ const Cloud=(function(){
   function itemStamp(x){return Math.max((x&&x.ratedAt)||0,(x&&x.savedAt)||0);}
   function mergeItemMap(localObj,cloudObj){const out=Object.assign({},cloudObj||{});const loc=localObj||{};Object.keys(loc).forEach(function(id){const a=loc[id],b=out[id];if(!b||itemStamp(a)>=itemStamp(b))out[id]=a;});return out;}
   function mergeClaimed(a,b){return Object.assign({},b||{},a||{});}
+  /* Per key, the larger number wins. Used by the game log's play counts and by
+     the Higher or Lower bests, which are both maps of independent numbers that
+     only go up — so taking the whole blob from whichever device wrote last
+     would silently drop a count set on the other one. Key-agnostic on purpose:
+     Higher or Lower's two modes are `streams` and `rating` today, and a third
+     would merge correctly without this being touched. */
+  function maxByKey(a,b){
+    a=a||{};b=b||{};const out={};
+    Object.keys(a).concat(Object.keys(b)).forEach(function(k){out[k]=Math.max(a[k]||0,b[k]||0);});
+    return out;
+  }
   /* Today's Blitz is one go, and until this was synced that cap was one
      device deep — the same ten questions were a fresh attempt on a phone,
      which is exactly what the shared score is supposed to rule out.
@@ -9476,10 +9487,7 @@ const Cloud=(function(){
      would silently drop a best set on the other one. */
   function mergeGameLog(a,b){
     a=a||{};b=b||{};
-    const plays={};
-    Object.keys(a.plays||{}).concat(Object.keys(b.plays||{})).forEach(function(k){
-      plays[k]=Math.max((a.plays||{})[k]||0,(b.plays||{})[k]||0);
-    });
+    const plays=maxByKey(a.plays,b.plays);
     const ea=a.ew,eb=b.ew;
     const ew=(!ea&&!eb)?null:(!ea?eb:(!eb?ea:((ea.rows||99)<=(eb.rows||99)?ea:eb)));
     return{plays:plays,ew:ew};
@@ -9500,6 +9508,8 @@ const Cloud=(function(){
     // the same per-item rule the ratings use.
     lsSetRaw('crate_shortlist_v1',mergeItemMap(lsGet('crate_shortlist_v1')||{},cloud['crate_shortlist_v1']||{}));
     ['crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_blitz_best'].forEach(function(k){const a=lsGet(k)||0,b=cloud[k]||0;if(Math.max(a,b))lsSetRaw(k,Math.max(a,b));});
+    const mHl=maxByKey(lsGet('crate_hl_best'),cloud['crate_hl_best']);
+    if(Object.keys(mHl).length)lsSetRaw('crate_hl_best',mHl);
     const mBd=mergeBlitzDaily(lsGet('crate_blitz_daily'),cloud['crate_blitz_daily']);
     if(mBd)lsSetRaw('crate_blitz_daily',mBd);
     /* The game log merges per field rather than newest-wins: play counts take
@@ -18716,7 +18726,11 @@ window.renderAdminStats = renderAdminStats;
   function best() { return bests()[mode] || 0; }
   function setBest(n) {
     var b = bests();
-    if (n > (b[mode] || 0)) { b[mode] = n; try { localStorage.setItem(BEST_KEY, JSON.stringify(b)); } catch (e) {} }
+    if (n > (b[mode] || 0)) {
+      b[mode] = n;
+      try { localStorage.setItem(BEST_KEY, JSON.stringify(b)); } catch (e) {}
+      if (window.Cloud) Cloud.push(BEST_KEY);
+    }
   }
 
   // Streams read as "1.2bn"; ratings are just the number out of 100.
