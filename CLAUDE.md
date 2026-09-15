@@ -321,6 +321,16 @@ The workings are private and the award is not: somebody else's shelf shows what 
 certified at, but how close they are to the next rung comes back only for yourself — same
 line Standing and Taste Match draw.
 
+**That line did not hold on the first attempt, and the failure is worth copying the fix
+from** (`..._20260915234500_cert_detail_privacy.sql`). The guard was
+`v_self boolean := (p_user = auth.uid())`, which is correct for a signed-in caller looking
+at somebody else and **NULL for an anonymous one** — so `not v_self` was NULL, the early
+return never fired, and every logged-out visitor got the breakdown. Three-valued logic, not
+a typo: it reads correctly in English and is wrong only for the one caller nobody pictures
+while writing it. **Anywhere a boolean gates a privacy branch, decide what NULL means and
+say so.** Caught by calling the function from a logged-out browser against a real shelf,
+which is worth doing to anything with a `v_self` in it.
+
 #### The finishes
 
 Silver leaf 8,000 · Gold plate 25,000 · Platinum 60,000 · Holographic 75,000 ·
