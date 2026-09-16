@@ -224,7 +224,20 @@ export default async function handler(req, res) {
 
     // ---- artist albums (the Completion list) -----------------------------
     if (path === 'artist-albums') {
-      const id = String(q.id || '');
+      let id = String(q.id || '');
+      // A legacy SPOTIFY artist id means nothing to Deezer, and every artist
+      // in a crate from before the catalogue moved carries one. Without this
+      // the discography 404s, the Completion list comes back empty, and every
+      // record you have already rated reads as unrated. So the caller sends
+      // the artist name too and it is resolved the same way a legacy album is.
+      if (!/^\d+$/.test(id)) {
+        if (!q.name) { res.status(400).json({ error: { status: 400, message: 'name required to resolve a legacy artist id' } }); return; }
+        const want = loose(String(q.name));
+        const f = await dz('/search/artist?limit=10&q=' + encodeURIComponent(String(q.name)));
+        const hit = (f.data || []).find(x => loose(x.name) === want) || null;
+        if (!hit) { res.setHeader('Cache-Control', DAY); res.status(200).json({ items: [], total: 0 }); return; }
+        id = String(hit.id);
+      }
       const j = await dz('/artist/' + encodeURIComponent(id) + '/albums?limit=' + Math.min(parseInt(q.limit, 10) || 50, 100));
       let items = (j.data || []);
       // include_groups=album is what the discography asks Spotify for: studio

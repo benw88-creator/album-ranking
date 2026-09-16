@@ -6771,6 +6771,8 @@ function _toCatalogue(path){
     u.set('type',q.get('type')||'album'); u.set('limit',q.get('limit')||'10');
   } else if((m=p.match(/^\/artists\/([^/]+)\/albums$/))){
     u.set('path','artist-albums'); u.set('id',decodeURIComponent(m[1]));
+    // Carried so a legacy Spotify artist id can be resolved by name.
+    if(q.get('name'))u.set('name',q.get('name'));
     u.set('include_groups',q.get('include_groups')||'album');
     u.set('limit',q.get('limit')||'50');
   } else if((m=p.match(/^\/artists\/([^/]+)$/))){
@@ -8852,7 +8854,12 @@ function renderAuthArea(connected){
   });
 
   async function fetchArtistAlbums(artistId){
-    let path='/artists/'+encodeURIComponent(artistId)+'/albums?'+new URLSearchParams({include_groups:'album',market:'US'}).toString();
+    // artistName rides along so a legacy Spotify artist id can be resolved by
+  // name at the route. Without it the discography 404s and every record you
+  // have already rated reads as unrated.
+  const _q={include_groups:'album',market:'US'};
+  if(artistName)_q.name=artistName;
+  let path='/artists/'+encodeURIComponent(artistId)+'/albums?'+new URLSearchParams(_q).toString();
     let items=[];
     for(let page=0;page<3&&path;page++){let data;try{data=await spotifyGet(path,{priority:true});}catch(e){if(page===0)throw e;break;}items=items.concat(data.items||[]);path=data.next?data.next.replace(SPOTIFY_API,''):null;}
     const seen={};const list=[];
@@ -9184,14 +9191,26 @@ function renderAuthArea(connected){
 /* ================================================================
    9. ACHIEVEMENTS + ARTIST COMPLETION
    ================================================================ */
+/* One artist, one key, whatever id a catalogue has given them today. Used
+   both to group a crate by artist and to decide whether a record you rated
+   belongs to the artist whose page you are looking at. */
+function _artistKey(n){
+  return String(n||'').normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .toLowerCase().replace(/^the\s+/,'').replace(/[^a-z0-9]+/g,'');
+}
 function baseAlbumTitle(name){return String(name||'').toLowerCase().replace(/\(.*?\)|\[.*?\]/g,' ').replace(/\b(deluxe|edition|remaster(ed)?|expanded|version|explicit|anniversary|reissue|mono|stereo|bonus|special|the)\b/g,' ').replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');}
 function isNonStudio(name){const n=String(name||'').toLowerCase();return/\b(live|unplugged|in concert|tour|remix(es|ed)?|reimagined|instrumental(s)?|a ?cappella|karaoke|commentary|demos?|sessions?|b-sides|rarities|greatest hits|best of|collection|anthology|compilation|soundtrack|score|mixtape|sped.?up|slowed|nightcore|chopped (and|&|n) screwed|8d audio)\b/.test(n);}
 const _studioMem={};
-async function fetchStudioAlbums(artistId,urgent){
+async function fetchStudioAlbums(artistId,urgent,artistName){
   if(_studioMem[artistId])return _studioMem[artistId];
   const storedList=_spCacheRead('studio:'+artistId);
   if(storedList){_studioMem[artistId]=storedList;return storedList;}
-  let path='/artists/'+encodeURIComponent(artistId)+'/albums?'+new URLSearchParams({include_groups:'album',market:'US'}).toString();
+  // artistName rides along so a legacy Spotify artist id can be resolved by
+  // name at the route. Without it the discography 404s and every record you
+  // have already rated reads as unrated.
+  const _q={include_groups:'album',market:'US'};
+  if(artistName)_q.name=artistName;
+  let path='/artists/'+encodeURIComponent(artistId)+'/albums?'+new URLSearchParams(_q).toString();
   let items=[];
   for(let page=0;page<3&&path;page++){let data;try{data=await spotifyFetch(path,urgent?{priority:true}:undefined);}catch(e){if(page===0)throw e;break;}items=items.concat(data.items||[]);path=data.next?data.next.replace(SPOTIFY_API,''):null;}
   const byBase={};
@@ -9399,7 +9418,18 @@ function renderCompletionistAchievements(){
   const el=document.getElementById('ach-completionist');
   const albums=Object.values(loadAlbums());
   const byArtist={};
-  albums.forEach(function(a){if(!a.artistId)return;(byArtist[a.artistId]=byArtist[a.artistId]||{id:a.artistId,name:a.artist,rated:[]}).rated.push(a);});
+  /* Grouped by artist NAME, not id. Keyed by id, an artist rated both before
+     and after the catalogue moved appears TWICE in this list — two cards, two
+     partial discographies, neither of them completable. The id is still kept
+     because fetchStudioAlbums needs one, and a numeric (Deezer) one is
+     preferred so the lookup does not have to fall back to resolving by name. */
+  albums.forEach(function(a){
+    if(!a.artistId)return;
+    const k=_artistKey(a.artist)||a.artistId;
+    const g=byArtist[k]=byArtist[k]||{id:a.artistId,name:a.artist,rated:[]};
+    if(/^\d+$/.test(String(a.artistId))&&!/^\d+$/.test(String(g.id)))g.id=a.artistId;
+    g.rated.push(a);
+  });
   const artists=Object.values(byArtist);
   if(!artists.length){el.innerHTML='<p class="reco-note">No artists yet \u2014 rate an album to start a Completionist track.</p>';return;}
   const claimed=loadClaimed();
@@ -9440,7 +9470,7 @@ function renderCompletionistAchievements(){
   }).slice(0,6);
   (function next(i){
     if(i>=needed.length)return;
-    fetchStudioAlbums(needed[i].id,true)
+    fetchStudioAlbums(needed[i].id,true,needed[i].name)
       .then(function(){drawCompCard(needed[i],loadClaimed());})
       .catch(function(){})
       .then(function(){setTimeout(function(){next(i+1);},220);});
@@ -9456,7 +9486,7 @@ function drawCompCard(a,claimed){
       '<div><div class="ach-name">'+esc(a.name)+' Completionist</div><div class="ach-sub">Rate every studio album</div></div></div>'+
       '<button class="ach-claim" style="background:var(--surface-3);color:var(--text);" data-load="'+a.id+'">Check progress</button>';
     const lb=card.querySelector('[data-load]');
-    lb.addEventListener('click',function(){lb.textContent='Loading\u2026';lb.disabled=true;fetchStudioAlbums(a.id,true).then(function(){drawCompCard(a,loadClaimed());}).catch(function(){lb.textContent='Retry';lb.disabled=false;});});
+    lb.addEventListener('click',function(){lb.textContent='Loading\u2026';lb.disabled=true;fetchStudioAlbums(a.id,true,a.name).then(function(){drawCompCard(a,loadClaimed());}).catch(function(){lb.textContent='Retry';lb.disabled=false;});});
     return;
   }
   const studio=studioList.map(function(s){return baseAlbumTitle(s.name);}).filter(Boolean);
@@ -9558,11 +9588,19 @@ async function renderCompletion(meta){
   if(!meta||!meta.artistId){host.innerHTML='';_compState=null;return;}
   host.innerHTML='<div class="comp"><div class="comp-title">Loading '+esc(meta.artist)+'\u2019s discography\u2026</div></div>';
   let studio=[];
-  try{studio=await fetchStudioAlbums(meta.artistId,true);}
+  try{studio=await fetchStudioAlbums(meta.artistId,true,meta.artist);}
   catch(e){host.innerHTML='<div class="comp"><div class="comp-missing">Couldn\u2019t load discography \u2014 '+esc(spotifyErrorMessage(e))+'</div></div>';return;}
   if(!studio.length){host.innerHTML='';_compState=null;return;}
   const ratedBases={};
-  Object.values(loadAlbums()).forEach(function(a){if(a.artistId===meta.artistId)ratedBases[baseAlbumTitle(a.name)]=true;});
+  /* Match on the artist NAME as well as the id. Artist ids moved with the
+     catalogue, so every album rated before that carries a Spotify artistId
+     and `a.artistId === meta.artistId` was false for all of them — which made
+     a finished discography read as nothing rated, and the app ask you to rank
+     records you had already ranked. Same failure as the track ratings, one
+     level up. */
+  Object.values(loadAlbums()).forEach(function(a){
+    if(a.artistId===meta.artistId||_artistKey(a.artist)===_artistKey(meta.artist))ratedBases[baseAlbumTitle(a.name)]=true;
+  });
   _compState={meta:meta,studio:studio,ratedBases:ratedBases};
   const have=studio.filter(function(s){return ratedBases[baseAlbumTitle(s.name)];}).length;
   const complete=have>=studio.length;
