@@ -93,7 +93,10 @@ function albumLite(a) {
     release_date: a.release_date || '',
     images: images(a),
     artists: a.artist ? [{ id: String(a.artist.id), name: a.artist.name }] : [],
-    external_urls: { spotify: a.link || '' },   // the field name the client reads; it is a Deezer link
+    // external_urls.spotify is the field name the client already reads; `link`
+    // is the honest one. Both carry the DEEZER url.
+    external_urls: { spotify: a.link || '' },
+    link: a.link || '',
     uri: 'deezer:album:' + a.id,
     source: 'deezer'
   };

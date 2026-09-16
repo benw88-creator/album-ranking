@@ -5060,12 +5060,24 @@ button.rw-day {
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
   font-size: 13px; color: var(--text-faint);
 }
-/* Spotify attribution. Their Developer Policy requires the LOGO wherever
-   their content appears, and a link back to the service from the content
-   itself — not a sentence in a footer, which is all this app had. The green
-   and the mark are theirs: do not recolour, squash or restyle them, which
-   the brand guidelines forbid in as many words. The link text is one of
-   their three approved strings ("PLAY ON SPOTIFY"), not a phrasing of ours. */
+/* Deezer attribution, and it is MANDATORY rather than courteous: "Each
+   application using Deezer API/SDKs must have to include a clearly visible
+   Deezer Logo... The respect of these logo guidelines is mandatory. Deezer
+   Logo must be clearly visible and identified."
+
+   The mark in `assets/deezer-mark.png` is Deezer's own published icon, taken
+   unaltered from their CDN — not redrawn, because a brand mark reproduced
+   from memory is an altered brand mark and the same guidelines forbid that.
+   Do not recolour it, crop it or squash it; keep it square.
+
+   The Spotify mark was removed from every surface at the same time. Spotify
+   supplies none of this app's content any more, so their attribution no
+   longer applies — and Deezer's terms say their Content "shall not be
+   associated, directly or indirectly with any trademark, brand name, or
+   logo", which another streaming service's mark on the same screen is the
+   clearest possible example of. */
+.dz-credit { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; }
+.dz-credit img { display: block; flex-shrink: 0; border-radius: 3px; }
 .sp-mark { width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.16em; fill: #1ED760; }
 .sp-link {
   display: inline-flex; align-items: center; gap: 7px;
@@ -5769,7 +5781,7 @@ window.ICONS = {
           <!-- Required, not decorative: metadata and cover art must link back
                to the record on Spotify. "Play on Spotify" is one of the three
                strings their guidelines permit here. -->
-          <a class="sp-link" id="detail-spotify" target="_blank" rel="noopener" href="https://open.spotify.com"><span data-spotify-mark></span>Play on Spotify</a>
+          <a class="sp-link" id="detail-spotify" target="_blank" rel="noopener" href="https://www.deezer.com"><img src="/assets/deezer-mark.png" alt="" width="16" height="16">Open in Deezer</a>
           <div id="detail-current-score" class="detail-album-score" style="display:none;"></div>
         </div>
         <div id="detail-note"></div>
@@ -5804,8 +5816,8 @@ window.ICONS = {
          survives only on the two controls that link TO Spotify, which is
          what a mark is for. -->
     <span>&middot;</span>
-    <a class="foot-note" href="https://www.deezer.com" target="_blank" rel="noopener">
-      Artwork and catalogue data from Deezer</a>
+    <a class="foot-note dz-credit" href="https://www.deezer.com" target="_blank" rel="noopener">
+      <img src="/assets/deezer-mark.png" alt="Deezer" width="18" height="18">Powered by Deezer</a>
   </footer>
 </div>
 
@@ -6197,7 +6209,7 @@ window.ICONS = {
         <a href="/privacy.html">Privacy</a>
         <a href="/terms.html">Terms</a>
       </div>
-      <p class="set-note" style="margin-top:8px;"><a class="sp-inline" style="color:inherit;text-decoration:none;" href="https://www.deezer.com" target="_blank" rel="noopener">Artwork and catalogue data from Deezer</a></p>
+      <p class="set-note" style="margin-top:8px;"><a class="dz-credit" style="color:inherit;text-decoration:none;" href="https://www.deezer.com" target="_blank" rel="noopener"><img src="/assets/deezer-mark.png" alt="Deezer" width="16" height="16">Powered by Deezer</a></p>
     </div>
   </div>
 </div>
@@ -6921,13 +6933,12 @@ async function openAlbum(meta) {
 
   currentAlbum = { id: meta.id, name: meta.name, artist: meta.artist, artistId: meta.artistId, art: meta.art, year: meta.year, genre: meta.genre || '' };
 
-  // The link back to the record on Spotify. Set per album rather than left on
-  // the service root, because the policy asks for a link to *the content*.
+  // The link back to the record on DEEZER, which is where this record and its
+  // sleeve actually came from. The real album url arrives with the tracklist
+  // (`link`); until it lands this is a Deezer search by name, so the button is
+  // never pointing at nothing.
   var spBtn = document.getElementById('detail-spotify');
-  // A SEARCH url, not /album/<id>: ids are Deezer's now and a Spotify id
-  // link would 404. A search by name needs no id, no API and no token, and
-  // it lands on the record for anybody who uses Spotify.
-  if (spBtn) spBtn.href = 'https://open.spotify.com/search/' +
+  if (spBtn) spBtn.href = 'https://www.deezer.com/search/' +
     encodeURIComponent(((meta.artist || '') + ' ' + (meta.name || '')).trim());
 
   const albums = loadAlbums();
@@ -6947,6 +6958,9 @@ async function openAlbum(meta) {
     const data = await spotifyGet('/albums/' + encodeURIComponent(meta.id) +
       '?name=' + encodeURIComponent(meta.name || '') +
       '&artist=' + encodeURIComponent(meta.artist || ''), { priority: true });
+    // Now the real Deezer url is known, point the credit button at the record
+    // rather than at a search for it.
+    if (spBtn && data && data.link) spBtn.href = data.link;
     const tracks = (data.tracks && data.tracks.items) || [];
     if (data.genres && data.genres.length) currentAlbum.genre = data.genres[0];
     renderTracks(tracks, meta);
@@ -22562,7 +22576,7 @@ window.track = function (name, props) {
       '<a id="pb-src" target="_blank" rel="noopener">Deezer &#8599;</a>' +
       // The bar shows Spotify's cover art while it plays, so it carries the
       // mark and the link back like every other surface that does.
-      '<a id="pb-open" class="sp-inline" href="#"><span data-spotify-mark></span>Full track</a>' +
+      '<a id="pb-open" class="dz-credit" href="#" target="_blank" rel="noopener"><img src="/assets/deezer-mark.png" alt="" width="14" height="14">Full track</a>' +
       '<button type="button" class="pb-btn" id="pb-close" aria-label="Close player">&#10005;</button>';
     document.body.appendChild(bar);
     if (window.SpotifyMark) SpotifyMark.paint(bar);   // the bar is built after load
@@ -22574,9 +22588,16 @@ window.track = function (name, props) {
     bar.querySelector('#pb-next').addEventListener('click', function () { next(false); });
     bar.querySelector('#pb-prev').addEventListener('click', prev);
     bar.querySelector('#pb-close').addEventListener('click', stop);
+    // Full length goes to DEEZER, where the clip came from and where a
+    // Premium+ account plays the whole track. The Spotify handoff is parked,
+    // not deleted — `Play` is intact and this is the one line that would
+    // bring it back, the same arrangement as market-mode Bid Wars.
     bar.querySelector('#pb-open').addEventListener('click', function (ev) {
       ev.preventDefault();
-      if (cur && window.Play) Play.track({ name: cur.name, artist: cur.artist }, {});
+      if (!cur) return;
+      var u = 'https://www.deezer.com/search/' +
+        encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim());
+      window.open(u, '_blank', 'noopener');
     });
     // Scrub. Pointer events so one path covers mouse and thumb.
     function frac(ev) { var r = prg.getBoundingClientRect(); return Math.min(1, Math.max(0, (ev.clientX - r.left) / (r.width || 1))); }
