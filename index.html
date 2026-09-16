@@ -22131,8 +22131,20 @@ window.track = function (name, props) {
      requests. It still runs from the BROWSER and must — from a Vercel
      route the whole of VINALL would share one IP and one budget. */
   var sweeps = {};                     // albumId -> Promise<map>
-  function albCacheGet(id) { try { var v = localStorage.getItem('ap:alb:' + id); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
-  function albCacheSet(id, m) { try { localStorage.setItem('ap:alb:' + id, JSON.stringify(m)); } catch (e) {} }
+  // `ap2:` and not `ap:`. The `ap:` entries were written when Apple was the
+  // only source, so a browser that opened IGOR before Deezer shipped would
+  // hold a map with two tracks in it and go on showing ten handoff rows for
+  // a record that is now completely playable. A source change has to
+  // invalidate what the old source cached, and a key bump is the cheapest
+  // way to say so. The stale entries are swept below rather than left to sit.
+  var CK = 'ap2:alb:';
+  function albCacheGet(id) { try { var v = localStorage.getItem(CK + id); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+  function albCacheSet(id, m) { try { localStorage.setItem(CK + id, JSON.stringify(m)); } catch (e) {} }
+  try {
+    Object.keys(localStorage).forEach(function (k) {
+      if (k.indexOf('ap:alb:') === 0 || k.indexOf('ap:') === 0) localStorage.removeItem(k);
+    });
+  } catch (e) {}
 
   function sweep(meta) {
     var id = meta && meta.id;
@@ -22146,7 +22158,14 @@ window.track = function (name, props) {
       return (m && Object.keys(m).length) ? m : appleMap(meta);
     }).then(function (m) {
       m = m || {};
-      albCacheSet(id, m);
+      // **An empty result is never cached.** Both sources being quiet is far
+      // more often a blip — offline, a cold route, a rate limit — than a
+      // record genuinely having no previews anywhere, and writing {} to
+      // localStorage turns one bad second into an album that shows every
+      // track as a handoff on that browser for good. A failure must not be
+      // remembered as a fact. The cost of being wrong the other way is one
+      // extra request next time the album is opened.
+      if (Object.keys(m).length) albCacheSet(id, m);
       delete sweeps[id];
       return m;
     }).catch(function () { delete sweeps[id]; return {}; });
