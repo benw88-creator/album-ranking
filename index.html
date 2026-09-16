@@ -1554,6 +1554,10 @@ html[data-motion="none"] .card { animation: none; }
    it is the only place on this row that costs nothing: the slider already
    takes 140px and a dedicated button would be the first thing to wrap on a
    phone. A button inherits no font, so the display face is re-stated here. */
+/* .song-row .idx already sets width:24px and outranks a bare button.idx, so
+   the width is restated at matching specificity — otherwise the "circle" is
+   a 24x26 oval, which is exactly what shipped the first time. */
+.song-row button.idx { width: 26px; }
 button.idx {
   -webkit-appearance: none; appearance: none;
   background: none; border: 0; padding: 0; margin: 0;
