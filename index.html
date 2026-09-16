@@ -1632,13 +1632,23 @@ html[data-motion="none"] #player-bar { transition: none; }
 #pb-time { font-family: var(--font-display); font-size: 11.5px; color: var(--text-faint); width: 34px; text-align: right; flex-shrink: 0; }
 /* Apple require a store link beside their preview audio, so this is not
    decoration and must not be removed. */
-#pb-apple, #pb-open { font-size: 11.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
-#pb-apple { color: var(--c-pink); }
+#pb-src, #pb-open { font-size: 11.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+#pb-src { color: var(--c-pink); }
 #pb-open { color: var(--c-lime); }
-#pb-apple:hover, #pb-open:hover { text-decoration: underline; }
+#pb-src:hover, #pb-open:hover { text-decoration: underline; }
+/* No preview anywhere: the bar stops being a player and becomes an offer.
+   Nothing here launches by itself — the handoff is a button, because Spotify
+   takes the whole screen and that has to be something somebody chose. */
+#player-bar.offer #pb-prog, #player-bar.offer #pb-time,
+#player-bar.offer #pb-prev, #player-bar.offer #pb-next { display: none; }
+#player-bar.offer #pb-toggle { opacity: 0.3; }
+#player-bar.offer #pb-open {
+  background: var(--c-lime-dim); color: var(--c-lime);
+  padding: 8px 14px; border-radius: 999px; font-size: 12.5px;
+}
 @media (max-width: 720px) {
   #player-bar { gap: 9px; padding-left: 12px; padding-right: 12px; }
-  #pb-prev, #pb-time, #pb-apple { display: none; }
+  #pb-prev, #pb-time, #pb-src { display: none; }
   #pb-art { width: 38px; height: 38px; }
 }
 /* The row button shows what this track is doing. */
@@ -20485,6 +20495,40 @@ window.renderAdminStats = renderAdminStats;
   }
   window.listeningPlays = listeningPlays;
 
+  // VINALL's own player as a listening source. Until it existed this table
+  // could only be filled by somebody requesting their Spotify data export,
+  // which almost nobody does — so findRinsed and findAbandoned sat first in
+  // buildQueue reading an empty table for most accounts.
+  //
+  // The key is built HERE and not in the player, because `k` is this
+  // module's rule (it mirrors normTitle in api/_streams.js) and a second
+  // copy of it living next to the audio code is a second copy to drift.
+  var _noteFailed = false;
+  async function noteListen(t) {
+    if (!t || !t.track || !t.artist) return;
+    if (!on() || !(await available())) return;
+    try {
+      var r = await sb().rpc('listening_note_play', {
+        p_k: keyOf(t.artist, t.track),
+        p_track: String(t.track), p_artist: String(t.artist),
+        p_album: t.album || null, p_uri: t.uri || null,
+        p_ms: Math.max(0, Math.round(t.ms || 30000))
+      });
+      if (r.error) {
+        // Almost always the migration not being applied yet, which is the
+        // normal state on this project — so it is reported ONCE rather than
+        // on every track, and never swallowed completely.
+        if (!_noteFailed && window.reportIssue) {
+          _noteFailed = true;
+          reportIssue('listening_note_play failed: ' + (r.error.message || r.error));
+        }
+        return;
+      }
+      _plays = null;                       // the cached top slice is now stale
+    } catch (e) {}
+  }
+  window.VinalListening = { noteListen: noteListen, keyOf: keyOf };
+
   async function upload(rows, onProgress) {
     var me = uid();
     var now = new Date().toISOString();
@@ -22039,7 +22083,7 @@ window.track = function (name, props) {
    behind it.
 
    Apple's terms allow previews to promote store content and want the
-   asset kept near a store link, which is what #pb-apple is. It is not
+   asset kept near a store link, which is what #pb-src is. It is not
    decoration; do not remove it.
 
    The honest bit, again: a preview is 30 seconds and the bar says so
@@ -22052,7 +22096,7 @@ window.track = function (name, props) {
   var CACHE_PREFIX = 'ap:';          // ap:<spotify track id> -> preview url or ''
   var el = null, unlocked = false;
   var album = null;                  // { tracks:[], meta:{} }
-  var qi = -1, cur = null, loadTok = 0, dragging = false;
+  var qi = -1, cur = null, loadTok = 0, dragging = false, noPrev = false;
 
   /* ---- matching ---------------------------------------------------- */
   function norm(s) {
@@ -22097,25 +22141,50 @@ window.track = function (name, props) {
     var hit = albCacheGet(id);
     if (hit) return Promise.resolve(hit);
     if (sweeps[id]) return sweeps[id];
+    // Deezer first, Apple second. Neither is trusted to be up: an empty map
+    // is an ordinary answer and means the row hands off to Spotify.
+    var p = deezerMap(meta).then(function (m) {
+      return (m && Object.keys(m).length) ? m : appleMap(meta);
+    }).then(function (m) {
+      m = m || {};
+      albCacheSet(id, m);
+      delete sweeps[id];
+      return m;
+    }).catch(function () { delete sweeps[id]; return {}; });
+    sweeps[id] = p;
+    return p;
+  }
+
+  // Deezer, through /api/preview because Deezer sends no CORS headers. The
+  // route caches at the edge for a week, so one album is one Deezer request
+  // ever rather than one per listener.
+  function deezerMap(meta) {
+    var u = '/api/preview?artist=' + encodeURIComponent(meta.artist || '') +
+            '&album=' + encodeURIComponent(meta.name || '');
+    return fetch(u).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      var map = {};
+      ((j && j.tracks) || []).forEach(function (t) {
+        var k = norm(t.title);
+        if (k && t.preview && !map[k]) map[k] = t.preview;
+      });
+      return map;
+    }).catch(function () { return {}; });
+  }
+
+  // Apple, straight from the browser, as the fallback when the route or
+  // Deezer has nothing. collectionName is the guard against covers.
+  function appleMap(meta) {
     var term = ((meta.artist || '') + ' ' + (meta.name || '')).trim();
     var url = 'https://itunes.apple.com/search?media=music&entity=song&limit=200&term=' + encodeURIComponent(term);
-    var p = fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+    return fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
       var want = norm(meta.name || ''), map = {};
       ((j && j.results) || []).forEach(function (r) {
-        // collectionName is the guard against covers, karaoke versions and
-        // lullaby renditions, which Apple ranks above the real record
-        // startlingly often — a search for Tyler's EARFQUAKE returns two
-        // tributes and no original.
         if (!r || !r.previewUrl || norm(r.collectionName) !== want) return;
         var k = norm(r.trackName);
         if (k && !map[k]) map[k] = r.previewUrl;
       });
-      albCacheSet(id, map);
-      delete sweeps[id];
       return map;
-    }).catch(function () { delete sweeps[id]; return {}; });
-    sweeps[id] = p;
-    return p;
+    }).catch(function () { return {}; });
   }
 
   /* ---- the element ------------------------------------------------- */
@@ -22123,7 +22192,7 @@ window.track = function (name, props) {
     if (el) return el;
     el = new Audio();
     el.preload = 'none';
-    el.addEventListener('timeupdate', paintProgress);
+    el.addEventListener('timeupdate', function () { paintProgress(); accrue(); });
     el.addEventListener('durationchange', paintProgress);
     el.addEventListener('ended', function () { next(true); });
     el.addEventListener('play', paint);
@@ -22198,12 +22267,20 @@ window.track = function (name, props) {
       if (album) album.map = album.map || m || {};
       var src = previewFor(t);
       if (!src) {
-        // Not a failure — it is the better audio, minus the controls.
-        if (window.Play) Play.track(t.id, {});
-        paintAvailability();
+        // **Never launch Spotify from pressing a track number.** Spotify
+        // raises its own window and takes the screen, and no web page can
+        // stop it once the OS has handed over the URI — so the only way not
+        // to be thrown out of VINALL is not to throw. The bar offers the
+        // handoff instead and the listener decides. Leaving VINALL should
+        // always be something somebody chose, never a side effect of
+        // pressing play.
+        qi = i; cur = t; noPrev = true;
+        show(); paint(); markRows(''); paintAvailability();
         return;
       }
+      noPrev = false;
       qi = i; cur = t;
+      resetHeard();
       var a = audio();
       a.src = src; a.currentTime = 0;
       var p = a.play();
@@ -22211,6 +22288,34 @@ window.track = function (name, props) {
       show(); paint(); markRows('playing'); session();
     });
   }
+  /* ---- listening, counted honestly ---------------------------------
+     A preview is 30 seconds and the import's threshold for a play is 30
+     seconds, so a preview heard to the end is exactly Spotify's own
+     definition and no more. Twenty of those thirty is the bar here: a tap
+     and a skip is not a play, and counting one would make "what have you
+     been rinsing" mean the opposite of what it says.
+
+     Time is ACCUMULATED rather than read off currentTime, so dragging the
+     scrubber to 0:25 does not buy a play — a jump shows up as a gap bigger
+     than a tick and is discarded. What is sent is the real listened
+     milliseconds, never a flat 30,000. */
+  var acc = 0, lastT = 0, counted = false;
+  function resetHeard() { acc = 0; lastT = 0; counted = false; }
+  function accrue() {
+    if (!cur || !el) return;
+    var t = el.currentTime || 0, d = t - lastT;
+    if (d > 0 && d < 1.5) acc += d;        // a bigger gap is a seek, not listening
+    lastT = t;
+    if (counted || acc < 20) return;
+    counted = true;
+    if (window.VinalListening) VinalListening.noteListen({
+      track: cur.name, artist: cur.artist,
+      album: (album && album.meta && album.meta.name) || null,
+      uri: cur.id ? 'spotify:track:' + cur.id : null,
+      ms: Math.round(acc * 1000)
+    });
+  }
+
   // Skip past anything with no preview rather than stopping the record dead.
   function seekPlayable(from, step) {
     if (!album) return -1;
@@ -22222,7 +22327,7 @@ window.track = function (name, props) {
 
   function toggle() {
     var a = audio();
-    if (!cur) return;
+    if (!cur || noPrev) return;   // nothing loaded; the bar is showing an offer
     if (a.paused) { var p = a.play(); if (p && p.catch) p.catch(function () {}); }
     else a.pause();
     paint();
@@ -22242,7 +22347,7 @@ window.track = function (name, props) {
   function stop() { try { audio().pause(); } catch (e) {} cur = null; qi = -1; loadTok++; markRows(''); hide(); }
 
   /* ---- the bar ----------------------------------------------------- */
-  var bar, art, ttl, sub, tog, prg, prgFill, tEl, appleA;
+  var bar, art, ttl, sub, tog, prg, prgFill, tEl, srcA;
   function build() {
     if (bar) return;
     bar = document.createElement('div');
@@ -22256,14 +22361,14 @@ window.track = function (name, props) {
       '<button type="button" class="pb-btn" id="pb-toggle" aria-label="Play or pause">&#9654;</button>' +
       '<button type="button" class="pb-btn" id="pb-next" aria-label="Next track">&#9197;</button>' +
       '<div id="pb-time">0:00</div>' +
-      '<a id="pb-apple" target="_blank" rel="noopener">Apple Music &#8599;</a>' +
+      '<a id="pb-src" target="_blank" rel="noopener">Deezer &#8599;</a>' +
       '<a id="pb-open" href="#">Full track &#8599;</a>' +
       '<button type="button" class="pb-btn" id="pb-close" aria-label="Close player">&#10005;</button>';
     document.body.appendChild(bar);
     art = bar.querySelector('#pb-art'); ttl = bar.querySelector('#pb-title');
     sub = bar.querySelector('#pb-sub'); tog = bar.querySelector('#pb-toggle');
     prg = bar.querySelector('#pb-prog'); prgFill = prg.querySelector('b');
-    tEl = bar.querySelector('#pb-time'); appleA = bar.querySelector('#pb-apple');
+    tEl = bar.querySelector('#pb-time'); srcA = bar.querySelector('#pb-src');
     tog.addEventListener('click', toggle);
     bar.querySelector('#pb-next').addEventListener('click', function () { next(false); });
     bar.querySelector('#pb-prev').addEventListener('click', prev);
@@ -22293,16 +22398,29 @@ window.track = function (name, props) {
     if (!bar || !cur) return;
     var a = audio();
     ttl.textContent = cur.name;
-    sub.innerHTML = esc(cur.artist || '') + ' <span class="pb-clip">&middot; 30s preview</span>';
     art.src = (album && album.meta && album.meta.art) || '';
-    tog.innerHTML = a.paused ? '&#9654;' : '&#10073;&#10073;';
+    bar.classList.toggle('offer', noPrev);
+    if (noPrev) {
+      sub.innerHTML = esc(cur.artist || '') + ' <span class="pb-clip">&middot; no preview &mdash; Spotify has it in full</span>';
+      tog.innerHTML = '&#9654;';
+    } else {
+      sub.innerHTML = esc(cur.artist || '') + ' <span class="pb-clip">&middot; 30s preview</span>';
+      tog.innerHTML = a.paused ? '&#9654;' : '&#10073;&#10073;';
+    }
+    tog.disabled = noPrev;
     if (album) {
       bar.querySelector('#pb-prev').disabled = false;
       bar.querySelector('#pb-next').disabled = seekPlayable(qi + 1, 1) < 0;
     }
-    appleA.href = 'https://music.apple.com/search?term=' +
-      encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim());
-    markRows(a.paused ? '' : 'playing');
+    // The audio may have come from either source, so the store link says
+    // which — both of their terms want the clip kept beside a link back.
+    var fromApple = /itunes\.apple\.com/.test((a && a.src) || '');
+    srcA.textContent = (fromApple ? 'Apple Music' : 'Deezer') + ' ↗';
+    srcA.href = fromApple
+      ? 'https://music.apple.com/search?term=' + encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim())
+      : 'https://www.deezer.com/search/' + encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim());
+    srcA.style.display = noPrev ? 'none' : '';
+    markRows((noPrev || a.paused) ? '' : 'playing');
   }
   function paintProgress() {
     if (!bar || !cur) return;
