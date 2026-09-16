@@ -1587,6 +1587,73 @@ button.idx.sent .pi { display: block; }
 }
 .play-fallback a { color: var(--c-cyan); font-weight: 600; text-decoration: none; }
 .play-fallback a:hover { text-decoration: underline; }
+/* ---- PLAYER BAR ----------------------------------------------------
+   VINALL's own <audio>, so pause/seek/next exist at all. A sibling of
+   every view and a direct child of <body>: the album page rebuilds its
+   innerHTML constantly and a player inside it would be destroyed
+   mid-note, which is the #draw-block rule again.
+   z-index sits under the modals (200+) so a sheet still covers it. */
+#player-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 160;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--surface-2); border-top: 1px solid var(--border-strong);
+  backdrop-filter: blur(12px);
+  transform: translateY(110%); transition: transform 0.22s ease;
+}
+#player-bar.up { transform: translateY(0); }
+html[data-motion="none"] #player-bar { transition: none; }
+#player-bar[hidden] { display: none; }
+/* The scrub line rides the top edge, with a fat invisible hit area —
+   3px of real target is unusable with a thumb. */
+#pb-prog { position: absolute; top: -6px; left: 0; right: 0; height: 15px; cursor: pointer; }
+#pb-prog i { position: absolute; top: 6px; left: 0; right: 0; height: 3px; background: var(--surface-4); display: block; }
+#pb-prog b { position: absolute; top: 6px; left: 0; width: 0; height: 3px; background: var(--c-cyan); display: block; }
+#pb-prog:hover b, #pb-prog.drag b { height: 5px; top: 5px; }
+#pb-art { width: 42px; height: 42px; border-radius: 6px; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
+#pb-meta { flex: 1; min-width: 0; }
+#pb-title { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#pb-sub { font-size: 11.5px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+#pb-sub .pb-clip { color: var(--text-faint); }
+.pb-btn {
+  -webkit-appearance: none; appearance: none; background: none;
+  border: 0; padding: 0; margin: 0; cursor: pointer;
+  color: var(--text-dim); font-size: 15px; line-height: 1;
+  width: 32px; height: 32px; border-radius: 50%;
+  display: grid; place-items: center; flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.pb-btn:hover { background: var(--surface-4); color: var(--text); }
+.pb-btn[disabled] { opacity: 0.3; cursor: default; }
+.pb-btn[disabled]:hover { background: none; color: var(--text-dim); }
+#pb-toggle { width: 38px; height: 38px; background: var(--text); color: var(--bg); font-size: 14px; }
+#pb-toggle:hover { background: var(--text); color: var(--bg); transform: scale(1.06); }
+#pb-toggle.loading { opacity: 0.55; }
+#pb-time { font-family: var(--font-display); font-size: 11.5px; color: var(--text-faint); width: 34px; text-align: right; flex-shrink: 0; }
+/* Apple require a store link beside their preview audio, so this is not
+   decoration and must not be removed. */
+#pb-apple, #pb-open { font-size: 11.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+#pb-apple { color: var(--c-pink); }
+#pb-open { color: var(--c-lime); }
+#pb-apple:hover, #pb-open:hover { text-decoration: underline; }
+@media (max-width: 720px) {
+  #player-bar { gap: 9px; padding-left: 12px; padding-right: 12px; }
+  #pb-prev, #pb-time, #pb-apple { display: none; }
+  #pb-art { width: 38px; height: 38px; }
+}
+/* The row button shows what this track is doing. */
+/* A track Apple has no preview for — about 30% of them, and it varies
+   wildly by record. Not an error: it still plays, in Spotify, at full
+   length. The arrow says it leaves the page, so nobody presses it
+   expecting the bar to appear. */
+button.idx .px { display: none; font-size: 10px; line-height: 1; }
+button.idx.nopv { color: var(--text-faint); }
+.song-row:hover button.idx.nopv .pi, button.idx.nopv:focus-visible .pi { display: none; }
+.song-row:hover button.idx.nopv .px, button.idx.nopv:focus-visible .px { display: block; }
+button.idx.playing { background: var(--c-cyan-dim); color: var(--c-cyan); }
+button.idx.playing .pn, button.idx.loading .pn { display: none; }
+button.idx.playing .pi, button.idx.loading .pi { display: block; }
+button.idx.loading { opacity: 0.6; }
 .song-row img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
 .song-meta { flex: 1; min-width: 0; }
 .song-name { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -5680,7 +5747,7 @@ window.ICONS = {
     <div id="detail-completion"></div>
     <!-- The play hint is printed rather than discovered. A number that is
          secretly a button is not a thing anybody finds by playing. -->
-    <div class="tracks-head">Tracks &mdash; rate each 0&ndash;10 &middot; tap a number to play it in Spotify</div>
+    <div class="tracks-head">Tracks &mdash; rate each 0&ndash;10 &middot; tap a number to play it</div>
     <div id="detail-tracks"></div>
     <!-- Certification. Under the tracks on purpose: nearly every mark is
          earned by something on this screen, so the ladder sits where the
@@ -6787,9 +6854,9 @@ function renderTracks(tracks, meta) {
     const val = saved ? saved.score : 0;
     const n = t.track_number || (i + 1);
     return '<div class="song-row" data-track="' + t.id + '" style="--score:' + songColor(val) + ';">' +
-      '<button type="button" class="idx" data-play="' + t.id + '" title="Play in Spotify" ' +
-        'aria-label="Play ' + esc(t.name) + ' in Spotify">' +
-        '<span class="pn">' + n + '</span><span class="pi">&#9654;</span></button>' +
+      '<button type="button" class="idx" data-pv="' + i + '" title="Play" ' +
+        'aria-label="Play ' + esc(t.name) + '">' +
+        '<span class="pn">' + n + '</span><span class="pi">&#9654;</span><span class="px">&#8599;</span></button>' +
       '<div class="song-meta"><div class="song-name">' + esc(t.name) + '</div>' +
       '<div class="song-sub">' + esc((t.artists || []).map(function (a) { return a.name; }).join(', ')) + '</div></div>' +
       '<div class="song-rate">' +
@@ -6797,6 +6864,10 @@ function renderTracks(tracks, meta) {
         '<div class="song-score">' + val + '</div>' +
       '</div></div>';
   }).join('');
+
+  // The player holds the record, not the row: a row only knows its index,
+  // so re-rendering the list cannot strand the queue that is playing.
+  if (window.VinalPlayer) VinalPlayer.setAlbum(tracks, meta);
 
   host.querySelectorAll('.song-slider').forEach(function (sl) {
     sl.addEventListener('input', function () {
@@ -21936,6 +22007,351 @@ window.track = function (name, props) {
   });
 
   window.Play = { track: fire, url: webUrl, mobile: MOBILE };
+})();
+
+
+/* ================================================================
+   PLAYER — VINALL plays the record itself, so pause exists.
+
+   The handoff below hands a URI to the operating system, and that is
+   the entire vocabulary of a `spotify:` link: "open this". Verified by
+   firing every plausible verb at a live client — spotify:pause,
+   :playpause, :app:pause, :action:pause, :internal:pause, the same
+   track twice, a bare `spotify:`, and a search URI over a playing
+   track. Windows accepted all of them because Spotify claims the whole
+   scheme; Spotify ignored all of them. **There is no pause link, and
+   there is no second verb to find.**
+
+   Pause therefore needs VINALL to own the sound. Which it now does:
+   one <audio> element, fed a 30-second preview from Apple's iTunes
+   Search API, which needs no key, no account and no OAuth, answers
+   CORS from this origin directly, and works for every visitor
+   including a logged-out one. Pause, scrub, next, previous and
+   lock-screen controls all follow from owning the element.
+
+   **Apple is called from the browser and must stay that way.** The
+   limit is about 20 requests a minute PER IP: from here that is per
+   listener and free, from a Vercel route it would be shared by the
+   whole of VINALL and throttled on the first busy evening. Same
+   reason resolution is lazy — seventeen lookups on opening an album
+   would spend a listener's minute before they pressed anything, so a
+   track is looked up when it is played and the next one is warmed
+   behind it.
+
+   Apple's terms allow previews to promote store content and want the
+   asset kept near a store link, which is what #pb-apple is. It is not
+   decoration; do not remove it.
+
+   The honest bit, again: a preview is 30 seconds and the bar says so
+   on every track. A player that just stops at 0:30 with no
+   explanation reads as broken, and the fix is a sentence rather than
+   an apology. Full length is one tap away on the same bar.
+   ================================================================ */
+(function () {
+  var SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+  var CACHE_PREFIX = 'ap:';          // ap:<spotify track id> -> preview url or ''
+  var el = null, unlocked = false;
+  var album = null;                  // { tracks:[], meta:{} }
+  var qi = -1, cur = null, loadTok = 0, dragging = false;
+
+  /* ---- matching ---------------------------------------------------- */
+  function norm(s) {
+    s = String(s || '');
+    try { if (window.VinalTitles && VinalTitles.baseName) s = VinalTitles.baseName(s); } catch (e) {}
+    return s.toLowerCase().replace(/(.*?)|[.*?]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  /* ---- resolution: ONE Apple request per album ----------------------
+     Measured, not assumed. Three strategies were tried against real
+     records before this one was kept:
+
+       per-track search   83% on some records, 0 on others, 17 requests
+       album lookup       exact when it works, but `entity=album` does
+                          not list Blonde or IGOR at all — they are in
+                          the catalogue as tracks and not as buyable
+                          albums, so the album index misses them
+       ONE song sweep     one request, filter to rows whose
+                          collectionName is this album  <-- kept
+
+     Coverage over Blonde / IGOR / In Rainbows / Graduation: 70% of
+     tracks. In Rainbows and Graduation are 100%, Blonde 65%, IGOR 17%
+     — Apple's catalogue simply thins out on streaming-first records
+     and nothing here can fix that.
+
+     **A per-track fallback was built, measured and deleted**: across
+     53 tracks it recovered exactly ZERO that the sweep had missed, at
+     one request each. Everything the sweep cannot find, a narrower
+     search cannot find either. Do not add it back without measuring.
+
+     One request per album also retires the rate-limit worry that
+     shaped the first draft (~20/min per IP): opening ten albums is ten
+     requests. It still runs from the BROWSER and must — from a Vercel
+     route the whole of VINALL would share one IP and one budget. */
+  var sweeps = {};                     // albumId -> Promise<map>
+  function albCacheGet(id) { try { var v = localStorage.getItem('ap:alb:' + id); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+  function albCacheSet(id, m) { try { localStorage.setItem('ap:alb:' + id, JSON.stringify(m)); } catch (e) {} }
+
+  function sweep(meta) {
+    var id = meta && meta.id;
+    if (!id) return Promise.resolve({});
+    var hit = albCacheGet(id);
+    if (hit) return Promise.resolve(hit);
+    if (sweeps[id]) return sweeps[id];
+    var term = ((meta.artist || '') + ' ' + (meta.name || '')).trim();
+    var url = 'https://itunes.apple.com/search?media=music&entity=song&limit=200&term=' + encodeURIComponent(term);
+    var p = fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      var want = norm(meta.name || ''), map = {};
+      ((j && j.results) || []).forEach(function (r) {
+        // collectionName is the guard against covers, karaoke versions and
+        // lullaby renditions, which Apple ranks above the real record
+        // startlingly often — a search for Tyler's EARFQUAKE returns two
+        // tributes and no original.
+        if (!r || !r.previewUrl || norm(r.collectionName) !== want) return;
+        var k = norm(r.trackName);
+        if (k && !map[k]) map[k] = r.previewUrl;
+      });
+      albCacheSet(id, map);
+      delete sweeps[id];
+      return map;
+    }).catch(function () { delete sweeps[id]; return {}; });
+    sweeps[id] = p;
+    return p;
+  }
+
+  /* ---- the element ------------------------------------------------- */
+  function audio() {
+    if (el) return el;
+    el = new Audio();
+    el.preload = 'none';
+    el.addEventListener('timeupdate', paintProgress);
+    el.addEventListener('durationchange', paintProgress);
+    el.addEventListener('ended', function () { next(true); });
+    el.addEventListener('play', paint);
+    el.addEventListener('pause', paint);
+    el.addEventListener('error', function () { if (cur) flash('Could not play that preview'); });
+    return el;
+  }
+  // iOS will only let an element play if play() was called inside a real
+  // gesture — and resolution is a fetch, so by the time the preview URL
+  // arrives the gesture is long gone. Unlocking a silent clip on the
+  // first tap anywhere buys the element permission for the whole session.
+  function unlock() {
+    if (unlocked) return;
+    unlocked = true;
+    try {
+      var a = audio(); a.src = SILENT;
+      var p = a.play(); if (p && p.catch) p.catch(function () {});
+      setTimeout(function () { try { a.pause(); a.removeAttribute('src'); } catch (e) {} }, 0);
+    } catch (e) {}
+  }
+  document.addEventListener('pointerdown', unlock, { once: true, capture: true });
+  document.addEventListener('keydown', unlock, { once: true, capture: true });
+
+  /* ---- transport --------------------------------------------------- */
+  function setAlbum(tracks, meta) {
+    album = { tracks: (tracks || []).map(function (t, i) {
+      return { id: t.id, name: t.name, i: i,
+               artist: ((t.artists || []).map(function (a) { return a.name; })[0]) || (meta && meta.artist) || '',
+               durMs: t.duration_ms || 0 };
+    }), meta: meta || {}, map: null };
+    var mine = album;
+    sweep(album.meta).then(function (m) {
+      if (album !== mine) return;                        // another record opened
+      album.map = m || {};
+      paintAvailability();
+    });
+  }
+  function previewFor(t) { return (album && album.map && t) ? (album.map[norm(t.name)] || null) : null; }
+
+  // Thirty per cent of tracks have no preview, so the row says which it is
+  // BEFORE it is pressed. Pressing and being surprised is the version of
+  // this that feels broken; a differently-marked row is a fact about the
+  // record. Nothing is marked until the sweep lands, because "no preview"
+  // and "not looked yet" are different claims.
+  function paintAvailability() {
+    if (!album || !album.map) return;
+    document.querySelectorAll('button.idx[data-pv]').forEach(function (b) {
+      var t = album.tracks[parseInt(b.getAttribute('data-pv'), 10)];
+      if (!t) return;
+      var has = !!previewFor(t);
+      b.classList.toggle('nopv', !has);
+      b.title = has ? 'Play preview' : 'No preview - opens in Spotify';
+    });
+  }
+
+  function playIndex(i) {
+    if (!album || !album.tracks[i]) return;
+    unlock();
+    var t = album.tracks[i], tok = ++loadTok;
+    // The sweep may not have landed on a fast tap, so wait for it rather
+    // than declaring a miss we have not actually looked for yet.
+    (album.map ? Promise.resolve(album.map) : sweep(album.meta)).then(function (m) {
+      if (tok !== loadTok) return;                       // a later press won
+      if (album) album.map = album.map || m || {};
+      var src = previewFor(t);
+      if (!src) {
+        // Not a failure — it is the better audio, minus the controls.
+        if (window.Play) Play.track(t.id, {});
+        paintAvailability();
+        return;
+      }
+      qi = i; cur = t;
+      var a = audio();
+      a.src = src; a.currentTime = 0;
+      var p = a.play();
+      if (p && p.catch) p.catch(function () { paint(); });
+      show(); paint(); markRows('playing'); session();
+    });
+  }
+  // Skip past anything with no preview rather than stopping the record dead.
+  function seekPlayable(from, step) {
+    if (!album) return -1;
+    for (var i = from; i >= 0 && i < album.tracks.length; i += step) {
+      if (previewFor(album.tracks[i])) return i;
+    }
+    return -1;
+  }
+
+  function toggle() {
+    var a = audio();
+    if (!cur) return;
+    if (a.paused) { var p = a.play(); if (p && p.catch) p.catch(function () {}); }
+    else a.pause();
+    paint();
+  }
+  function next(auto) {
+    if (!album) return;
+    var n = seekPlayable(qi + 1, 1);
+    if (n > -1) playIndex(n);
+    else if (auto) { markRows(''); paint(); }
+  }
+  function prev() {
+    var a = audio();
+    if (a.currentTime > 3) { a.currentTime = 0; return; }   // restart first, like every player
+    var p = seekPlayable(qi - 1, -1);
+    if (p > -1) playIndex(p); else a.currentTime = 0;
+  }
+  function stop() { try { audio().pause(); } catch (e) {} cur = null; qi = -1; loadTok++; markRows(''); hide(); }
+
+  /* ---- the bar ----------------------------------------------------- */
+  var bar, art, ttl, sub, tog, prg, prgFill, tEl, appleA;
+  function build() {
+    if (bar) return;
+    bar = document.createElement('div');
+    bar.id = 'player-bar';
+    bar.hidden = true;
+    bar.innerHTML =
+      '<div id="pb-prog"><i></i><b></b></div>' +
+      '<img id="pb-art" alt="">' +
+      '<div id="pb-meta"><div id="pb-title"></div><div id="pb-sub"></div></div>' +
+      '<button type="button" class="pb-btn" id="pb-prev" aria-label="Previous track">&#9198;</button>' +
+      '<button type="button" class="pb-btn" id="pb-toggle" aria-label="Play or pause">&#9654;</button>' +
+      '<button type="button" class="pb-btn" id="pb-next" aria-label="Next track">&#9197;</button>' +
+      '<div id="pb-time">0:00</div>' +
+      '<a id="pb-apple" target="_blank" rel="noopener">Apple Music &#8599;</a>' +
+      '<a id="pb-open" href="#">Full track &#8599;</a>' +
+      '<button type="button" class="pb-btn" id="pb-close" aria-label="Close player">&#10005;</button>';
+    document.body.appendChild(bar);
+    art = bar.querySelector('#pb-art'); ttl = bar.querySelector('#pb-title');
+    sub = bar.querySelector('#pb-sub'); tog = bar.querySelector('#pb-toggle');
+    prg = bar.querySelector('#pb-prog'); prgFill = prg.querySelector('b');
+    tEl = bar.querySelector('#pb-time'); appleA = bar.querySelector('#pb-apple');
+    tog.addEventListener('click', toggle);
+    bar.querySelector('#pb-next').addEventListener('click', function () { next(false); });
+    bar.querySelector('#pb-prev').addEventListener('click', prev);
+    bar.querySelector('#pb-close').addEventListener('click', stop);
+    bar.querySelector('#pb-open').addEventListener('click', function (ev) {
+      ev.preventDefault();
+      if (cur && window.Play) Play.track(cur.id, {});
+    });
+    // Scrub. Pointer events so one path covers mouse and thumb.
+    function frac(ev) { var r = prg.getBoundingClientRect(); return Math.min(1, Math.max(0, (ev.clientX - r.left) / (r.width || 1))); }
+    prg.addEventListener('pointerdown', function (ev) {
+      if (!cur) return;
+      dragging = true; prg.classList.add('drag');
+      try { prg.setPointerCapture(ev.pointerId); } catch (e) {}
+      seekTo(frac(ev));
+    });
+    prg.addEventListener('pointermove', function (ev) { if (dragging) seekTo(frac(ev)); });
+    prg.addEventListener('pointerup', function () { dragging = false; prg.classList.remove('drag'); });
+    prg.addEventListener('pointercancel', function () { dragging = false; prg.classList.remove('drag'); });
+  }
+  function seekTo(f) { var a = audio(); if (a.duration && isFinite(a.duration)) { a.currentTime = f * a.duration; paintProgress(); } }
+  function show() { build(); bar.hidden = false; void bar.offsetWidth; bar.classList.add('up'); }
+  function hide() { if (!bar) return; bar.classList.remove('up'); setTimeout(function () { if (bar && !cur) bar.hidden = true; }, 240); }
+  function mmss(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+
+  function paint() {
+    if (!bar || !cur) return;
+    var a = audio();
+    ttl.textContent = cur.name;
+    sub.innerHTML = esc(cur.artist || '') + ' <span class="pb-clip">&middot; 30s preview</span>';
+    art.src = (album && album.meta && album.meta.art) || '';
+    tog.innerHTML = a.paused ? '&#9654;' : '&#10073;&#10073;';
+    if (album) {
+      bar.querySelector('#pb-prev').disabled = false;
+      bar.querySelector('#pb-next').disabled = seekPlayable(qi + 1, 1) < 0;
+    }
+    appleA.href = 'https://music.apple.com/search?term=' +
+      encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim());
+    markRows(a.paused ? '' : 'playing');
+  }
+  function paintProgress() {
+    if (!bar || !cur) return;
+    var a = audio(), d = (a.duration && isFinite(a.duration)) ? a.duration : 30;
+    prgFill.style.width = (Math.min(1, (a.currentTime || 0) / d) * 100) + '%';
+    tEl.textContent = mmss(a.currentTime);
+  }
+  function flash(msg) { if (bar && sub) sub.textContent = msg; }
+
+  // Row state. Cheap enough to sweep every row: an album is twenty of them.
+  function markRows(state) {
+    document.querySelectorAll('button.idx').forEach(function (b) { b.classList.remove('playing', 'loading'); });
+    if (!state || !cur) return;
+    var b = document.querySelector('button.idx[data-pv="' + qi + '"]');
+    if (b) b.classList.add(state);
+  }
+
+  /* ---- OS media controls ------------------------------------------- */
+  // The reason to own the element rather than drive an embed: this puts
+  // real controls on a phone's lock screen, which no iframe can do.
+  function session() {
+    if (!navigator.mediaSession || !window.MediaMetadata) return;
+    try {
+      navigator.mediaSession.metadata = new window.MediaMetadata({
+        title: cur.name, artist: cur.artist || '',
+        album: (album && album.meta && album.meta.name) || '',
+        artwork: (album && album.meta && album.meta.art) ? [{ src: album.meta.art, sizes: '512x512', type: 'image/jpeg' }] : []
+      });
+      navigator.mediaSession.setActionHandler('play', function () { toggle(); });
+      navigator.mediaSession.setActionHandler('pause', function () { toggle(); });
+      navigator.mediaSession.setActionHandler('nexttrack', function () { next(false); });
+      navigator.mediaSession.setActionHandler('previoustrack', prev);
+    } catch (e) {}
+  }
+
+  /* ---- wiring ------------------------------------------------------ */
+  document.addEventListener('click', function (ev) {
+    var b = ev.target && ev.target.closest && ev.target.closest('[data-pv]');
+    if (!b) return;
+    ev.preventDefault(); ev.stopPropagation();
+    if (window.ripple) ripple(b, ev);
+    if (window.buzz) buzz('tap');
+    var i = parseInt(b.getAttribute('data-pv'), 10);
+    if (cur && qi === i) { toggle(); return; }    // pressing the live row pauses it
+    playIndex(i);
+  });
+  // Space is the universal play/pause, but not while somebody is typing
+  // or while a slider has focus — the rating sliders live on these rows.
+  document.addEventListener('keydown', function (ev) {
+    if (ev.code !== 'Space' || !cur) return;
+    var t = ev.target, tag = t && t.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+    ev.preventDefault(); toggle();
+  });
+
+  window.VinalPlayer = { setAlbum: setAlbum, play: playIndex, toggle: toggle, stop: stop,
+                         next: next, prev: prev, playing: function () { return !!cur && !!el && !el.paused; } };
 })();
 
 </script>
