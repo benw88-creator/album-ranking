@@ -5800,7 +5800,7 @@ window.ICONS = {
          used to be here, is not what the guidelines ask for. -->
     <span>&middot;</span>
     <a class="foot-note sp-inline" href="https://open.spotify.com" target="_blank" rel="noopener">
-      <span data-spotify-mark></span>Artwork and catalogue data from Spotify</a>
+      Artwork and catalogue data from Deezer</a>
   </footer>
 </div>
 
@@ -6192,7 +6192,7 @@ window.ICONS = {
         <a href="/privacy.html">Privacy</a>
         <a href="/terms.html">Terms</a>
       </div>
-      <p class="set-note" style="margin-top:8px;"><a class="sp-inline" style="color:inherit;text-decoration:none;" href="https://open.spotify.com" target="_blank" rel="noopener"><span data-spotify-mark></span>Artwork and catalogue data from Spotify</a></p>
+      <p class="set-note" style="margin-top:8px;"><a class="sp-inline" style="color:inherit;text-decoration:none;" href="https://www.deezer.com" target="_blank" rel="noopener">Artwork and catalogue data from Deezer</a></p>
     </div>
   </div>
 </div>
@@ -6908,7 +6908,11 @@ async function openAlbum(meta) {
   // The link back to the record on Spotify. Set per album rather than left on
   // the service root, because the policy asks for a link to *the content*.
   var spBtn = document.getElementById('detail-spotify');
-  if (spBtn) spBtn.href = meta.id ? 'https://open.spotify.com/album/' + encodeURIComponent(meta.id) : 'https://open.spotify.com';
+  // A SEARCH url, not /album/<id>: ids are Deezer's now and a Spotify id
+  // link would 404. A search by name needs no id, no API and no token, and
+  // it lands on the record for anybody who uses Spotify.
+  if (spBtn) spBtn.href = 'https://open.spotify.com/search/' +
+    encodeURIComponent(((meta.artist || '') + ' ' + (meta.name || '')).trim());
 
   const albums = loadAlbums();
   const existing = albums[meta.id];
@@ -7933,7 +7937,7 @@ async function _buildRecommendations(grid, emptyEl, status) {
   const songs = loadSongs();
   const affinity = {};
   function add(id, name, val, when) {
-    if (!id) return;
+    if (!t || (!t.name && typeof t !== 'string')) return;
     affinity[id] = affinity[id] || { id: id, name: name, sum: 0, n: 0, first: when || Infinity };
     affinity[id].sum += val; affinity[id].n += 1;
     if (when && when < affinity[id].first) affinity[id].first = when;
@@ -7970,7 +7974,7 @@ async function _buildRecommendations(grid, emptyEl, status) {
   const candidates = {};
   let relatedWorked = false;
   function addCand(id, name, weight, isSeed) {
-    if (!id) return;
+    if (!t || (!t.name && typeof t !== 'string')) return;
     if (!candidates[id] || candidates[id].weight < weight) candidates[id] = { id: id, name: name, weight: weight, isSeed: isSeed };
   }
   for (let i = 0; i < seeds.length; i++) {
@@ -22077,8 +22081,14 @@ window.track = function (name, props) {
     } catch (e) { return false; }
   })();
 
-  var WEB = 'https://open.spotify.com/track/';
-  function webUrl(id) { return WEB + encodeURIComponent(id); }
+  // A SEARCH, not a track id. Ids are Deezer's since the catalogue moved, so
+  // spotify:track:<id> now names nothing — it would open Spotify and sit
+  // there, which is the silent-wrong-thing failure this file keeps warning
+  // about. A search by name needs no id and no API, and it works for a track
+  // Spotify has under a different id to everyone else's.
+  function query(t) { return ((t && t.artist ? t.artist + ' ' : '') + ((t && t.name) || '')).trim(); }
+  function webUrl(t) { return 'https://open.spotify.com/search/' + encodeURIComponent(typeof t === 'string' ? t : query(t)); }
+  function uriFor(t) { return 'spotify:search:' + encodeURIComponent(typeof t === 'string' ? t : query(t)); }
 
   // One anchor click inside the user's own click, so neither the custom
   // scheme nor the popup blocker treats it as something the page did by
@@ -22099,7 +22109,7 @@ window.track = function (name, props) {
     if (old) old.remove();
   }
 
-  function showFallback(row, id, name) {
+  function showFallback(row, t, name) {
     clearFallback();
     var el = document.createElement('div');
     el.className = 'play-fallback';
@@ -22109,7 +22119,7 @@ window.track = function (name, props) {
     // this panel appears over a track that is audibly playing. An offer is
     // harmless when it is wrong; "No Spotify app answered" would be a lie.
     el.innerHTML = '<span>Didn&rsquo;t open?</span>' +
-      '<a href="' + webUrl(id) + '" target="_blank" rel="noopener">Play in the Spotify web player &#8599;</a>';
+      '<a href="' + webUrl(t) + '" target="_blank" rel="noopener">Play in the Spotify web player &#8599;</a>';
     if (row && row.parentNode) row.insertAdjacentElement('afterend', el);
     else {
       var host = document.getElementById('detail-tracks');
@@ -22128,16 +22138,16 @@ window.track = function (name, props) {
   }
 
   // Returns nothing useful on purpose: there is nothing true to return.
-  function fire(id, opts) {
+  function fire(t, opts) {
     opts = opts || {};
-    if (!id) return;
+    if (!t || (!t.name && typeof t !== 'string')) return;
     clearFallback();
     markSent(opts.button);
     if (window.buzz) buzz('tap');
 
-    if (MOBILE) { openLink(webUrl(id), true); return; }
+    if (MOBILE) { openLink(webUrl(t), true); return; }
 
-    openLink('spotify:track:' + id, false);
+    openLink(uriFor(t), false);
 
     // Losing focus is the only signal a custom scheme gives us, and it is
     // indirect — so we wait for it rather than assume either way. Any of
@@ -22152,7 +22162,7 @@ window.track = function (name, props) {
       window.removeEventListener('pagehide', seen);
       document.removeEventListener('visibilitychange', seen);
       if (handed || document.hidden) return;
-      showFallback(opts.row, id, opts.name);
+      showFallback(opts.row, t, opts.name);
     }, 1400);
   }
 
@@ -22518,7 +22528,7 @@ window.track = function (name, props) {
     bar.querySelector('#pb-close').addEventListener('click', stop);
     bar.querySelector('#pb-open').addEventListener('click', function (ev) {
       ev.preventDefault();
-      if (cur && window.Play) Play.track(cur.id, {});
+      if (cur && window.Play) Play.track({ name: cur.name, artist: cur.artist }, {});
     });
     // Scrub. Pointer events so one path covers mouse and thumb.
     function frac(ev) { var r = prg.getBoundingClientRect(); return Math.min(1, Math.max(0, (ev.clientX - r.left) / (r.width || 1))); }
