@@ -1550,6 +1550,39 @@ html[data-motion="none"] .card { animation: none; }
   text-align: center; flex-shrink: 0;
   font-size: 13px;
 }
+/* PLAY — the track number IS the play button. Spotify's own convention, and
+   it is the only place on this row that costs nothing: the slider already
+   takes 140px and a dedicated button would be the first thing to wrap on a
+   phone. A button inherits no font, so the display face is re-stated here. */
+button.idx {
+  -webkit-appearance: none; appearance: none;
+  background: none; border: 0; padding: 0; margin: 0;
+  font-family: var(--font-display); font-weight: 700; font-size: 13px;
+  color: var(--text-faint);
+  width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center;
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: background 0.12s, color 0.12s;
+}
+button.idx .pi { display: none; font-size: 10px; line-height: 1; }
+.song-row:hover button.idx, button.idx:focus-visible { background: var(--surface-4); color: var(--text); }
+.song-row:hover button.idx .pn, button.idx:focus-visible .pn { display: none; }
+.song-row:hover button.idx .pi, button.idx:focus-visible .pi { display: block; }
+/* No hover on touch, so the number sits in a ring to read as a control. */
+@media (hover: none) { button.idx { background: var(--surface-3); color: var(--text-dim); } }
+button.idx.sent { background: var(--c-lime-dim); color: var(--c-lime); }
+button.idx.sent .pn { display: none; }
+button.idx.sent .pi { display: block; }
+/* The web-player escape hatch. Only rendered once we know the handoff went
+   nowhere — see Play.fire() for why we can only find that out afterwards. */
+.play-fallback {
+  margin: -4px 0 10px; padding: 9px 12px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 10px; font-size: 12.5px; color: var(--text-dim);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.play-fallback a { color: var(--c-cyan); font-weight: 600; text-decoration: none; }
+.play-fallback a:hover { text-decoration: underline; }
 .song-row img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
 .song-meta { flex: 1; min-width: 0; }
 .song-name { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -5641,7 +5674,9 @@ window.ICONS = {
       </div>
     </div>
     <div id="detail-completion"></div>
-    <div class="tracks-head">Tracks &mdash; rate each 0&ndash;10</div>
+    <!-- The play hint is printed rather than discovered. A number that is
+         secretly a button is not a thing anybody finds by playing. -->
+    <div class="tracks-head">Tracks &mdash; rate each 0&ndash;10 &middot; tap a number to play it in Spotify</div>
     <div id="detail-tracks"></div>
     <!-- Certification. Under the tracks on purpose: nearly every mark is
          earned by something on this screen, so the ladder sits where the
@@ -6746,8 +6781,11 @@ function renderTracks(tracks, meta) {
   host.innerHTML = tracks.map(function (t, i) {
     const saved = songs[t.id];
     const val = saved ? saved.score : 0;
+    const n = t.track_number || (i + 1);
     return '<div class="song-row" data-track="' + t.id + '" style="--score:' + songColor(val) + ';">' +
-      '<div class="idx">' + (t.track_number || (i + 1)) + '</div>' +
+      '<button type="button" class="idx" data-play="' + t.id + '" title="Play in Spotify" ' +
+        'aria-label="Play ' + esc(t.name) + ' in Spotify">' +
+        '<span class="pn">' + n + '</span><span class="pi">&#9654;</span></button>' +
       '<div class="song-meta"><div class="song-name">' + esc(t.name) + '</div>' +
       '<div class="song-sub">' + esc((t.artists || []).map(function (a) { return a.name; }).join(', ')) + '</div></div>' +
       '<div class="song-rate">' +
@@ -21751,6 +21789,146 @@ window.track = function (name, props) {
   window.VinallLore = { load: loadLore, save: saveAnswer, questions: QUESTIONS, count: loreCount,
                         items: function () { return _loreList || []; } };
 })();
+
+/* ================================================================
+   PLAY — hand a track to the Spotify the listener already has open.
+
+   VINALL plays nothing. No audio element, no embed, no SDK — because
+   both routes that would let it actually stream are shut. The Web
+   Playback SDK needs a per-user OAuth grant, and this app sits in
+   Spotify's Development Mode, which since February 2026 is capped at
+   FIVE authorised users; Extended Quota wants a registered business
+   with 250k MAU. So a real player would work, for five people.
+
+   The button therefore does the one thing that needs no account at
+   all: it fires the record's URI at the operating system and lets
+   whatever Spotify is already running pick it up. No token, no
+   scopes, no cap, no Premium check, and nothing to break when
+   Spotify changes its API again.
+
+   A consequence rather than a compromise: playback survives browsing
+   VINALL perfectly, because VINALL was never the thing playing. The
+   whole persistence problem — the one that makes an embed a menace,
+   since re-parenting an iframe silently kills it — does not exist here.
+
+   **A custom-scheme navigation fails silently.** No error, no event,
+   no rejected promise: if Spotify is not installed, absolutely
+   nothing happens. So this must never say "playing", because it
+   cannot know that. It says "Opening in Spotify", and then watches
+   for the page to lose focus — which is the only evidence available
+   that an app took the URI. If focus never goes, nothing opened, and
+   the web player link is offered instead. That test is desktop-only:
+   on a phone the https link IS the handoff, so there is nothing left
+   to fall back to.
+   ================================================================ */
+(function () {
+  // Phones and tablets take the https link, because iOS and Android
+  // resolve it to the installed app themselves. Desktop takes the
+  // spotify: scheme, which hands to the native client without
+  // navigating the page — verified: location and title are unchanged
+  // after firing it.
+  var MOBILE = (function () {
+    try {
+      if (/android|iphone|ipod/i.test(navigator.userAgent)) return true;
+      if (/ipad/i.test(navigator.userAgent)) return true;
+      if (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) return true; // iPadOS
+      return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    } catch (e) { return false; }
+  })();
+
+  var WEB = 'https://open.spotify.com/track/';
+  function webUrl(id) { return WEB + encodeURIComponent(id); }
+
+  // One anchor click inside the user's own click, so neither the custom
+  // scheme nor the popup blocker treats it as something the page did by
+  // itself. _blank on the https path so a phone that does NOT resolve the
+  // link to the app opens a tab rather than navigating away from VINALL.
+  function openLink(href, blank) {
+    var a = document.createElement('a');
+    a.href = href;
+    if (blank) { a.target = '_blank'; a.rel = 'noopener'; }
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  function clearFallback() {
+    var old = document.querySelector('.play-fallback');
+    if (old) old.remove();
+  }
+
+  function showFallback(row, id, name) {
+    clearFallback();
+    var el = document.createElement('div');
+    el.className = 'play-fallback';
+    el.innerHTML = '<span>No Spotify app answered.</span>' +
+      '<a href="' + webUrl(id) + '" target="_blank" rel="noopener">Open in the Spotify web player &#8599;</a>';
+    if (row && row.parentNode) row.insertAdjacentElement('afterend', el);
+    else {
+      var host = document.getElementById('detail-tracks');
+      if (host && host.parentNode) host.parentNode.insertBefore(el, host);
+    }
+    // It is an offer, not a verdict. If they sorted it out themselves the
+    // panel should not still be sitting there insisting nothing happened.
+    setTimeout(function () { if (el.parentNode) el.remove(); }, 14000);
+  }
+
+  function markSent(btn) {
+    if (!btn) return;
+    document.querySelectorAll('button.idx.sent').forEach(function (b) { b.classList.remove('sent'); });
+    btn.classList.add('sent');
+    setTimeout(function () { btn.classList.remove('sent'); }, 6000);
+  }
+
+  // Returns nothing useful on purpose: there is nothing true to return.
+  function fire(id, opts) {
+    opts = opts || {};
+    if (!id) return;
+    clearFallback();
+    markSent(opts.button);
+    if (window.buzz) buzz('tap');
+
+    if (MOBILE) { openLink(webUrl(id), true); return; }
+
+    openLink('spotify:track:' + id, false);
+
+    // Losing focus is the only signal a custom scheme gives us, and it is
+    // indirect — so we wait for it rather than assume either way. Any of
+    // the three means an app came forward.
+    var handed = false;
+    function seen() { handed = true; }
+    window.addEventListener('blur', seen, { once: true });
+    window.addEventListener('pagehide', seen, { once: true });
+    document.addEventListener('visibilitychange', seen, { once: true });
+    setTimeout(function () {
+      window.removeEventListener('blur', seen);
+      window.removeEventListener('pagehide', seen);
+      document.removeEventListener('visibilitychange', seen);
+      if (handed || document.hidden) return;
+      showFallback(opts.row, id, opts.name);
+    }, 1400);
+  }
+
+  // Delegated, so any row rendered later gets it for free and
+  // renderTracks() never has to re-wire anything it rebuilds.
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target && ev.target.closest && ev.target.closest('[data-play]');
+    if (!btn) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    var row = btn.closest('.song-row');
+    if (window.ripple) ripple(btn, ev);
+    fire(btn.getAttribute('data-play'), {
+      button: btn,
+      row: row,
+      name: row && row.querySelector('.song-name') ? row.querySelector('.song-name').textContent : ''
+    });
+  });
+
+  window.Play = { track: fire, url: webUrl, mobile: MOBILE };
+})();
+
 </script>
 </body>
 </html>
