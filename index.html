@@ -5060,6 +5060,23 @@ button.rw-day {
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
   font-size: 13px; color: var(--text-faint);
 }
+/* Spotify attribution. Their Developer Policy requires the LOGO wherever
+   their content appears, and a link back to the service from the content
+   itself — not a sentence in a footer, which is all this app had. The green
+   and the mark are theirs: do not recolour, squash or restyle them, which
+   the brand guidelines forbid in as many words. The link text is one of
+   their three approved strings ("PLAY ON SPOTIFY"), not a phrasing of ours. */
+.sp-mark { width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.16em; fill: #1ED760; }
+.sp-link {
+  display: inline-flex; align-items: center; gap: 7px;
+  color: var(--text); text-decoration: none;
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+  padding: 9px 15px; border-radius: 999px;
+  background: var(--surface-3); border: 1px solid var(--border);
+  transition: background 0.12s, border-color 0.12s;
+}
+.sp-link:hover { background: var(--surface-4); border-color: var(--border-strong); }
+.sp-inline { display: inline-flex; align-items: center; gap: 6px; }
 .site-foot a { color: var(--text-dim); text-decoration: none; }
 .site-foot a:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .foot-note { margin-left: auto; }
@@ -5749,6 +5766,10 @@ window.ICONS = {
         <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
           <button class="btn-primary" id="rate-album-btn" style="padding:12px 24px;">&#9733; Rate Album</button>
           <button class="btn-mini" id="suggest-album-btn"><span data-icon="share"></span> Recommend</button>
+          <!-- Required, not decorative: metadata and cover art must link back
+               to the record on Spotify. "Play on Spotify" is one of the three
+               strings their guidelines permit here. -->
+          <a class="sp-link" id="detail-spotify" target="_blank" rel="noopener" href="https://open.spotify.com"><span data-spotify-mark></span>Play on Spotify</a>
           <div id="detail-current-score" class="detail-album-score" style="display:none;"></div>
         </div>
         <div id="detail-note"></div>
@@ -5774,9 +5795,12 @@ window.ICONS = {
     <span class="foot-note">VINALL &mdash; music, remembered.</span>
     <!-- Spotify's Developer Policy requires attribution wherever their content
          is displayed, and every piece of artwork in this app is theirs. Apple
-         will not raise this; Spotify can. -->
+         will not raise this; Spotify can. The mark is required as a LOGO and
+         has to link back to the service — a sentence on its own, which is what
+         used to be here, is not what the guidelines ask for. -->
     <span>&middot;</span>
-    <span class="foot-note">Artwork and catalogue data from Spotify.</span>
+    <a class="foot-note sp-inline" href="https://open.spotify.com" target="_blank" rel="noopener">
+      <span data-spotify-mark></span>Artwork and catalogue data from Spotify</a>
   </footer>
 </div>
 
@@ -6168,7 +6192,7 @@ window.ICONS = {
         <a href="/privacy.html">Privacy</a>
         <a href="/terms.html">Terms</a>
       </div>
-      <p class="set-note" style="margin-top:8px;">Artwork and catalogue data from Spotify.</p>
+      <p class="set-note" style="margin-top:8px;"><a class="sp-inline" style="color:inherit;text-decoration:none;" href="https://open.spotify.com" target="_blank" rel="noopener"><span data-spotify-mark></span>Artwork and catalogue data from Spotify</a></p>
     </div>
   </div>
 </div>
@@ -6830,6 +6854,11 @@ async function openAlbum(meta) {
   }
 
   currentAlbum = { id: meta.id, name: meta.name, artist: meta.artist, artistId: meta.artistId, art: meta.art, year: meta.year, genre: meta.genre || '' };
+
+  // The link back to the record on Spotify. Set per album rather than left on
+  // the service root, because the policy asks for a link to *the content*.
+  var spBtn = document.getElementById('detail-spotify');
+  if (spBtn) spBtn.href = meta.id ? 'https://open.spotify.com/album/' + encodeURIComponent(meta.id) : 'https://open.spotify.com';
 
   const albums = loadAlbums();
   const existing = albums[meta.id];
@@ -22380,9 +22409,12 @@ window.track = function (name, props) {
       '<button type="button" class="pb-btn" id="pb-next" aria-label="Next track">&#9197;</button>' +
       '<div id="pb-time">0:00</div>' +
       '<a id="pb-src" target="_blank" rel="noopener">Deezer &#8599;</a>' +
-      '<a id="pb-open" href="#">Full track &#8599;</a>' +
+      // The bar shows Spotify's cover art while it plays, so it carries the
+      // mark and the link back like every other surface that does.
+      '<a id="pb-open" class="sp-inline" href="#"><span data-spotify-mark></span>Full track</a>' +
       '<button type="button" class="pb-btn" id="pb-close" aria-label="Close player">&#10005;</button>';
     document.body.appendChild(bar);
+    if (window.SpotifyMark) SpotifyMark.paint(bar);   // the bar is built after load
     art = bar.querySelector('#pb-art'); ttl = bar.querySelector('#pb-title');
     sub = bar.querySelector('#pb-sub'); tog = bar.querySelector('#pb-toggle');
     prg = bar.querySelector('#pb-prog'); prgFill = prg.querySelector('b');
@@ -22498,6 +22530,46 @@ window.track = function (name, props) {
 
   window.VinalPlayer = { setAlbum: setAlbum, play: playIndex, toggle: toggle, stop: stop,
                          next: next, prev: prev, playing: function () { return !!cur && !!el && !el.paused; } };
+})();
+
+
+/* ================================================================
+   SPOTIFY ATTRIBUTION
+
+   The Developer Policy requires that metadata and cover art are
+   "accompanied by a link back to the applicable album, content or
+   playlist on the Spotify Service", and the Design Guidelines require
+   the LOGO rather than a line of prose: "you must always attribute
+   content from Spotify with the logo."
+
+   VINALL had neither. The footer carried the sentence "Artwork and
+   catalogue data from Spotify." and album pages linked nowhere at all,
+   which is the one requirement in that whole document that costs an
+   hour to satisfy and is visible on every screen.
+
+   ONE definition of the mark, injected into every `data-spotify-mark`
+   placeholder. Not three copies in three files: the Shop swatch and
+   the real theme were separately invented once and drifted for months,
+   and a brand mark is the worst possible thing to let drift, because
+   the guidelines forbid altering it at all.
+
+   Do not recolour it, squash it, put it on album artwork or draw your
+   own. #1ED760 is theirs and the aspect ratio is fixed by the viewBox.
+   ================================================================ */
+(function () {
+  var MARK = '<svg class="sp-mark" viewBox="0 0 24 24" role="img" aria-label="Spotify" focusable="false">' +
+    '<path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>';
+
+  function paint(root) {
+    (root || document).querySelectorAll('[data-spotify-mark]').forEach(function (el) {
+      if (el.firstChild) return;                 // already painted
+      el.innerHTML = MARK;
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { paint(); });
+  else paint();
+
+  window.SpotifyMark = { html: MARK, paint: paint };
 })();
 
 </script>
