@@ -7967,7 +7967,7 @@ async function _buildRecommendations(grid, emptyEl, status) {
   const songs = loadSongs();
   const affinity = {};
   function add(id, name, val, when) {
-    if (!t || (!t.name && typeof t !== 'string')) return;
+    if (!id) return;
     affinity[id] = affinity[id] || { id: id, name: name, sum: 0, n: 0, first: when || Infinity };
     affinity[id].sum += val; affinity[id].n += 1;
     if (when && when < affinity[id].first) affinity[id].first = when;
@@ -8004,7 +8004,7 @@ async function _buildRecommendations(grid, emptyEl, status) {
   const candidates = {};
   let relatedWorked = false;
   function addCand(id, name, weight, isSeed) {
-    if (!t || (!t.name && typeof t !== 'string')) return;
+    if (!id) return;
     if (!candidates[id] || candidates[id].weight < weight) candidates[id] = { id: id, name: name, weight: weight, isSeed: isSeed };
   }
   for (let i = 0; i < seeds.length; i++) {
