@@ -15,3 +15,7 @@ node_modules/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Local preview scaffolding — a static server for the browser pane, not part
+# of the deploy. Vercel serves index.html itself; nothing here is built.
+.claude/

@@ -259,6 +259,29 @@ The spread would simply have stopped showing people. Same failure shape as
 
 ### Certification — the step after owning a record
 
+**TEMPORARILY OFF.** `ON = false` at the top of the `Cert` module, and that is the whole
+switch — nothing is deleted, no migration, the SQL side is untouched. Same arrangement as
+Liner Notes and market-mode Bid Wars, so bringing it back is one line.
+
+It is held there rather than by hiding markup in four places because every plated surface
+already funnels through four functions, and turning those off turns off the album panel,
+the shelf badges, the finishes and the Masters showcase together — which is exactly the
+property this section relies on for a finish bought in one place showing up in the others.
+`one()` returns null so `CertPanel` paints nothing, `all()` returns `{}` so no shelf card
+finds a cert (and the shelf costs one round trip fewer, since no RPC is issued), `badge()`
+returns `''`, and `art()` renders the sleeve plain.
+
+**`art()` is deliberately not an early return.** The `Covers` swap inside it is what keeps
+a plated or gamed sleeve off Spotify's CDN, and that has to keep happening whether or not
+anything is plated — see the `Covers` section. Only the finish and master classes drop.
+
+Three call sites outside the module carry their own `Cert.ON` check, because the switch
+cannot reach them: `CertPanel.open` (which clears the host **before** the "Reading this
+record's certification…" placeholder — a panel that announces itself and then empties is
+worse than one that never appears, and `openAlbum` reuses that element), the Masters fetch
+on the profile, and `mastersHtml`, which would otherwise still print the owner's "Up to
+three records can represent you here" pitch — an advert for a door that is locked.
+
 `..._20260915220000_certification.sql`, plus the `Cert` and `CertPanel` modules.
 
 The progression was Rank → Acquire → Own, and it stopped. A record on the shelf on day
@@ -640,8 +663,17 @@ the page; what you would enjoy finding out does not.
 action: a bar above the ladder, a strip on Home, and the ladder itself. Both extras are gone.
 They were not merely redundant — each was another place to get the state wrong, and the Home
 strip did exactly that (below). The live day is a `<button>`, it glows, and pressing it takes
-the day. The nav dot is the only thing that still advertises the claim from elsewhere, which
-is all the Home strip was ever for.
+the day.
+
+**The nav dot is off too** — `DOT_ON = false` in the Discs module, the state it computed kept
+whole and simply not applied, so this is a switch and not a removal. It was the last thing
+advertising the claim from elsewhere, and it read as a notification badge: a pulsing dot on a
+nav item means *something has happened*, and what it actually meant was "the ladder is where
+it always is and today is unclaimed", which is true every morning. **A badge that is lit most
+of the time is not a badge.** Note that it renders in `var(--gold)`, which is themed — under a
+pink skin it is a pink dot, which reads even more like an alert. The class is cleared rather
+than left alone, so a dot painted before this shipped goes on the next render rather than
+sticking until a reload. Nothing advertises the claim from elsewhere now; the ladder is it.
 
 ### `login_last_date` was read in three places and written in none
 
@@ -722,8 +754,41 @@ valuation, so knowing what a record is worth pays off in two different games.
   many times somebody has been round the loop. `collection_sell` takes no price: the refund is
   derived from the stored row, so it is safe to expose straight to a signed-in client.
 - **The market page prices from the `album_plays` cache**, never inline. Twenty uncached
-  albums would be twenty kworb fetches in one serverless invocation, which times out. Uncached
-  rows show "price on request" and one tap values them.
+  albums would be twenty kworb fetches in one serverless invocation, which times out. So the
+  `GET` still returns those rows with `price: null` — and **the page fills them in itself**,
+  which is the part that changed.
+  - **It was a button, and the button lied.** An unpriced card said "price on request" and
+    offered *Price it* — which did not price the record, it priced it **and bought it**,
+    because "Price it" was the Buy button wearing a different word. One tap, no number shown
+    first, Discs gone on a record that might have cost 51,240 of them. **A control that names
+    one action and performs two is the worst shape a button can have**, and it was on the most
+    expensive control in the app.
+  - `priceSweep` walks the nulls in chunks of five and patches each card where it stands.
+    Chunks go **one after another, not together**: each uncached artist costs a kworb page
+    fetch, and five parallel invocations all scraping the same site is how you get rate-limited
+    off it. The button now only ever appears with a real number on it.
+  - **Cards are patched in place, never re-rendered.** A shelf that redraws under you every few
+    seconds while you are reading it is worse than a slow price, and a re-render throws away the
+    scroll position — the same reason the Shop reads and restores its own `scrollTop`.
+  - **`_sweep` is a token, not a flag.** Switching tab, searching and buying all re-enter
+    `render()`, and a chunk landing afterwards must not write a price onto a grid that has gone.
+    Same shape as the player's `loadTok` and the Cover Fire card's fetch token, for the same
+    reason: the slower request would otherwise land last and win.
+  - **The valuing is a `POST` on the same route, not client arithmetic**, because
+    `priceFromStreams` and its divisor are the server's and the divisor moves with the economy.
+    A second copy in the browser is a second copy to forget, and the failure is every record in
+    the market priced wrong at once. It writes every result back to `album_plays`, so the work
+    is done once for everybody.
+  - **It consults `my_sealed_albums()` and fails closed.** A market card printing a record's
+    exact value beside a live Bid War board would unseal it just as surely as the public
+    `/api/album-streams` did. If that check cannot run, nothing is priced.
+  - `PRICE_CHUNK` mirrors `BATCH` in the route, which **slices** anything past it rather than
+    refusing — a short answer is a 200. So the client marks any id it asked about and did not
+    hear back on as retryable **and reports it**, rather than calling it "cannot be priced":
+    that would be inventing a fact about a record because two constants stopped agreeing.
+  - A record kworb genuinely cannot match says "cannot be priced" and loses its Buy button —
+    that is a real and permanent answer, not a retry. A failed batch says "price unavailable
+    just now" instead, and the sweep carries on: one bad chunk is not a dead market.
 - **Collections are publicly readable**, like ratings — other people seeing what you built is
   the point. There is **no INSERT or UPDATE policy at all**, so the only way in is the definer
   functions.
@@ -987,6 +1052,33 @@ Neither the player nor the handoff touches any of it.
 - `.song-row .idx` sets `width: 24px` and outranks a bare `button.idx`, so the circle
   first shipped as a 24×26 oval. Restated at matching specificity. Measure the rendered
   box, not the rule.
+
+### The bars
+
+The playing row shows a three-bar equaliser in its circle instead of the ▶.
+
+A ▶ on the row that is already playing says *press to play* over a track that is playing —
+the same wrong-verb problem the bar's own toggle has to solve — and the list had no way to
+say *this one, now* while scrolling a twenty-track record. The bars are also the only moving
+thing on the page, so they are how you find your place after scrolling away.
+
+- **The spans are in the markup on every row**, hidden until the row wears `.playing` or
+  `.paused`, rather than injected into whichever row is playing. `renderTracks()` rebuilds the
+  list constantly and the player finds its row by index — a node the player added would be
+  wiped by the next render while the track carried on. Same reasoning as `#player-bar` being a
+  child of `<body>`, one level down. An unplayed row costs three empty spans.
+- **Paused is its own class, not the absence of one.** `paint()` used to call `markRows('')`
+  whenever the audio was paused, so pausing made the list forget which track the bar at the
+  bottom was still holding — and pressing play again is one tap on a row you can no longer
+  find. Only `noPrev` genuinely owns no audio. The paused bars freeze rather than disappear,
+  which is what paused looks like.
+- **Heights animate, not transforms.** A scaled bar grows from its centre; these sit on a
+  floor. Three durations, none a multiple of another, so the pattern does not visibly loop —
+  the scrolling-gradient rule one dimension down.
+- **The ▶ and the ↗ lose to the bars on the playing row, including on hover.** Hovering the
+  row that owns the audio must not make it look unplayed, and the hover rules are written at
+  `.song-row:hover button.idx .pi`, so beating them takes matching specificity. This is the
+  same trap as the 24×26 oval directly above.
 
 ## The catalogue is Deezer's
 
@@ -1452,6 +1544,15 @@ and never asked** — the animation is theatre played out after the result alrea
 same relationship the Bid War reveal has with `bid_war_submit`. Duplicates pay their shop
 price back in Discs, which is the only thing keeping the rare tiers worth landing on once you
 own them.
+
+**The celebration eyebrow is a caller's word, not a fixed one.** `celebrate()` hardcoded
+"Achievement Unlocked" over everything the overlay has ever shown — a tournament win, a
+seven-day streak, a Bid War, and a theme out of the reel. **A theme is not an achievement.**
+Renaming the string outright was the other option and is wrong for the same reason: a war win
+labelled "Cosmetic Unlocked" is the same lie pointing the other way. So it takes an optional
+third argument and defaults to what it always said, and `eyebrowFor()` in the Draw returns
+*Cosmetic Unlocked* for a theme, banner, flair, frame or tag, and *Already Yours* for a
+duplicate. Discs and album picks keep the plain word — they are neither.
 
 The motion, since it is the whole feature and is easy to ruin:
 

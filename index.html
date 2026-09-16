@@ -1660,9 +1660,60 @@ button.idx .px { display: none; font-size: 10px; line-height: 1; }
 button.idx.nopv { color: var(--text-faint); }
 .song-row:hover button.idx.nopv .pi, button.idx.nopv:focus-visible .pi { display: none; }
 .song-row:hover button.idx.nopv .px, button.idx.nopv:focus-visible .px { display: block; }
-button.idx.playing { background: var(--c-cyan-dim); color: var(--c-cyan); }
-button.idx.playing .pn, button.idx.loading .pn { display: none; }
-button.idx.playing .pi, button.idx.loading .pi { display: block; }
+/* ---- THE BARS -----------------------------------------------------------
+   What the playing row shows instead of a triangle. A ▶ on the row that is
+   already playing says "press to play" over a track that is playing, which is
+   the same wrong-verb problem the player bar's own toggle has to solve — and
+   the row had no way to say "this one, now" at a glance while scrolling a
+   twenty-track record.
+
+   Three bars, and they are the only moving thing in the list, so they are
+   also how you find your place after scrolling away.
+
+   Heights are animated, not transforms: a scaled bar grows from its centre
+   and these have to sit on a floor. Three different durations, none a
+   multiple of another, so the pattern does not visibly loop — the same rule
+   the scrolling gradients are written up for, one dimension down. The
+   `.playing` background is kept, so the circle reads as marked even at the
+   instant a bar is at its shortest. */
+button.idx.playing, button.idx.paused { background: var(--c-cyan-dim); color: var(--c-cyan); }
+button.idx.playing .pn, button.idx.loading .pn, button.idx.paused .pn { display: none; }
+button.idx.loading .pi { display: block; }
+/* The triangle and the arrow lose to the bars on the row that owns the audio,
+   including on hover — hovering the playing row must not make it look
+   unplayed. Stated at the same specificity as the hover rules above, which is
+   what the .idx width note further up is about. */
+button.idx.playing .pi, button.idx.paused .pi,
+button.idx.playing .px, button.idx.paused .px,
+.song-row:hover button.idx.playing .pi, .song-row:hover button.idx.paused .pi,
+.song-row:hover button.idx.playing .px, .song-row:hover button.idx.paused .px { display: none; }
+button.idx .eq { display: none; }
+button.idx.playing .eq, button.idx.paused .eq {
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: 2px; height: 11px;
+}
+button.idx .eq i {
+  display: block; width: 2px; border-radius: 1px;
+  background: currentColor; height: 40%;
+  transform-origin: bottom;
+}
+button.idx.playing .eq i:nth-child(1) { animation: eqBar 0.62s ease-in-out infinite alternate; }
+button.idx.playing .eq i:nth-child(2) { animation: eqBar 0.43s ease-in-out infinite alternate; animation-delay: -0.18s; }
+button.idx.playing .eq i:nth-child(3) { animation: eqBar 0.77s ease-in-out infinite alternate; animation-delay: -0.31s; }
+@keyframes eqBar { from { height: 25%; } to { height: 100%; } }
+/* Paused keeps the bars and stops them. The row still owns the audio, so
+   clearing the mark entirely would say the track had been let go — and a
+   still equaliser is exactly what paused looks like. */
+button.idx.paused .eq i { height: 45%; opacity: 0.55; }
+@media (prefers-reduced-motion: reduce) {
+  /* Nothing, rather than something slower: the bars are decoration and the
+     background already says which row it is. Staggered static heights so it
+     still reads as an equaliser rather than three identical ticks. */
+  button.idx.playing .eq i { animation: none !important; }
+  button.idx.playing .eq i:nth-child(1) { height: 55%; }
+  button.idx.playing .eq i:nth-child(2) { height: 100%; }
+  button.idx.playing .eq i:nth-child(3) { height: 70%; }
+}
 button.idx.loading { opacity: 0.6; }
 .song-row img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
 .song-meta { flex: 1; min-width: 0; }
@@ -3719,6 +3770,17 @@ body.entering-done #artist-hero {
 .col-price { font: 700 14px/1 var(--font-mono); color: var(--section); margin-top: 6px; }
 .col-price small { font-size: 10px; color: var(--text-faint); font-weight: 400; }
 .col-unpriced { color: var(--text-faint); font-weight: 400; font-size: 11px; }
+/* A record being valued. The button stays where it will be rather than
+   appearing later, so the grid does not reflow under the cursor as prices
+   land one at a time — but it must not look pressable while it is not, hence
+   the flattened, breathing version rather than a greyed-out Buy. */
+.col-pricing {
+  background: var(--surface-3) !important; border-color: var(--border) !important;
+  color: var(--text-faint) !important; cursor: default;
+  animation: colPricing 1.5s ease-in-out infinite;
+}
+@keyframes colPricing { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.95; } }
+@media (prefers-reduced-motion: reduce) { .col-pricing { animation: none; opacity: 0.7; } }
 .col-buy, .col-sell { flex-shrink: 0; }
 /* Mythic album picks. The box only exists while you hold one, which is the
    whole reason it can be this loud — it is not chrome on the page, it is an
@@ -6659,7 +6721,7 @@ window.ICONS = {
   <div class="celebrate-shine"></div>
   <div class="celebrate-inner">
     <div class="celebrate-trophy" id="celebrate-trophy"><svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="var(--gold)" stroke-width="1" aria-hidden="true"><path d="M5 2.5h6v3.2a3 3 0 0 1-6 0V2.5Z"/><path d="M5 3.3H3.2a1.6 1.6 0 0 0 0 3.2c.4 0 .8-.1 1.1-.4M11 3.3h1.8a1.6 1.6 0 0 1 0 3.2c-.4 0-.8-.1-1.1-.4"/><path d="M8 8.7v2.1M5.6 13.5h4.8M6.4 11v1.3a1.6 1.6 0 0 0 0 1.2M9.6 11v1.3a1.6 1.6 0 0 1 0 1.2"/></svg></div>
-    <div class="celebrate-eyebrow">Achievement Unlocked</div>
+    <div class="celebrate-eyebrow" id="celebrate-eyebrow">Achievement Unlocked</div>
     <div class="celebrate-title" id="celebrate-title"></div>
     <div class="celebrate-sub" id="celebrate-sub"></div>
     <button class="celebrate-btn" id="celebrate-btn">Nice!</button>
@@ -7022,7 +7084,14 @@ function renderTracks(tracks, meta) {
     return '<div class="song-row" data-track="' + t.id + '" style="--score:' + songColor(val) + ';">' +
       '<button type="button" class="idx" data-pv="' + i + '" title="Play" ' +
         'aria-label="Play ' + esc(t.name) + '">' +
-        '<span class="pn">' + n + '</span><span class="pi">&#9654;</span><span class="px">&#8599;</span></button>' +
+        '<span class="pn">' + n + '</span><span class="pi">&#9654;</span><span class="px">&#8599;</span>' +
+        // The bars. In the markup on every row rather than injected into the
+        // one that is playing, because the row that plays is found by index
+        // and the list re-renders constantly — a node added by the player
+        // would be wiped by the next renderTracks() while the track carried
+        // on. Hidden until the row wears .playing or .paused, so an unplayed
+        // row costs three empty spans and nothing else.
+        '<span class="eq" aria-hidden="true"><i></i><i></i><i></i></span></button>' +
       '<div class="song-meta"><div class="song-name">' + esc(t.name) + '</div>' +
       '<div class="song-sub">' + esc((t.artists || []).map(function (a) { return a.name; }).join(', ')) + '</div></div>' +
       '<div class="song-rate">' +
@@ -7523,6 +7592,32 @@ window.removeSong = removeSong;
 (function () {
   'use strict';
 
+  /* ---- CERTIFICATION IS TEMPORARILY OFF -----------------------------------
+
+     One switch, and nothing is deleted: the module, the panel, the Masters
+     block, every finish and the whole of the SQL side are intact. Same
+     arrangement as Liner Notes and market-mode Bid Wars — a switch, not a
+     migration, so bringing it back is this line and nothing else.
+
+     It is held HERE rather than by hiding markup in four places because every
+     plated surface already funnels through `art()`, `badge()`, `one()` and
+     `all()`. Turning those four off turns off the album panel, the shelf
+     badges, the finishes and the Masters showcase together, which is exactly
+     the property this file relies on for a finish bought in one place showing
+     up in the others.
+
+     What each one does while off:
+
+       one()   -> null, so CertPanel paints nothing at all
+       all()   -> {},   so no shelf card finds a cert
+       art()   -> the sleeve, plain — NOT an early return, because the Covers
+                  swap in there is also what keeps a game sleeve off Spotify
+       badge() -> ''
+
+     No RPC is issued while off, so a shelf costs one round trip fewer rather
+     than fetching a tier nothing renders. */
+  var ON = false;
+
   var TIERS = {
     silver:   { name: 'Silver',   at: 4,  blurb: 'Certified. You have done more with this than score it.' },
     gold:     { name: 'Gold',     at: 6,  blurb: 'A record you have lived with rather than filed.' },
@@ -7582,6 +7677,7 @@ window.removeSong = removeSong;
 
   // One record. Used by the album page, where there is exactly one.
   async function one(albumId, who) {
+    if (!ON) return null;
     var u = who || uid();
     if (!u || !sb() || !albumId) return null;
     try {
@@ -7595,6 +7691,7 @@ window.removeSong = removeSong;
      renderCollection runs on every tab switch. */
   var _cache = {}, _inflight = {};
   async function all(who, force) {
+    if (!ON) return {};
     var u = who || uid();
     if (!u || !sb()) return {};
     if (!force && _cache[u]) return _cache[u];
@@ -7639,8 +7736,11 @@ window.removeSong = removeSong;
      has not been updated degrades rather than breaking. */
   function art(src, cert, opts) {
     opts = opts || {};
-    var f = cert && cert.finish;
-    var cls = 'fin' + (f ? ' on ' + f : '') + (cert && cert.master ? ' is-master' : '');
+    // Off: the sleeve, unplated. Deliberately not an early return — the Covers
+    // swap below is the thing keeping a plated or gamed sleeve off Spotify's
+    // CDN, and it has to keep happening whether or not anything is plated.
+    var f = ON && cert && cert.finish;
+    var cls = 'fin' + (f ? ' on ' + f : '') + (ON && cert && cert.master ? ' is-master' : '');
     var pick = { src: src || '', key: null };
     if (window.Covers && opts.artist && opts.album) pick = Covers.srcFor(opts.artist, opts.album, src);
     return '<span class="' + cls + '"' + (opts.style ? ' style="' + opts.style + '"' : '') + '>' +
@@ -7649,6 +7749,7 @@ window.removeSong = removeSong;
       '</span>';
   }
   function badge(cert) {
+    if (!ON) return '';
     var t = cert && cert.tier;
     if (!t || !TIERS[t]) return '';
     return '<span class="cert-badge ' + t + '">' + TIERS[t].name + '</span>';
@@ -7668,6 +7769,7 @@ window.removeSong = removeSong;
   }
 
   window.Cert = {
+    ON: ON,
     TIERS: TIERS, ORDER: ORDER, FINISHES: FINISHES, SWATCH: SWATCH,
     rank: rank, finish: finish, marklist: marklist, progress: progress,
     one: one, all: all, cached: cached, bust: bust, art: art, badge: badge,
@@ -7703,6 +7805,12 @@ window.removeSong = removeSong;
     host = el('detail-cert');
     if (!host) return;
     _album = album;
+    /* Off. Cleared rather than left alone: the panel from the previously
+       opened record is still sitting in this element, and openAlbum reuses
+       it. The check is before the "Reading this record's certification…"
+       placeholder for the obvious reason — a panel that announces itself and
+       then empties is worse than one that never appears. */
+    if (!window.Cert || !Cert.ON) { host.innerHTML = ''; return; }
     if (!album || !album.id) { host.innerHTML = ''; return; }
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) {
       host.innerHTML = '';
@@ -9306,8 +9414,21 @@ function buzz(kind) {
 }
 window.buzz = buzz;
 
-function celebrate(title,sub){
+/* The eyebrow is a caller's word, not a fixed one.
+
+   It said "Achievement Unlocked" over everything this overlay has ever shown
+   — a tournament win, a seven-day streak, a Bid War, and a cosmetic out of
+   The Draw. A theme is not an achievement, so on the one screen where that
+   distinction is the whole point it now says Cosmetic Unlocked. Renaming it
+   outright was the other option and is wrong for the same reason: a war win
+   labelled "Cosmetic Unlocked" is the same lie pointing the other way.
+
+   Defaulted rather than required, so every existing call site keeps the
+   wording it already had. */
+function celebrate(title,sub,opts){
   const ov=document.getElementById('celebrate');
+  const eb=document.getElementById('celebrate-eyebrow');
+  if(eb)eb.textContent=(opts&&opts.eyebrow)||'Achievement Unlocked';
   document.getElementById('celebrate-title').textContent=title;
   // Hidden rather than emptied when there is no subtitle: an empty element
   // still carries its margin, so the button would sit a line lower than the
@@ -10704,6 +10825,9 @@ async function renderProfile(){
    with is worth doing. Those go straight to the shortlist, which is where
    "not heard" already goes from the Crate. */
 function mastersHtml(rows,isOwner,uname){
+  // Off: not even the owner's pitch. An empty heading explaining a ladder
+  // that is currently switched off is an advert for a door that is locked.
+  if(!window.Cert||!Cert.ON)return'';
   if(!rows||!rows.length){
     // Nothing on an empty state for a visitor: a heading saying somebody has
     // no Masters is worse than the heading not being there.
@@ -10809,7 +10933,7 @@ async function drawProfile(host,prof,isOwner){
      with it. */
   let masters=[];
   try{
-    if(window.Cert){
+    if(window.Cert&&Cert.ON){
       const certs=await Cert.all(prof.id,true);
       const shelf=await Cloud.client().from('collection')
         .select('album_id,name,artist,art,bought_at,is_master')
@@ -18075,6 +18199,152 @@ window.renderAdminStats = renderAdminStats;
     return _market;
   }
 
+  /* ---- PRICING, WITHOUT BEING ASKED ---------------------------------------
+
+     /api/collection-prices returns cached rows only — valuing twenty uncached
+     albums in one serverless invocation would time out — so a fresh crate or
+     any search result arrives with `price: null` on most of it.
+
+     That used to be the player's problem to solve one record at a time, with a
+     button that said "Price it" and silently bought what it priced. Now the
+     page walks the nulls itself, in chunks of PRICE_CHUNK, and each card fills
+     in where it stands. The request is one POST per chunk and they go one
+     after another rather than together: each uncached artist costs a kworb
+     page fetch, and six parallel invocations all scraping the same site is how
+     you get rate-limited off it.
+
+     Cards are patched IN PLACE rather than re-rendering the grid. A shelf that
+     redraws under you every few seconds while you are reading it is worse than
+     a slow price, and re-rendering would also throw away the scroll position
+     — the same reason the Shop reads and restores its own scrollTop.
+
+     `_sweep` is a token, not a flag. Switching tab, searching, or buying all
+     re-enter render(), and a chunk that lands afterwards must not write a
+     price onto whatever is on screen now — it belongs to a grid that has
+     gone. The same shape as the player's `loadTok` and the Cover Fire card's
+     fetch token, and for the same reason: the slower request would otherwise
+     land last and win. */
+  // Mirrors BATCH in /api/collection-prices, which slices anything past it.
+  // Change one and you must change the other.
+  var PRICE_CHUNK = 5;
+  var _sweep = 0;
+
+  async function priceSweep(items, ctx) {
+    var mine = ++_sweep;
+    var todo = (items || []).filter(function (a) {
+      return a && a.album_id && a.price == null && !ctx.owned[a.album_id];
+    }).map(function (a) { return a.album_id; });
+    if (!todo.length) return;
+
+    var t = await token();
+    if (!t || mine !== _sweep) return;
+
+    for (var i = 0; i < todo.length; i += PRICE_CHUNK) {
+      var chunk = todo.slice(i, i + PRICE_CHUNK);
+      var prices = null;
+      try {
+        var r = await fetch('/api/collection-prices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
+          body: JSON.stringify({ album_ids: chunk }),
+        });
+        var j = await r.json();
+        prices = r.ok ? (j && j.prices) : null;
+      } catch (e) { prices = null; }
+      if (mine !== _sweep) return;               // the grid moved on
+      if (!prices) {
+        /* The whole chunk failed — Spotify unreachable, kworb down, or the
+           sealed-war check could not run. Say so on those cards rather than
+           leaving them saying "counting streams…" forever, which is the
+           stale-field shape this app has already paid for once. Carry on with
+           the next chunk: one bad batch is not a dead market. */
+        chunk.forEach(function (id) { applyPrice(id, null, ctx, 'later'); });
+        continue;
+      }
+      chunk.forEach(function (id) {
+        /* An id that was asked about and is simply absent from the answer is
+           not the same as one the server said it could not price — that is
+           PRICE_CHUNK having drifted past the route's BATCH, which slices
+           silently. It gets the retryable wording and a report, rather than
+           "cannot be priced", which would be this app inventing a fact about
+           a record because two constants stopped agreeing. */
+        if (!Object.prototype.hasOwnProperty.call(prices, id)) {
+          if (window.reportIssue) reportIssue('collection price batch came back short', { album: id, asked: chunk.length });
+          applyPrice(id, null, ctx, 'later');
+          return;
+        }
+        var p = prices[id] || {};
+        applyPrice(id, (typeof p.price === 'number' ? p.price : null), ctx, p.reason);
+      });
+    }
+  }
+
+  /* One card, settled. Writes the price back into `_market`/`_results` too,
+     so re-entering the tab does not re-price everything that was just priced
+     — and so `buy()`, which reads the record out of those arrays for its name
+     and artwork, sees the same number the card is showing. */
+  function applyPrice(albumId, price, ctx, reason) {
+    [_market, _results].forEach(function (list) {
+      (list || []).forEach(function (x) { if (x.album_id === albumId) x.price = price; });
+    });
+
+    /* Found by walking the grid rather than by an attribute selector. Album
+       ids are now Deezer's and numeric, and CSS.escape('12345') is
+       `\31 2345` — which does happen to match inside a quoted attribute
+       value, because the browser resolves the escape, but relying on that is
+       relying on a coincidence. Thirty cards is nothing to walk. */
+    var rec = null;
+    var all = document.querySelectorAll('.col-rec');
+    for (var k = 0; k < all.length; k++) {
+      if (all[k].getAttribute('data-rec') === albumId) { rec = all[k]; break; }
+    }
+    if (!rec) return;
+    var priceEl = rec.querySelector('.col-price');
+    var btn = rec.querySelector('.col-buy');
+
+    if (price == null) {
+      /* Unpriceable is a real answer and a permanent one for that record —
+         kworb matched too few of its tracks. It is not an error and it is not
+         "try again", so the card says what it is and stops offering a button
+         that would raise the same thing from the server. */
+      var msg = reason === 'later' ? 'price unavailable just now'
+        : reason === 'sealed' ? 'on one of your live Bid Wars'
+        : 'cannot be priced';
+      if (priceEl) { priceEl.className = 'col-price col-unpriced'; priceEl.textContent = msg; }
+      if (btn) { btn.remove(); }
+      var pk = rec.querySelector('.col-pick');
+      if (pk) pk.remove();
+      return;
+    }
+
+    if (priceEl) { priceEl.className = 'col-price'; priceEl.innerHTML = n(price) + ' <small>Discs</small>'; }
+    if (btn) {
+      var afford = ctx.admin || ctx.discs >= price;
+      btn.classList.remove('col-pricing');
+      btn.className = (afford ? 'btn-primary' : 'btn-mini') + ' col-buy';
+      btn.disabled = !afford;
+      if (!afford) btn.title = 'Not enough Discs';
+      btn.textContent = 'Buy';
+    }
+    // A pick can only be spent on a record with a price, so the button could
+    // not exist until now. Wired here rather than by a second wire() pass,
+    // which would double every handler already on the grid.
+    if (ctx.picks > 0 && !ctx.owned[albumId] && !rec.querySelector('.col-pick') && btn) {
+      var p = document.createElement('button');
+      p.className = 'btn-mini col-pick';
+      p.setAttribute('data-pick', albumId);
+      p.textContent = 'Use a pick';
+      p.addEventListener('click', function () {
+        var r2 = (_results || []).concat(_market || [])
+          .filter(function (x) { return x.album_id === albumId; })[0] || {};
+        if (!confirm('Use one album pick on ' + (r2.name || 'this record') +
+                     '? It is worth ' + n(r2.price || 0) + ' Discs, and a picked record cannot be sold.')) return;
+        buy(p, albumId, true);
+      });
+      btn.insertAdjacentElement('afterend', p);
+    }
+  }
+
   function worthOf(list) {
     return (list || []).reduce(function (s, x) { return s + (Number(x.price) || 0); }, 0);
   }
@@ -18175,9 +18445,23 @@ window.renderAdminStats = renderAdminStats;
     } else if (opts.owned) {
       action = '<button class="btn-mini col-sell" data-sell="' + esc(a.album_id) + '">Sell ' + n(Math.floor(a.price * 0.7)) + '</button>';
     } else {
-      action = '<button class="' + (afford === false ? 'btn-mini' : 'btn-primary') + ' col-buy" data-buy="' + esc(a.album_id) + '"' +
-        (afford === false ? ' disabled title="Not enough Discs"' : '') + '>' +
-        (a.price == null ? 'Price it' : 'Buy') + '</button>' +
+      /* A record with no price yet is being valued right now, and the button
+         says so instead of offering a purchase.
+
+         It used to say "Price it" — and pressing it did not price the record,
+         it priced it AND BOUGHT IT, because "Price it" was the Buy button
+         wearing a different word. One tap, no number shown first, Discs gone
+         on a record that might have cost 51,240 of them. Naming one action
+         and performing two is the worst shape a button can have, and it was
+         on the most expensive control in the app.
+
+         Disabled rather than absent, so the card keeps its height and the
+         grid does not reflow under the cursor as each price lands. */
+      action = a.price == null
+        ? '<button class="btn-mini col-buy col-pricing" data-buy="' + esc(a.album_id) + '" disabled>Pricing…</button>'
+        : '<button class="' + (afford === false ? 'btn-mini' : 'btn-primary') + ' col-buy" data-buy="' + esc(a.album_id) + '"' +
+          (afford === false ? ' disabled title="Not enough Discs"' : '') + '>Buy</button>';
+      action +=
         // The pick button only exists while you hold one, and it is offered
         // even on a record you could afford — spending a pick on something
         // cheap is your call to make badly.
@@ -18198,9 +18482,12 @@ window.renderAdminStats = renderAdminStats;
           (cert.inscription ? '<span class="col-insc">“' + esc(cert.inscription) + '”</span>' : '') +
           '</div>'
         : '') +
+      // "price on request" was true and read as a refusal — there was nothing
+      // on the card saying who you were meant to ask. The price is on its way;
+      // the line says that and is replaced in place when it lands.
       (a.price != null
         ? '<div class="col-price">' + n(a.price) + ' <small>Discs</small></div>'
-        : '<div class="col-price col-unpriced">price on request</div>') +
+        : '<div class="col-price col-unpriced">counting streams&hellip;</div>') +
       (opts.owned ? provenance(a) : '') +
       '</div>' + action +
     '</div>';
@@ -18311,19 +18598,21 @@ window.renderAdminStats = renderAdminStats;
             'Search for one if it is not in the crate. A picked record is yours to keep and cannot be sold.</div>'
           : '') +
         '<p class="reco-note">' +
-        (_results ? 'Search results — tap Price it to value one. ' : 'Priced by total Spotify streams. ') +
+        (_results ? 'Search results, priced by total Spotify streams. ' : 'Priced by total Spotify streams. ') +
         'You hold ' + (admin ? '∞' : n(discs)) + ' Discs. Selling a record returns 70%.' +
         (_results ? ' <a href="#" id="col-clear">Back to the crate</a>' : '') + '</p>' +
         '<div class="col-grid">' + items.map(function (a) {
           return card(a, {
             owned: !!owned[a.album_id],
             // A pick still has to go through pricing, so it is only offered on
-            // a record that already has a price. "Price it" first, then pick.
+            // a record that already has a price. The pricing sweep below puts
+            // the button on as each price lands.
             picks: picks > 0 && !owned[a.album_id] && a.price != null,
             afford: admin || a.price == null || discs >= a.price
           });
         }).join('') + '</div>';
       wire(body);
+      priceSweep(items, { owned: owned, picks: picks, discs: discs, admin: admin });
       return;
     }
 
@@ -18486,13 +18775,16 @@ window.renderAdminStats = renderAdminStats;
     render();
   }
 
-  /* Search any album on Spotify and buy it.
+  /* Search any album and buy it.
 
      Results come back with no price: pricing an album means a kworb fetch, and
-     doing twenty of those to render a search would take twenty seconds. So a
-     result shows "price on request" and the button says "Price it" — one tap
-     values it, caches it in album_plays, and buys. The second tap on the same
-     record is instant because it is cached. */
+     doing eighteen of those to render a search would take the best part of a
+     minute. So the cards draw immediately saying they are being counted, and
+     priceSweep fills them in five at a time — see the note on it above for why
+     this stopped being a button the player had to press.
+
+     Every valuation lands in album_plays, so searching for the same record
+     again is instant, and so is the next person to search for it. */
   async function search(q) {
     if (!q || q.length < 2) { _results = null; render(); return; }
     var body = el('col-body');
@@ -18877,6 +19169,17 @@ window.renderAdminStats = renderAdminStats;
      different from the tier below it, or the top of the ladder is just a
      slightly better middle. Everything here degrades to nothing under
      prefers-reduced-motion. */
+  /* What the overlay calls this. A theme, banner, flair, frame or tag out of
+     the reel is a cosmetic, and calling it an achievement is the overlay
+     describing the wrong thing — nothing was achieved, a reel stopped. Discs
+     and album picks are neither, so they keep the plain word. */
+  function eyebrowFor(won) {
+    var COSMETIC = { theme: 1, banner: 1, flair: 1, frame: 1, tag: 1 };
+    if (won.duplicate) return { eyebrow: 'Already Yours' };
+    if (COSMETIC[won.kind]) return { eyebrow: 'Cosmetic Unlocked' };
+    return undefined;
+  }
+
   function applyFeedback(won) {
     var wnd = el('draw-window');
     var name = won.granted || won.label;
@@ -18888,7 +19191,7 @@ window.renderAdminStats = renderAdminStats;
           won.kind === 'picks' ? won.picks + ' records of your choice, free. Go and take them.'
           : won.kind === 'tag' ? 'A producer tag. Wear it under your name.'
           : won.duplicate ? 'You had every tag already, so it paid out instead.'
-          : 'The top of the ladder.');
+          : 'The top of the ladder.', eyebrowFor(won));
       }
     } else if (won.tier === 'legendary') {
       if (window.burst) burst(wnd, { count: 42, spread: 220 });
@@ -18901,7 +19204,7 @@ window.renderAdminStats = renderAdminStats;
         // than one that just arrives.
         window.celebrate('Legendary — ' + name, won.kind === 'picks'
           ? 'A record of your choice, free. Take it in the Market.'
-          : '');
+          : '', eyebrowFor(won));
       }
     } else if (won.tier === 'epic') {
       if (window.burst) burst(wnd, { count: 22, spread: 150 });
@@ -19088,15 +19391,27 @@ window.renderAdminStats = renderAdminStats;
       if (b && b.click) b.click();
     });
   }
-  /* A dot on the Rewards tab when there is something to take. The reward has
-     to advertise itself from wherever you are, or a manual claim just means
-     people forget — which is worse than the automatic version it replaced. */
+  /* The dot on the Discs tab is OFF.
+
+     It was the last thing advertising the daily claim from elsewhere, after
+     the bar above the ladder and the Home strip both went. It reads as a
+     notification badge — a pulsing dot on a nav item means "something has
+     happened", and what it actually meant was "the ladder is where it always
+     is and today is unclaimed", which is true every morning. A badge that is
+     lit most of the time is not a badge.
+
+     The state it computed was correct: `login_last_date` against today, plus
+     any album picks held. Kept whole and simply not applied, so this is a
+     switch and not a removal — one line brings it back. The class is cleared
+     rather than left alone, so a dot painted before this shipped goes away
+     on the next render instead of sticking until a reload. */
+  var DOT_ON = false;
   function markRewardsDot() {
     var btn = document.querySelector('#modes button[data-mode="rewards"]');
     if (!btn) return;
     var st = (window.Wallet && Wallet.get) ? Wallet.get() : null;
     var on = false;
-    if (st && window.Cloud && Cloud.isOn && Cloud.isOn()) {
+    if (DOT_ON && st && window.Cloud && Cloud.isOn && Cloud.isOn()) {
       var last = st.login_last_date ? String(st.login_last_date).slice(0, 10) : null;
       on = last !== new Date().toISOString().slice(0, 10) || (st.album_picks || 0) > 0;
     }
@@ -22836,7 +23151,11 @@ window.track = function (name, props) {
       ? 'https://music.apple.com/search?term=' + encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim())
       : 'https://www.deezer.com/search/' + encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim());
     srcA.style.display = noPrev ? 'none' : '';
-    markRows((noPrev || a.paused) ? '' : 'playing');
+    /* Paused is its own mark, not the absence of one. Clearing it said the
+       row had been let go, so pausing made the list forget which track the
+       bar at the bottom was still holding — and hitting play again is one tap
+       on a row you can no longer find. Only `noPrev` genuinely owns no audio. */
+    markRows(noPrev ? '' : (a.paused ? 'paused' : 'playing'));
   }
   function paintProgress() {
     if (!bar || !cur) return;
@@ -22848,7 +23167,7 @@ window.track = function (name, props) {
 
   // Row state. Cheap enough to sweep every row: an album is twenty of them.
   function markRows(state) {
-    document.querySelectorAll('button.idx').forEach(function (b) { b.classList.remove('playing', 'loading'); });
+    document.querySelectorAll('button.idx').forEach(function (b) { b.classList.remove('playing', 'loading', 'paused'); });
     if (!state || !cur) return;
     var b = document.querySelector('button.idx[data-pv="' + qi + '"]');
     if (b) b.classList.add(state);
