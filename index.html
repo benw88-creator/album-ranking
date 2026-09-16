@@ -6711,7 +6711,18 @@ function _toCatalogue(path){
     if(q.get('name'))u.set('name',q.get('name'));
     if(q.get('artist'))u.set('artist',q.get('artist'));
   } else if(p==='/search'){
-    u.set('path','search'); u.set('q',q.get('q')||'');
+    // Strip Spotify's query operators. `genre:"rock"` and `year:1997` are
+    // their search syntax, and Deezer reads them as literal text — so a
+    // discovery call asking for a genre was searching for the word "genre".
+    // A genre name is still a useful plain term; a bare year is not, so that
+    // one is dropped and the caller gets the empty result it can handle.
+    var raw=(q.get('q')||'');
+    var cleaned=raw.replace(/\b(genre|artist|album|track)\s*:\s*"([^"]*)"/gi,'$2')
+                   .replace(/\b(genre|artist|album|track)\s*:\s*(\S+)/gi,'$2')
+                   .replace(/\byear\s*:\s*[\d-]+/gi,'')
+                   .replace(/\s+/g,' ').trim();
+    if(!cleaned) return null;                    // nothing meaningful left to ask
+    u.set('path','search'); u.set('q',cleaned);
     u.set('type',q.get('type')||'album'); u.set('limit',q.get('limit')||'10');
   } else if((m=p.match(/^\/artists\/([^/]+)\/albums$/))){
     u.set('path','artist-albums'); u.set('id',decodeURIComponent(m[1]));

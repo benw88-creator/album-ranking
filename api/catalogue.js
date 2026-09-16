@@ -66,6 +66,9 @@ async function dz(path) {
   return j;
 }
 
+// Titles that are not a studio record however Deezer types them.
+const NOT_STUDIO = /\b(live|unplugged|in concert|at the|karaoke|tribute|instrumental|remix(es|ed)?|commentary|demos?|sessions?|b-?sides|rarities|greatest hits|best of|the collection|anthology|box ?set)\b/i;
+
 const loose = s => String(s || '')
   .normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().replace(/\([^)]*\)|\[[^\]]*\]/g, '')
@@ -174,7 +177,20 @@ export default async function handler(req, res) {
       const out = {};
       if (/album/.test(type)) {
         const j = await dz('/search/album?limit=' + limit + '&q=' + encodeURIComponent(term));
-        out.albums = { items: (j.data || []).map(albumLite), total: j.total || 0 };
+        const items = (j.data || []).map(albumLite);
+        // Deezer's album SEARCH carries no release_date — only /album/{id}
+        // does — so search results had no year at all, and VINALL prints the
+        // year beside every record it suggests. The top few are enriched in
+        // parallel: one extra call each, only for what somebody will actually
+        // look at, and the whole response is edge-cached per query so a repeat
+        // of the same search costs nothing.
+        await Promise.all(items.slice(0, 6).map(async (a) => {
+          try {
+            const d = await dz('/album/' + a.id);
+            if (d && d.release_date) a.release_date = d.release_date;
+          } catch (e) { /* a year is worth one try, never a failed search */ }
+        }));
+        out.albums = { items, total: j.total || 0 };
       }
       if (/artist/.test(type)) {
         const j = await dz('/search/artist?limit=' + limit + '&q=' + encodeURIComponent(term));
@@ -210,7 +226,13 @@ export default async function handler(req, res) {
       let items = (j.data || []);
       // include_groups=album is what the discography asks Spotify for: studio
       // records only, or the Completion list fills up with singles and live sets.
-      if (String(q.include_groups || 'album') === 'album') items = items.filter(a => a.record_type === 'album');
+      // record_type alone is not enough — Deezer files plenty of live albums,
+      // anniversary editions and remaster reissues as `album`, and a Completion
+      // list telling somebody they have not rated "Hail to the Thief (Live
+      // Recordings 2003-2009)" is asking them to rank a record twice.
+      if (String(q.include_groups || 'album') === 'album') {
+        items = items.filter(a => a.record_type === 'album' && !NOT_STUDIO.test(a.title || ''));
+      }
       res.setHeader('Cache-Control', WEEK);
       res.status(200).json({ items: items.map(albumLite), total: j.total || items.length });
       return;
