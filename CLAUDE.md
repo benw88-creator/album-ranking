@@ -1058,6 +1058,90 @@ catalogue data Spotify no longer supplies — not merely stale, but what Policy 
 use. They credit Deezer now, and the Spotify mark survives only on the two controls that link
 **to** Spotify, which is what a mark is for.
 
+### Playback: the clip comes off the track, not a second search
+
+Most tracks would not play, and the cause was that the player threw away the preview it was
+handed and went looking for another one.
+
+`/api/catalogue` returns `preview_url` on every track, off the same Deezer album the page is
+showing. `setAlbum()` dropped it, then ran a **second, independent album search by name** and
+matched tracks to that album by normalised title. A deluxe, a remaster or a regional pressing
+carries different tracks — or the same tracks under slightly different titles — and every one
+that failed to match read as "no preview" and offered to throw you out to Spotify. On some
+records that was most of the album.
+
+Taking the clip off the track it belongs to makes the match **exact by construction**: if
+Deezer has a preview for a track on this record, VINALL has it. Measured after the fix:
+**77/77 tracks playable** across Blonde, IGOR, Rumours, Graduation and SOS. The name sweep
+survives only as a fallback, and is not even requested unless some track arrives without a clip.
+
+`paintAvailability()` also marked a row "no preview" whenever the map was absent, which before
+the sweep landed meant every row. **A track with no clip of its own is not a track with no clip
+until something has actually looked.**
+
+### Valuation had to learn Deezer ids
+
+Every record rated after the catalogue switch was silently unpriceable — not buyable in the
+Collection, never picked for a Bid War, dropped from Higher or Lower's streams mode.
+`albumInfo()` asked Spotify about a numeric id, got a 400, returned null. It errored nowhere,
+which made it a leak rather than an outage.
+
+kworb is why Spotify cannot leave entirely: it indexes by Spotify **artist** id. So the
+tracklist comes from Deezer and the only thing still asked of Spotify is *what is this artist's
+id* — one search per artist, cached across a batch, no album metadata read or stored.
+**The artist match requires an exact name**: taking `items[0]` is how a tribute act ends up
+supplying somebody else's stream table, which is a wrong valuation that looks entirely
+plausible.
+
+
+### Deezer's terms, and the trade that was actually made
+
+Read after the switch, not before — which was the wrong order and is worth admitting.
+
+> "the use of the Services is strictly limited for a **non-commercial purpose and in a
+> non-commercial environment**. The Developer shall not perceive, receive, generate, benefit
+> or create directly or indirectly, any moneys, incomes, revenues, data or any other
+> consideration in connection with the use of neither the Services themselves, nor any and
+> all Content accessed through the Services."
+
+So the two licences are near mirror images, and VINALL has swapped which half it is bound by:
+
+| | Spotify | Deezer |
+|---|---|---|
+| games and trivia quizzes | **banned outright**, no approval route | not mentioned |
+| commercial use | **permitted** for a Non-Streaming SDA — ads, sponsorship, paid access | **banned outright** |
+| full-length playback | Premium only, via their SDK | Premium+ only; everyone else 30 seconds |
+| access revocation | quota review | "at any time for any reason", no notice |
+
+**Neither licence permits a music app that has games AND makes money.** That is the real
+constraint, and no amount of moving artwork or metadata changes it.
+
+Where that leaves things today: VINALL takes no money from anybody. Discs cannot be bought,
+there are no ads and there is no paid tier, so the Deezer terms are satisfied *now*. The
+constraint is entirely on the future, and it is a hard one — the moment VINALL charges for
+anything or carries advertising, the catalogue has to move again.
+
+An earlier note in this file said the Non-Streaming SDA classification meant VINALL was free
+to monetise. That was true of Spotify and is **not** true of where the catalogue now is.
+
+If commercial use is ever wanted, the only combination that allows games *and* money is:
+
+- **metadata and artwork** from **MusicBrainz + Cover Art Archive** — CC0, no restriction on
+  games, commercial use or storage, which none of the streaming APIs offer. Costs coverage
+  and image quality, and its rate limit is one request a second.
+- **previews** from **Apple's iTunes Search API**, whose terms are explicitly *promotional* —
+  affiliate marketing is the use it was built for — provided the clip sits beside a store
+  link, which `#pb-src` already does.
+
+That is a third catalogue move and should not be done on speculation. It is written down so
+the decision is made once, with the trade visible, rather than discovered after the fact
+twice.
+
+One clause to watch even without monetising: *"The Services and the Content accessed through
+the Services shall not be associated, directly or indirectly with any trademark, brand name,
+or logo."* The Spotify mark still renders on the two controls that link to Spotify, and a
+Deezer sleeve now sits on the same screen as it.
+
 ### Known regressions
 
 - **Search results have no year.** Deezer's album search omits `release_date`; it arrives when
