@@ -7422,12 +7422,29 @@ window.removeSong = removeSong;
   /* The art, wearing whatever it is wearing. Every surface that shows a record
      goes through this, so a finish bought on the album page shows on the shelf
      and on a profile with no second implementation to keep in step. */
+  /* A finish is an animated wash laid ON TOP of the sleeve, and Spotify's
+     Design Guidelines forbid exactly that: "Artwork must be kept in its
+     original form. Don't animate or distort it in any way. This includes
+     applying overlays." So a plated record uses a Deezer sleeve.
+
+     It happens HERE because this is the single renderer every plated
+     surface goes through — the shelf, the album page and the Masters
+     showcase — which is the property this file already relies on for a
+     finish bought in one place showing in the others. One swap, no second
+     implementation to keep in step.
+
+     Callers pass `opts.artist` and `opts.album` so the cover can be looked
+     up by name; without them it renders exactly as before, so a caller that
+     has not been updated degrades rather than breaking. */
   function art(src, cert, opts) {
     opts = opts || {};
     var f = cert && cert.finish;
     var cls = 'fin' + (f ? ' on ' + f : '') + (cert && cert.master ? ' is-master' : '');
+    var pick = { src: src || '', key: null };
+    if (window.Covers && opts.artist && opts.album) pick = Covers.srcFor(opts.artist, opts.album, src);
     return '<span class="' + cls + '"' + (opts.style ? ' style="' + opts.style + '"' : '') + '>' +
-      '<img src="' + esc(src || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
+      '<img src="' + esc(pick.src) + '"' + (pick.key ? ' data-cover-key="' + esc(pick.key) + '"' : '') +
+      ' alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
       '</span>';
   }
   function badge(cert) {
@@ -10448,7 +10465,7 @@ function mastersHtml(rows,isOwner,uname){
     '<div class="mast-grid">'+rows.map(function(r){
       var c=r.cert||{};
       return '<div class="mast" data-mast="'+esc(r.album_id)+'">'+
-        Cert.art(r.art,c)+
+        Cert.art(r.art,c,{artist:r.artist,album:r.name})+
         '<div class="mast-nm">'+esc(r.name||'')+'</div>'+
         '<div class="mast-ar">'+esc(r.artist||'')+'</div>'+
         (c.inscription?'<div class="mast-insc">“'+esc(c.inscription)+'”</div>':'')+
@@ -17919,7 +17936,7 @@ window.renderAdminStats = renderAdminStats;
     var cert = null;
     try { cert = opts.owned ? (Cert.cached()[a.album_id] || null) : null; } catch (e) {}
     return '<div class="col-rec' + (opts.owned ? ' owned' : '') + '" data-rec="' + esc(a.album_id) + '">' +
-      (window.Cert ? Cert.art(a.art, cert)
+      (window.Cert ? Cert.art(a.art, cert, { artist: a.artist, album: a.name })
                    : '<img src="' + esc(a.art || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">') +
       '<div class="col-meta"><div class="col-nm">' + esc(a.name) + '</div>' +
       '<div class="col-ar">' + esc(a.artist || '') + '</div>' +
@@ -19110,7 +19127,13 @@ window.renderAdminStats = renderAdminStats;
   // Covers in the cache before they are needed. Art swapping in a beat late
   // is most of what made a correct answer feel like a stall.
   function preload(entries) {
-    entries.forEach(function (e) { if (e.a.art) { var i = new Image(); i.src = e.a.art; } });
+    // Warm the Deezer sleeves first, then preload whichever URL will actually
+    // be shown — this is a game, so it should not be rendering Spotify art.
+    if (window.Covers) Covers.prefetch(entries.map(function (e) { return e.a; }), 40);
+    entries.forEach(function (e) {
+      var u = (window.Covers && Covers.get(e.a.artist, e.a.name)) || e.a.art;
+      if (u) { var i = new Image(); i.src = u; }
+    });
   }
 
   async function buildPool() {
@@ -19152,7 +19175,13 @@ window.renderAdminStats = renderAdminStats;
 
   function paintSide(side, entry, hideValue) {
     var img = el('hl-' + side + '-art');
-    var src = entry.a.art || '';
+    // A Deezer sleeve where there is one. This is a game, and the Developer
+    // Policy's "Do not create a game, including trivia quizzes" is about
+    // Spotify content appearing in one — the static pools moved already,
+    // and these records come live out of your own crate. Spotify's URL is
+    // still the fallback while the lookup is in flight, because a blank
+    // square here is worse than a first-visit second of the old sleeve.
+    var src = (window.Covers && Covers.get(entry.a.artist, entry.a.name)) || entry.a.art || '';
     if (img.getAttribute('src') !== src) img.src = src;
     el('hl-' + side + '-nm').textContent = entry.a.name;
     el('hl-' + side + '-ar').textContent = entry.a.artist || '';
@@ -19776,8 +19805,14 @@ window.renderAdminStats = renderAdminStats;
   function myRated() {
     try {
       var al = window.loadAlbums ? loadAlbums() : {};
-      return Object.keys(al).map(function (k) { return al[k]; })
+      var list = Object.keys(al).map(function (k) { return al[k]; })
         .filter(function (a) { return a && typeof a.score === 'number' && a.name && a.art; });
+      // Warm the Deezer sleeves for the pool this mode draws from, so the
+      // solo rounds are not showing Spotify artwork inside a game. Capped
+      // and paced inside Covers; a crate of four hundred does not become
+      // four hundred requests.
+      if (window.Covers) Covers.prefetch(list, 40);
+      return list;
     } catch (e) { return []; }
   }
   function mineReady() { return myRated().length >= 10; }
@@ -19795,7 +19830,11 @@ window.renderAdminStats = renderAdminStats;
       if (Math.abs(top - nearest) < gapMin) continue;
       return {
         prompt: label, note: 'from your crate',
-        choices: set.map(function (a) { return { name: a.name, artist: a.artist || '', art: a.art }; }),
+        // Deezer sleeve where known, Spotify's only until the warm lands.
+        choices: set.map(function (a) {
+          return { name: a.name, artist: a.artist || '',
+                   art: (window.Covers && Covers.get(a.artist, a.name)) || a.art };
+        }),
         correct: vals.indexOf(top)
       };
     }
@@ -22570,6 +22609,133 @@ window.track = function (name, props) {
   else paint();
 
   window.SpotifyMark = { html: MARK, paint: paint };
+})();
+
+
+/* ================================================================
+   COVERS — a non-Spotify sleeve, for the two surfaces that need one
+
+   Album pages, search, the Crate and profiles all show Spotify
+   artwork and should keep doing so: a rating site displaying records,
+   crediting Spotify with the logo and linking back to each release is
+   exactly what their API is for. That use is intended, not tolerated,
+   and moving it would cost quality for nothing.
+
+   Two surfaces cannot keep it, and both for the same written reason:
+
+     - **Certification finishes.** Holographic, Prism and the rest are
+       animated washes laid ON TOP of the sleeve, and the Design
+       Guidelines say "Artwork must be kept in its original form. Don't
+       animate or distort it in any way. This includes applying
+       overlays."
+     - **Game rounds drawn from your own crate** — Higher or Lower, and
+       Cover Fire's solo questions. The Developer Policy says "Do not
+       create a game, including trivia quizzes." The static game pools
+       were moved to Deezer already; these two read live crate records,
+       so they were still showing Spotify's art inside a game.
+
+   So this resolves a Deezer sleeve for a record and hands it to those
+   two, and nothing else changes anywhere.
+
+   Keyed by **artist + album name, not by Spotify id**, because the
+   callers do not agree on ids: the crate keys by Spotify album id, the
+   Collection and Masters come back from the `collection` table, and a
+   Crate feed row has neither. A name is the one thing all of them
+   carry.
+
+   It rides `/api/preview`, which already resolves the album on Deezer
+   for the player's 30-second clips and now returns the cover with
+   them. One lookup serves both, and the route is edge-cached for a
+   week, so the second person to want a record pays nothing.
+
+   **A miss is cached too.** Deezer does not carry everything — 808s &
+   Heartbreak is simply absent — and without caching the miss, every
+   render of that shelf would spend another request rediscovering it.
+
+   Falling back to the Spotify URL while a lookup is in flight is
+   deliberate. The alternative is a blank square, and on Cover Fire the
+   sleeve IS the question. It is a first-visit-only window, it closes
+   as soon as the swap lands, and a placeholder would break the game to
+   win a second of purity.
+   ================================================================ */
+(function () {
+  var CK = 'dzc:';                 // dzc:<artist>|<album> -> url or '' (a miss)
+  var mem = {}, inflight = {}, queue = [], pumping = false;
+  var GAP = 140;                   // paced: a shelf can ask for fifty at once
+
+  function key(artist, album) {
+    var n = function (s) {
+      return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .toLowerCase().replace(/\([^)]*\)/g, '').replace(/[^a-z0-9]+/g, '');
+    };
+    return n(artist) + '|' + n(album);
+  }
+  function read(k) {
+    if (mem[k] !== undefined) return mem[k];
+    try { var v = localStorage.getItem(CK + k); if (v !== null) { mem[k] = v; return v; } } catch (e) {}
+    return undefined;
+  }
+  function write(k, v) { mem[k] = v || ''; try { localStorage.setItem(CK + k, v || ''); } catch (e) {} }
+
+  // Synchronous read. '' means "looked, Deezer has not got it".
+  function get(artist, album) {
+    if (!artist || !album) return null;
+    var v = read(key(artist, album));
+    return v ? v : null;
+  }
+
+  function pump() {
+    if (pumping || !queue.length) return;
+    pumping = true;
+    var job = queue.shift();
+    fetch('/api/preview?artist=' + encodeURIComponent(job.artist) + '&album=' + encodeURIComponent(job.album))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { write(job.k, (j && j.cover) || ''); })
+      .catch(function () { /* leave it unwritten: a network blip is not a fact */ })
+      .then(function () {
+        delete inflight[job.k];
+        var url = read(job.k);
+        if (url) swap(job.k, url);
+        setTimeout(function () { pumping = false; pump(); }, GAP);
+      });
+  }
+
+  // Elements that asked before the answer arrived get it when it does.
+  function swap(k, url) {
+    try {
+      document.querySelectorAll('img[data-cover-key="' + k + '"]').forEach(function (im) {
+        im.src = url;
+        im.removeAttribute('data-cover-key');
+      });
+    } catch (e) {}
+  }
+
+  function want(artist, album) {
+    if (!artist || !album) return null;
+    var k = key(artist, album);
+    var v = read(k);
+    if (v !== undefined) return v || null;         // known, hit or miss
+    if (!inflight[k]) { inflight[k] = 1; queue.push({ k: k, artist: artist, album: album }); pump(); }
+    return null;
+  }
+
+  // What a caller renders: the Deezer sleeve if known, else Spotify's for
+  // now, tagged so it is replaced the moment the real answer lands.
+  function srcFor(artist, album, fallback) {
+    var k = key(artist, album);
+    var v = want(artist, album);
+    return { src: v || fallback || '', key: v ? null : k };
+  }
+
+  // Warm a shelf or a game pool in one go. Capped: a crate of four hundred
+  // records must not become four hundred requests because somebody scrolled.
+  function prefetch(list, cap) {
+    (list || []).slice(0, cap || 60).forEach(function (r) {
+      if (r) want(r.artist, r.name || r.album);
+    });
+  }
+
+  window.Covers = { get: get, want: want, srcFor: srcFor, prefetch: prefetch, key: key };
 })();
 
 </script>

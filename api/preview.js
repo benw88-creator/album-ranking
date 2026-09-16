@@ -81,7 +81,16 @@ export default async function handler(req, res) {
       .map(function (t) { return { title: t.title, preview: t.preview, ms: (t.duration || 0) * 1000 }; });
 
     res.setHeader('Cache-Control', 'public, s-maxage=604800, stale-while-revalidate=86400');
-    res.status(200).json({ source: 'deezer', album: best.title, artist: best.artist && best.artist.name, link: best.link, tracks: tracks });
+    // `cover` rides along because the album was resolved anyway. VINALL needs a
+    // non-Spotify sleeve for the two surfaces Spotify's brand guidelines will
+    // not allow theirs on — the Certification finishes, which paint over the
+    // art, and the game rounds drawn from your own crate. One lookup serves
+    // both that and the previews, and the edge cache makes the second caller
+    // free.
+    res.status(200).json({
+      source: 'deezer', album: best.title, artist: best.artist && best.artist.name,
+      link: best.link, cover: best.cover_xl || best.cover_big || null, tracks: tracks
+    });
   } catch (e) {
     // Never 500 into the player. An empty list means "use the Apple fallback",
     // and a record that will not play is a row that hands off to Spotify —
