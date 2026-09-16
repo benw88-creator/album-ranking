@@ -6843,6 +6843,10 @@ function _toCatalogue(path){
     u.set('limit',q.get('limit')||'50');
   } else if((m=p.match(/^\/artists\/([^/]+)$/))){
     u.set('path','artist'); u.set('id',decodeURIComponent(m[1]));
+    // Same legacy resolution the album and discography paths get. This one was
+    // missed, so a pre-switch fav_artist id went to Deezer as a base62 string
+    // and came back a 502.
+    if(q.get('name'))u.set('name',q.get('name'));
   } else return null;
   return '/api/catalogue?'+u.toString();
 }
@@ -8248,8 +8252,16 @@ async function _buildRecommendations(grid, emptyEl, status) {
   const candList = Object.values(candidates).sort(function (a, b) { return b.weight - a.weight; }).slice(0, 6);
   for (let i = 0; i < candList.length; i++) {
     try {
+      // The seeds come out of your own crate, so their artist ids are whatever
+      // that record was rated under — a legacy Spotify one for anything from
+      // before the catalogue moved. The route resolves those by name and 400s
+      // without one, which is three failed requests on every logged-out load
+      // and no recommendations at all from a pre-switch crate. addCand keeps
+      // the name for exactly this.
+      const _cq = { include_groups: 'album', market: 'US' };
+      if (candList[i].name) _cq.name = candList[i].name;
       const data = await spotifyGet('/artists/' + encodeURIComponent(candList[i].id) + '/albums?' +
-        new URLSearchParams({ include_groups: 'album', market: 'US' }).toString());
+        new URLSearchParams(_cq).toString());
       const items = (data.items || []);
       let added = 0;
       for (let j = 0; j < items.length; j++) {
@@ -8317,10 +8329,14 @@ async function _buildRecommendations(grid, emptyEl, status) {
    Driven by profile.fav_artist (set on the Profile page), NOT by ratings.
    ================================================================ */
 const _artistImgCache = {};
-async function fetchArtistImage(artistId) {
+async function fetchArtistImage(artistId, artistName) {
   if (_artistImgCache[artistId] !== undefined) return _artistImgCache[artistId];
   try {
-    const data = await spotifyGet('/artists/' + encodeURIComponent(artistId));
+    // A fav_artist saved before the catalogue moved carries a Spotify id that
+    // Deezer cannot look up, so the name goes with it. Without one the route
+    // has nothing to resolve and the hero silently loses its background.
+    const _aq = artistName ? '?' + new URLSearchParams({ name: artistName }).toString() : '';
+    const data = await spotifyGet('/artists/' + encodeURIComponent(artistId) + _aq);
     const url = (data.images && data.images.length) ? pickImage(data.images, 1000) : null;
     _artistImgCache[artistId] = url;
     return url;
@@ -8366,7 +8382,7 @@ async function renderArtistHero() {
 
   // Prefer the image already saved on the profile (avoids an extra API call);
   // only hit Spotify if we don't have one cached on the favourite itself.
-  const img = fav.image || await fetchArtistImage(fav.id);
+  const img = fav.image || await fetchArtistImage(fav.id, fav.name);
   if (!img) { hideArtistHero(hero); return; }
 
   document.getElementById('artist-hero-bg').src = img;
@@ -9925,8 +9941,13 @@ async function pickNewrelArtist(artist) {
     // meant a prolific artist's newest release could sit past page 3 and
     // never get fetched at all. Querying each group separately fixes both.
     async function fetchGroup(group) {
+      // fav_artist is stored on the profile and may have been saved before the
+      // catalogue moved, so this id can be a legacy Spotify one — the name
+      // rides along to resolve it.
+      const _gq = { include_groups: group, market: 'US' };
+      if (artist.name) _gq.name = artist.name;
       let path = '/artists/' + encodeURIComponent(artist.id) + '/albums?' +
-        new URLSearchParams({ include_groups: group, market: 'US' }).toString();
+        new URLSearchParams(_gq).toString();
       let out = [];
       for (let page = 0; page < 3 && path; page++) {
         const data = await spotifyFetch(path, { priority: true });
@@ -11395,7 +11416,7 @@ function openFavArtistPicker(){
     // it's just a row icon in a dropdown. Re-fetch the artist at full
     // resolution before saving, since this image gets blown up to a full
     // hero banner; using the thumbnail there was the source of the blurry look.
-    const hiRes = await fetchArtistImage(item.id);
+    const hiRes = await fetchArtistImage(item.id, item.name);
     const res = await Cloud.saveProfile({ fav_artist: { id: item.id, name: item.name, image: hiRes || item.art || '' } });
     if (res.error) {
       console.error('Could not save favourite artist:', res.error);
@@ -18443,7 +18464,19 @@ window.renderAdminStats = renderAdminStats;
     if (opts.owned && a.via_pick) {
       action = '<span class="btn-mini col-kept" title="Won in The Draw. Yours to keep.">Mythic pick</span>';
     } else if (opts.owned) {
-      action = '<button class="btn-mini col-sell" data-sell="' + esc(a.album_id) + '">Sell ' + n(Math.floor(a.price * 0.7)) + '</button>';
+      /* The refund is 70% of WHAT YOU PAID, which lives on the collection row
+         — never the record's price on the card. On the shelf those are the
+         same object so a.price is right. On the Market they are not: `a` is a
+         market row carrying today's valuation, and priceSweep skips anything
+         you own, so a.price sat at null and this button read "Sell 0" while
+         the confirm dialog underneath it correctly offered thousands.
+         opts.paid is the collection row's price, passed in by the Market. */
+      var paid = (typeof opts.paid === 'number') ? opts.paid
+               : (typeof a.price === 'number' ? a.price : null);
+      // No paid price known is not a refund of zero. Say "Sell" and let the
+      // confirm, which reads the collection row directly, name the figure.
+      action = '<button class="btn-mini col-sell" data-sell="' + esc(a.album_id) + '">' +
+        (paid == null ? 'Sell' : 'Sell ' + n(Math.floor(paid * 0.7))) + '</button>';
     } else {
       /* A record with no price yet is being valued right now, and the button
          says so instead of offering a purchase.
@@ -18583,7 +18616,10 @@ window.renderAdminStats = renderAdminStats;
       body.innerHTML = '<p class="reco-note">Reading the crate…</p>';
       var items = _results || await loadMarket(true);
       var owned = {};
-      (await loadMine()).forEach(function (a) { owned[a.album_id] = true; });
+      // The row, not just a flag: the Sell button has to print 70% of what you
+      // paid, and only the collection row knows that number.
+      var mineRow = {};
+      (await loadMine()).forEach(function (a) { owned[a.album_id] = true; mineRow[a.album_id] = a; });
       var discs = (window.Wallet && Wallet.get) ? (Wallet.get().discs || 0) : 0;
       var admin = (window.Wallet && Wallet.get) ? Wallet.get().is_admin : false;
       var picks = (window.Wallet && Wallet.get) ? (Wallet.get().album_picks || 0) : 0;
@@ -18604,6 +18640,7 @@ window.renderAdminStats = renderAdminStats;
         '<div class="col-grid">' + items.map(function (a) {
           return card(a, {
             owned: !!owned[a.album_id],
+            paid: (mineRow[a.album_id] || {}).price,
             // A pick still has to go through pricing, so it is only offered on
             // a record that already has a price. The pricing sweep below puts
             // the button on as each price lands.
@@ -21689,8 +21726,16 @@ window.track = function (name, props) {
 
   function playRows() { return _plays || []; }
 
+  /* Two sources write this column and they key differently: an imported
+     Spotify export carries spotify:track:<base62>, and VINALL's own player
+     carries deezer:track:<numeric>. Both are real ids for the track — they
+     just name it in different catalogues — and the ratings map they are
+     looked up in already holds both kinds, because a record rated before the
+     catalogue moved kept its Spotify key. So read either prefix and hand back
+     the id; refusing the Deezer one would leave every play the player
+     observes invisible to the finders below. */
   function trackIdOf(r) {
-    var m = /^spotify:track:([A-Za-z0-9]+)$/.exec(String(r.track_uri || ''));
+    var m = /^(?:spotify|deezer):track:([A-Za-z0-9]+)$/.exec(String(r.track_uri || ''));
     return m ? m[1] : null;
   }
 
@@ -23029,10 +23074,19 @@ window.track = function (name, props) {
     lastT = t;
     if (counted || acc < 20) return;
     counted = true;
+    /* deezer:, not spotify:. cur.id is a DEEZER track id — the catalogue moved
+       and the player reads its tracks off it. Writing 'spotify:track:' + a
+       Deezer id would file a fabricated Spotify URI in listening_plays,
+       indistinguishable from the real ones an import puts there, and
+       listening_note_play coalesces track_uri rather than overwriting it — so
+       whichever source inserts first owns that column for good and an import's
+       real id could never land afterwards. Same defect as the two dead
+       spotify: links the catalogue switch left behind, except this one would
+       have written it to the database. */
     if (window.VinalListening) VinalListening.noteListen({
       track: cur.name, artist: cur.artist,
       album: (album && album.meta && album.meta.name) || null,
-      uri: cur.id ? 'spotify:track:' + cur.id : null,
+      uri: cur.id ? 'deezer:track:' + cur.id : null,
       ms: Math.round(acc * 1000)
     });
   }

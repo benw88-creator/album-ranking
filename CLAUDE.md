@@ -753,6 +753,20 @@ valuation, so knowing what a record is worth pays off in two different games.
 - **Selling refunds 70%.** Churning has to cost something, or a net worth only measures how
   many times somebody has been round the loop. `collection_sell` takes no price: the refund is
   derived from the stored row, so it is safe to expose straight to a signed-in client.
+  - **70% of what you PAID, never of what the record is worth today**, and the Sell button
+    read the wrong one of those on the Market tab. `card()` printed `a.price * 0.7`, which is
+    right on the shelf — there `a` *is* the collection row — and wrong on the Market, where
+    `a` is a market row carrying today's valuation. Worse, `priceSweep` deliberately skips
+    anything you already own, so that price was never filled in and the button sat at
+    **"Sell 0"** while the confirm dialog underneath it correctly offered thousands.
+  - Nobody lost anything: `sell()` reads `_mine` for both the figure and the confirm text, and
+    the server derives the refund from the stored row regardless. It was a button and a dialog
+    disagreeing, which costs trust rather than Discs — but on the most expensive control in
+    the app that is still the wrong place to be approximate.
+  - The Market now passes the collection row's `price` in as `opts.paid`. **No paid price
+    known renders a bare "Sell"**, not "Sell 0": a refund of zero is a fact about the record
+    and this would be inventing it, the same line the market's "cannot be priced" wording
+    draws.
 - **The market page prices from the `album_plays` cache**, never inline. Twenty uncached
   albums would be twenty kworb fetches in one serverless invocation, which times out. So the
   `GET` still returns those rows with `price: null` — and **the page fills them in itself**,
@@ -997,6 +1011,33 @@ audio it can observe a play directly.
   the usual cause is the migration not being applied yet, which is the normal state on
   this project, and a handled error with no report at all is worse than an unhandled one.
 
+#### The URI is `deezer:track:`, and getting that wrong would have been permanent
+
+The player shipped writing `'spotify:track:' + cur.id` — and `cur.id` is a **Deezer** track
+id, because the catalogue moved and the player reads its tracks off it. That is a fabricated
+Spotify URI naming nothing on Spotify, filed in the same column and the same format as the
+real ones an import puts there, with nothing to tell them apart afterwards.
+
+**It was caught before the migration was applied, which is the only reason it is not
+permanent.** `listening_note_play` does `track_uri = coalesce(existing, excluded)` — fill a
+gap, never overwrite, which is right for its stated purpose because an import carries better
+metadata than a preview lookup. The consequence is that **whichever source inserts first owns
+that column for good**: the `k` merge key is `artist|track`, so a play and an imported row for
+the same track become one row, and a fake id written first would block the real one forever.
+
+Same defect as the two dead `spotify:` links the catalogue switch left behind, one level
+worse — those built a bad link at render time, this one would have written it to the database.
+`trackIdOf` accepts **either prefix** and hands back the id, because both name the track
+honestly and the ratings map it is looked up in already holds both kinds of key.
+
+**Applying the migration will not make the two finders start firing, and that is expected.**
+`findRinsed` wants 15 plays of one track and `findAbandoned` wants 20 plays plus **240 days**
+of silence — thresholds sized against an import covering years. Fed by 20-second listens to a
+30-second preview, the first `findAbandoned` card is not reachable before roughly May 2027.
+The table still has to start filling sometime, so the migration is right to apply; whether
+those thresholds should differ by `source` is a separate decision and should not be bundled
+with anything.
+
 ### A custom-scheme navigation fails silently, so nothing may claim success
 
 If Spotify is not installed, firing `spotify:track:` does **absolutely nothing** — no
@@ -1119,6 +1160,27 @@ Spotify or claims to be it.
 has never heard of — so `openAlbum` sends `?name=&artist=` and the route resolves by name.
 Ratings, the Collection, Certification and score history keep their keys untouched. No table was
 re-keyed and nobody's crate was rewritten. New records get Deezer's numeric ids.
+
+**Every caller that can hold a legacy id must send a name, and three of them did not.** The
+symptom was three 400s from `/api/catalogue` on every logged-out load, which is exactly the
+shape this is: the route is *correctly* refusing a request it cannot serve, and the fault is
+upstream. Three, because `related-artists` is dead so the candidate list is just the three
+recommendation seeds — each one an artist id taken from a record in the crate.
+
+- **Recommendation seeds.** `addCand` was already keeping the artist name; the call simply
+  did not pass it. A pre-switch crate therefore produced no recommendations at all.
+- **`pickNewrelArtist`** reads `fav_artist` off the profile, which may have been saved before
+  the switch.
+- **`/artists/{id}` — the plain artist branch — had no legacy handling at all**, in neither
+  `_toCatalogue` nor the route, so it went to Deezer as a base62 string and came back a
+  **502** rather than a 400. It resolves by name now like the other two, and an artist the
+  search cannot match returns a **200 with an empty `images` array** rather than an error:
+  "no picture" is a real answer the caller already handles, and it must not gate the page.
+
+The rule worth keeping: `/albums/{id}`, `/artists/{id}` and `/artists/{id}/albums` all take a
+legacy id and all three need `?name=`. Adding a fourth path that accepts an id means deciding
+this again, and a numeric Deezer id skips the name branch entirely, so passing one always costs
+nothing.
 
 ### What deliberately stayed on Spotify
 

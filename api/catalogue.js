@@ -212,7 +212,27 @@ export default async function handler(req, res) {
 
     // ---- artist ----------------------------------------------------------
     if (path === 'artist') {
-      const a = await dz('/artist/' + encodeURIComponent(String(q.id || '')));
+      let aid = String(q.id || '');
+      // A legacy Spotify artist id resolves by name here exactly as it does
+      // for an album and for the discography below. This branch was the one
+      // that did not, so a fav_artist saved before the catalogue moved was
+      // handed to Deezer as a base62 string, dz() threw, and the artist hero
+      // lost its background to a 502 that named nothing useful.
+      if (!/^\d+$/.test(aid)) {
+        if (!q.name) { res.status(400).json({ error: { status: 400, message: 'name required to resolve a legacy artist id' } }); return; }
+        const wantA = loose(String(q.name));
+        const fa = await dz('/search/artist?limit=10&q=' + encodeURIComponent(String(q.name)));
+        const hitA = (fa.data || []).find(x => loose(x.name) === wantA) || null;
+        // No match is a real answer: an artist with no picture, which the
+        // caller already handles. It is not an error and must not gate the page.
+        if (!hitA) {
+          res.setHeader('Cache-Control', DAY);
+          res.status(200).json({ id: aid, name: String(q.name), source: 'deezer', images: [], external_urls: { spotify: '' } });
+          return;
+        }
+        aid = String(hitA.id);
+      }
+      const a = await dz('/artist/' + encodeURIComponent(aid));
       res.setHeader('Cache-Control', WEEK);
       res.status(200).json({
         id: String(a.id), name: a.name, source: 'deezer',
