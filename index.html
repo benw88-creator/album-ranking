@@ -22380,20 +22380,46 @@ window.track = function (name, props) {
   document.addEventListener('keydown', unlock, { once: true, capture: true });
 
   /* ---- transport --------------------------------------------------- */
+  /* The tracklist ALREADY carries its own clip.
+
+     /api/catalogue returns `preview_url` on every track, straight off the
+     same Deezer album the page is showing. The first version threw that away
+     and ran a SECOND, independent album search by name, then matched tracks
+     to it by normalised title — so the clips came off whichever edition that
+     search happened to land on. A deluxe, a remaster or a regional pressing
+     has different tracks, or the same tracks under slightly different titles,
+     and every one that failed to match read as "no preview" and offered to
+     throw you out to Spotify. On some records that was most of the album.
+
+     Taking the clip off the track it belongs to makes the match exact by
+     construction: if Deezer has a preview for a track on this record, VINALL
+     has it. There is nothing left to mismatch.
+
+     The name sweep survives only as a fallback for tracks that arrive with no
+     clip of their own, and it is not even requested unless there are some. */
   function setAlbum(tracks, meta) {
     album = { tracks: (tracks || []).map(function (t, i) {
       return { id: t.id, name: t.name, i: i,
                artist: ((t.artists || []).map(function (a) { return a.name; })[0]) || (meta && meta.artist) || '',
-               durMs: t.duration_ms || 0 };
+               durMs: t.duration_ms || 0,
+               preview: t.preview_url || null };
     }), meta: meta || {}, map: null };
     var mine = album;
+    var gaps = album.tracks.filter(function (t) { return !t.preview; }).length;
+    paintAvailability();                                 // what we know already
+    if (!gaps) { album.map = {}; return; }               // nothing left to look up
     sweep(album.meta).then(function (m) {
       if (album !== mine) return;                        // another record opened
       album.map = m || {};
       paintAvailability();
     });
   }
-  function previewFor(t) { return (album && album.map && t) ? (album.map[norm(t.name)] || null) : null; }
+  // The track's own clip first, the name-matched sweep only as a fallback.
+  function previewFor(t) {
+    if (!t) return null;
+    if (t.preview) return t.preview;
+    return (album && album.map) ? (album.map[norm(t.name)] || null) : null;
+  }
 
   // Thirty per cent of tracks have no preview, so the row says which it is
   // BEFORE it is pressed. Pressing and being surprised is the version of
@@ -22401,11 +22427,15 @@ window.track = function (name, props) {
   // record. Nothing is marked until the sweep lands, because "no preview"
   // and "not looked yet" are different claims.
   function paintAvailability() {
-    if (!album || !album.map) return;
+    if (!album) return;
     document.querySelectorAll('button.idx[data-pv]').forEach(function (b) {
       var t = album.tracks[parseInt(b.getAttribute('data-pv'), 10)];
       if (!t) return;
       var has = !!previewFor(t);
+      // A track with no clip of its own is not yet a track with no clip, until
+      // the sweep has answered. Saying so early is the "no preview" lie the
+      // first version told on most of an album.
+      if (!has && !album.map) return;
       b.classList.toggle('nopv', !has);
       b.title = has ? 'Play preview' : 'No preview - opens in Spotify';
     });
@@ -22415,9 +22445,11 @@ window.track = function (name, props) {
     if (!album || !album.tracks[i]) return;
     unlock();
     var t = album.tracks[i], tok = ++loadTok;
-    // The sweep may not have landed on a fast tap, so wait for it rather
-    // than declaring a miss we have not actually looked for yet.
-    (album.map ? Promise.resolve(album.map) : sweep(album.meta)).then(function (m) {
+    // A track carrying its own clip needs no lookup at all — that is the
+    // common case now. Only a track without one waits for the sweep, and
+    // waiting beats declaring a miss we have not actually looked for yet.
+    (t.preview ? Promise.resolve(album.map || {})
+               : (album.map ? Promise.resolve(album.map) : sweep(album.meta))).then(function (m) {
       if (tok !== loadTok) return;                       // a later press won
       if (album) album.map = album.map || m || {};
       var src = previewFor(t);
