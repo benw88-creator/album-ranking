@@ -22034,21 +22034,20 @@ window.track = function (name, props) {
     }, 1400);
   }
 
-  // Delegated, so any row rendered later gets it for free and
-  // renderTracks() never has to re-wire anything it rebuilds.
-  document.addEventListener('click', function (ev) {
-    var btn = ev.target && ev.target.closest && ev.target.closest('[data-play]');
-    if (!btn) return;
-    ev.preventDefault();
-    ev.stopPropagation();
-    var row = btn.closest('.song-row');
-    if (window.ripple) ripple(btn, ev);
-    fire(btn.getAttribute('data-play'), {
-      button: btn,
-      row: row,
-      name: row && row.querySelector('.song-name') ? row.querySelector('.song-name').textContent : ''
-    });
-  });
+  // **There is deliberately no delegated handler here, and there must not be
+  // one.** The first version claimed every `[data-play]` on the page from
+  // `document` — and Cover Fire's match list had been using that exact
+  // attribute since it shipped, on the button that starts a pending match.
+  // So pressing Play on a match fired `spotify:track:<match uuid>`, and
+  // Spotify launched and took the whole screen over a UUID that is not a
+  // track. It read as "VINALL still redirects me to Spotify" long after the
+  // track rows had stopped doing any such thing.
+  //
+  // Nothing needs delegation now: the track rows carry `data-pv` and belong
+  // to the player, the bar's "Full track" calls Play.track() directly, and
+  // the fallback panel is an ordinary link. A module-level listener on
+  // `document` is a claim over the whole app's markup, so it has to be
+  // spelled specifically enough that only this module's own elements match.
 
   window.Play = { track: fire, url: webUrl, mobile: MOBILE };
 })();
