@@ -2106,6 +2106,39 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 .comp-bar { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; margin: 14px 0; }
 .comp-bar-fill { height: 100%; border-radius: 3px; background: var(--green); transition: width 0.5s ease; }
 .comp-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+/* Checkboxes. Both of them shipped as the browser default — a bright white
+   box on near-black, which made them the loudest thing on their screen and
+   the only control in the app that did not look like it belonged to it.
+
+   Themed to `--section`, so a tick takes the colour of the tab it is on, the
+   same way every other "this is on" state in VINALL does. A GLOBAL rule
+   rather than two classes, because the next checkbox somebody adds should
+   not have to remember this file exists. */
+input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; flex-shrink: 0;
+  margin: 0; padding: 0; border-radius: 5px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  cursor: pointer; position: relative; display: inline-block;
+  vertical-align: -3px;
+  transition: background 0.12s, border-color 0.12s;
+}
+input[type="checkbox"]:hover { border-color: var(--section, var(--text-dim)); }
+input[type="checkbox"]:checked {
+  background: var(--section, var(--text));
+  border-color: var(--section, var(--text));
+}
+/* Drawn rather than a glyph: a ✓ character sits differently in every font and
+   would not centre the same way twice. */
+input[type="checkbox"]:checked::after {
+  content: ''; position: absolute;
+  left: 5px; top: 1px; width: 3px; height: 7px;
+  border: solid var(--bg); border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+input[type="checkbox"]:focus-visible { outline: 2px solid var(--section, var(--text)); outline-offset: 2px; }
+html[data-motion="none"] input[type="checkbox"] { transition: none; }
 .comp-toggle { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-dim); cursor: pointer; user-select: none; }
 .comp-missing { font-size: 13px; color: var(--text-dim); margin-top: 10px; }
 .comp-missing b { color: var(--text); font-weight: 600; }
@@ -5258,7 +5291,7 @@ window.ICONS = {
   <div class="splash-scrim" id="splash-scrim"></div>
   <div class="splash-content">
     <div class="splash-word" id="splash-word">VINALL</div>
-    <p class="splash-tag">Music, remembered.</p>
+    <p class="splash-tag">The place for music.</p>
     <button class="splash-cta" id="splash-cta">GO</button>
   </div>
 </div>
@@ -5294,7 +5327,7 @@ window.ICONS = {
       <div class="brand-mark" aria-hidden="true"></div>
       <div class="brand-text">
         <h1>VINALL</h1>
-        <p>Music, remembered.</p>
+        <p>The place for music.</p>
       </div>
       <div class="waveform" aria-hidden="true">
         <span></span><span></span><span></span><span></span><span></span>
@@ -5804,7 +5837,7 @@ window.ICONS = {
     <span>&middot;</span>
     <a href="/terms.html">Terms</a>
     <span>&middot;</span>
-    <span class="foot-note">VINALL &mdash; music, remembered.</span>
+    <span class="foot-note">VINALL &mdash; the place for music.</span>
     <!-- Spotify's Developer Policy requires attribution wherever their content
          is displayed, and every piece of artwork in this app is theirs. Apple
          will not raise this; Spotify can.
@@ -9557,11 +9590,13 @@ function drawCompletion(){
   const X=studio.filter(function(s){return ratedBases[baseAlbumTitle(s.name)];}).length;
   const Y=studio.length,pct=Math.round(X/Y*100),complete=X>=Y;
   const missing=studio.filter(function(s){return!ratedBases[baseAlbumTitle(s.name)];});
-  /* Unrated-only, EXCEPT when there is nothing left unrated. An artist you
-     have finished would otherwise open on an empty list under a full green
-     bar, which reads as broken rather than as done — the one moment the whole
-     discography is worth seeing is the moment you have all of it. */
-  const list=(compUnratedOnly&&missing.length)?missing:studio;
+  /* An earlier attempt made this fall back to the full list when nothing was
+     unrated, to avoid an empty panel. That was wrong twice: the empty case
+     already renders "All studio albums rated" below, which is the collapsed
+     view this is supposed to produce — and the fallback meant that for a
+     finished artist the toggle changed nothing at all, so it read as a dead
+     checkbox. Keep it literal. */
+  const list=compUnratedOnly?missing:studio;
   /* The sleeve on every row. A discography as a column of titles is a
      spreadsheet; the cover is how anybody actually recognises a record they
      have not got round to, and it is the thing this list is asking them to go
@@ -21777,8 +21812,8 @@ window.track = function (name, props) {
 
   var _undoItem = null, _undoQ = null, _undoRestore = null;
 
-  function setUndoable(item, q) {
-    _undoItem = item; _undoQ = q;
+  function setUndoable(item, q, restore) {
+    _undoItem = item; _undoQ = q; _undoRestore = restore || null;
     var b = document.getElementById('today-undo');
     if (b) {
       b.style.display = ''; b.disabled = false; b.textContent = 'Undo';
@@ -21911,8 +21946,32 @@ window.track = function (name, props) {
       paintCount(true);
       if (window.Wallet && Wallet.syncAward) Wallet.syncAward('lore');
 
-      // The card is answered, so the header Undo now has something to undo.
-      setUndoable(d.item, d.q);
+      /* The card is answered, so the header Undo now has something to undo —
+         and, crucially, something to put back.
+
+         `_undoRestore` was declared and read but NEVER assigned, so undo
+         deleted the answer and then did nothing anybody could see: the button
+         vanished, the card stayed settled, and the only feedback was two
+         seconds of changed hint text. It read as a dead button.
+
+         This un-settles the card: options back, confirmation away, and the
+         pending auto-advance cancelled — without that the card you just took
+         back slides away by itself a moment later. */
+      setUndoable(d.item, d.q, function () {
+        if (!slot || !slot.isConnected) return false;   // card already gone
+        var opts = slot.querySelector('.td-opts');
+        if (!opts) return false;
+        if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+        opts.style.display = '';
+        var oth = slot.querySelector('.td-other-wrap');
+        if (oth) oth.style.display = 'none';
+        var aft = slot.querySelector('.td-after');
+        if (aft) aft.style.display = 'none';
+        var nb = slot.querySelector('.td-next');
+        if (nb) nb.style.display = 'none';
+        sizeToSlot();
+        return true;
+      });
 
       var nextBtn = slot.querySelector('.td-next');
       if (!autoOn()) {
