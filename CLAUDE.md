@@ -2522,9 +2522,38 @@ ever refreshed:
   outside the three tables — those would be runtime artwork from the live API and must not be
   rewritten by a data pass.
 
-Still open: the Design Guidelines forbid overlays on cover art, which is what the Certification
-finishes are. That one needs either Collection artwork off Spotify too, or finishes restyled as
-a frame rather than a wash over the sleeve.
+### `Covers` — a non-Spotify sleeve for the two surfaces that cannot keep one
+
+The static game pools were the bulk of it; two surfaces read artwork **live** and needed the
+same treatment:
+
+- **Certification finishes.** Holographic and Prism are animated washes laid *on top of* the
+  sleeve, and the guidelines say "Artwork must be kept in its original form. Don't animate or
+  distort it in any way. This includes applying overlays."
+- **Higher or Lower and Cover Fire's solo rounds**, which draw live from `crate_albums_v1` and
+  were therefore still showing Spotify art inside a game.
+
+`Covers` resolves a Deezer sleeve for those two and **nothing else changes anywhere**. Album
+pages, search, the Crate and profiles keep Spotify artwork and should: a rating site showing
+records, crediting Spotify with the logo and linking back to each release is what the API is
+*for*. That use is intended, not tolerated.
+
+- **Keyed by artist + album name, not by Spotify id**, because the callers do not agree on ids:
+  the crate keys by Spotify album id, the Collection and Masters come back from the `collection`
+  table, and a Crate feed row has neither. A name is the one thing all of them carry.
+- **It rides `/api/preview`**, which already resolved the album on Deezer for the player's clips
+  and now returns `cover` alongside them. One lookup serves both, and the week-long edge cache
+  makes the second caller free.
+- **A miss is cached too.** Deezer has no *808s & Heartbreak*; without that, every render of a
+  shelf holding it would spend another request rediscovering the same absence.
+- **The swap lives inside `Cert.art()`**, because that is the single renderer every plated
+  surface goes through — the property this file already relies on for a finish bought in one
+  place appearing in the others. A caller that does not pass `artist`/`album` renders exactly as
+  before, so an un-updated one degrades rather than breaking.
+- **Spotify's URL stays the fallback while a lookup is in flight, deliberately.** The
+  alternative is a blank square, and on Cover Fire the sleeve *is* the question — a placeholder
+  would break the game to win a second of purity. Game pools are warmed when they are built, so
+  that window is first-visit only.
 
 `STORE-SUBMISSION.md` holds the paste-ready **App Review notes**, and the decisions on the two
 outside dependencies: the Spotify Development Mode cap does not apply (it limits authenticated
