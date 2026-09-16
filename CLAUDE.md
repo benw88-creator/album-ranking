@@ -1142,6 +1142,44 @@ the Services shall not be associated, directly or indirectly with any trademark,
 or logo."* The Spotify mark still renders on the two controls that link to Spotify, and a
 Deezer sleeve now sits on the same screen as it.
 
+### Deezer's logo is mandatory, and Spotify's marks had to come off
+
+> "Each application using Deezer API/SDKs must have to include a clearly visible Deezer
+> Logo... **The respect of these logo guidelines is mandatory. Deezer Logo must be clearly
+> visible and identified.**"
+
+VINALL credited Deezer in plain text and showed no logo at all, which does not meet that.
+
+`assets/deezer-mark.png` is **Deezer's own published icon, taken unaltered from their CDN**.
+It is deliberately not redrawn: a brand mark reproduced from memory is an altered brand mark,
+and the same guidelines forbid altering it. Their brand site was erroring at the time, so this
+was the faithful route available — swap it for the full wordmark from deezerbrand.com when
+that is reachable. Do not recolour, crop or squash it.
+
+It appears in the footer, in Settings and on the album page button. `.dz-credit` is the one
+class that lays it out.
+
+**The Spotify marks came off every surface in the same pass**, for two reasons that agree:
+
+- Spotify supplies none of this app's content any more, so their attribution requirement has
+  nothing left to attach to.
+- Deezer's terms say their Content *"shall not be associated, directly or indirectly with any
+  trademark, brand name, or logo"* — another streaming service's mark on the same screen as
+  their sleeves is the clearest case of that there is.
+
+So the album page button is **Open in Deezer**, pointing at the record's real Deezer url once
+the tracklist lands (`link` on the album response) and a Deezer search until then, so it is
+never aimed at nothing. The player bar's **Full track** goes to Deezer too — where the clip
+came from, and where a Premium+ account plays the whole thing.
+
+**The Spotify handoff is parked, not deleted.** The `Play` module is intact and unwired; one
+line in the `#pb-open` handler brings it back, the same arrangement as market-mode Bid Wars.
+If VINALL ever leaves Deezer it is waiting. `SpotifyMark` is likewise still defined and unused.
+
+**Commercial use is off the table while the catalogue is Deezer's.** Their terms are
+non-commercial in as many words, and that is the standing constraint — not a detail. See the
+trade table above.
+
 ### Known regressions
 
 - **Search results have no year.** Deezer's album search omits `release_date`; it arrives when
