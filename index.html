@@ -22457,7 +22457,9 @@ window.track = function (name, props) {
 
   /* ---- wiring ------------------------------------------------------ */
   document.addEventListener('click', function (ev) {
-    var b = ev.target && ev.target.closest && ev.target.closest('[data-pv]');
+    // Scoped to this module's own button, not a bare attribute — see the note
+    // in Play about what happened when a document listener claimed one.
+    var b = ev.target && ev.target.closest && ev.target.closest('button.idx[data-pv]');
     if (!b) return;
     ev.preventDefault(); ev.stopPropagation();
     if (window.ripple) ripple(b, ev);
