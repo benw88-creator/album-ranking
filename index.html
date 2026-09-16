@@ -22141,7 +22141,15 @@ window.track = function (name, props) {
     try {
       var a = audio(); a.src = SILENT;
       var p = a.play(); if (p && p.catch) p.catch(function () {});
-      setTimeout(function () { try { a.pause(); a.removeAttribute('src'); } catch (e) {} }, 0);
+      setTimeout(function () {
+        try {
+          // ONLY tidy up if nothing real has loaded since. playIndex() calls
+          // unlock() and sets a genuine src a microtask later, so this timer
+          // lands after it — unguarded, it paused and stripped the source of
+          // the track the very same tap had just started, on every press.
+          if (a.src === SILENT) { a.pause(); a.removeAttribute('src'); }
+        } catch (e) {}
+      }, 0);
     } catch (e) {}
   }
   document.addEventListener('pointerdown', unlock, { once: true, capture: true });
