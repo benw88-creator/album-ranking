@@ -793,26 +793,132 @@ missed site means that row pays full price on a free spin.
   and marked `via_pick` so it cannot be sold. See The Draw for why that restriction is
   load-bearing rather than flavour.
 
-## Playing a track — VINALL plays nothing, on purpose
+## Playing a track
 
-The track number on every row of an album page is a button. Pressing it fires the
-record's URI at the operating system and whatever Spotify is already running picks it
-up. The `Play` module at the very bottom of `index.html` is the whole feature, and it
-is about forty lines.
+The track number on every row of an album page is a button. About 70% of the time it
+plays the record in VINALL, with a player bar carrying pause, scrub, next, previous and
+lock-screen controls. The other 30% it hands the track to Spotify, at full length,
+with no controls — and the row says which it is **before** you press it.
 
-**Verified end to end on Windows, 2026-09-16**: with Spotify not running at all, firing
-`spotify:track:19YKaevk2bce4odJkP5L22` cold-launched the app and its window title became
-`Frank Ocean - Nikes`, which Spotify only shows once a track is loaded and playing.
+Two modules at the bottom of `index.html`: `Play` (the handoff) and `VinalPlayer` (the
+bar and the audio).
 
-### Why a handoff and not a player
+### There is no pause link, and that is why VINALL owns an `<audio>` element
 
-Because the two routes that would let VINALL actually stream both need a per-user OAuth
-grant, and **this app is in Spotify's Development Mode, which has been capped at five
-authorised users since February 2026**. Extended Quota wants a registered business at
-250,000 MAU. A Web Playback SDK player would work beautifully — for five people.
+The handoff came first and does one thing: fire the record's URI at the operating
+system and let whatever Spotify is running pick it up. **Verified end to end on Windows
+2026-09-16** — with Spotify not running at all, `spotify:track:19YKaevk2bce4odJkP5L22`
+cold-launched the app and its window title became `Frank Ocean - Nikes`, which Spotify
+only shows once a track is loaded and playing.
 
-That cap is not theoretical and it is already visible in this repo. Probing the live API
-through `/api/app-token`:
+Then pause was asked for, and the honest answer is that **a `spotify:` link has exactly
+one verb**. Fired at a live client, all of these did nothing at all:
+
+`spotify:pause` · `spotify:playpause` · `spotify:app:pause` · `spotify:action:pause` ·
+`spotify:internal:pause` · the same track twice (it plays, it does not toggle) · a bare
+`spotify:` · `spotify:search:blonde` over a playing track (it kept playing)
+
+Windows accepted every one, because Spotify claims the whole scheme. Spotify ignored
+every one. The vocabulary is one word long and the word is *open this*. Do not go
+looking for a second verb; it was looked for.
+
+There is a second reason, and it is the worse one: **VINALL cannot read Spotify's state
+either.** Even given a pause link, the button would not know whether to show ▶ or ⏸, so
+it would be wrong about half the time. A pause button that might be a play button is
+worse than no button.
+
+Pause therefore requires owning the sound. Which is why there is an `<audio>` element
+fed 30-second previews from Apple's **iTunes Search API** — no key, no account, no
+OAuth, answers CORS from this origin directly, works for a logged-out visitor. Every
+control follows from owning the element, including `navigator.mediaSession`, which puts
+real controls on a phone's lock screen. No iframe or embed can do that.
+
+The alternative was Spotify's own `/me/player/*`, which does all of this perfectly —
+**for five people.** See the Development Mode note below.
+
+### Resolution: ONE Apple request per album, and the fallback that was deleted
+
+Three strategies were measured against real records before one was kept:
+
+| | |
+|---|---|
+| per-track search | 83% on some records, **0% on others**, seventeen requests per album |
+| album lookup (`entity=album`) | exact when it works, but **does not list Blonde or IGOR at all** — they are in the catalogue as tracks and not as buyable albums |
+| **one song sweep**, filtered on `collectionName` | one request, 70% of tracks — kept |
+
+Measured coverage: **In Rainbows 100%, Graduation 100%, Blonde 65%, IGOR 17%.** Apple's
+catalogue thins out badly on streaming-first records and nothing in this code can fix
+that.
+
+**A per-track fallback was built, measured and deleted.** Across 53 tracks it recovered
+exactly **zero** that the sweep had missed, at one request each. Everything the sweep
+cannot find, a narrower search cannot find either. Do not add it back without measuring
+it again.
+
+`collectionName` is the guard against covers, and it is load-bearing: a search for
+Tyler's EARFQUAKE returns a tribute act and a *lullaby rendition* above the original,
+and does not return the original at all.
+
+**Apple is called from the browser and must stay there.** The limit is roughly 20
+requests a minute *per IP* — from here that is per listener and free; from a Vercel
+route the whole of VINALL would share one budget and be throttled on the first busy
+evening. One request per album also retired the rate-limit worry that shaped the first
+draft, which resolved per track and would have spent a listener's minute before they
+pressed anything.
+
+Apple's terms permit previews to promote store content and want the asset kept near a
+store link. `#pb-apple` is that link. It is not decoration.
+
+### The 30% is marked, not discovered
+
+A track with no preview is marked before it is pressed and hands off to Spotify
+instead — which is *better* audio, at full length, minus the controls. Pressing and
+being surprised is the version of this that feels broken. Nothing is marked until the
+sweep lands, because "no preview" and "not looked yet" are different claims.
+
+`next`/`prev` skip past unplayable tracks via `seekPlayable` rather than stopping the
+record dead on one.
+
+### The unlock timer was killing the track the same tap had started
+
+The bar filled in correctly, the row lit up, the media session carried the right title,
+and the audio sat at 0:00, paused. Every time.
+
+`unlock()` primes a silent clip so iOS grants the element permission inside a real
+gesture, then tidies up on a `setTimeout(0)`. `playIndex()` calls `unlock()` and sets
+the genuine `src` a microtask later — so **the timer always landed after the real
+source**, and its `pause()` + `removeAttribute('src')` stripped the track that the very
+same press had started. Not a race; guaranteed. The cleanup now runs only while the
+source is still the silent clip.
+
+It is worth knowing how it was found, because everything downstream looked healthy: a
+fresh `new Audio()` on the identical URL played first time, which ruled out autoplay
+policy, the preview URLs, CORS and the whole Apple sweep in one step and left only the
+module.
+
+### A custom-scheme navigation fails silently, so nothing may claim success
+
+If Spotify is not installed, firing `spotify:track:` does **absolutely nothing** — no
+error, no event, no rejected promise. So the handoff never says "playing". It watches
+for the page to lose focus (`blur`, `pagehide`, `visibilitychange`), because an app
+coming forward is the only evidence available, and after 1.4s with none of them it
+offers the web player.
+
+**That offer is worded as a question and must stay that way.** Losing focus is evidence
+an app came forward, never proof that none did: Spotify *already running* can take the
+URI and start playing without raising a window, and the panel would then appear over a
+track that is audibly playing. "Didn't open?" is harmless when wrong. "No Spotify app
+answered", which shipped first, is a lie in the register this file keeps warning about.
+
+Desktop autoplay is also **not guaranteed** — one test run opened Spotify and left it
+idle on "Spotify Premium" rather than playing. Usually it plays; occasionally it just
+opens the app.
+
+### Why a player at all, rather than Spotify's
+
+This app is in Spotify's **Development Mode**, capped at **five authorised users** since
+February 2026, with Extended Quota gated behind a registered business at 250k MAU. The
+cap is visible in this repo — probing the live API through `/api/app-token`:
 
 | | |
 |---|---|
@@ -820,71 +926,38 @@ through `/api/app-token`:
 | `/search?limit=10` | 200 |
 | `/search?limit=20` | **400 Invalid limit** |
 | `GET /albums?ids=` (batch), `/artists/{id}/top-tracks` | **403 Forbidden** |
-| `popularity`, `available_markets` on any object | **gone** |
+| `popularity`, `available_markets` | **gone** |
 
-So the note under Daily Drop — "search limit **10** — anything larger is a 400" — is not a
-Spotify quirk somebody discovered, it is the February 2026 Development Mode restriction,
-and VINALL survives that migration only because it happens to fetch single items
-everywhere. Two other things came with it: the app owner must hold active Premium or the
-whole app stops, and refresh tokens now expire **six months from original consent** rather
-than from the last refresh.
+So the note under Daily Drop — "search limit **10** — anything larger is a 400" — is not
+a Spotify quirk somebody found, it is the February 2026 restriction, and VINALL survives
+that migration only because it fetches single items everywhere. Two other things came
+with it: the app owner must hold active Premium or the whole app stops, and refresh
+tokens now expire **six months from original consent** rather than from last refresh.
 
-The handoff needs none of it. No token, no scopes, no Premium check, no user cap, and
-nothing to break the next time the Web API changes.
+Neither the player nor the handoff touches any of it.
 
-**Playback then survives browsing VINALL for free, because VINALL was never the thing
-playing.** The persistence problem an embed would have created does not exist here at all
-— and it is a real one: re-parenting an iframe silently kills its playback, which is the
-`#draw-block` trap in a new costume and would have bitten on the first `innerHTML` render.
+### Structure
 
-### A custom-scheme navigation fails silently, so nothing may claim success
+- `#player-bar` is a **direct child of `<body>`**, a sibling of every view. The album
+  page rebuilds its `innerHTML` constantly and a player inside it would be destroyed
+  mid-note — the `#draw-block` rule again. Its `z-index` is 160, under the modals.
+- A row only knows its **index**; the player holds the record. So re-rendering the list
+  cannot strand the queue that is playing.
+- The click handler is delegated on `document`, so `renderTracks()` re-wires nothing.
+- One `<audio>`, created once and reused forever. iOS will not let a *new* element play
+  outside a gesture.
+- `.song-row .idx` sets `width: 24px` and outranks a bare `button.idx`, so the circle
+  first shipped as a 24×26 oval. Restated at matching specificity. Measure the rendered
+  box, not the rule.
 
-If Spotify is not installed, firing `spotify:track:` does **absolutely nothing**. No error,
-no event, no rejected promise, no console line. So the button never says "playing", because
-it cannot know that.
+### What this still does not do
 
-What it does instead is watch for the page to lose focus — `blur`, `pagehide` or
-`visibilitychange`, whichever comes first — because an app coming forward is the only
-evidence available. If none of them fires within 1.4s, it offers the web player.
-
-**That offer is worded as a question and must stay that way.** Losing focus is evidence
-that an app came forward, never proof that none did: Spotify *already running* can take
-the URI and start playing without raising a window, and then the panel appears over a
-track that is audibly playing. "Didn't open?" is harmless when it is wrong. "No Spotify
-app answered" — which is what shipped first — is a lie in exactly the register this file
-keeps warning about.
-
-The test is desktop-only. On a phone the https link **is** the handoff, so there is
-nothing left to fall back to.
-
-### The rest of it
-
-- **Desktop takes `spotify:track:`**, which hands to the native client without navigating
-  the page — verified, `location` and `title` are unchanged after firing it. **Phones take
-  `https://open.spotify.com/track/`** with `target="_blank"`, because iOS and Android
-  resolve that to the installed app themselves, and a phone that does *not* resolve it
-  opens a tab rather than walking the listener out of VINALL.
-- One anchor, created and clicked inside the user's own click, so neither the custom scheme
-  nor the popup blocker treats it as something the page did by itself.
-- The click handler is **delegated on `document`**, so `renderTracks()` rebuilding its
-  innerHTML re-wires nothing, and any row added anywhere later gets it for free.
-- **The hint is printed above the tracklist.** A number that is secretly a button is not
-  something anybody finds by playing — that is the line this file draws about the Discs
-  page, applied in the other direction.
-- `.song-row .idx` already sets `width: 24px` and outranks a bare `button.idx`, so the
-  circle shipped as a 24×26 oval. The width is restated at matching specificity. Measure
-  the rendered box, not the rule.
-
-### What this does not do, and the one worth doing next
-
-It does not know whether anything played, so it logs nothing. That is the shame of it:
-`listening_plays` exists, `findRinsed` and `findAbandoned` are first in `buildQueue`, and
-they sit on a table almost nobody will ever populate because filling it needs a Spotify
-data export. **Every press of this button is a first-party play signal on a track whose id
-VINALL already holds** — an intent to listen, which is weaker than a play and far stronger
-than nothing. Wiring it needs a `SYNC_KEYS` entry and a merge rule of its own (counts take
-the larger, like the game log's), which is why it is not in the change that added the
-button.
+It logs nothing. `listening_plays` exists, `findRinsed` and `findAbandoned` are first in
+`buildQueue`, and they sit on a table almost nobody will populate because filling it
+needs a Spotify data export. **Now that VINALL plays the audio itself, a press is a
+genuine first-party play signal** — and unlike the handoff, the player knows whether it
+actually played and for how long. Wiring it needs a `SYNC_KEYS` entry and a merge rule
+of its own (counts take the larger, like the game log's).
 
 ## Settings
 
