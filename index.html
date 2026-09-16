@@ -6942,7 +6942,7 @@ async function openAlbum(meta) {
     encodeURIComponent(((meta.artist || '') + ' ' + (meta.name || '')).trim());
 
   const albums = loadAlbums();
-  const existing = albums[meta.id];
+  const existing = findAlbumRec(albums, meta);
   if (existing && existing.genre) currentAlbum.genre = existing.genre;
   if (existing && existing.note) currentAlbum.note = existing.note;
   if (existing) updateDetailScore(existing.score);
@@ -6964,7 +6964,7 @@ async function openAlbum(meta) {
     const tracks = (data.tracks && data.tracks.items) || [];
     if (data.genres && data.genres.length) currentAlbum.genre = data.genres[0];
     renderTracks(tracks, meta);
-    compUnratedOnly = false;
+    compUnratedOnly = true;      // every album page opens showing what is left
     primeCompletion(currentAlbum);
   } catch (e) {
     if (e.message === 'not-authenticated') return;
@@ -6977,7 +6977,7 @@ function renderTracks(tracks, meta) {
   const host = document.getElementById('detail-tracks');
   if (!tracks.length) { host.innerHTML = '<div class="sugg-empty">No tracks found.</div>'; return; }
   host.innerHTML = tracks.map(function (t, i) {
-    const saved = songs[t.id];
+    const saved = findSongRec(songs, t, meta);
     const val = saved ? saved.score : 0;
     const n = t.track_number || (i + 1);
     return '<div class="song-row" data-track="' + t.id + '" style="--score:' + songColor(val) + ';">' +
@@ -7114,6 +7114,68 @@ document.getElementById('detail-back').addEventListener('click', function () { s
 const ALBUMS_KEY = 'crate_albums_v1';
 const SONGS_KEY  = 'crate_songs_v1';
 
+/* FINDING A RATING WHEN THE ID HAS MOVED
+
+   Ratings are keyed by the catalogue's id, and the catalogue changed. Every
+   record rated before that carries a Spotify id; the same record looked up
+   today comes back with a Deezer one. So `songs[t.id]` missed on everything
+   already rated, and an album page drew a whole tracklist of zeros — which
+   reads exactly like the ratings were wiped.
+
+   **Nothing was lost.** The records are still in crate_songs_v1 and
+   crate_albums_v1 under their old keys; they were simply not being found.
+
+   So a lookup falls back to the name. An id is a catalogue's opinion and can
+   change under you; "Weird Fishes / Arpeggi on In Rainbows" is the record,
+   and that does not move.
+
+   Nothing is re-keyed or deleted. A migration would be the obvious fix and
+   the wrong one: another device still holds the old key, mergeItemMap unions
+   per item, and the old row would come straight back as a duplicate. Instead
+   saveAlbum/saveSong write to whatever key the existing record already has,
+   so re-rating updates the original rather than starting a second copy. The
+   stored id stays whatever it always was, which is fine — it is an opaque
+   key, not a claim about any catalogue. */
+function _ratingKey(a, b) {
+  var n = function (s) {
+    return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase().replace(/\([^)]*\)|\[[^\]]*\]/g, '')
+      .replace(/-\s*(\d{4}\s*)?(remaster|remastered|deluxe|expanded|edition|version)\b.*$/i, '')
+      .replace(/[^a-z0-9]+/g, '');
+  };
+  return n(a) + '|' + n(b);
+}
+// Album: id, else artist+name.
+function findAlbumRec(albums, meta) {
+  if (!meta) return null;
+  if (meta.id && albums[meta.id]) return albums[meta.id];
+  var want = _ratingKey(meta.artist, meta.name);
+  if (want === '|') return null;
+  for (var k in albums) {
+    var r = albums[k];
+    if (r && _ratingKey(r.artist, r.name) === want) return r;
+  }
+  return null;
+}
+// Song: id, else album+title (tightest), else artist+title.
+function findSongRec(songs, track, albumMeta) {
+  if (!track) return null;
+  if (track.id && songs[track.id]) return songs[track.id];
+  var title = track.name;
+  var art = ((track.artists || []).map(function (a) { return a.name; })[0]) || (albumMeta && albumMeta.artist) || '';
+  var byAlbum = albumMeta ? _ratingKey(albumMeta.name, title) : null;
+  var byArtist = _ratingKey(art, title);
+  var loose = null;
+  for (var k in songs) {
+    var r = songs[k];
+    if (!r) continue;
+    if (byAlbum && byAlbum !== '|' && _ratingKey(r.albumName, r.name) === byAlbum) return r;
+    if (!loose && byArtist !== '|' && _ratingKey(r.artist, r.name) === byArtist) loose = r;
+  }
+  return loose;
+}
+window.findAlbumRec = findAlbumRec; window.findSongRec = findSongRec;
+
 function loadAlbums() { try { return JSON.parse(localStorage.getItem(ALBUMS_KEY)) || {}; } catch (e) { return {}; } }
 function loadSongs()  { try { return JSON.parse(localStorage.getItem(SONGS_KEY)) || {}; } catch (e) { return {}; } }
 function persist(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); flashSaved(); } catch (e) {} if (window.Cloud) Cloud.push(key); }
@@ -7195,10 +7257,13 @@ window.scoreMove = scoreMove;
 
 function saveAlbum(meta, score) {
   const albums = loadAlbums();
-  const prev = albums[meta.id];
+  // Reuse the existing record's key so a re-rate updates the original
+  // rather than starting a second copy under a new catalogue id.
+  const prev = findAlbumRec(albums, meta);
+  const albKey = (prev && prev.id) || meta.id;
   const now = Date.now();
-  albums[meta.id] = {
-    id: meta.id, name: meta.name, artist: meta.artist, artistId: meta.artistId || '',
+  albums[albKey] = {
+    id: albKey, name: meta.name, artist: meta.artist, artistId: meta.artistId || '',
     art: meta.art, year: meta.year || '', genre: meta.genre || '', score: score,
     note: (typeof meta.note === 'string') ? meta.note : (prev && prev.note) || '',
     savedAt: (prev && prev.savedAt) || now,
@@ -7212,8 +7277,8 @@ function saveAlbum(meta, score) {
   persist(ALBUMS_KEY, albums);
   // You have heard it now, so it stops being something to hear.
   if (shortlistHas(meta.id)) shortlistRemove(meta.id);
-  if (window.Cloud) Cloud.syncRating('album', meta.id, albums[meta.id]);
-  if (window.Cloud) Cloud.postToFeed(meta, score, albums[meta.id].note);
+  if (window.Cloud) Cloud.syncRating('album', albKey, albums[albKey]);
+  if (window.Cloud) Cloud.postToFeed(meta, score, albums[albKey].note);
   if (window.Wallet) Wallet.recordRating();
   _recsDirty = true;
   renderAlbums();
@@ -7223,22 +7288,31 @@ function saveAlbum(meta, score) {
 }
 function saveSong(track, score, albumMeta) {
   const songs = loadSongs();
+  // Write to whatever key this song already has, so a re-rate updates the
+  // original record instead of starting a second one under a new catalogue
+  // id. See findSongRec above for why the id cannot be trusted to be stable.
+  const found = findSongRec(songs, track, albumMeta);
+  const key = (found && found.id) || track.id;
   if (score <= 0) {
-    delete songs[track.id];
-    if (window.Cloud) Cloud.deleteRating('song', track.id);
+    delete songs[key];
+    if (window.Cloud) Cloud.deleteRating('song', key);
   }
   else {
-    songs[track.id] = {
-      id: track.id, name: track.name,
+    songs[key] = {
+      id: key, name: track.name,
       artist: (track.artists || []).map(function (a) { return a.name; }).join(', '),
       artistId: (track.artists && track.artists[0] && track.artists[0].id) || '',
       albumId: albumMeta.id, albumName: albumMeta.name, art: albumMeta.art, score: score,
-      savedAt: (songs[track.id] && songs[track.id].savedAt) || Date.now(),
+      // `found`, not songs[track.id] — when the id has moved, songs[track.id]
+      // is undefined and this would quietly drop the first-heard date and the
+      // whole score history, which is the one thing in this app that can only
+      // be earned by time.
+      savedAt: (found && found.savedAt) || Date.now(),
       ratedAt: Date.now(),
-      history: pushScoreHistory(songs[track.id], score, Date.now()),
+      history: pushScoreHistory(found, score, Date.now()),
       date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     };
-    if (window.Cloud) Cloud.syncRating('song', track.id, songs[track.id]);
+    if (window.Cloud) Cloud.syncRating('song', key, songs[key]);
     if (window.Wallet) Wallet.recordRating();
   }
   persist(SONGS_KEY, songs);
@@ -9179,7 +9253,12 @@ window.buzz = buzz;
 function celebrate(title,sub){
   const ov=document.getElementById('celebrate');
   document.getElementById('celebrate-title').textContent=title;
-  document.getElementById('celebrate-sub').textContent=sub||'';
+  // Hidden rather than emptied when there is no subtitle: an empty element
+  // still carries its margin, so the button would sit a line lower than the
+  // layout the title was spaced for.
+  const subEl=document.getElementById('celebrate-sub');
+  subEl.textContent=sub||'';
+  subEl.style.display=sub?'':'none';
   ov.querySelectorAll('.cf').forEach(function(n){n.remove();});
   ov.classList.add('show');
   const cols=['#4fb477','#F5C842','#85b7eb','#f0ede8','#e24b4a','#6bbf68','#d98cff'];
@@ -9390,7 +9469,12 @@ function drawCompCard(a,claimed){
   var mm=document.getElementById('missing-modal');
   if(mm)mm.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 })();
-let compUnratedOnly=false,_compState=null;
+/* Unrated-only by DEFAULT. The list is on the album page under the tracks,
+   and a full discography of ticks is a wall of records you have already dealt
+   with, pushing everything below it off the screen. What is left to rate is
+   the only actionable thing on it — so that is what it opens as, and the
+   toggle is there to see the whole thing rather than to hide it. */
+let compUnratedOnly=true,_compState=null;
 const _missingByArtist={};
 
 /* "See what's missing" — the albums by this artist you haven't rated yet.
@@ -18729,9 +18813,14 @@ window.renderAdminStats = renderAdminStats;
       if (window.burst) burst(wnd, { count: 42, spread: 220 });
       if (window.buzz) buzz('big');
       if (typeof window.celebrate === 'function') {
+        // No odds in the subtitle. "One spin in seven lands here" publishes a
+        // probability on a win screen, which is the same thing the odds panel
+        // above the reel was removed for — and a win is a moment, not a
+        // statistics lesson. A prize that explains its own rarity is smaller
+        // than one that just arrives.
         window.celebrate('Legendary — ' + name, won.kind === 'picks'
           ? 'A record of your choice, free. Take it in the Market.'
-          : 'One spin in seven lands here.');
+          : '');
       }
     } else if (won.tier === 'epic') {
       if (window.burst) burst(wnd, { count: 22, spread: 150 });
