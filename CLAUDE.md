@@ -2463,9 +2463,39 @@ support address before any store submission or public launch, since this is the 
 use to exercise data rights. `privacy.html` also covers imported listening history: what is
 stored, that the aggregation happens on the device, and that it is private to the account.
 
-The footer carries **"Artwork and catalogue data from Spotify."** because Spotify's Developer
-Policy requires attribution wherever their content appears, and every piece of artwork in the
-app is theirs. Apple will not raise it; Spotify can. Don't remove it.
+### Spotify attribution — the mark, and a link to the record
+
+Spotify's Developer Policy requires attribution wherever their content appears, and every
+piece of artwork in this app is theirs. Apple will not raise it; Spotify can.
+
+For a long time that was met with a **sentence** in the footer — "Artwork and catalogue data
+from Spotify." — which is not what either document asks for. Two separate requirements were
+being missed:
+
+- Design Guidelines: *"you must always attribute content from Spotify with the logo."* The
+  **logo**, not prose. There was no mark anywhere in the app.
+- Developer Policy II.4.2: metadata and cover art must be *"accompanied by a link back to the
+  applicable album, content or playlist on the Spotify Service."* Album pages linked nowhere.
+
+So the mark now appears in the footer, in Settings and on the player bar (which shows Spotify
+cover art while it plays), and every album page carries a **Play on Spotify** button pointing
+at *that album* rather than at the service root — the policy asks for a link to the content,
+not to Spotify in general. "Play on Spotify" is one of the three strings the guidelines permit
+for that button; it is not a phrasing of ours to improve on.
+
+**One definition of the mark**, in the `SpotifyMark` module, injected into every
+`data-spotify-mark` placeholder. Not three copies in three places — the Shop swatch and the
+real theme were separately invented once and drifted for months, and a brand mark is the worst
+thing in the app to let drift, because the guidelines forbid altering it at all. `#1ED760` and
+the viewBox are theirs: do not recolour it, squash it, redraw it, or lay it over album artwork.
+
+Still open, and deliberately so: the policy also says **"Do not create a game, including trivia
+quizzes"**, with the compliance notes naming *"a 'name that tune' quiz"* as the example — which
+is Earworm, and Daily Drop and Cover Fire are trivia quizzes over Spotify artwork. The Design
+Guidelines also forbid overlays on cover art, which is what the Certification finishes are. The
+cheap fix for the first is that the games run on **baked static tables** and need nothing from
+Spotify but the 323 artwork URLs in them; re-pointing those at Deezer takes the games off
+Spotify content entirely without changing a single rule of play.
 
 `STORE-SUBMISSION.md` holds the paste-ready **App Review notes**, and the decisions on the two
 outside dependencies: the Spotify Development Mode cap does not apply (it limits authenticated
