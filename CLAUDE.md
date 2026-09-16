@@ -793,6 +793,99 @@ missed site means that row pays full price on a free spin.
   and marked `via_pick` so it cannot be sold. See The Draw for why that restriction is
   load-bearing rather than flavour.
 
+## Playing a track — VINALL plays nothing, on purpose
+
+The track number on every row of an album page is a button. Pressing it fires the
+record's URI at the operating system and whatever Spotify is already running picks it
+up. The `Play` module at the very bottom of `index.html` is the whole feature, and it
+is about forty lines.
+
+**Verified end to end on Windows, 2026-09-16**: with Spotify not running at all, firing
+`spotify:track:19YKaevk2bce4odJkP5L22` cold-launched the app and its window title became
+`Frank Ocean - Nikes`, which Spotify only shows once a track is loaded and playing.
+
+### Why a handoff and not a player
+
+Because the two routes that would let VINALL actually stream both need a per-user OAuth
+grant, and **this app is in Spotify's Development Mode, which has been capped at five
+authorised users since February 2026**. Extended Quota wants a registered business at
+250,000 MAU. A Web Playback SDK player would work beautifully — for five people.
+
+That cap is not theoretical and it is already visible in this repo. Probing the live API
+through `/api/app-token`:
+
+| | |
+|---|---|
+| `/albums/{id}`, `/albums/{id}/tracks`, `/artists/{id}`, `/artists/{id}/albums`, `/tracks/{id}` | 200 |
+| `/search?limit=10` | 200 |
+| `/search?limit=20` | **400 Invalid limit** |
+| `GET /albums?ids=` (batch), `/artists/{id}/top-tracks` | **403 Forbidden** |
+| `popularity`, `available_markets` on any object | **gone** |
+
+So the note under Daily Drop — "search limit **10** — anything larger is a 400" — is not a
+Spotify quirk somebody discovered, it is the February 2026 Development Mode restriction,
+and VINALL survives that migration only because it happens to fetch single items
+everywhere. Two other things came with it: the app owner must hold active Premium or the
+whole app stops, and refresh tokens now expire **six months from original consent** rather
+than from the last refresh.
+
+The handoff needs none of it. No token, no scopes, no Premium check, no user cap, and
+nothing to break the next time the Web API changes.
+
+**Playback then survives browsing VINALL for free, because VINALL was never the thing
+playing.** The persistence problem an embed would have created does not exist here at all
+— and it is a real one: re-parenting an iframe silently kills its playback, which is the
+`#draw-block` trap in a new costume and would have bitten on the first `innerHTML` render.
+
+### A custom-scheme navigation fails silently, so nothing may claim success
+
+If Spotify is not installed, firing `spotify:track:` does **absolutely nothing**. No error,
+no event, no rejected promise, no console line. So the button never says "playing", because
+it cannot know that.
+
+What it does instead is watch for the page to lose focus — `blur`, `pagehide` or
+`visibilitychange`, whichever comes first — because an app coming forward is the only
+evidence available. If none of them fires within 1.4s, it offers the web player.
+
+**That offer is worded as a question and must stay that way.** Losing focus is evidence
+that an app came forward, never proof that none did: Spotify *already running* can take
+the URI and start playing without raising a window, and then the panel appears over a
+track that is audibly playing. "Didn't open?" is harmless when it is wrong. "No Spotify
+app answered" — which is what shipped first — is a lie in exactly the register this file
+keeps warning about.
+
+The test is desktop-only. On a phone the https link **is** the handoff, so there is
+nothing left to fall back to.
+
+### The rest of it
+
+- **Desktop takes `spotify:track:`**, which hands to the native client without navigating
+  the page — verified, `location` and `title` are unchanged after firing it. **Phones take
+  `https://open.spotify.com/track/`** with `target="_blank"`, because iOS and Android
+  resolve that to the installed app themselves, and a phone that does *not* resolve it
+  opens a tab rather than walking the listener out of VINALL.
+- One anchor, created and clicked inside the user's own click, so neither the custom scheme
+  nor the popup blocker treats it as something the page did by itself.
+- The click handler is **delegated on `document`**, so `renderTracks()` rebuilding its
+  innerHTML re-wires nothing, and any row added anywhere later gets it for free.
+- **The hint is printed above the tracklist.** A number that is secretly a button is not
+  something anybody finds by playing — that is the line this file draws about the Discs
+  page, applied in the other direction.
+- `.song-row .idx` already sets `width: 24px` and outranks a bare `button.idx`, so the
+  circle shipped as a 24×26 oval. The width is restated at matching specificity. Measure
+  the rendered box, not the rule.
+
+### What this does not do, and the one worth doing next
+
+It does not know whether anything played, so it logs nothing. That is the shame of it:
+`listening_plays` exists, `findRinsed` and `findAbandoned` are first in `buildQueue`, and
+they sit on a table almost nobody will ever populate because filling it needs a Spotify
+data export. **Every press of this button is a first-party play signal on a track whose id
+VINALL already holds** — an intent to listen, which is weaker than a play and far stronger
+than nothing. Wiring it needs a `SYNC_KEYS` entry and a merge rule of its own (counts take
+the larger, like the game log's), which is why it is not in the change that added the
+button.
+
 ## Settings
 
 A modal off the account menu (`openSettings`), holding **Motion**, a **clear-cached-data**

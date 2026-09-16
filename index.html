@@ -21866,8 +21866,13 @@ window.track = function (name, props) {
     clearFallback();
     var el = document.createElement('div');
     el.className = 'play-fallback';
-    el.innerHTML = '<span>No Spotify app answered.</span>' +
-      '<a href="' + webUrl(id) + '" target="_blank" rel="noopener">Open in the Spotify web player &#8599;</a>';
+    // Worded as a question, not a verdict. Losing focus is only EVIDENCE that
+    // an app came forward, never proof that none did: Spotify already running
+    // can take the URI and start playing without raising a window, and then
+    // this panel appears over a track that is audibly playing. An offer is
+    // harmless when it is wrong; "No Spotify app answered" would be a lie.
+    el.innerHTML = '<span>Didn&rsquo;t open?</span>' +
+      '<a href="' + webUrl(id) + '" target="_blank" rel="noopener">Play in the Spotify web player &#8599;</a>';
     if (row && row.parentNode) row.insertAdjacentElement('afterend', el);
     else {
       var host = document.getElementById('detail-tracks');
