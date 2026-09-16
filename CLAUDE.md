@@ -2489,13 +2489,42 @@ real theme were separately invented once and drifted for months, and a brand mar
 thing in the app to let drift, because the guidelines forbid altering it at all. `#1ED760` and
 the viewBox are theirs: do not recolour it, squash it, redraw it, or lay it over album artwork.
 
-Still open, and deliberately so: the policy also says **"Do not create a game, including trivia
-quizzes"**, with the compliance notes naming *"a 'name that tune' quiz"* as the example — which
-is Earworm, and Daily Drop and Cover Fire are trivia quizzes over Spotify artwork. The Design
-Guidelines also forbid overlays on cover art, which is what the Certification finishes are. The
-cheap fix for the first is that the games run on **baked static tables** and need nothing from
-Spotify but the 323 artwork URLs in them; re-pointing those at Deezer takes the games off
-Spotify content entirely without changing a single rule of play.
+### The games hold no Spotify content, and that was the point of moving the artwork
+
+The policy says **"Do not create a game, including trivia quizzes"**, and the compliance notes
+name *"a 'name that tune' quiz"* as the example — which is Earworm exactly, with Daily Drop and
+Cover Fire as trivia quizzes beside it.
+
+The way out was that the games run on **baked static tables**, and the only thing in them
+Spotify owned was the artwork. Title, artist, year, genre, track count and runtime are plain
+fact. So all **323** Spotify cover URLs in `EW_ROWS`, `ALBUM_ROWS` and `SONG_ROWS` were
+re-pointed at Deezer. There is no `i.scdn.co` left anywhere in the file, and not one rule of
+play changed.
+
+Worth keeping from how it was done, because the same pass will be wanted again if the pool is
+ever refreshed:
+
+- **373 artwork cells, 236 unique covers.** Thriller appears in all three tables. Resolve each
+  cover once and replace globally — which is also what preserves the property this file already
+  calls out, that Earworm and the Drop label a record identically.
+- **Diacritics were the whole failure mode.** The first pass got 231/236 and every single miss
+  was the same bug: Deezer writes Beyoncé with an acute and JAY-Z as *JAŸ-Z*, and stripping
+  non-alphanumerics **without folding diacritics first** turns those into `beyonc` and `jaz`,
+  which match nothing. Normalise NFD and drop the combining marks before stripping. Dropping
+  parentheticals (`(Remastered 2009)`, `(Explicit Version)`) fixed the rest.
+- **Live albums, karaoke records and tributes are refused by name.** They carry the right title
+  and the wrong sleeve, which is worse than no sleeve — the same reason `collectionName` guards
+  the preview lookup.
+- **Deezer does not carry everything.** *808s & Heartbreak* is simply absent, so Heartless comes
+  from Apple, where 47 of these covers already came from. Expect one or two of these.
+- **Every URL was fetched and checked for an image response before the file was touched**, and
+  the apply step rebuilds the file region by region and **refuses** if any `i.scdn.co` sits
+  outside the three tables — those would be runtime artwork from the live API and must not be
+  rewritten by a data pass.
+
+Still open: the Design Guidelines forbid overlays on cover art, which is what the Certification
+finishes are. That one needs either Collection artwork off Spotify too, or finishes restyled as
+a frame rather than a wash over the sleeve.
 
 `STORE-SUBMISSION.md` holds the paste-ready **App Review notes**, and the decisions on the two
 outside dependencies: the Spotify Development Mode cap does not apply (it limits authenticated
