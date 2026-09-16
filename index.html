@@ -9557,7 +9557,11 @@ function drawCompletion(){
   const X=studio.filter(function(s){return ratedBases[baseAlbumTitle(s.name)];}).length;
   const Y=studio.length,pct=Math.round(X/Y*100),complete=X>=Y;
   const missing=studio.filter(function(s){return!ratedBases[baseAlbumTitle(s.name)];});
-  const list=compUnratedOnly?missing:studio;
+  /* Unrated-only, EXCEPT when there is nothing left unrated. An artist you
+     have finished would otherwise open on an empty list under a full green
+     bar, which reads as broken rather than as done — the one moment the whole
+     discography is worth seeing is the moment you have all of it. */
+  const list=(compUnratedOnly&&missing.length)?missing:studio;
   /* The sleeve on every row. A discography as a column of titles is a
      spreadsheet; the cover is how anybody actually recognises a record they
      have not got round to, and it is the thing this list is asking them to go
