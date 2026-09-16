@@ -988,6 +988,86 @@ Neither the player nor the handoff touches any of it.
   first shipped as a 24×26 oval. Restated at matching specificity. Measure the rendered
   box, not the rule.
 
+## The catalogue is Deezer's
+
+Every album name, artist name, tracklist, cover and search result comes from **Deezer**, via
+`api/catalogue.js`. No catalogue request carries a Spotify token. `/api/app-token` still exists
+and is still used by the stream valuation below, but nothing a user sees goes through it.
+
+### Why, in one definition
+
+The Developer Terms define **"Spotify Content"** as *"any content, data, information or material
+made available through the Spotify Platform ... cover art, musical works, podcasts, artist
+biographies, song lyrics, **metadata**, playlists"*.
+
+Metadata. Album and artist names being Spotify's is what kept four clauses live no matter how
+much artwork was moved:
+
+- *"Do not create a game, including trivia quizzes."*
+- *"Do not create any product or service which is integrated with streams or content from another
+  service."*
+- *"Do not analyze the Spotify Content ... creating new or derived listenership metrics ... or
+  building profiles of users."*
+- *"Do not store Spotify Content indefinitely"*, with local caching limited to **temporary**
+  caching of metadata and cover art.
+
+None of those is designable-around, because games, Taste Match and remembering what you rated
+forever **are** the product. And none has a written-approval carve-out — ringtones have one,
+mimicking a core experience has one, trivia quizzes do not. There was nothing to ask for.
+
+### It is a switch, not a migration
+
+Every catalogue request already went through one `spotifyGet(path)`, and about twenty call sites
+read Spotify's field names. So `_toCatalogue()` translates the **path** and `/api/catalogue`
+answers in **Spotify's response shape**. Nothing above that line knows which service replied, and
+reverting is the same one function. It is a compatibility translation; nothing there calls
+Spotify or claims to be it.
+
+**Legacy ids are not re-keyed.** A record already in a crate carries a Spotify base62 id Deezer
+has never heard of — so `openAlbum` sends `?name=&artist=` and the route resolves by name.
+Ratings, the Collection, Certification and score history keep their keys untouched. No table was
+re-keyed and nobody's crate was rewritten. New records get Deezer's numeric ids.
+
+### What deliberately stayed on Spotify
+
+**Stream valuation.** `_streams.js` needs the Spotify **artist id**, because that is how kworb
+indexes its tables (`kworb.net/spotify/artist/<id>_songs.html`). Bid Wars, Collection prices and
+Higher or Lower's streams mode cannot follow the catalogue across without re-pricing the economy.
+
+Deezer offers a replacement if that is ever wanted — album `fans`: Views 560k, Thriller 390k, In
+Rainbows 131k, The Money Store 23k. But that is a **24:1 spread where streams give 100:1**, and
+the Collection section explains why the wide spread is deliberate. Changing it means purging
+`album_plays`, clearing pending wars and moving everybody's net worth — its own migration, as
+`..._220000_purge_stale_values.sql` already established. Do not bundle it with anything else.
+
+`/artists/{id}/related-artists` returns null from the translator. Spotify removed that endpoint
+themselves, so it was already dead.
+
+### Two links that broke the moment ids stopped being Spotify's
+
+Caught on a screenshot, not by a test. The album page built `open.spotify.com/album/<id>` out of
+a **Deezer** id (a 404), and the player's "Full track" fired `spotify:track:<deezer id>`, which
+names nothing — Spotify opens and sits there, and nothing anywhere would have reported it.
+
+**Both search by name now.** A search URL needs no id, no API and no token, cannot be invalidated
+by a catalogue change, and works where Spotify files a record under a different id.
+`Play.track()` takes `{name, artist}`, never an id.
+
+**Attribution follows the data.** The footer and Settings credited Spotify for artwork and
+catalogue data Spotify no longer supplies — not merely stale, but what Policy II calls misleading
+use. They credit Deezer now, and the Spotify mark survives only on the two controls that link
+**to** Spotify, which is what a mark is for.
+
+### Known regressions
+
+- **Search results have no year.** Deezer's album search omits `release_date`; it arrives when
+  the album is opened, so the year chip in suggestions is blank until then.
+- **`genre:"x"` and `year:N` search operators do nothing.** Those are Spotify query syntax, and
+  the discovery paths that used them now do a plain text search.
+- **The studio-album filter is looser.** Deezer types some live records as `album`, so the
+  Completion list can include one.
+
+
 ## Settings
 
 A modal off the account menu (`openSettings`), holding **Motion**, a **clear-cached-data**
