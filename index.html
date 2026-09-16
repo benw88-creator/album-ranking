@@ -4204,7 +4204,11 @@ body.entering-done #artist-hero {
   transition: border-color .16s, color .16s;
 }
 .today-auto:hover { border-color: var(--text-dim); color: var(--text); }
-.today-auto input { accent-color: var(--gold); width: 13px; height: 13px; margin: 0; cursor: pointer; }
+/* Sizing and colour come from the global input[type="checkbox"] rule. This
+   used to force 13px and an accent-color, which is how you theme a NATIVE
+   checkbox — and it beat the new rule on specificity, so the box stayed the
+   old size while the drawn tick was positioned for the new one. */
+.today-auto input { cursor: pointer; }
 .today-auto:has(input:checked) { border-color: var(--gold-dim); color: var(--gold); }
 
 .td-card {
