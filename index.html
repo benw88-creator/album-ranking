@@ -6670,15 +6670,65 @@ const _spQueue=[];let _spPumping=false,_spLast=0;const SP_GAP=150,_spotifyGetCac
 function spotifyFetch(path,opts){opts=opts||{};return new Promise(function(resolve,reject){const job={path:path,resolve:resolve,reject:reject,skip:opts.skip||null};if(opts.priority){let i=0;while(i<_spQueue.length&&_spQueue[i]._pri)i++;job._pri=true;_spQueue.splice(i,0,job);}else{_spQueue.push(job);}_spPump();});}
 async function _spPump(){if(_spPumping)return;_spPumping=true;while(_spQueue.length){const job=_spQueue.shift();if(job.skip&&job.skip()){const e=new Error('stale');e.stale=true;job.reject(e);continue;}try{job.resolve(await _spExec(job.path,job._pri));}catch(err){job.reject(err);}}_spPumping=false;}
 
+/* CATALOGUE — Spotify-shaped paths, Deezer underneath.
+
+   Every catalogue request in this app already went through one function, and
+   the call sites read Spotify's field names in about twenty places. So the
+   switch happens HERE, by translating the path, rather than by rewriting
+   those: /api/catalogue answers in Spotify's shape, so nothing above this
+   line knows or cares which service replied.
+
+   Why at all: "Spotify Content" is defined in the Developer Terms to include
+   METADATA, so album and artist names being theirs is what keeps the games
+   ban, the "integrated with content from another service" clause, the ban on
+   derived listenership metrics and "do not store Spotify Content
+   indefinitely" all live — none of which VINALL can design around, because
+   games, Taste Match and remembering what you rated forever ARE the product.
+
+   Returning null means "this shape has no Deezer equivalent", and the caller
+   fails exactly as it did before. /artists/{id}/related-artists is the only
+   one, and Spotify removed that endpoint themselves, so it was already dead.
+
+   Stream valuation deliberately still uses Spotify, in /api/album-streams:
+   kworb indexes by Spotify ARTIST id, so Bid Wars and Collection prices
+   cannot follow the catalogue across without re-pricing the whole economy.
+   That is a separate decision with its own migration — see CLAUDE.md. */
+function _toCatalogue(path){
+  const cut=path.indexOf('?');
+  const p=cut<0?path:path.slice(0,cut);
+  const q=new URLSearchParams(cut<0?'':path.slice(cut+1));
+  const u=new URLSearchParams();
+  let m;
+  if((m=p.match(/^\/albums\/(.+)$/))){
+    u.set('path','album'); u.set('id',decodeURIComponent(m[1]));
+    // A record already in somebody's crate carries a Spotify base62 id that
+    // Deezer has never heard of, so the caller sends the name to resolve by.
+    if(q.get('name'))u.set('name',q.get('name'));
+    if(q.get('artist'))u.set('artist',q.get('artist'));
+  } else if(p==='/search'){
+    u.set('path','search'); u.set('q',q.get('q')||'');
+    u.set('type',q.get('type')||'album'); u.set('limit',q.get('limit')||'10');
+  } else if((m=p.match(/^\/artists\/([^/]+)\/albums$/))){
+    u.set('path','artist-albums'); u.set('id',decodeURIComponent(m[1]));
+    u.set('include_groups',q.get('include_groups')||'album');
+    u.set('limit',q.get('limit')||'50');
+  } else if((m=p.match(/^\/artists\/([^/]+)$/))){
+    u.set('path','artist'); u.set('id',decodeURIComponent(m[1]));
+  } else return null;
+  return '/api/catalogue?'+u.toString();
+}
+
 let _spPauseUntil=0;
 async function _spExec(path,pri){
   for(let attempt=0;;attempt++){
     let hold=_spPauseUntil-Date.now();while(hold>0){await sleep(Math.min(hold,1000));hold=_spPauseUntil-Date.now();}
     if(!pri){const gap=SP_GAP-(Date.now()-_spLast);if(gap>0)await sleep(gap);}_spLast=Date.now();
-    const token=await getAnyToken();if(!token){showGate(true);const e=new Error('not-authenticated');e.status=0;throw e;}
-    const usingAppToken=(token===_appToken);
-    let res;try{const ctrl=new AbortController();const to=setTimeout(function(){ctrl.abort();},12000);try{res=await fetch(SPOTIFY_API+path,{headers:{Authorization:'Bearer '+token},signal:ctrl.signal});}finally{clearTimeout(to);}}catch(netErr){if(attempt<2){await sleep(500*(attempt+1));continue;}const e=new Error('network');e.status=0;e.detail=String(netErr&&netErr.message||netErr);throw e;}
-    if(res.status===401){if(usingAppToken){_appToken=null;_appTokenExp=0;}else{_token=null;_tokenExp=0;_tokClear();}if(attempt<1){const fresh=await getAnyToken();if(fresh)continue;}if(window.renderAuthArea)renderAuthArea(false);showGate(true);const err401=new Error('token-expired');err401.status=401;throw err401;}
+    const cat=_toCatalogue(path);
+    if(!cat){const e=new Error('unsupported-endpoint');e.status=404;e.endpoint=path.split('?')[0];throw e;}
+    // No token and no Authorization header: the catalogue needs neither, which
+    // is the point. showGate() therefore cannot fire from a catalogue call any
+    // more — there is no longer an auth state for it to be reporting.
+    let res;try{const ctrl=new AbortController();const to=setTimeout(function(){ctrl.abort();},12000);try{res=await fetch(cat,{signal:ctrl.signal});}finally{clearTimeout(to);}}catch(netErr){if(attempt<2){await sleep(500*(attempt+1));continue;}const e=new Error('network');e.status=0;e.detail=String(netErr&&netErr.message||netErr);throw e;}
     if(res.status===429){const ra=parseInt(res.headers.get('Retry-After')||'3',10);_spPauseUntil=Math.max(_spPauseUntil,Date.now()+Math.min(Math.max(ra,2),30)*1000);if(attempt<6)continue;const err429=new Error('spotify-429');err429.status=429;throw err429;}
     if(res.status>=500&&attempt<2){await sleep(500*(attempt+1));continue;}
     if(!res.ok){let detail='';try{const j=await res.json();detail=(j.error&&(j.error.message||JSON.stringify(j.error)))||'';}catch(e){try{detail=(await res.text()).slice(0,200);}catch(e2){}}const err=new Error('spotify-'+res.status);err.status=res.status;err.detail=detail;err.endpoint=path.split('?')[0];throw err;}
@@ -6872,7 +6922,11 @@ async function openAlbum(meta) {
   if (window.CertPanel) try { CertPanel.open(currentAlbum); } catch (e) {}
 
   try {
-    const data = await spotifyGet('/albums/' + encodeURIComponent(meta.id) + '?market=US', { priority: true });
+    // name and artist ride along so a record saved under a Spotify id — every
+    // record already in anybody's crate — can still be resolved by name.
+    const data = await spotifyGet('/albums/' + encodeURIComponent(meta.id) +
+      '?name=' + encodeURIComponent(meta.name || '') +
+      '&artist=' + encodeURIComponent(meta.artist || ''), { priority: true });
     const tracks = (data.tracks && data.tracks.items) || [];
     if (data.genres && data.genres.length) currentAlbum.genre = data.genres[0];
     renderTracks(tracks, meta);
