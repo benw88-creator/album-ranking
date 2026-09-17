@@ -145,7 +145,12 @@ async function fullAlbum(id) {
   return out;
 }
 
+import { cors } from './_cors.js';
+
 export default async function handler(req, res) {
+  // Answers the preflight and stops. Must be first: the method checks below
+  // would 405 an OPTIONS, and three of these routes have one.
+  if (cors(req, res)) return;
   const q = req.query || {};
   const path = String(q.path || '');
   try {

@@ -5,7 +5,12 @@
 
 let cached = { token: null, exp: 0 };
 
+import { cors } from './_cors.js';
+
 export default async function handler(req, res) {
+  // Answers the preflight and stops. Must be first: the method checks below
+  // would 405 an OPTIONS, and three of these routes have one.
+  if (cors(req, res)) return;
   try {
     const id = process.env.SPOTIFY_CLIENT_ID;
     const secret = process.env.SPOTIFY_CLIENT_SECRET;

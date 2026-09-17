@@ -1,0 +1,5 @@
+# The Capacitor wrapper is not part of the website. Excluding it keeps the
+# native source off wildcrate.xyz and keeps the deploy the size it has always
+# been. Nothing here changes the root's shape — there is still no build step
+# and still no root package.json.
+app/

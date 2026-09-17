@@ -28,6 +28,7 @@
 // dropped from the pool like any other unusable album.
 
 import { spotifyToken, valueAlbum } from './_streams.js';
+import { cors } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
 // Defaulted rather than required, like SUPABASE_URL above. The anon key is
@@ -68,6 +69,9 @@ async function sealedFor(jwt) {
 }
 
 export default async function handler(req, res) {
+  // Answers the preflight and stops. Must be first: the method checks below
+  // would 405 an OPTIONS, and three of these routes have one.
+  if (cors(req, res)) return;
   const q = (req.query && (req.query.q || req.query.album || req.query.albums)) || '';
   if (!q) { res.status(400).json({ error: 'Pass ?album=<id>, ?albums=<id,id,…> or ?q=<search>' }); return; }
 

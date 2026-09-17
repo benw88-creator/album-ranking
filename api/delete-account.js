@@ -12,7 +12,12 @@
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
 
+import { cors } from './_cors.js';
+
 export default async function handler(req, res) {
+  // Answers the preflight and stops. Must be first: the method checks below
+  // would 405 an OPTIONS, and three of these routes have one.
+  if (cors(req, res)) return;
   if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
 
   const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;

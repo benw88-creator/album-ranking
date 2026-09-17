@@ -5303,6 +5303,89 @@ button.rw-day {
 </script>
 
 <!-- ================================================================
+     NATIVE — the one place that knows whether this is the app or the site.
+
+     index.html is served two ways now: from wildcrate.xyz, and from inside a
+     Capacitor binary where the same file is bundled and served from the app's
+     own origin (capacitor://localhost on iOS, https://localhost on Android).
+     Three things stop being true in there, and all three are silent failures
+     rather than errors:
+
+       - a relative /api/... is looked for inside the binary, so every
+         catalogue, preview and valuation call 404s and the app opens to an
+         empty shell;
+       - location.origin is a scheme nobody else's phone can open, so a share
+         or invite link built from it is a dead link;
+       - navigator.vibrate does not exist in a WKWebView, so every piece of
+         tactile feedback in the app does nothing on iPhone.
+
+     Aliasing the origin to wildcrate.xyz was checked and cannot work — see
+     api/_cors.js, which carries the reasoning and the other half of the fix.
+
+     Everything below feature-detects and falls back to exactly what the web
+     did before, because the same file still has to be the site.
+     ================================================================ -->
+<script>
+(function () {
+  var C = window.Capacitor;
+  var on = !!(C && C.isNativePlatform && C.isNativePlatform());
+
+  /* Capacitor injects native-bridge.js at document start, which defines
+     nativePromise() but NOT registerPlugin() — that one lives in
+     @capacitor/core's JS runtime and only exists once something has bundled
+     it. VINALL has no build step and is not growing one for this, so plugins
+     are called straight through the bridge. That is what registerPlugin's
+     proxy does underneath anyway. */
+  function call(plugin, method, opts) {
+    if (!on || !C.nativePromise) return Promise.resolve(null);
+    try {
+      return C.nativePromise(plugin, method, opts || {}).catch(function () { return null; });
+    } catch (e) { return Promise.resolve(null); }
+  }
+
+  /* PluginHeaders is the list the native side actually registered. A plugin
+     missing from it is a sync that did not happen, and calling into it would
+     reject rather than no-op. */
+  function has(plugin) {
+    if (!on || !C.PluginHeaders) return false;
+    for (var i = 0; i < C.PluginHeaders.length; i++) {
+      if (C.PluginHeaders[i] && C.PluginHeaders[i].name === plugin) return true;
+    }
+    return false;
+  }
+
+  window.Native = {
+    on: on,
+    platform: on && C.getPlatform ? C.getPlatform() : 'web',
+    call: call,
+    has: has,
+    /* Prefixed onto every /api/ path. Empty on the web, so the request is
+       same-origin and relative exactly as it always was. */
+    api: on ? 'https://wildcrate.xyz' : '',
+    /* The verb every hand-it-over button prints. A button labelled Copy that
+       opens a share sheet names one action and performs another, which is the
+       worst shape a control can have — see the Market's old "Price it". */
+    hand: on ? 'Share' : 'Copy',
+    /* What a link handed to another person has to say. On the web this is
+       what the code already built by hand. */
+    site: on ? 'https://wildcrate.xyz/' : (location.origin + location.pathname),
+    /* Resolves true only when the sheet actually handed the text somewhere.
+       The plugin REJECTS when somebody backs out, which is the only way to
+       tell that from a share — and a button saying Shared over a cancelled
+       sheet is the same small lie as one saying Copied over an empty
+       clipboard. */
+    share: function (opts) {
+      if (!on || !C.nativePromise || !has('Share')) return Promise.resolve(false);
+      return C.nativePromise('Share', 'share', opts).then(
+        function () { return true; },
+        function () { return false; }
+      );
+    }
+  };
+})();
+</script>
+
+<!-- ================================================================
      ICON SET — defined first, before anything else, because some
      top-level code later in this document (BADGES) reads ICONS.xxx
      immediately rather than inside a function, so it must already exist.
@@ -6771,7 +6854,7 @@ async function getAccessToken() {
   return null;
 }
 
-const APP_TOKEN_PATH='/api/app-token';
+const APP_TOKEN_PATH=Native.api+'/api/app-token';
 let _appToken=null,_appTokenExp=0,_appTokenDead=0;
 async function getAppToken(){
   if(_appToken&&Date.now()<_appTokenExp-5000)return _appToken;
@@ -6848,7 +6931,7 @@ function _toCatalogue(path){
     // and came back a 502.
     if(q.get('name'))u.set('name',q.get('name'));
   } else return null;
-  return '/api/catalogue?'+u.toString();
+  return Native.api+'/api/catalogue?'+u.toString();
 }
 
 let _spPauseUntil=0;
@@ -9424,11 +9507,79 @@ window.ripple = ripple;
 // Patterns rather than raw durations, so "right" and "wrong" feel like
 // different events rather than the same nudge at different lengths.
 var BUZZ = { tap: [7], good: [10, 40, 16], bad: [26, 60, 26], big: [12, 40, 12, 40, 26] };
+
+/* iOS Safari has no vibration API at all, so for the whole life of this app
+   every one of the thirty-odd call sites below did nothing on an iPhone — the
+   frequent small moments this file argues are the point of having feedback at
+   all were silent on the platform most people were holding.
+
+   In the native app they go to the Taptic engine instead. The mapping is by
+   MEANING rather than by duration: iOS owns its own vocabulary for these and a
+   success there is a double thump whatever milliseconds the web pattern
+   happened to use. 'big' is three impacts rather than one, because it is the
+   word this app reserves for a win and a single knock is what 'tap' already
+   gets. */
+var HAPTIC = {
+  tap:  [['impact', { style: 'LIGHT' }, 0]],
+  good: [['notification', { type: 'SUCCESS' }, 0]],
+  bad:  [['notification', { type: 'ERROR' }, 0]],
+  big:  [['impact', { style: 'HEAVY' }, 0],
+         ['impact', { style: 'HEAVY' }, 70],
+         ['impact', { style: 'MEDIUM' }, 140]]
+};
 function buzz(kind) {
+  if (window.Native && Native.on && Native.has('Haptics')) {
+    (HAPTIC[kind] || HAPTIC.tap).forEach(function (step) {
+      if (!step[2]) Native.call('Haptics', step[0], step[1]);
+      else setTimeout(function () { Native.call('Haptics', step[0], step[1]); }, step[2]);
+    });
+    return;
+  }
   if (!navigator.vibrate) return;
   try { navigator.vibrate(BUZZ[kind] || BUZZ.tap); } catch (e) {}
 }
 window.buzz = buzz;
+
+/* "Hand this to somebody." On the web that is the clipboard, which is all a
+   browser offers. In the app it is the system share sheet — which is what
+   anybody holding a phone is reaching for, and the thing a spoiler-free
+   result row was built for: it can go straight into the thread it is about
+   instead of via a paste.
+
+   Every clipboard write in this app carries its own .catch because writeText
+   REFUSES by REJECTING rather than throwing — no permission, no user gesture,
+   an insecure context — so a try/catch around it catches nothing and the
+   button cheerfully says Copied over an empty clipboard. Four of the five
+   call sites shipped exactly that way. Putting the rule in one function is
+   how it stops being four chances to forget it.
+
+   The label follows what happened rather than what was attempted, for the
+   same reason, and the idle string is read off the button so a caller cannot
+   get the two out of step. */
+function handOff(btn, opts) {
+  if (!btn) return;
+  var idle = opts.idle || btn.textContent;
+  var say = function (t) {
+    btn.textContent = t;
+    setTimeout(function () { btn.textContent = idle; }, 1600);
+  };
+
+  if (window.Native && Native.on && Native.has('Share')) {
+    btn.textContent = 'Sharing…';
+    Native.share({ text: opts.text, url: opts.url, dialogTitle: opts.title || 'VINALL' })
+      .then(function (sent) { if (sent) say('Shared'); else btn.textContent = idle; });
+    return;
+  }
+
+  // A link is more useful on a clipboard than a sentence wrapped round it.
+  var payload = opts.url || opts.text;
+  if (!navigator.clipboard) { say('Copy failed'); return; }
+  navigator.clipboard.writeText(payload).then(
+    function () { say(opts.copied || 'Copied ✓'); },
+    function () { say('Copy failed'); }
+  );
+}
+window.handOff = handOff;
 
 /* The eyebrow is a caller's word, not a fixed one.
 
@@ -10347,7 +10498,7 @@ const Cloud=(function(){
           // origin not on Supabase’s allow-list is silently replaced by
           // the project’s Site URL — which is how this ended up sending
           // people to localhost.
-          redirectTo:location.origin+location.pathname
+          redirectTo:Native.site
         });
         if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Send reset link';return;}
         errEl.style.color='var(--gold)';
@@ -11063,9 +11214,9 @@ async function drawProfile(host,prof,isOwner){
       }).join('')+'</div>';
   }
 
-  const shareUrl=location.origin+location.pathname+'?u='+prof.id;
+  const shareUrl=Native.site+'?u='+prof.id;
   let actionBtn='';
-  if(isOwner){actionBtn='<div style="display:flex;flex-direction:column;gap:8px;"><button class="btn-primary" id="prof-edit">Edit profile</button><button class="btn-mini" id="prof-share">Copy share link</button></div>';}
+  if(isOwner){actionBtn='<div style="display:flex;flex-direction:column;gap:8px;"><button class="btn-primary" id="prof-edit">Edit profile</button><button class="btn-mini" id="prof-share">'+(Native.on?'Share profile':'Copy share link')+'</button></div>';}
   else if(me){actionBtn='<button class="'+(following?'btn-mini':'btn-primary')+'" id="prof-follow">'+(following?'Following \u2713':'+ Follow')+'</button>';}
   else{actionBtn='<button class="btn-primary" id="prof-follow-login">Log in to follow</button>';}
   let listsHtml='';
@@ -11177,7 +11328,7 @@ async function drawProfile(host,prof,isOwner){
 
   if(isOwner){
     document.getElementById('prof-edit').addEventListener('click',openProfileEdit);
-    document.getElementById('prof-share').addEventListener('click',function(){const b=document.getElementById('prof-share');navigator.clipboard&&navigator.clipboard.writeText(shareUrl).catch(function(){b.textContent='Copy failed';});b.textContent='Copied!';setTimeout(function(){b.textContent='Copy share link';},1500);});
+    document.getElementById('prof-share').addEventListener('click',function(){handOff(document.getElementById('prof-share'),{url:shareUrl,text:'My crate on VINALL',copied:'Copied!'});});
     host.querySelectorAll('.top3-slot').forEach(function(el){el.addEventListener('click',openProfileEdit);});
     const al=document.getElementById('prof-add-list');if(al)al.addEventListener('click',function(){openListEditor(null);});
     const fp=document.getElementById('fav-artist-pick');if(fp)fp.addEventListener('click',openFavArtistPicker);
@@ -11676,7 +11827,8 @@ async function drawGrooveInviteList(filter){
   document.getElementById('groove-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
   document.getElementById('groove-invite-btn').addEventListener('click',function(){const p=document.getElementById('groove-invite-panel');const showing=p.style.display!=='none';p.style.display=showing?'none':'block';if(!showing){document.getElementById('groove-invite-search').value='';drawGrooveInviteList('');}});
   document.getElementById('groove-invite-search').addEventListener('input',function(){clearTimeout(_grooveInviteTimer);const v=this.value;_grooveInviteTimer=setTimeout(function(){drawGrooveInviteList(v);},250);});
-  document.getElementById('groove-copy-btn').addEventListener('click',function(){if(!_currentGroove)return;const url=location.origin+location.pathname+'?groove='+_currentGroove.id;const b=document.getElementById('groove-copy-btn');if(navigator.clipboard)navigator.clipboard.writeText(url).catch(function(){b.textContent='Copy failed';});b.textContent='Copied!';setTimeout(function(){b.textContent='Copy join link';},1500);});
+  document.getElementById('groove-copy-btn').textContent=Native.hand+' join link';
+  document.getElementById('groove-copy-btn').addEventListener('click',function(){if(!_currentGroove)return;handOff(document.getElementById('groove-copy-btn'),{url:Native.site+'?groove='+_currentGroove.id,text:'Join my Groove on VINALL',copied:'Copied!'});});
   document.getElementById('groove-leave-btn').addEventListener('click',async function(){if(!_currentGroove)return;if(!confirm('Leave '+_currentGroove.name+'?'))return;await Cloud.leaveGroove(_currentGroove.id);document.getElementById('groove-modal').classList.remove('open');renderGrooves();});
 })();
 window.renderGrooves=renderGrooves;
@@ -12351,7 +12503,13 @@ window.handleGrooveLink=handleGrooveLink;
   // a stale build — see sw.js.
   // localhost counts as a secure context, and allowing it is the only way to
   // exercise the offline path before shipping it.
-  if ('serviceWorker' in navigator &&
+  // Never in the app. The assets are already inside the binary there, so a
+  // cache of them buys nothing, and the one thing a worker could still do is
+  // serve a stale shell — the exact failure sw.js is written to avoid. On
+  // Android the app's origin is https://localhost, which passes both tests
+  // below and would have registered one. sw.js is also left out of the bundle,
+  // so this is the near half of a fence with two sides.
+  if (!Native.on && 'serviceWorker' in navigator &&
       (location.protocol === 'https:' || location.hostname === 'localhost')) {
     // This runs from an async init that has already awaited several things, so
     // 'load' has usually fired by now and a listener for it would never be
@@ -15608,15 +15766,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         (ewState.mode === 'daily' ? '<div class="drop-share">' + esc(grid) + '</div>' : '') +
         '<div class="ew-result-actions">' +
           (ewState.mode === 'daily'
-            ? '<button class="btn-primary" type="button" id="ew-copy">Copy result</button>'
+            ? '<button class="btn-primary" type="button" id="ew-copy">' + Native.hand + ' result</button>'
             : '<button class="btn-primary" type="button" id="ew-again">Another one</button>') +
         '</div>' +
       '</div>';
     var copy = document.getElementById('ew-copy');
     if (copy) copy.addEventListener('click', function () {
-      if (navigator.clipboard) navigator.clipboard.writeText(ewShareGrid()).catch(function () { copy.textContent = 'Copy failed'; });
-      copy.textContent = 'Copied ✓';
-      setTimeout(function () { copy.textContent = 'Copy result'; }, 1600);
+      handOff(copy, { text: ewShareGrid() });
     });
     var again = document.getElementById('ew-again');
     if (again) again.addEventListener('click', function () { ewLoadAnswer(); });
@@ -16536,18 +16692,12 @@ function playDismissAnimation(gateEl, callback) {
         '<h3>' + (won ? 'Got it — ' : 'It was ') + esc(answer.name) + '</h3>' +
         '<p>' + esc(sub) + '</p>' +
         '<div class="drop-share">' + esc(shareGrid()) + '</div>' +
-        '<div><button class="btn-primary" id="drop-share-btn" type="button" style="margin-top:14px;">Copy result</button></div>' +
+        '<div><button class="btn-primary" id="drop-share-btn" type="button" style="margin-top:14px;">' + Native.hand + ' result</button></div>' +
         '<div class="drop-note">' + (otherLeft() || 'A new album and a new song every day at midnight.') + '</div>' +
       '</div>';
     var btn = document.getElementById('drop-share-btn');
     if (btn) btn.addEventListener('click', function () {
-      var txt = shareGrid();
-      // A refused clipboard write REJECTS rather than throwing, so a try/catch
-      // around it catches nothing and the button claims 'Copied' over an empty
-      // clipboard. Same fix as the Blitz share button.
-      if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(function () { btn.textContent = 'Copy failed'; });
-      btn.textContent = 'Copied ✓';
-      setTimeout(function () { btn.textContent = 'Copy result'; }, 1600);
+      handOff(btn, { text: shareGrid() });
     });
   }
   /* Finishing one half of the day should point at the other half rather
@@ -16870,7 +17020,7 @@ function playDismissAnimation(gateEl, callback) {
     } catch (e) {}
     if (!token) return { error: { message: 'Log in again to start a war.' } };
     try {
-      var r = await fetch('/api/bid-war-create', {
+      var r = await fetch(Native.api+'/api/bid-war-create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         body: JSON.stringify({ opponent_id: opponentId, mode: _mode }),
@@ -17628,7 +17778,7 @@ async function doDeleteAccount() {
   try {
     const s = await Cloud.client().auth.getSession();
     const token = s && s.data && s.data.session && s.data.session.access_token;
-    const res = await fetch('/api/delete-account', {
+    const res = await fetch(Native.api+'/api/delete-account', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       body: JSON.stringify({ confirm: 'DELETE' })
@@ -17803,7 +17953,7 @@ async function renderAdminStats() {
         // quietly unsealed every Bid War board.
         var _s = await Cloud.client().auth.getSession();
         var _t = _s && _s.data && _s.data.session && _s.data.session.access_token;
-        var resp = await fetch('/api/album-streams?q=' + encodeURIComponent(p.q) + '&debug=1',
+        var resp = await fetch(Native.api+'/api/album-streams?q=' + encodeURIComponent(p.q) + '&debug=1',
           { headers: { Authorization: 'Bearer ' + _t } });
         r = await resp.json();
       } catch (e) { r = { error: String((e && e.message) || e) }; }
@@ -18213,7 +18363,7 @@ window.renderAdminStats = renderAdminStats;
     var t = await token();
     if (!t) return (_market = []);
     try {
-      var r = await fetch('/api/collection-prices', { headers: { Authorization: 'Bearer ' + t } });
+      var r = await fetch(Native.api+'/api/collection-prices', { headers: { Authorization: 'Bearer ' + t } });
       var j = await r.json();
       _market = j.items || [];
     } catch (e) { _market = []; }
@@ -18264,7 +18414,7 @@ window.renderAdminStats = renderAdminStats;
       var chunk = todo.slice(i, i + PRICE_CHUNK);
       var prices = null;
       try {
-        var r = await fetch('/api/collection-prices', {
+        var r = await fetch(Native.api+'/api/collection-prices', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
           body: JSON.stringify({ album_ids: chunk }),
@@ -18729,7 +18879,7 @@ window.renderAdminStats = renderAdminStats;
     var t = await token();
     var j = null;
     try {
-      var r = await fetch('/api/collection-buy', {
+      var r = await fetch(Native.api+'/api/collection-buy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
         // `pick` only chooses which server function is called. Whether the
@@ -19716,7 +19866,7 @@ window.renderAdminStats = renderAdminStats;
       // cannot be priced.
       var sess = await Cloud.client().auth.getSession();
       var tok = sess && sess.data && sess.data.session && sess.data.session.access_token;
-      var r = await fetch('/api/album-streams?albums=' + encodeURIComponent(picks.map(function (a) { return a.id; }).join(',')),
+      var r = await fetch(Native.api+'/api/album-streams?albums=' + encodeURIComponent(picks.map(function (a) { return a.id; }).join(',')),
         { headers: { Authorization: 'Bearer ' + tok } });
       var j = await r.json();
       var byId = {};
@@ -20846,16 +20996,10 @@ window.renderAdminStats = renderAdminStats;
       var rec = Blitz.dailyDone();
       el('blitz-vs').innerHTML =
         '<div class="bl-vs"><b>Today\u2019s Ten</b><span>#' + rec.day + ' \u00b7 same ten for everybody</span></div>' +
-        '<button class="btn-mini" id="blitz-share" style="margin-top:10px;">Copy result</button>';
+        '<button class="btn-mini" id="blitz-share" style="margin-top:10px;">' + Native.hand + ' result</button>';
       var shb = el('blitz-share');
       if (shb) shb.addEventListener('click', function () {
-        var txt = Blitz.shareText(rec);
-        try {
-          // A rejected clipboard promise escapes the try, so it needs its own catch.
-          if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(function () { shb.textContent = 'Copy failed'; });
-          shb.textContent = 'Copied';
-        } catch (e) { shb.textContent = 'Copy failed'; }
-        setTimeout(function () { shb.textContent = 'Copy result'; }, 1600);
+        handOff(shb, { text: Blitz.shareText(rec), copied: 'Copied' });
       });
     }
     if (window.notePlay) notePlay('blitz');
@@ -22893,7 +23037,7 @@ window.track = function (name, props) {
   // route caches at the edge for a week, so one album is one Deezer request
   // ever rather than one per listener.
   function deezerMap(meta) {
-    var u = '/api/preview?artist=' + encodeURIComponent(meta.artist || '') +
+    var u = Native.api+'/api/preview?artist=' + encodeURIComponent(meta.artist || '') +
             '&album=' + encodeURIComponent(meta.name || '');
     return fetch(u).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
       var map = {};
@@ -23388,7 +23532,7 @@ window.track = function (name, props) {
     if (pumping || !queue.length) return;
     pumping = true;
     var job = queue.shift();
-    fetch('/api/preview?artist=' + encodeURIComponent(job.artist) + '&album=' + encodeURIComponent(job.album))
+    fetch(Native.api+'/api/preview?artist=' + encodeURIComponent(job.artist) + '&album=' + encodeURIComponent(job.album))
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) { write(job.k, (j && j.cover) || ''); })
       .catch(function () { /* leave it unwritten: a network blip is not a fact */ })

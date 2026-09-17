@@ -42,7 +42,12 @@ async function dz(path) {
   return r.json();
 }
 
+import { cors } from './_cors.js';
+
 export default async function handler(req, res) {
+  // Answers the preflight and stops. Must be first: the method checks below
+  // would 405 an OPTIONS, and three of these routes have one.
+  if (cors(req, res)) return;
   const artist = String((req.query && req.query.artist) || '').slice(0, 120);
   const album = String((req.query && req.query.album) || '').slice(0, 160);
   if (!artist || !album) {

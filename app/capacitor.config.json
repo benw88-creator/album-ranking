@@ -1,0 +1,28 @@
+{
+  "appId": "xyz.wildcrate.vinall",
+  "appName": "VINALL",
+  "webDir": "www",
+  "backgroundColor": "#0a0908",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor",
+    "hostname": "localhost"
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0a0908"
+  },
+  "android": {
+    "backgroundColor": "#0a0908"
+  },
+  "plugins": {
+    "Keyboard": {
+      "resize": "native"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "overlaysWebView": true,
+      "backgroundColor": "#0a0908"
+    }
+  }
+}

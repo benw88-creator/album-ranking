@@ -2657,6 +2657,159 @@ Added so the site can be wrapped without failing review for the obvious reasons.
 age-rating answers, drafted listing copy, and the shortlist of things only Ben
 can do.
 
+## The native app — Capacitor, in `app/`
+
+iOS and Android wrappers around the same `index.html` the website serves.
+`app/` has its own `package.json` and its own `node_modules`; **the repo root
+stays flat and must**, because Vercel auto-detects a root `package.json` and
+starts trying to build a site that is already finished. `.vercelignore`
+excludes `app/` from the deploy as well, so the native source never reaches
+wildcrate.xyz.
+
+```
+cd app && npm install      # once
+npm run ios                # sync + open Xcode
+npm run android            # sync + open Android Studio
+```
+
+`npm run sync` copies the web app into `app/www` (an explicit file list, not a
+glob — a glob ships `api/`, `supabase/` and this file inside the binary) and
+then runs `cap sync`.
+
+**The assets are bundled, not loaded from the live site.** A wrapper that only
+points a webview at a URL is the textbook App Store 4.2 rejection, and it has
+no offline behaviour at all.
+
+### Which origin problem, and why there was only ever one answer
+
+Bundled assets are served from the app's own origin — `capacitor://localhost`
+on iOS, `https://localhost` on Android — so every relative `/api/...` is
+cross-origin, and none of the nine routes set a single CORS header, because
+until now the page and the routes shared an origin.
+
+The tempting fix is to alias the origin to `wildcrate.xyz` and make the whole
+question disappear. **It cannot work, on either platform, and both reasons are
+in Capacitor's own source rather than being a matter of taste:**
+
+- **iOS.** `server.iosScheme` can never be `https`: WKWebView refuses to
+  register a URL scheme handler for a scheme it already owns, which is stated
+  in the CLI's own type declarations. So the origin is a custom scheme
+  whatever `hostname` says — `capacitor://wildcrate.xyz` is still cross-origin
+  to `https://wildcrate.xyz`.
+- **Android.** `hostname` is worse than useless there. `WebViewLocalServer`
+  routes anything whose host matches the bridge host through `handleLocalRequest`,
+  which looks the path up **inside the app bundle** and returns 404 when it is
+  not there. Aliasing to wildcrate.xyz would therefore make the local server own
+  `/api/*` and the routes would never be reached at all.
+
+So: `api/_cors.js`, called first in all nine routes, plus `Native.api` in front
+of all eleven `/api/` call sites in `index.html`. The header block is exact
+origins and never `*`, because these routes carry a Supabase bearer token.
+
+**`Vary: Origin` is set unconditionally, including when the origin is not on
+the list**, and that is the part worth not deleting. `/api/preview` and
+`/api/catalogue` are edge-cached for a **week**. Without Vary the CDN serves
+one caller's copy, headers and all, to everybody — and a copy cached for a
+browser has no `Access-Control-Allow-Origin` on it, so the app's fetch of it is
+blocked. A week at a time, on the route that is the audio.
+
+`CapacitorHttp` would also have sidestepped CORS, by patching `window.fetch` to
+go through native networking. It was rejected rather than missed: it replaces
+the fetch the Supabase client and every one of these call sites rides on, in an
+app with 1.25MB of vanilla JS and no test suite, and it would behave
+differently from the web build in ways nothing here would catch.
+
+### `Native` — the one place that knows which of the two this is
+
+A small module near the top of `index.html`, next to the crash reporter,
+defined before anything reads it. Everything in it feature-detects and falls
+back to exactly what the web did, because the same file is still the site.
+
+| | |
+|---|---|
+| `Native.on` | are we in the app |
+| `Native.api` | `https://wildcrate.xyz` natively, `''` on the web |
+| `Native.site` | what a link handed to another person has to say |
+| `Native.hand` | `Share` or `Copy` — the verb the buttons print |
+| `Native.call/has/share` | the bridge |
+
+**`Native.site` exists because three links were being built out of
+`location.origin`** — the profile share link, the Groove join link and the
+password-reset `redirectTo` — and in the app that origin is a scheme nobody
+else's phone can open. A share link that cannot be opened is worse than no
+share button.
+
+**Plugins are called through `Capacitor.nativePromise` rather than
+`registerPlugin`.** Capacitor injects `native-bridge.js` at document start,
+which gives `nativePromise`, `PluginHeaders` and `isNativePlatform` — but
+**not** `registerPlugin`, which lives in `@capacitor/core`'s JS runtime and
+only exists once something has bundled it. This app has no build step and is
+not growing one for this. `nativePromise` is what `registerPlugin`'s proxy
+calls underneath anyway. The npm plugin packages still have to be installed:
+they carry the native code that `cap sync` installs.
+
+### Haptics — the largest felt change in the port, and a few lines
+
+`buzz()` has been global and called from thirty-odd sites since the feedback
+primitives shipped, and **on iPhone every one of them did nothing**, because
+iOS Safari has no vibration API. They go to the Taptic engine now.
+
+The mapping is by **meaning, not duration**: iOS owns its own vocabulary and a
+success there is a double thump whatever milliseconds the web pattern happened
+to use. `tap` → light impact, `good` → SUCCESS, `bad` → ERROR, `big` → three
+staggered impacts, because `big` is the word this app reserves for a win and a
+single knock is what `tap` already gets.
+
+### `handOff` — the share sheet, and one .catch instead of five
+
+The three games build a spoiler-free result row and the profile and Groove
+build a link; all five put it on the clipboard. In the app they open the system
+sheet, which is what somebody holding a phone is reaching for and what a
+spoiler-free row was built for — it can go into the thread it is about without
+a paste.
+
+Two things it keeps in one place that were previously five chances to get
+wrong:
+
+- **`writeText` refuses by REJECTING, not throwing**, so a `try/catch` around
+  it catches nothing and the button cheerfully says Copied over an empty
+  clipboard. Four of the five sites shipped exactly that way.
+- **The share plugin also rejects when somebody backs out of the sheet**, which
+  is the only way to tell a share from a change of mind. `Native.share`
+  resolves `false` there and the label goes back to idle rather than claiming
+  Shared — the same small lie pointing the other way.
+
+**The buttons say `Share` in the app and `Copy` on the web**, from
+`Native.hand`. A button labelled Copy that opens a share sheet names one action
+and performs another, which this file already calls the worst shape a control
+can have.
+
+### The service worker is off in the app, from both ends
+
+`sw.js` is left out of the bundle **and** registration is guarded on
+`!Native.on`. Both halves are needed: on Android the app's origin is
+`https://localhost`, which passes the existing `https:`-or-`localhost` test and
+would have registered one. Inside the binary the assets are already local, so a
+cache of them buys nothing and the only thing a worker could still do is serve
+a stale shell — the exact failure `sw.js` is written to avoid.
+
+### Do not change the scheme or hostname later
+
+`localStorage` is keyed to the origin, and the entire working crate lives in
+`localStorage`. Changing `iosScheme`, `androidScheme` or `hostname` after
+anybody has the app moves the origin and takes every rating, every diary entry
+and every local best with it. It syncs from `app_state`, so it would be
+recoverable for a signed-in account and gone for everybody else.
+
+### What is deliberately not in it
+
+- **No push notifications.** No infrastructure for them, and they drag in a
+  permission prompt, a token store and a privacy-label change.
+- No deep links, so a password-reset mail opens the website rather than the
+  app. `Native.site` points `redirectTo` at wildcrate.xyz on purpose: the
+  capacitor scheme is not on Supabase's redirect allow-list and would silently
+  fall back to Site URL anyway.
+
 ## Colour
 
 The app used to have two accents — `--gold` and `--accent-2` — on near-black grey, so every

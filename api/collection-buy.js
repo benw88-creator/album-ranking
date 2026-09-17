@@ -18,6 +18,7 @@
 //   which function to call, never whether the caller has a pick.
 
 import { spotifyToken, valueAlbum } from './_streams.js';
+import { cors } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
 const STALE_DAYS = 14;
@@ -61,6 +62,9 @@ function svcHeaders(key, extra) {
 }
 
 export default async function handler(req, res) {
+  // Answers the preflight and stops. Must be first: the method checks below
+  // would 405 an OPTIONS, and three of these routes have one.
+  if (cors(req, res)) return;
   if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
 
   const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;

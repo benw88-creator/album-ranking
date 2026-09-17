@@ -1,0 +1,24 @@
+{
+  "name": "vinall-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capacitor wrapper for VINALL. Lives in app/ so the repo root stays flat and Vercel's zero-config deploy is untouched.",
+  "scripts": {
+    "sync:web": "node scripts/sync-web.mjs",
+    "sync": "npm run sync:web && npx cap sync",
+    "ios": "npm run sync && npx cap open ios",
+    "android": "npm run sync && npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/keyboard": "^8.0.5",
+    "@capacitor/share": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3"
+  }
+}

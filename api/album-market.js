@@ -12,8 +12,12 @@
 // anything a player could not already see on their own board.
 
 import { valueMarket, discogsToken } from './_discogs.js';
+import { cors } from './_cors.js';
 
 export default async function handler(req, res) {
+  // Answers the preflight and stops. Must be first: the method checks below
+  // would 405 an OPTIONS, and three of these routes have one.
+  if (cors(req, res)) return;
   const token = discogsToken();
   if (!token) { res.status(500).json({ error: 'Server not configured: missing DISCOGS_TOKEN' }); return; }
 

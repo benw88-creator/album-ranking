@@ -37,6 +37,7 @@
 
 import { priceFromStreams } from './collection-buy.js';
 import { spotifyToken, valueAlbum } from './_streams.js';
+import { cors } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
 // Defaulted rather than required, exactly as /api/album-streams does it. The
@@ -149,6 +150,9 @@ async function valueBatch(ids, SERVICE, sealed) {
 }
 
 export default async function handler(req, res) {
+  // Answers the preflight and stops. Must be first: the method checks below
+  // would 405 an OPTIONS, and three of these routes have one.
+  if (cors(req, res)) return;
   const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SERVICE) { res.status(500).json({ error: 'Server not configured' }); return; }
 

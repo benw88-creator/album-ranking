@@ -19,3 +19,13 @@ desktop.ini
 # Local preview scaffolding — a static server for the browser pane, not part
 # of the deploy. Vercel serves index.html itself; nothing here is built.
 .claude/
+
+# Capacitor — the native wrapper lives in app/ so the repo root stays flat and
+# Vercel's zero-config deploy keeps working. The native projects themselves ARE
+# committed: bundle id, Info.plist, icons and signing config live in them and
+# have to survive moving between machines. Only what a sync or a build
+# regenerates is ignored here; ios/.gitignore and android/.gitignore cover the
+# rest from inside.
+app/node_modules/
+app/www/
+app/build/
