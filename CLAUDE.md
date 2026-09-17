@@ -2915,6 +2915,38 @@ recoverable for a signed-in account and gone for everybody else.
 
 ## The design system, and the mobile-first turn
 
+### The service worker serves the shell, and says when it is stale
+
+It was network-first for navigations, and its own comment explained why: a cache-first shell
+would serve last week's build with nothing to indicate it. **That was right about cache-first
+and wrong about this**, and the cost had never been measured. index.html is 375KB brotli, the
+server sends `max-age=0, must-revalidate`, and a cold fetch measured **2.4 seconds** — paid on
+every single load before anything appeared.
+
+Stale-while-revalidate keeps the property that mattered. You are never more than **one load**
+behind rather than a week, and when you are, the app says so: the background copy is compared
+with what was actually served and every open page gets a *new version ready, tap to refresh*
+button. The objection was a stale build nobody can detect; this answers it rather than
+accepting it.
+
+Measured on the live site, second load:
+
+| | before | after |
+|---|---|---|
+| download | 237ms | **39ms** |
+| DOM interactive | 865ms | **250ms** |
+| load | 2,429ms | **340ms** |
+
+**This changes how to verify a deploy.** A push is now one load behind on any browser that has
+already been to the site — reload twice, or watch for the update button. `?anything=1` is its
+own cache entry, which is the quickest way to force a cold one. None of it applies to the
+native app, where the assets are already in the binary and the worker is switched off.
+
+**Where the weight actually is**, since the obvious guesses are wrong: the stylesheet is
+**286KB, 22% of the file**. The three static game tables everybody assumes are the problem
+(`ALBUM_ROWS`, `SONG_ROWS`, `EW_ROWS`) are 65KB between them — **5%**. Splitting those out
+would buy almost nothing; the CSS is where a real cut would come from.
+
 Added when VINALL was wrapped as an app and it became obvious that it was a desktop layout
 being poured into a phone. The numbers, measured on a 375x812 viewport rather than eyeballed:
 
