@@ -241,6 +241,7 @@ controls on your lock screen.
 - Taste match: how close you and somebody else really are, and the records you
   disagree on most
 - Build a collection, and watch what it is worth
+- Recall: one second of a record. Name it before it gets easier
 - Cover Fire: ten sleeves, one minute, same ten for everybody
 - Earworm: spell the record, letter by letter
 - Daily Drop: guess the day's album and song in six

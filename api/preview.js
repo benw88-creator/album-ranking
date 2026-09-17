@@ -26,6 +26,28 @@
 // one rule waiting to drift apart — the same mistake LADDER against v_ladder
 // is written up to avoid.
 
+// ?track= — ONE song, looked up as a song
+//
+// The album sweep above is the right shape for a tracklist: one request, every
+// clip on the record. It is the wrong shape for Recall, which wants a single
+// song and does not care what record it came off — and measured over the 118
+// songs in the game pool, asking Deezer for the ALBUM found 112 and asking for
+// the TRACK found 117. They miss different records (the album path has 21 and
+// Metallica, the track path has HUMBLE., which Deezer's track index answers
+// with nothing but remixes, karaoke and an 8-bit cover), so the caller tries
+// this first and falls back to the album sweep. Together: 118 of 118.
+//
+// Deezer's advanced query syntax is a trap here: artist:"Metallica"
+// track:"Enter Sandman" returns a 200 and an EMPTY list, where the same words
+// as a plain query return the record. Measured, not assumed.
+//
+// The scoring is the whole of this branch. A plain track search for HUMBLE.
+// returns a Skrillex remix, a parody, an 8-bit emulation, a string-orchestra
+// arrangement and two karaoke versions before anything else — so a covers
+// guard is not politeness, it is the difference between a music game and a
+// karaoke game. Same rule `collectionName` plays for Apple and the album-match
+// score plays above.
+
 const UA = 'VINALL/1.0 (+https://wildcrate.xyz)';
 
 function clean(s) {
@@ -42,6 +64,58 @@ async function dz(path) {
   return r.json();
 }
 
+/* A cover, a karaoke backing or a tribute carries the right title and the
+   wrong record, which is worse than no clip at all — the player would be
+   asked to name a song it is not playing. BAD is refused outright; LIVE is
+   only ever outscored, because a live album is a legitimate record and the
+   pool may one day hold one. */
+const BAD = /\b(karaoke|tribute|instrumental|made popular|originally performed|in the style of|backing track|parody|8-bit|8 bit)\b/i;
+const LIVE = /\b(live|remix|sped up|slowed|acoustic version|demo|re-?recorded)\b/i;
+
+// Mirrors norm() in the Recall module. Two copies of one rule is exactly what
+// the note above says to avoid — but the guard cannot run in the browser (the
+// browser never sees the rejected candidates) and the browser's cannot run
+// here, so each side normalises what it is looking at and only the CLIP
+// crosses between them.
+function nm(s) {
+  return String(s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/['\u2019\u02bc]/g, '')
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ').replace(/\[[^\]]*\]/g, ' ')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+async function oneTrack(res, artist, title) {
+  const j = await dz('/search/track?limit=25&q=' + encodeURIComponent(artist + ' ' + title));
+  const wt = nm(title), wa = nm(artist);
+  let best = null, bestScore = -1;
+  for (const t of (j.data || [])) {
+    if (!t || !t.preview) continue;
+    if (nm(t.title) !== wt) continue;
+    const ta = nm(t.artist && t.artist.name);
+    if (ta !== wa && !ta.includes(wa) && !wa.includes(ta)) continue;
+    const alb = (t.album && t.album.title) || '';
+    if (BAD.test(t.title) || BAD.test((t.artist && t.artist.name) || '') || BAD.test(alb)) continue;
+    let s = 0;
+    if (ta === wa) s += 4;
+    if (!/[([]/.test(t.title)) s += 3;                       // the plain pressing
+    if (!LIVE.test(t.title) && !LIVE.test(alb)) s += 3;
+    if (s > bestScore) { bestScore = s; best = t; }
+  }
+  // Same four minutes and the same reason: these urls are signed and expire.
+  res.setHeader('Cache-Control', best ? 'public, s-maxage=240' : 'public, s-maxage=86400, stale-while-revalidate=3600');
+  res.status(200).json(best ? {
+    source: 'deezer', mode: 'track',
+    album: (best.album && best.album.title) || null,
+    artist: (best.artist && best.artist.name) || null,
+    cover: (best.album && (best.album.cover_xl || best.album.cover_big)) || null,
+    link: best.link || null,
+    tracks: [{ title: best.title, preview: best.preview, ms: (best.duration || 0) * 1000 }]
+  } : { source: 'deezer', mode: 'track', album: null, tracks: [] });
+}
+
 import { cors } from './_cors.js';
 
 export default async function handler(req, res) {
@@ -50,12 +124,14 @@ export default async function handler(req, res) {
   if (cors(req, res)) return;
   const artist = String((req.query && req.query.artist) || '').slice(0, 120);
   const album = String((req.query && req.query.album) || '').slice(0, 160);
-  if (!artist || !album) {
-    res.status(400).json({ error: 'artist and album are required' });
+  const track = String((req.query && req.query.track) || '').slice(0, 160);
+  if (!artist || (!album && !track)) {
+    res.status(400).json({ error: 'artist plus album or track is required' });
     return;
   }
 
   try {
+    if (track) { await oneTrack(res, artist, track); return; }
     const q = clean(artist) + ' ' + clean(album);
     const found = await dz('/search/album?limit=10&q=' + encodeURIComponent(q));
 

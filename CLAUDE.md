@@ -2336,6 +2336,209 @@ Things that cost time to discover and should not be rediscovered:
 Client-side, every value goes through `fmtVal(n, war, rec)` rather than `fmtPlays`. £12.50
 rendered through the streams formatter reads as "1,250".
 
+## Recall
+
+One second of a record, then three, then five, then ten. Naming it at one second is
+worth 1,000 and naming it at ten is worth 250, so the entire game is **how long you
+are willing to sit with not knowing**. `..._20260917120000_recall.sql`, the
+`VinalAudio`, `Recall` and Recall-screen modules in `index.html`, and one new branch
+in `api/preview.js`.
+
+**It makes no new music data and needs no new provider.** The songs are `SONG_ROWS`
+— the static table the Daily Drop has always baked in — and the audio is the same
+Deezer 30-second preview the player already uses. Apply the migration by hand in the
+SQL editor, like the others; **the game is fully playable before it is applied**, it
+simply has no server record of anything.
+
+### The provider seam is at resolution, not at playback
+
+`VinalAudio`. Recall asks for "the audio for this song, for this many seconds" and
+never learns who supplied it, so a licensed provider can be dropped in later without
+the game being touched.
+
+The seam is drawn where the difference between providers actually lives: one hands
+back a **url** and one hands back a **player**. A provider supplies `resolve(track)`
+and the shared element does the playing — unless it also supplies `play`/`stop`, in
+which case it is driven directly. **`mock` is exactly that case and it exists to
+prove the seam is real rather than decorative**: reached with `?audio=mock`, it
+synthesises its own sound out of WebAudio and makes not one network request, so the
+reveal ladder, the clock, the scoring and the animation can all be played and tested
+with the network off. It is never reached automatically — falling back to a tone
+when a real clip fails would be playing somebody a tune and asking them to name a
+record.
+
+Three things the engine owns so no provider has to think about them:
+
+- **One `<audio>` element**, created once and reused forever. iOS will not let a
+  *new* element play outside a gesture, and `prime()` carries the player's hard-won
+  rule with it: the silent-clip tidy-up must only fire if the source is **still** the
+  silent clip, and it refuses to prime at all once something real is loaded.
+- **The window**, which is always `[0, seconds]`. The reveal is cumulative and always
+  from the start; a clip that began somewhere different each time would be four clips
+  and not one song.
+- **The signature.** Deezer stamps every preview url with an expiry about ten minutes
+  out, so nothing is cached longer than four minutes and **nothing is ever written to
+  localStorage**. That is the bug that cost this app its audio for a week and it
+  applies to every caller, not just the player. A failed `play()` gets exactly one
+  silent retry against a fresh lookup, the same as the player.
+
+**The window is enforced three times, and it needs to be.** `requestAnimationFrame`
+is *suspended* in a background tab while media playback carries on — so pressing play
+and switching apps would run the clip to the full thirty seconds and hand the answer
+over on the way back. So: the rAF loop (which also moves the playhead), a `timeupdate`
+listener on the element, which keeps firing when rAF does not, and a `setTimeout`
+backstop for a provider with its own transport. **Measure a clip's cut with a
+position read and not by listening, and remember that a throttled tab lies.**
+
+`play()` also tells `NotAllowedError` apart from a dead clip. Autoplay refusal is not
+a broken preview, and "could not reach the audio" over it would be a wrong answer in a
+frightening register — it asks for a tap instead, which is all the browser wanted.
+
+### `?track=` on `/api/preview`, and why both lookups stay
+
+The album sweep is the right shape for a tracklist and the wrong one for a song game.
+Measured over all 118 songs in the pool: asking Deezer for the **album** found 112,
+asking for the **track** found 117, and **together they found 118**. They miss
+different records — the album path misses *21* and *Metallica*, the track path misses
+*HUMBLE.*, whose track index answers with a Skrillex remix, a parody, an 8-bit
+emulation, a string-orchestra arrangement and two karaoke versions and nothing else.
+So the provider asks for the track first and falls back to the album.
+
+Two things not to rediscover:
+
+- **Deezer's advanced query syntax returns a 200 and an empty list here.**
+  `artist:"Metallica" track:"Enter Sandman"` finds nothing; the same words as a plain
+  query find the record.
+- **The covers guard is the whole branch.** Without it Recall is a karaoke game with
+  extra steps. Same rule `collectionName` plays for Apple.
+
+**A failed request and a record with no clip are different answers, and the daily
+depends on the difference.** A transport failure comes back as `{error:true}` and is
+never cached; a genuine miss is cached like any other fact. Falling through to the
+next song because a phone lost signal would hand that person a different daily from
+everybody else's with nothing anywhere saying so.
+
+### Wrong guesses open the clip, which is where the scoring honesty lives
+
+Four steps, one guess each. A skip opens the next step and **so does a wrong guess** —
+without that a player sits at one second guessing forever and 1,000 means nothing.
+Naming the **artist** is not naming the song: it says so, and costs nothing, because
+it is the commonest near-miss and scoring it as a wrong guess would quietly eat a
+reveal.
+
+Matching is deliberately forgiving and is the same rule on both sides. Two things
+easy to get backwards:
+
+- **An apostrophe is deleted, never spaced.** "Don't" and "dont" have to land on the
+  same string; replacing punctuation with a space gives "don t", which is the exact
+  case the brief asked for by name.
+- **A leading "the" goes**, so nobody loses a round over an article.
+
+Then accents, case, brackets, `feat.` tails, `&`, and one typo in a short title or two
+in a long one. Tighter and "Smells Like Teen Sprit" is a loss; looser and two
+different songs collide.
+
+### The score is the server's; the answer cannot be hidden, and that is said plainly
+
+`recall_submit` computes the score from the step — the same rule as `wallet_buy`
+taking a key and never a price — and decides correctness itself against
+`recall_daily`. The client sends the title it is claiming and how far in it was,
+**never a verdict and never a number**, and then compares what comes back with what
+it worked out locally and reports a disagreement rather than papering over it.
+
+What that cannot do is hide the answer. The browser has to fetch the clip and the
+request names the artist and the title, so today's answer is one network tab away for
+anybody who looks. **The only way to close that is to proxy the audio, which Deezer's
+terms do not permit and this project will not do.** So the posture is the one every
+minigame here already has: the daily cap bounds the money, a forged daily wins a row
+in your own history, and nothing is claimed about it that is not true.
+
+### The schedule is a table because a formula would be two copies of one rule
+
+The client picks the day's song from a seeded shuffle of the pool, like the Drop and
+Cover Fire. The server cannot re-derive that without mulberry32 and the pool in
+plpgsql, and **that drift would be silent and total** — every answer marked wrong at
+once. So the schedule was generated from the pool at authoring time and inserted as
+760 literal rows, to 2028-10-15, and the two were checked against each other by
+hashing both: identical, 13,336 bytes, day 2451 onwards.
+
+- **Regenerate before October 2028, and regenerate whenever `SONG_ROWS` changes**,
+  because the shuffle is over the whole pool and one more row re-deals every day of it.
+- Going stale is handled rather than merely warned about: a day with no row is judged
+  against what the client says it played, `verified` comes back false, and **nobody is
+  told they are wrong about a song they actually named**.
+- A **cycle** is one pass through all 118, so every song plays once before any plays
+  twice. `GUARD` is the seam: two cycles are two independent shuffles, so the last
+  song of one can be the first of the next — two days apart. The first 20 places of a
+  cycle are swapped clear of the last 20 of the one before, which puts the shortest
+  gap at **21 days**, measured over 3,000 of them.
+
+`recall_daily` has RLS on and **no policies at all**, like `blitz_seeds` and
+`bid_war_values`: a select policy on it publishes every future day at once. There is a
+guard that fails the migration if one is ever added, and another if `recall_results`
+gains a write policy.
+
+### The rest
+
+- **Modes are a registry, not two branches.** `Recall.MODES` is a map of key to
+  behaviour — how a round is chosen, whether there is one go at it, whether the streak
+  pays — and the screen reads those rather than asking which mode it is in. `mode` is
+  plain text on the results table with no check constraint, so **a third mode is an
+  object and not a migration**.
+- **Scoring is one line you can do in your head**: 1,000 / 750 / 500 / 250, plus 100
+  per streak in Endless, capped at 500. `recall_points()` in SQL is what is stored and
+  `Recall.SCORES` is display; change one and you must change the other, the same
+  arrangement as `LADDER` against `v_ladder`.
+- `crate_recall_daily` and `crate_recall_best` are in `SYNC_KEYS`. The daily takes the
+  same merge rule as Cover Fire's — newer day supersedes, and on the same day the
+  **earlier** attempt wins, because the first go is the honest one. That function was
+  called `mergeBlitzDaily` and is now `mergeDailyOnce`: two games use it and the name
+  should not pretend otherwise. The best is a **map by mode**, like `crate_hl_best`,
+  for the same reason — two modes are two games and a whole-blob merge would drop
+  whichever device wrote first.
+- **A finished run is marked `done` before anything is filed.** `close()` records an
+  abandoned run so walking away still counts; without the flag, finishing properly and
+  *then* closing the sheet files the same run twice.
+- **Teardown is an observer on the sheet's own class, not more wiring at each exit.**
+  Android's back and the iOS edge swipe are handled centrally for every modal and that
+  handler simply removes `open` — so a close that never reached this module would leave
+  the clip playing underneath whatever the person went back to.
+- **Open on day one**, like the Drop. Recall asks nothing of your crate, and it is the
+  game most likely to bring back somebody who has rated nothing — which is exactly the
+  wrong thing to put behind a gate.
+- Pays **1,600 x 3**, identical to Cover Fire and Higher or Lower. A day of everything
+  goes from 30,800 to **35,600**; the sink is what holds the economy and the Draw's
+  2,993-against-5,000 is untouched. What it moves is real terms — the cheapest tag is
+  about three and a half days of everything rather than four — and that is a decision
+  being made here rather than discovered later.
+- **`wildcrate.xyz/#recall` opens straight into it.** There is no `/recall` path: this
+  app is one static file with no router and no build step, so a real path would mean a
+  `vercel.json` rewrite — a deploy-config change to reach a view the hash already
+  reaches.
+- The **blur is threefold** and has to be. Blur alone leaves a famous sleeve
+  recognisable by its colours — Blonde is a white square, DAMN. is a red one — so it is
+  blurred, desaturated and darkened together.
+- The **waveform is a picture of the ladder, not a reading of the audio.** Bars come
+  from a hash of the song, so the same record always looks the same; an analyser would
+  need the clip decoded before anything could be drawn, which is a second of nothing on
+  the one screen that has to feel instant.
+- The input is **16px exactly**. Anything smaller and iOS zooms the page on focus,
+  which on a bottom sheet throws the record off the top of the screen.
+- The share text is **spoiler-free and structured first**: `shareCard()` returns an
+  object and `shareText()` renders it, so the day this becomes an image is a second
+  renderer over the same object rather than a parser over a string. Four cells say how
+  long you held out and never which record it was.
+- **Deezer's mark sits on the reveal** and links back to the record, because a clip is
+  their content and their guidelines ask for both.
+
+### Found and fixed on the way
+
+`notePlay('blitz')` has been a **silent no-op since Cover Fire shipped** — `blitz` was
+never added to `GAME_LABELS`, which is the map `notePlay` refuses unknown keys against,
+so every match played counted for nothing on the favourite-minigame tile. Both `blitz`
+and `recall` are in it now. Second time this exact defect has been found in that
+module, after the `.gc-best` selector that wiped four cards' status lines.
+
 ## Album Tournament — parked
 
 Its card in the Minigames grid was its only way in, so removing that card retires it. The

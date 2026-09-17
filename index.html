@@ -5497,6 +5497,217 @@ button.rw-day {
   .bl-final { font-size: 42px; }
 }
 @media (prefers-reduced-motion: reduce) { .bl-float.in { animation: none; } }
+
+/* ---- RECALL -------------------------------------------------------------
+   The record is the screen. Everything else is one line of type, one button
+   and a box — before the reveal the panel should look almost empty, because
+   the thing being asked for is attention to a second of audio and anything
+   else on screen is competing with it.
+
+   Violet is Recall's, the way cyan is the Crate's. It is one of the five fixed
+   hues rather than var(--section): a modal is not on a page, and a game that
+   changed colour depending on which tab you opened it from would read as an
+   accident. */
+.rc-modal .modal-panel { --rc: var(--c-violet); --rc-dim: var(--c-violet-dim); max-width: 420px; }
+.rc-top { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s4); padding-right: 34px; }
+.rc-wordmark {
+  font-family: var(--font-display); font-weight: 800; font-size: 20px;
+  letter-spacing: .14em; text-transform: uppercase;
+}
+.rc-streak {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+  font: 700 12px/1 var(--font-mono); color: var(--text-faint);
+  padding: 5px 10px; border-radius: 999px; border: 1px solid transparent;
+}
+.rc-streak.lit { color: var(--rc); border-color: var(--rc-dim); background: var(--rc-dim); }
+.rc-streak .rc-flame { display: inline-flex; width: 13px; height: 13px; }
+.rc-streak svg { width: 13px; height: 13px; }
+.rc-score { font: 700 15px/1 var(--font-mono); color: var(--rc); }
+
+/* ---- the lobby: two buttons and your own numbers ---- */
+.rc-pitch { font-size: var(--t-body); color: var(--text-dim); margin: 0 0 var(--s4); line-height: 1.5; }
+.rc-big { width: 100%; }
+.rc-second {
+  width: 100%; margin-top: var(--s2); padding: 11px; border-radius: 12px;
+  background: none; border: 1px solid var(--border-strong); color: var(--text);
+  font: 600 14px/1 var(--font-body); cursor: pointer;
+  transition: border-color var(--dur-quick), transform var(--dur-quick) var(--ease);
+}
+.rc-second:hover { border-color: var(--rc); }
+.rc-second:active { transform: scale(.98); }
+.rc-stats-line { font: 11px/1.6 var(--font-mono); color: var(--text-faint); margin-top: var(--s4); text-align: center; }
+
+/* ---- the record ---- */
+.rc-art {
+  position: relative; width: 100%; max-width: 250px; margin: 0 auto;
+  aspect-ratio: 1; border-radius: 16px; overflow: hidden;
+  background: var(--surface-2); box-shadow: var(--e2);
+}
+.rc-art img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  /* Blurred AND desaturated AND dark. Blur alone leaves a famous sleeve
+     perfectly recognisable by its colours — Blonde is a white square, DAMN. is
+     a red one — which would give the answer away before a note had played. */
+  filter: blur(26px) saturate(.5) brightness(.55); transform: scale(1.25);
+  transition: filter var(--dur-slow) var(--ease), transform var(--dur-slow) var(--ease);
+}
+.rc-art.open img { filter: none; transform: scale(1); }
+.rc-art::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+  transition: box-shadow var(--dur) var(--ease);
+}
+.rc-art.open::after { box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+.rc-art.loading { animation: rcPulse 1.4s ease-in-out infinite; }
+@keyframes rcPulse { 0%,100% { opacity: .55; } 50% { opacity: .85; } }
+
+/* ---- the waveform: how much of the clip you have opened ----
+   A picture of the ladder, not a reading of the audio. Bars come from a hash
+   of the song so the same record always looks the same — a shape that changed
+   under you every render would read as the record changing. */
+.rc-wave {
+  display: flex; align-items: flex-end; gap: 2px; height: 30px;
+  margin: var(--s4) auto var(--s3); max-width: 250px; position: relative;
+}
+.rc-wave i {
+  flex: 1; min-width: 0; border-radius: 1px; background: var(--surface-3);
+  transition: background var(--dur) var(--ease);
+}
+.rc-wave i.lit { background: var(--rc); }
+.rc-wave .rc-head {
+  position: absolute; top: -2px; bottom: -2px; width: 2px; left: 0; opacity: 0;
+  background: var(--text); border-radius: 2px; pointer-events: none;
+  box-shadow: 0 0 10px rgba(255,255,255,.55);
+}
+
+/* ---- the one button ---- */
+.rc-hear {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  margin: 0 auto; padding: 13px 26px; min-width: 150px;
+  border-radius: 999px; cursor: pointer;
+  font: 700 17px/1 var(--font-mono); color: var(--rc);
+  background: var(--rc-dim); border: 1.5px solid var(--rc);
+  transition: transform var(--dur-quick) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.rc-hear:active:not(:disabled) { transform: scale(.96); }
+.rc-hear:disabled { opacity: .4; cursor: default; }
+.rc-hear .rc-play-ico {
+  width: 0; height: 0; border-left: 11px solid currentColor;
+  border-top: 7px solid transparent; border-bottom: 7px solid transparent;
+}
+.rc-hear.on { box-shadow: 0 0 0 6px var(--rc-dim); }
+
+.rc-steps { display: flex; justify-content: center; gap: var(--s2); margin-top: var(--s3); }
+.rc-steps i {
+  font: 11px/1 var(--font-mono); font-style: normal; padding: 5px 10px; border-radius: 999px;
+  color: var(--text-faint); border: 1px solid transparent; background: var(--surface-2);
+}
+.rc-steps i.done { color: var(--text-dim); }
+.rc-steps i.now { color: var(--rc); border-color: var(--rc); background: var(--rc-dim); }
+
+/* ---- answering ---- */
+.rc-answer { position: relative; margin-top: var(--s5); }
+.rc-answer input {
+  width: 100%; padding: 14px var(--s4); border-radius: 13px;
+  background: var(--surface-2); border: 1.5px solid var(--border-strong); color: var(--text);
+  /* 16px exactly. Anything smaller and iOS zooms the page on focus, which on a
+     bottom sheet throws the record off the top of the screen. */
+  font: 400 16px/1.2 var(--font-body);
+  transition: border-color var(--dur-quick);
+}
+.rc-answer input:focus { outline: none; border-color: var(--rc); }
+.rc-answer input::placeholder { color: var(--text-faint); }
+.rc-answer.shake { animation: rcShake .34s var(--ease); }
+@keyframes rcShake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); } 45% { transform: translateX(5px); }
+  70% { transform: translateX(-3px); } 88% { transform: translateX(2px); }
+}
+.rc-sugg {
+  position: absolute; left: 0; right: 0; top: calc(100% + 5px); z-index: 4;
+  background: var(--surface-2); border: 1px solid var(--border-strong);
+  border-radius: 13px; overflow: hidden auto; max-height: 232px; box-shadow: var(--e2);
+}
+.rc-sug {
+  display: flex; align-items: baseline; gap: var(--s2); width: 100%; text-align: left;
+  padding: 10px var(--s3); background: none; border: 0; cursor: pointer;
+  color: var(--text); font: 400 14px/1.3 var(--font-body);
+}
+.rc-sug + .rc-sug { border-top: 1px solid var(--border); }
+.rc-sug span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-sug small { margin-left: auto; color: var(--text-faint); font-size: 11.5px; flex-shrink: 0; }
+.rc-sug:hover, .rc-sug.on { background: var(--surface-3); }
+
+.rc-verdict { min-height: 18px; margin-top: var(--s3); font-size: var(--t-sm); color: var(--text-dim); text-align: center; }
+.rc-verdict.bad { color: var(--red); }
+.rc-controls { display: flex; gap: var(--s2); align-items: center; margin-top: var(--s2); }
+.rc-controls .btn-primary { flex: 1; }
+.rc-skip {
+  padding: 11px var(--s4); border-radius: 12px; cursor: pointer; white-space: nowrap;
+  background: none; border: 1px solid var(--border-strong); color: var(--text-dim);
+  font: 600 13px/1 var(--font-mono);
+  transition: border-color var(--dur-quick), color var(--dur-quick);
+}
+.rc-skip:hover { border-color: var(--rc); color: var(--text); }
+.rc-skip.give { color: var(--text-faint); }
+
+/* The reveal takes the screen. Hiding the controls rather than leaving them
+   greyed is the difference between "that round is over" and "you may still
+   type in here" — and it keeps the panel the same height it was. */
+#recall-play.revealed .rc-controls, #recall-play.revealed .rc-answer,
+#recall-play.revealed .rc-steps, #recall-play.revealed .rc-hear,
+#recall-play.revealed .rc-verdict { display: none; }
+
+.rc-reveal { display: none; text-align: center; margin-top: var(--s4); }
+.rc-reveal.on { display: block; animation: rcRise var(--dur-slow) var(--ease); }
+@keyframes rcRise { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+.rc-rev-head {
+  font: 700 12px/1 var(--font-mono); letter-spacing: .16em; text-transform: uppercase;
+  color: var(--text-faint); display: flex; align-items: baseline; justify-content: center; gap: var(--s2);
+}
+.rc-rev-head.good { color: var(--green); }
+.rc-rev-head.bad { color: var(--red); }
+.rc-rev-head b { font-size: 21px; letter-spacing: 0; color: var(--text); }
+.rc-rev-head .rc-bonus { font-size: 11px; letter-spacing: 0; color: var(--rc); }
+.rc-rev-title {
+  font-family: var(--font-display); font-size: var(--t-h2); font-weight: 800;
+  letter-spacing: -.02em; margin-top: var(--s2); line-height: 1.2;
+}
+.rc-rev-sub { font-size: var(--t-sm); color: var(--text-dim); margin-top: 3px; }
+.rc-rev-when { font: 11px/1 var(--font-mono); color: var(--text-faint); margin-top: var(--s2); }
+.rc-rev-actions { display: flex; gap: var(--s2); justify-content: center; margin-top: var(--s4); flex-wrap: wrap; }
+.rc-rev-actions .btn-primary { flex: 1; min-width: 140px; }
+.rc-next-in { font: 11px/1 var(--font-mono); color: var(--text-faint); margin-top: var(--s3); text-align: center; }
+/* Deezer's guidelines want the mark wherever their content appears, and a clip
+   is their content. It links back to the record, which is the other half of
+   what the terms ask for. */
+.rc-src {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: var(--s4);
+  font: 10px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-faint); text-decoration: none;
+}
+.rc-src img { border-radius: 3px; opacity: .85; }
+.rc-src:hover { color: var(--text-dim); }
+
+/* ---- the summary ---- */
+.rc-final { font: 700 clamp(40px, 12vw, 56px)/1 var(--font-mono); color: var(--rc); text-align: center; margin: var(--s3) 0 0; }
+.rc-over-note { text-align: center; font-size: var(--t-sm); color: var(--text-dim); min-height: 18px; }
+.rc-sum { margin: var(--s5) 0; border-top: 1px solid var(--border); }
+.rc-sum-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3);
+  padding: 11px 2px; border-bottom: 1px solid var(--border);
+  font-size: var(--t-sm); color: var(--text-dim);
+}
+.rc-sum-row b { font-family: var(--font-mono); color: var(--text); font-size: 15px; }
+
+.rc-modal :focus-visible { outline: 2px solid var(--rc); outline-offset: 2px; }
+@media (max-width: 380px) { .rc-art { max-width: 200px; } .rc-wave { max-width: 200px; } }
+@media (prefers-reduced-motion: reduce) {
+  .rc-art img { transition: none; }
+  .rc-answer.shake, .rc-reveal.on, .rc-art.loading { animation: none; }
+  .rc-wave i { transition: none; }
+}
+
 .hl-mode { display: inline-flex; gap: 4px; background: var(--surface-2); border-radius: 999px; padding: 4px; }
 .hl-mode button {
   border: none; background: none; color: var(--text-dim); cursor: pointer;
@@ -6142,6 +6353,9 @@ window.ICONS = {
   chart: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M2.5 13.5v-4M6.3 13.5V6M10.1 13.5V8.5M13.9 13.5V3"/></svg>',
   calendar: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="2.2" y="3.2" width="11.6" height="10.6" rx="1.6"/><path d="M2.2 6.4h11.6M5.3 1.8v2.6M10.7 1.8v2.6"/></svg>',
   crown: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 12.4 1.6 5l3.2 2.2L8 3l3.2 4.2L14.4 5l-.8 7.4Z"/><path d="M2.4 12.4h11.2"/></svg>',
+  // Recall's. A sound wave rather than a note: the game is about hearing a
+  // second of something, and every other music glyph here is taken.
+  wave: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M1.6 7.4v1.2M4.3 5.2v5.6M7 2.6v10.8M9.7 4.6v6.8M12.4 6.4v3.2M15.1 7.5v1"/></svg>',
   note: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M6 12.4a1.8 1.8 0 1 1-1.2-1.7M6 12.4V3.4l6-1.2v7.4"/><path d="M12 9.6a1.8 1.8 0 1 1-1.2-1.7"/></svg>',
   search: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.3"/><path d="M13.4 13.4 10 10"/></svg>',
   share: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M2 13V7.6L8 2l6 5.6V13a1 1 0 0 1-1 1h-3v-4.4H6V14H3a1 1 0 0 1-1-1Z"/></svg>',
@@ -6484,6 +6698,13 @@ window.ICONS = {
         <p>One album, one song, six guesses.</p>
         <div class="gc-go">Play today &rarr;</div>
         <div class="gc-best" id="drop-card-status"></div>
+      </div>
+      <div class="game-card" id="recall-card">
+        <div class="gc-emoji" data-icon="wave"></div>
+        <h3>Recall</h3>
+        <p>One second of a record. Name it.</p>
+        <div class="gc-go">Play &rarr;</div>
+        <div class="gc-best" id="recall-card-status"></div>
       </div>
       <div class="game-card" id="ew-card">
         <div class="gc-emoji" data-icon="mic"></div>
@@ -7025,6 +7246,65 @@ window.ICONS = {
       <div class="hl-over-score" id="hl-over-score"></div>
       <p class="reco-note" id="hl-over-sub"></p>
       <button class="btn-primary" id="hl-again" style="margin-top:12px;">Go again</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== RECALL =====================
+     One second of a record, then three, then five, then ten. Naming it early
+     is worth four times naming it late, so the game is entirely about how long
+     you are willing to sit with not knowing.
+
+     Three states in one sheet, like Cover Fire: a lobby that is one tap from
+     playing, the round, and — for Endless — the summary. The round screen is
+     deliberately almost empty before the reveal. The record is the screen. -->
+<div class="modal rc-modal" id="recall-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="recall-close" aria-label="Close Recall">&times;</button>
+    <div class="rc-top">
+      <div class="rc-wordmark">Recall</div>
+      <div class="rc-score" id="recall-score" style="display:none;" aria-live="polite"></div>
+      <div class="rc-streak" id="recall-streak" aria-live="polite"></div>
+    </div>
+
+    <div id="recall-lobby">
+      <p class="rc-pitch" id="recall-lobby-note">One second of a record. Name it before it gets easier.</p>
+      <button class="btn-primary rc-big" id="recall-daily-btn">Play today&rsquo;s song</button>
+      <button class="rc-second" id="recall-endless-btn">Endless &mdash; keep going until you stop</button>
+      <div class="rc-stats-line" id="recall-stats-line"></div>
+      <div id="recall-lobby-done"></div>
+    </div>
+
+    <div id="recall-play" style="display:none;">
+      <div class="rc-art" id="recall-art"><img id="recall-art-img" alt="" aria-hidden="true"></div>
+      <div class="rc-wave" id="recall-wave" aria-hidden="true"></div>
+      <button type="button" class="rc-hear" id="recall-hear" aria-label="Play the clip"><span class="rc-play-ico"></span>1.0s</button>
+      <div class="rc-steps" id="recall-steps" aria-hidden="true"></div>
+
+      <div class="rc-answer" id="recall-answer">
+        <input id="recall-input" type="text" autocomplete="off" autocorrect="off"
+               autocapitalize="none" spellcheck="false" enterkeyhint="go"
+               placeholder="What song is this?" aria-label="Name the song">
+        <div class="rc-sugg" id="recall-sugg" role="listbox" style="display:none;"></div>
+      </div>
+      <div class="rc-verdict" id="recall-verdict" role="status" aria-live="polite"></div>
+      <div class="rc-controls">
+        <button class="btn-primary" id="recall-submit">Submit</button>
+        <button type="button" class="rc-skip" id="recall-skip">Hear 3s</button>
+      </div>
+
+      <div class="rc-reveal" id="recall-reveal" aria-live="polite"></div>
+    </div>
+
+    <div id="recall-over" style="display:none;">
+      <div class="rc-final" id="recall-final">0</div>
+      <p class="rc-over-note" id="recall-over-note"></p>
+      <div class="rc-sum" id="recall-summary"></div>
+      <div class="rc-rev-actions">
+        <button class="btn-primary" id="recall-again">Go again</button>
+        <button type="button" class="rc-skip" id="recall-over-share">Copy result</button>
+        <button type="button" class="rc-skip" id="recall-menu">Back</button>
+      </div>
     </div>
   </div>
 </div>
@@ -10111,7 +10391,7 @@ function renderAuthArea(connected){
      to be looking at the grid at the moment its module wrote it. */
   function renderBests(){
     document.querySelectorAll('.gc-best[data-best]').forEach(function(el){let b=0;try{b=parseInt(localStorage.getItem('crate_best_'+el.dataset.best)||'0',10);}catch(e){}el.textContent=b>0?('Best '+b+'/5'):'';});
-    ['paintDropCard','paintEarwormCard','paintBlitzCard','paintHigherLowerCard'].forEach(function(k){
+    ['paintDropCard','paintEarwormCard','paintBlitzCard','paintHigherLowerCard','paintRecallCard'].forEach(function(k){
       try{if(window[k])window[k]();}catch(e){}
     });
   }
@@ -10965,7 +11245,7 @@ const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const Cloud=(function(){
   let sb=null,user=null,ready=false;
-  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best'];
+  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best'];
   const pending={};
   function isOn(){return!!(sb&&user);}
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
@@ -11002,7 +11282,10 @@ const Cloud=(function(){
      Earworm best taking the smaller row count. A record written before
      `at` existed has none, reads as 0 and therefore wins — which is right,
      since it was written before anything carrying a stamp. */
-  function mergeBlitzDaily(a,b){
+  /* One go a day, on whichever device you picked it up on. Shared by Cover
+     Fire and Recall — the rule is the same and the name should not pretend
+     otherwise, so it says what it does rather than which game asked first. */
+  function mergeDailyOnce(a,b){
     if(!a)return b||null; if(!b)return a;
     if((a.day||0)!==(b.day||0))return (a.day||0)>(b.day||0)?a:b;
     return (a.at||0)<=(b.at||0)?a:b;
@@ -11037,8 +11320,15 @@ const Cloud=(function(){
     ['crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_blitz_best'].forEach(function(k){const a=lsGet(k)||0,b=cloud[k]||0;if(Math.max(a,b))lsSetRaw(k,Math.max(a,b));});
     const mHl=maxByKey(lsGet('crate_hl_best'),cloud['crate_hl_best']);
     if(Object.keys(mHl).length)lsSetRaw('crate_hl_best',mHl);
-    const mBd=mergeBlitzDaily(lsGet('crate_blitz_daily'),cloud['crate_blitz_daily']);
+    const mBd=mergeDailyOnce(lsGet('crate_blitz_daily'),cloud['crate_blitz_daily']);
     if(mBd)lsSetRaw('crate_blitz_daily',mBd);
+    // Recall's daily takes the same rule, and its bests are a map by mode —
+    // the two modes are separate games and a whole-blob merge would drop
+    // whichever device wrote first, exactly as it would for Higher or Lower.
+    const mRd=mergeDailyOnce(lsGet('crate_recall_daily'),cloud['crate_recall_daily']);
+    if(mRd)lsSetRaw('crate_recall_daily',mRd);
+    const mRb=maxByKey(lsGet('crate_recall_best'),cloud['crate_recall_best']);
+    if(Object.keys(mRb).length)lsSetRaw('crate_recall_best',mRb);
     /* The game log merges per field rather than newest-wins: play counts take
        the larger of the two, and the Earworm best takes the *smaller* row
        count, because fewer guesses is better. A whole-blob merge would throw
@@ -11480,6 +11770,28 @@ const Cloud=(function(){
   // on and no policies, so the questions cannot be read ahead of playing.
   async function blitzStart(id){if(!isOn())return null;try{const r=await sb.rpc('blitz_start',{p_match:id});return r.error?null:r.data;}catch(e){return null;}}
   async function blitzSubmit(id,score,streak,correct){if(!isOn())return null;try{const r=await sb.rpc('blitz_submit',{p_match:id,p_score:score,p_streak:streak,p_correct:correct});return r.error?null:r.data;}catch(e){return null;}}
+  /* Recall. The daily's verdict and its score are the server's — what goes up
+     is the title being claimed and how far into the clip it was, never a
+     number and never a verdict. Every one of these returns null rather than
+     throwing when the migration has not been applied yet, which is the normal
+     state on this project: the game scores the round locally either way and
+     simply has no record of it. */
+  async function recallSubmit(o){
+    if(!isOn())return null;
+    try{
+      const r=await sb.rpc('recall_submit',{p_day:o.day,p_mode:o.mode||'daily',p_guess:o.guess||'',
+        p_step:o.step,p_attempts:o.attempts,p_claim:o.claim||'',p_correct:!!o.correct});
+      return r.error?null:r.data;
+    }catch(e){return null;}
+  }
+  async function recallSession(score,songs,streak,avgReveal){
+    if(!isOn())return null;
+    try{const r=await sb.rpc('recall_session',{p_score:score,p_songs:songs,p_streak:streak,p_avg_reveal:avgReveal});return r.error?null:r.data;}catch(e){return null;}
+  }
+  async function recallState(){
+    if(!isOn())return null;
+    try{const r=await sb.rpc('recall_state');return r.error?null:r.data;}catch(e){return null;}
+  }
   async function blitzRecord(otherId){if(!isOn())return null;try{const r=await sb.rpc('blitz_record',{p_other:otherId});return r.error?null:r.data;}catch(e){return null;}}
   /* Matches plus both usernames. Two queries rather than a join, because the
      FK is to auth.users and PostgREST cannot follow that to profiles. */
@@ -11705,6 +12017,7 @@ const Cloud=(function(){
          grooveRoster:grooveRoster,
          blitzCreate:blitzCreate,blitzStart:blitzStart,blitzSubmit:blitzSubmit,
          blitzRecord:blitzRecord,blitzList:blitzList,
+         recallSubmit:recallSubmit,recallSession:recallSession,recallState:recallState,
          setGrooveRole:setGrooveRole,removeGrooveMember:removeGrooveMember,
          acceptGrooveInvite:acceptGrooveInvite,leaveGroove:leaveGroove,fetchGroove:fetchGroove,
          submitLeaderboardTime:submitLeaderboardTime,fetchLeaderboard:fetchLeaderboard,fetchMyBestTime:fetchMyBestTime,
@@ -18961,6 +19274,11 @@ window.renderAdminStats = renderAdminStats;
 (function () {
   var GATES = {
     'drop-card':        { need: 0,  label: 'Daily Drop' },
+    /* Open on day one, like the Drop. Recall asks nothing of your crate — the
+       songs are the shared pool — and it is the game most likely to make
+       somebody who has rated nothing come back tomorrow, which is precisely
+       the wrong thing to put behind a gate. */
+    'recall-card':      { need: 0,  label: 'Recall' },
     'ew-card':          { need: 3,  label: 'Earworm' },
     'cover':            { need: 5,  label: 'Guess the Cover' },
     'tracklist':        { need: 10, label: 'Guess from Tracklist' },
@@ -19089,10 +19407,14 @@ window.renderAdminStats = renderAdminStats;
      screen you backed out of is not a game you played, and "favourite
      minigame" has to mean the one you actually finish. */
   var GAMELOG_KEY = 'crate_gamelog_v1';
+  /* A key missing from here makes notePlay() a silent no-op, which is what
+     `blitz` has been since Cover Fire shipped — every match played and none of
+     them counted towards the favourite-minigame tile. */
   var GAME_LABELS = {
     drop: 'Daily Drop', earworm: 'Earworm', higherlower: 'Higher or Lower',
     cover: 'Guess the Cover', coverx: 'Cover EXTREME',
-    tracklist: 'Guess from Tracklist', year: 'Guess the Year'
+    tracklist: 'Guess from Tracklist', year: 'Guess the Year',
+    blitz: 'Cover Fire', recall: 'Recall'
   };
 
   function readLog() {
@@ -22030,6 +22352,1303 @@ window.renderAdminStats = renderAdminStats;
   window.paintBlitzCard = paintCard;
   paintCard();
   window.openAlbumBlitz = open;
+})();
+</script>
+
+<!-- ================================================================
+     VinalAudio — the provider seam
+
+     Recall must not know where a clip comes from. Today it is Deezer's
+     30-second preview, through the same /api/preview the player already uses;
+     tomorrow it could be a licensed provider with its own SDK. So the game
+     asks for "the audio for this song, for this many seconds" and nothing
+     else, and a provider answers.
+
+     The seam is drawn at RESOLUTION, not at playback, because that is where
+     the difference between providers actually lives: one hands back a url and
+     one hands back a player. A provider supplies `resolve(track)` and the
+     shared element below does the playing — unless it also supplies `play` and
+     `stop`, in which case it is driven directly. `mock` is exactly that case,
+     and it exists to prove the seam is real rather than decorative: it makes
+     its own sound out of WebAudio and never touches the element or the
+     network.
+
+     Three things this owns that a provider must never have to think about:
+
+       * ONE <audio> element, created once and reused forever. iOS will not let
+         a *new* element play outside a gesture.
+       * The window. Every play is [0, seconds] — the reveal is cumulative and
+         always from the start, because a clip that begins somewhere different
+         each time is four clips and not one song.
+       * Signed urls are CREDENTIALS. Deezer stamps each preview link with an
+         expiry about ten minutes out, so nothing here is cached longer than
+         four minutes and nothing is ever written to localStorage. That is the
+         bug that cost this app its audio for a week; the note is in
+         api/preview.js and it applies to every caller, not just the player.
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  var TTL = 4 * 60 * 1000;          // shorter than the signature's own life
+  var SILENT = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAADAAABgAC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u93d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3f////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYDpiFcDAAAAAAAAAAAAAAAA//sQxAADwAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=';
+
+  function nm(s) {
+    return String(s || '')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/['’ʼ]/g, '')
+      .toLowerCase()
+      .replace(/\([^)]*\)/g, ' ').replace(/\[[^\]]*\]/g, ' ')
+      .replace(/&/g, ' and ')
+      .replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function keyOf(t) { return nm(t && t.artist) + '|' + nm(t && t.title); }
+
+  /* ---- providers ---------------------------------------------------- */
+  var PROVIDERS = {}, activeName = 'deezer';
+  function register(name, p) { p.name = name; PROVIDERS[name] = p; }
+  function provider() { return PROVIDERS[activeName] || PROVIDERS.deezer; }
+
+  function apiBase() { try { return (window.Native && Native.api) || ''; } catch (e) { return ''; } }
+
+  /* Deezer, through the route the player already uses.
+
+     TWO lookups, tried in order, because they miss different records and the
+     difference was measured over the whole game pool: asking for the TRACK
+     found 117 of 118 and asking for the ALBUM found 112, and together they
+     found all 118. The track lookup goes first because Recall is a song game —
+     it is one request either way, and the album sweep is only reached for the
+     handful Deezer's track index answers with nothing but karaoke. */
+  register('deezer', {
+    label: 'Deezer',
+    link: function (t) {
+      return 'https://www.deezer.com/search/' +
+        encodeURIComponent(((t.artist || '') + ' ' + (t.title || '')).trim());
+    },
+    resolve: function (t, fresh) {
+      var base = apiBase() + '/api/preview?artist=' + encodeURIComponent(t.artist || '');
+      var bust = fresh ? ('&t=' + Date.now()) : '';
+      /* A failed REQUEST and a record with no clip are different answers and
+         the daily depends on the difference: falling through to the next song
+         because a phone lost signal would hand that person a different song
+         from everybody else's, with nothing anywhere saying so. So a transport
+         failure comes back as {error:true} and is never cached. */
+      function get(u) {
+        return fetch(u).then(function (r) { return r.ok ? r.json() : { __err: 1 }; })
+                       .catch(function () { return { __err: 1 }; });
+      }
+      function pickFrom(j) {
+        if (j && j.__err) return { error: true };
+        if (!j || !j.tracks || !j.tracks.length) return null;
+        var want = nm(t.title), hit = null, i;
+        for (i = 0; i < j.tracks.length; i++) if (nm(j.tracks[i].title) === want) { hit = j.tracks[i]; break; }
+        if (!hit) for (i = 0; i < j.tracks.length; i++) {
+          var n = nm(j.tracks[i].title);
+          if (n && (n.indexOf(want) === 0 || want.indexOf(n) === 0)) { hit = j.tracks[i]; break; }
+        }
+        if (!hit || !hit.preview) return null;
+        return { url: hit.preview, cover: j.cover || null, link: j.link || null, source: 'Deezer', ms: hit.ms || 30000 };
+      }
+      return get(base + '&track=' + encodeURIComponent(t.title || '') + bust).then(function (j) {
+        var got = pickFrom(j);
+        if ((got && got.url) || !t.album) return got;
+        return get(base + '&album=' + encodeURIComponent(t.album) + bust).then(function (k) {
+          var second = pickFrom(k);
+          // Two lookups, and only a clip or a definite miss ends it. If either
+          // leg errored and neither found anything, this is an error.
+          if (second && second.url) return second;
+          if ((got && got.error) || (second && second.error)) return { error: true };
+          return null;
+        });
+      });
+    }
+  });
+
+  /* The development provider. It is not a silent stub and it is not a
+     workaround: it synthesises its own sound, so the whole game — the reveal
+     ladder, the clock, the scoring, the animation — can be played and tested
+     with the network off and without a single byte of anybody's catalogue.
+     Reached with ?audio=mock, never automatically: falling back to this when a
+     real clip fails to load would be playing somebody a tune and asking them
+     to name a record. */
+  register('mock', {
+    label: 'Test tone',
+    link: function () { return null; },
+    resolve: function (t) {
+      return Promise.resolve({ url: 'mock:' + keyOf(t), cover: null, link: null, source: 'Test tone', ms: 30000 });
+    },
+    // Its own transport, which is the point: a provider is allowed to be
+    // something other than a url, and the engine must not assume otherwise.
+    play: function (res, seconds) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return Promise.resolve(false);
+      this._ctx = this._ctx || new AC();
+      var ctx = this._ctx;
+      if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
+      this.stop();
+      var h = 0, s = res.url, i;
+      for (i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      var gain = ctx.createGain();
+      gain.gain.value = 0.0001; gain.connect(ctx.destination);
+      var now = ctx.currentTime, scale = [0, 3, 5, 7, 10, 12], nodes = [];
+      for (i = 0; i < Math.ceil(seconds * 2); i++) {
+        var o = ctx.createOscillator();
+        o.type = (h % 3 === 0) ? 'triangle' : 'sine';
+        o.frequency.value = 220 * Math.pow(2, scale[(h >>> (i % 8)) % scale.length] / 12);
+        o.connect(gain); o.start(now + i * 0.5); o.stop(now + i * 0.5 + 0.45);
+        nodes.push(o);
+      }
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.25, now + 0.04);
+      gain.gain.setValueAtTime(0.25, now + seconds - 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + seconds);
+      this._nodes = nodes; this._gain = gain; this._t0 = now;
+      return Promise.resolve(true);
+    },
+    stop: function () {
+      (this._nodes || []).forEach(function (o) { try { o.stop(); } catch (e) {} });
+      this._nodes = [];
+      if (this._gain) { try { this._gain.disconnect(); } catch (e) {} this._gain = null; }
+      /* And forget where it started. position() is "how far into the clip",
+         not "how long since play was pressed" — leaving the mark behind left
+         it counting up after the sound had stopped, which is the playhead
+         walking off the end of a waveform nothing is playing. */
+      this._t0 = null;
+    },
+    position: function () {
+      return (this._ctx && this._t0 != null) ? Math.max(0, this._ctx.currentTime - this._t0) : 0;
+    }
+  });
+
+  /* ---- the element -------------------------------------------------- */
+  var el = null, unlocked = false, raf = 0, stopAt = 0, playTok = 0, hardStop = 0;
+  var listeners = { tick: [], end: [], error: [] };
+  function emit(k, v) { (listeners[k] || []).forEach(function (f) { try { f(v); } catch (e) {} }); }
+
+  function audio() {
+    if (el) return el;
+    el = new Audio();
+    el.preload = 'auto';
+    el.addEventListener('ended', function () { halt(); emit('end'); });
+    /* The window is enforced here as well as in the animation frame, and it
+       has to be. requestAnimationFrame is SUSPENDED in a background tab while
+       media playback carries on — so pressing play and switching apps would
+       leave the clip running to the full thirty seconds and hand the answer
+       over on the way back. timeupdate keeps firing on a playing element. */
+    el.addEventListener('timeupdate', function () {
+      if (stopAt && el.currentTime >= stopAt) { cut(); emit('end'); }
+    });
+    el.addEventListener('error', function () { emit('error'); });
+    return el;
+  }
+
+  /* iOS grants an element permission only inside a real gesture, and by the
+     time a lookup has answered the gesture is long gone. Priming a silent clip
+     on the first touch buys it for the session.
+
+     The guard is the one the player had to learn the hard way: the tidy-up
+     timer must only tidy if the source is STILL the silent clip. Without it,
+     the timer lands after a real src and pauses the very track the same tap
+     started. Here it also refuses to prime at all once something real is
+     loaded, because this one can be called from a button press mid-round. */
+  function prime() {
+    if (unlocked) return;
+    var a = audio();
+    if (a.src && a.src.indexOf('data:') !== 0 && a.src !== '') { unlocked = true; return; }
+    unlocked = true;
+    try {
+      a.src = SILENT;
+      var p = a.play(); if (p && p.catch) p.catch(function () {});
+      setTimeout(function () {
+        try { if (a.src === SILENT) { a.pause(); a.removeAttribute('src'); } } catch (e) {}
+      }, 0);
+    } catch (e) {}
+  }
+
+  /* ---- resolution cache --------------------------------------------- */
+  // Memory only, four minutes, and never localStorage. See the header.
+  var cache = {};
+  function cached(k) {
+    var c = cache[k];
+    if (!c) return null;
+    if (Date.now() - c.at > TTL) { delete cache[k]; return null; }
+    return c;
+  }
+  /* A known MISS is cached and an error is not. Returning the entry rather
+     than the result is what makes that possible — a null result is an answer,
+     and reading it as "nothing cached" would re-ask Deezer about a record it
+     has already said it does not have, on every render. */
+  function resolve(track, fresh) {
+    var k = keyOf(track) + '@' + activeName;
+    if (!fresh) {
+      var c = cached(k);
+      if (c) return c.pending ? c.pending : Promise.resolve(c.res);
+    }
+    var pending = Promise.resolve(provider().resolve(track, fresh)).then(function (res) {
+      if (res && res.error) { delete cache[k]; return res; }
+      cache[k] = { res: res || null, at: Date.now() };
+      return res || null;
+    }).catch(function () { delete cache[k]; return { error: true }; });
+    cache[k] = { pending: pending, at: Date.now() };
+    return pending;
+  }
+  function isAvailable(track) { return resolve(track).then(function (r) { return !!(r && r.url); }); }
+  function prefetch(track) { return resolve(track).then(function (r) { return r; }, function () { return null; }); }
+
+  /* ---- transport ----------------------------------------------------- */
+  function halt() {
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    if (hardStop) { clearTimeout(hardStop); hardStop = 0; }
+    stopAt = 0;
+    var p = provider();
+    if (p.stop) { try { p.stop(); } catch (e) {} }
+    if (el) { try { el.pause(); } catch (e) {} }
+  }
+  function frame() {
+    var p = provider(), t = p.position ? p.position() : (el ? el.currentTime : 0);
+    if (stopAt && t >= stopAt) { cut(); emit('end'); return; }
+    emit('tick', t);
+    raf = requestAnimationFrame(frame);
+  }
+  /* A hard pause on a one-second clip clicks, and a click is the loudest thing
+     in a game played at low volume. 70ms of ramp is short enough that the cut
+     still reads as a cut. */
+  function cut() {
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    if (hardStop) { clearTimeout(hardStop); hardStop = 0; }
+    stopAt = 0;
+    var p = provider();
+    if (p.stop) { try { p.stop(); } catch (e) {} return; }
+    if (!el) return;
+    var a = el, v = a.volume, steps = 6, i = 0;
+    var iv = setInterval(function () {
+      i++;
+      try { a.volume = Math.max(0, v * (1 - i / steps)); } catch (e) {}
+      if (i >= steps) {
+        clearInterval(iv);
+        try { a.pause(); a.currentTime = 0; a.volume = v; } catch (e) {}
+      }
+    }, 12);
+  }
+
+  /* Play [0, seconds]. Resolution may already be cached, in which case this is
+     synchronous enough to stay inside the gesture that asked for it. */
+  function play(track, seconds, opts) {
+    var tok = ++playTok;
+    halt();
+    // Two things playing at once is never right, and the player is a sibling
+    // of every view rather than of this modal, so it survives one opening.
+    try { if (window.VinalPlayer && VinalPlayer.playing()) VinalPlayer.stop(); } catch (e) {}
+    return resolve(track, !!(opts && opts.fresh)).then(function (res) {
+      if (tok !== playTok) return false;
+      if (!res || !res.url) return false;
+      stopAt = seconds;
+      /* Third line of defence, for the case neither of the other two covers: a
+         provider with its own transport and a tab that has stopped painting.
+         A timer is throttled in the background but it still fires, where an
+         animation frame simply does not. */
+      if (hardStop) clearTimeout(hardStop);
+      hardStop = setTimeout(function () { if (stopAt) { cut(); emit('end'); } }, seconds * 1000 + 90);
+      var p = provider();
+      if (p.play) {
+        return Promise.resolve(p.play(res, seconds)).then(function (ok) {
+          if (ok !== false) { raf = requestAnimationFrame(frame); }
+          return ok !== false;
+        });
+      }
+      var a = audio();
+      if (a.src !== res.url) { a.src = res.url; }
+      try { a.currentTime = 0; } catch (e) {}
+      try { a.volume = 1; } catch (e) {}
+      var pr = a.play();
+      if (pr && pr.then) {
+        return pr.then(function () {
+          if (tok !== playTok) return false;
+          raf = requestAnimationFrame(frame);
+          return true;
+        }).catch(function (err) {
+          /* Refused by the autoplay policy is not a broken clip, and saying
+             "could not reach the audio" over it would be a wrong answer in a
+             frightening register. Nothing is retried and nothing is claimed —
+             the caller asks for a tap, which is all the browser wants. */
+          if (err && err.name === 'NotAllowedError') { halt(); return 'blocked'; }
+          /* A clip url is signed and expires about ten minutes out, so "this
+             src failed" is far more often a stale signature than a song with no
+             preview. One silent retry against a fresh lookup, exactly as the
+             player does it — and because it is one, a genuinely dead track
+             still says so rather than looping. */
+          if (tok !== playTok || (opts && opts.fresh)) return false;
+          return play(track, seconds, { fresh: true });
+        });
+      }
+      raf = requestAnimationFrame(frame);
+      return true;
+    });
+  }
+
+  window.VinalAudio = {
+    register: register,
+    use: function (name) { if (PROVIDERS[name]) { halt(); activeName = name; } return activeName; },
+    current: function () { return activeName; },
+    label: function () { return provider().label; },
+    link: function (t) { try { return provider().link(t); } catch (e) { return null; } },
+    providers: function () { return Object.keys(PROVIDERS); },
+    key: keyOf, norm: nm,
+    prime: prime,
+    getTrackPreview: resolve,      // the name the brief uses
+    resolve: resolve,
+    isAvailable: isAvailable,
+    prefetch: prefetch,
+    playPreview: play,
+    play: play,
+    stopPreview: halt,
+    stop: halt,
+    position: function () { var p = provider(); return p.position ? p.position() : (el ? el.currentTime : 0); },
+    on: function (k, fn) { if (listeners[k]) listeners[k].push(fn); }
+  };
+
+  // ?audio=mock anywhere in the query string. Deliberately opt-in.
+  try {
+    if (/[?&]audio=mock\b/.test(location.search)) window.VinalAudio.use('mock');
+  } catch (e) {}
+})();
+</script>
+
+<!-- ================================================================
+     RECALL — the engine
+
+     One second of a record, then three, then five, then ten. The sooner you
+     name it the more it is worth, so the whole game is how long you are
+     willing to sit with not knowing. Everything below is logic and storage;
+     the screen is the module under it.
+
+     It makes no new music data. The songs are SONG_ROWS — the static table the
+     Daily Drop has always baked in, exported as window.VinalPool — and the
+     audio comes through VinalAudio, which does not care who is supplying it.
+
+     MODES IS A REGISTRY, not two branches. A mode is an object saying how a
+     round is chosen, whether there is one go at it and how a round is scored,
+     and the screen reads those rather than asking which mode it is in. A third
+     mode is an entry in that map; it is not a rewrite, and it is not a
+     migration either, because `mode` is plain text on the results table.
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  var STEPS = [1, 3, 5, 10];               // seconds of audio, cumulative
+  var SCORES = [1000, 750, 500, 250];      // mirrors recall_points() in SQL
+  var STREAK_STEP = 100, STREAK_MAX = 500;
+  var DAILY_KEY = 'crate_recall_daily', BEST_KEY = 'crate_recall_best';
+
+  /* The forgiving half, and the two rules that are easy to get backwards.
+
+     An apostrophe is DELETED and never turned into a space: "Don't" and "dont"
+     have to land on the same string, and replacing punctuation with a space
+     gives "don t". A leading "the" goes, because nobody should lose a round
+     over an article. recall_norm() in SQL is the same rule and the migration
+     pins both against the same examples — that is two copies of one rule, and
+     it is deliberate: the server has to be able to judge without asking the
+     browser, which is the whole point of validating there. */
+  function norm(s) {
+    s = String(s || '')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/['’ʼ`]/g, '')
+      .toLowerCase()
+      .replace(/\([^)]*\)/g, ' ').replace(/\[[^\]]*\]/g, ' ')
+      .replace(/\bfeat\.?\s[\s\S]*$/, ' ')
+      .replace(/&/g, ' and ')
+      .replace(/[^a-z0-9]+/g, ' ').trim();
+    return s.replace(/^the\s+/, '');
+  }
+
+  // Bounded edit distance. Only ever asked about two short strings, and it
+  // gives up the moment it is past the tolerance, so it costs nothing.
+  function within(a, b, max) {
+    if (Math.abs(a.length - b.length) > max) return false;
+    var prev = [], cur = [], i, j;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+      cur[0] = i; var best = i;
+      for (j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1));
+        if (cur[j] < best) best = cur[j];
+      }
+      if (best > max) return false;
+      prev = cur.slice();
+    }
+    return prev[b.length] <= max;
+  }
+  // One typo in a short title, two in a long one. Tighter than that and
+  // "Smells Like Teen Sprit" is a loss; looser and two different songs collide.
+  function slack(n) { return n.length >= 16 ? 2 : n.length >= 8 ? 1 : 0; }
+
+  /* Does this typing name this song? Artist alone never does — the brief is
+     explicit and it is right: naming Queen is not naming Bohemian Rhapsody,
+     and accepting it would turn every round into a much easier game. */
+  function matches(text, track) {
+    var n = norm(text); if (!n) return false;
+    var t = norm(track.title), a = norm(track.artist);
+    if (n === t) return true;
+    if (n === a) return false;
+    if (n === norm(track.artist + ' ' + track.title)) return true;
+    if (n === norm(track.title + ' ' + track.artist)) return true;
+    if (a && n.length > a.length && n.indexOf(a) === 0 && norm(n.slice(a.length)) === t) return true;
+    return within(n, t, slack(t));
+  }
+  function isArtistOnly(text, track) { return !!norm(text) && norm(text) === norm(track.artist); }
+
+  /* ---- the pool ------------------------------------------------------ */
+  // SONG_ROWS: [title, artist, year, genre, secs, trackNo, albumName, art]
+  var _pool = null;
+  function pool() {
+    if (_pool) return _pool;
+    var rows = [];
+    try { rows = (window.VinalPool && VinalPool.songs) || []; } catch (e) { rows = []; }
+    _pool = rows.map(function (r, i) {
+      return { i: i, title: r[0], artist: r[1], year: r[2], genre: r[3], secs: r[4], album: r[6], art: r[7] };
+    });
+    return _pool;
+  }
+
+  /* Autocomplete. Two characters before anything appears, and never before the
+     round has any audio — a list you can open on a blank round is the answer
+     key with a search box on it. Titles rank above artists so typing three
+     letters of a song does not fill the list with everything by somebody whose
+     name happens to contain them. */
+  function suggest(q, limit) {
+    var n = norm(q);
+    if (n.length < 2) return [];
+    var out = [], p = pool(), i, r, t, a, rank;
+    for (i = 0; i < p.length; i++) {
+      r = p[i]; t = norm(r.title); a = norm(r.artist);
+      rank = t.indexOf(n) === 0 ? 0 : t.indexOf(n) > 0 ? 1 : a.indexOf(n) === 0 ? 2 : a.indexOf(n) > 0 ? 3 : -1;
+      if (rank < 0) continue;
+      out.push({ r: r, rank: rank });
+    }
+    out.sort(function (x, y) { return x.rank - y.rank || x.r.title.localeCompare(y.r.title); });
+    return out.slice(0, limit || 6).map(function (x) { return x.r; });
+  }
+
+  /* ---- the day ------------------------------------------------------- */
+  // Days since 2020-01-01 UTC, the clock the Drop and Cover Fire count in.
+  function dayNo() {
+    var d = new Date();
+    return Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(2020, 0, 1)) / 86400000);
+  }
+  function msToNextDay() {
+    var d = new Date();
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1) - d.getTime();
+  }
+  function rng(seed) {
+    var s = seed >>> 0;
+    return function () {
+      s = (s + 0x6D2B79F5) >>> 0;
+      var t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffled(r, arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+
+  /* A cycle is one pass through the whole pool, so every song plays once
+     before any plays twice — a modulo over a hash can repeat inside a
+     fortnight, which reads as the game being broken.
+
+     GUARD is the seam. Two cycles are two independent shuffles, so the last
+     song of one can be the first of the next: two days apart. The first GUARD
+     places of a cycle are swapped clear of the last GUARD of the one before,
+     which puts the shortest gap at 21 days. Measured over 3,000 days.
+
+     This is mirrored by the literal rows in recall_daily — the SQL does not
+     re-derive it, it was generated from this. Change any of it and that table
+     has to be regenerated, or every answer is judged against the wrong song. */
+  var GUARD = 20, _orders = {};
+  function seedFor(c) { return (((c + 1) * 2654435761) ^ 0x9e3779b9) >>> 0; }
+  function rawOrder(c) {
+    var idx = [], i, n = pool().length;
+    for (i = 0; i < n; i++) idx.push(i);
+    return shuffled(rng(seedFor(c)), idx);
+  }
+  function orderFor(c) {
+    if (_orders[c]) return _orders[c];
+    var cur = rawOrder(c), n = pool().length;
+    if (c > 0) {
+      var tail = {}, prev = rawOrder(c - 1), i, j;
+      prev.slice(n - GUARD).forEach(function (v) { tail[v] = 1; });
+      for (i = 0; i < GUARD && i < n; i++) {
+        if (!tail[cur[i]]) continue;
+        for (j = GUARD; j < n; j++) {
+          if (!tail[cur[j]]) { var t = cur[i]; cur[i] = cur[j]; cur[j] = t; break; }
+        }
+      }
+    }
+    _orders[c] = cur;
+    return cur;
+  }
+  /* The day's song, and then every other song in a fixed order behind it.
+
+     A list rather than one track because a clip can fail to resolve, and a
+     daily that cannot be played is a dead day for everybody. Falling through
+     is deterministic, so the whole world falls to the same next song — and it
+     only ever happens when a lookup SUCCEEDS and has no audio, never on a
+     failed request, which would fork the day between whoever had a bad
+     connection and whoever did not. */
+  function dayCandidates(day) {
+    var p = pool(), n = p.length;
+    if (!n) return [];
+    var c = Math.floor(day / n), order = orderFor(c), at = day - c * n, out = [], i;
+    for (i = 0; i < n; i++) out.push(p[order[(at + i) % n]]);
+    return out;
+  }
+
+  /* ---- storage ------------------------------------------------------- */
+  function lsGet(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } }
+  function lsSet(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+    if (window.Cloud && Cloud.push) Cloud.push(k);
+  }
+  function dailyDone() { var r = lsGet(DAILY_KEY, null); return (r && r.day === dayNo()) ? r : null; }
+  function saveDaily(rec) { rec.day = dayNo(); rec.at = Date.now(); lsSet(DAILY_KEY, rec); return rec; }
+  function best(mode) { var m = lsGet(BEST_KEY, {}); return (m && m[mode]) || 0; }
+  function setBest(mode, n) {
+    var m = lsGet(BEST_KEY, {}) || {};
+    if (n > (m[mode] || 0)) { m[mode] = n; lsSet(BEST_KEY, m); return true; }
+    return false;
+  }
+
+  /* ---- scoring ------------------------------------------------------- */
+  function points(step) { return SCORES[step] || 0; }
+  // Kept to one line on purpose. A scoring system people cannot do in their
+  // head is a scoring system nobody feels.
+  function streakBonus(streak) { return Math.min(Math.max(streak - 1, 0), STREAK_MAX / STREAK_STEP) * STREAK_STEP; }
+
+  /* ---- the modes ----------------------------------------------------- */
+  var MODES = {
+    daily: {
+      key: 'daily', label: 'Daily Recall', short: 'Daily',
+      blurb: 'One song. The same one for everybody.',
+      oneGo: true, endless: false, bonus: false,
+      candidates: function () { return dayCandidates(dayNo()); }
+    },
+    endless: {
+      key: 'endless', label: 'Endless Recall', short: 'Endless',
+      blurb: 'Round after round. Stop when you like.',
+      oneGo: false, endless: true, bonus: true,
+      candidates: function (session) {
+        var p = pool().filter(function (t) { return !session.used[t.i]; });
+        if (!p.length) return [];
+        // One random first, then the rest behind it, so a dead clip costs a
+        // moment rather than the run.
+        var r = rng((Date.now() ^ (session.played * 2654435761)) >>> 0);
+        return shuffled(r, p);
+      }
+    }
+  };
+
+  function session(modeKey) {
+    var m = MODES[modeKey] || MODES.endless;
+    return {
+      mode: m.key, m: m, score: 0, streak: 0, bestStreak: 0,
+      correct: 0, played: 0, used: {}, rounds: [], startedAt: Date.now(),
+      /* Where the best stood when this run began. The best is written as the
+         run goes, so that a run abandoned by closing the sheet still counts —
+         which means asking "is this a best?" at the end would always be
+         answered by the run's own score. */
+      bestAtStart: (function () { try { return best(m.key); } catch (e) { return 0; } })()
+    };
+  }
+  // The round is scored here rather than on the screen so a new mode gets the
+  // ladder, the streak and the stats for nothing.
+  function settle(session, track, step, attempts, correct) {
+    session.played++;
+    session.used[track.i] = 1;
+    var gained = 0, bonus = 0;
+    if (correct) {
+      gained = points(step);
+      session.streak++;
+      if (session.streak > session.bestStreak) session.bestStreak = session.streak;
+      if (session.m.bonus) bonus = streakBonus(session.streak);
+      session.correct++;
+    } else {
+      session.streak = 0;
+    }
+    session.score += gained + bonus;
+    session.rounds.push({ title: track.title, artist: track.artist, step: step,
+                          seconds: STEPS[step], attempts: attempts, correct: !!correct,
+                          points: gained + bonus });
+    return { points: gained, bonus: bonus, total: gained + bonus };
+  }
+  function stats(session) {
+    var got = session.rounds.filter(function (r) { return r.correct; });
+    var secs = got.reduce(function (a, r) { return a + r.seconds; }, 0);
+    var tries = session.rounds.reduce(function (a, r) { return a + r.attempts; }, 0);
+    return {
+      songs: session.correct, played: session.played, score: session.score,
+      bestStreak: session.bestStreak,
+      avgReveal: got.length ? (secs / got.length) : 0,
+      accuracy: tries ? Math.round(session.correct / tries * 100) : 0
+    };
+  }
+
+  /* ---- sharing ------------------------------------------------------- */
+  /* Structured first and rendered second, so the day this becomes an image
+     card it is a different renderer over the same object rather than a parser
+     over a string.
+
+     Spoiler-free, always. Four cells say how long you held out and never which
+     record it was — the same trade Cover Fire's row of circles makes. */
+  function shareCard(rec) {
+    var marks = STEPS.map(function (s, i) {
+      return rec.correct && rec.step === i ? '●' : (rec.correct && i < rec.step) ? '○' : (!rec.correct ? '○' : '·');
+    }).join('');
+    if (rec.mode === 'endless') {
+      return { title: 'RECALL — Endless', lines: [
+        rec.songs + ' song' + (rec.songs === 1 ? '' : 's') + ' · ' + (rec.score || 0).toLocaleString('en-GB') + ' points',
+        'best streak ' + (rec.bestStreak || 0) + ' · average reveal ' + (rec.avgReveal || 0).toFixed(1) + 's'
+      ], url: 'wildcrate.xyz' };
+    }
+    return { title: 'RECALL #' + rec.day, lines: [
+      marks + '  ' + (rec.correct ? (STEPS[rec.step] + '.0s') : 'missed'),
+      (rec.score || 0).toLocaleString('en-GB') + ' points'
+    ], url: 'wildcrate.xyz' };
+  }
+  function shareText(rec) {
+    var c = shareCard(rec);
+    return c.title + '\n' + c.lines.join('\n') + '\n' + c.url;
+  }
+
+  window.Recall = {
+    STEPS: STEPS, SCORES: SCORES, MODES: MODES,
+    DAILY_KEY: DAILY_KEY, BEST_KEY: BEST_KEY,
+    norm: norm, matches: matches, isArtistOnly: isArtistOnly, suggest: suggest,
+    pool: pool, dayNo: dayNo, msToNextDay: msToNextDay, dayCandidates: dayCandidates,
+    dailyDone: dailyDone, saveDaily: saveDaily, best: best, setBest: setBest,
+    points: points, streakBonus: streakBonus,
+    session: session, settle: settle, stats: stats,
+    shareCard: shareCard, shareText: shareText
+  };
+})();
+</script>
+
+<!-- ================================================================
+     RECALL — the screen
+
+     Open, hear, guess, know, next. Everything on the round is one screen and
+     one thumb: the sleeve, the clip, the box, one button. There is no setup,
+     no difficulty picker and no mode menu past the first tap, because a game
+     that takes four taps to start is a game people play once.
+
+     The lobby is two buttons and a line of your own numbers. That is the
+     whole of it.
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+  var modal = document.getElementById('recall-modal');
+  if (!modal || !window.Recall || !window.VinalAudio) return;
+
+  var STEPS = Recall.STEPS;
+  var sess = null, cands = [], candAt = 0, song = null, clip = null;
+  var step = 0, attempts = 0, revealed = false, roundTok = 0, busy = false;
+  var countdown = null, serverState = null;
+
+  function el(id) { return document.getElementById(id); }
+  function n(v) { return (Number(v) || 0).toLocaleString('en-GB'); }
+  function on() { return !!(window.Cloud && Cloud.isOn && Cloud.isOn()); }
+  function show(v) {
+    ['recall-lobby', 'recall-play', 'recall-over'].forEach(function (x) {
+      var e = el(x); if (e) e.style.display = x === v ? 'block' : 'none';
+    });
+  }
+
+  /* ---------- the sleeve, the waveform ---------- */
+  /* Bars are drawn from a hash of the song rather than at random, so the same
+     song looks the same every time and a re-render does not make the record
+     appear to change. It is an indicator, not a reading of the audio: an
+     analyser would need the clip decoded before anything could be drawn, which
+     is a second of nothing on the one screen that has to feel instant. */
+  var BARS = 44;
+  function paintWave(reveal) {
+    var host = el('recall-wave'); if (!host) return;
+    if (host.dataset.key !== (song ? song.title + song.artist : '')) {
+      var h = 9, s = song ? (song.title + song.artist) : 'x', i;
+      for (i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      var html = '';
+      for (i = 0; i < BARS; i++) {
+        h = (h * 1103515245 + 12345) >>> 0;
+        var v = 26 + ((h >>> 8) % 74);
+        html += '<i style="height:' + v + '%"></i>';
+      }
+      host.innerHTML = html + '<b class="rc-head"></b>';
+      host.dataset.key = song ? song.title + song.artist : '';
+    }
+    var frac = reveal / STEPS[STEPS.length - 1];
+    var bars = host.querySelectorAll('i');
+    for (var j = 0; j < bars.length; j++) bars[j].classList.toggle('lit', (j / BARS) < frac);
+  }
+  function movePlayhead(t) {
+    var head = modal.querySelector('.rc-head'); if (!head) return;
+    var max = STEPS[STEPS.length - 1];
+    head.style.left = Math.min(100, (t / max) * 100) + '%';
+    head.style.opacity = t > 0 ? '1' : '0';
+  }
+  VinalAudio.on('tick', function (t) { movePlayhead(t); });
+  VinalAudio.on('end', function () {
+    movePlayhead(0);
+    var b = el('recall-hear'); if (b) b.classList.remove('on');
+  });
+
+  /* ---------- painting a round ---------- */
+  function paintSteps() {
+    var host = el('recall-steps'); if (!host) return;
+    host.innerHTML = STEPS.map(function (s, i) {
+      var cls = i < step ? 'done' : i === step ? 'now' : 'todo';
+      return '<i class="' + cls + '">' + s + 's</i>';
+    }).join('');
+    var b = el('recall-hear');
+    if (b) {
+      b.innerHTML = '<span class="rc-play-ico"></span>' + STEPS[step].toFixed(1) + 's';
+      b.setAttribute('aria-label', 'Play the first ' + STEPS[step] + ' seconds');
+    }
+    var sk = el('recall-skip');
+    if (sk) {
+      var last = step >= STEPS.length - 1;
+      sk.textContent = last ? 'Give up' : ('Hear ' + STEPS[step + 1] + 's');
+      sk.className = last ? 'rc-skip give' : 'rc-skip';
+    }
+    paintWave(STEPS[step]);
+  }
+  function paintHud() {
+    var s = el('recall-streak');
+    if (!s) return;
+    var streak = sess ? sess.streak : 0;
+    if (sess && sess.m.endless) {
+      s.innerHTML = (streak > 0 ? ('<span class="rc-flame">' + (window.ICONS ? ICONS.fire : '') + '</span>' + streak + ' streak') : '') ;
+      s.classList.toggle('lit', streak > 0);
+    } else {
+      var d = serverState && serverState.streak;
+      s.innerHTML = d ? ('<span class="rc-flame">' + (window.ICONS ? ICONS.fire : '') + '</span>' + d + ' day' + (d === 1 ? '' : 's')) : '';
+      s.classList.toggle('lit', !!d);
+    }
+    var sc = el('recall-score');
+    if (sc) {
+      sc.textContent = sess && sess.m.endless ? n(sess.score) : '';
+      sc.style.display = sess && sess.m.endless ? '' : 'none';
+    }
+  }
+  function say(msg, kind) {
+    var v = el('recall-verdict');
+    if (!v) return;
+    v.textContent = msg || '';
+    v.className = 'rc-verdict' + (kind ? (' ' + kind) : '');
+  }
+  function shake() {
+    var w = el('recall-answer'); if (!w) return;
+    w.classList.remove('shake'); void w.offsetWidth; w.classList.add('shake');
+  }
+
+  /* ---------- loading a round ---------- */
+  function setLoading(state, msg) {
+    var art = el('recall-art');
+    if (art) art.classList.toggle('loading', !!state);
+    var b = el('recall-hear');
+    if (b) b.disabled = !!state;
+    var i = el('recall-input');
+    if (i) i.disabled = !!state;
+    if (msg !== undefined) say(msg || '');
+  }
+
+  function nextRound() {
+    if (!sess) return;
+    revealed = false; step = 0; attempts = 0; clip = null;
+    var r = el('recall-reveal'); if (r) { r.innerHTML = ''; r.classList.remove('on'); }
+    var a = el('recall-art'); if (a) a.classList.remove('open');
+    var pane = el('recall-play'); if (pane) pane.classList.remove('revealed');
+    var i = el('recall-input'); if (i) { i.value = ''; }
+    closeSuggest();
+    cands = sess.m.candidates(sess) || [];
+    candAt = 0;
+    show('recall-play');
+    paintHud();
+    loadCandidate();
+  }
+
+  /* A clip that will not resolve is two different things and they are handled
+     differently on purpose: a record Deezer genuinely has no preview for is a
+     fact about the record, so the round steps deterministically to the next
+     song and the whole world steps with it. A failed request is a fact about
+     this phone, so it stops and offers a retry — falling through there would
+     quietly give one person a different daily from everybody else. */
+  function loadCandidate() {
+    var tok = ++roundTok, t = cands[candAt];
+    if (!t) { outOfSongs(); return; }
+    setLoading(true, candAt ? '' : 'Cueing it up…');
+    VinalAudio.resolve(t).then(function (res) {
+      if (tok !== roundTok) return;
+      if (res && res.error) { trouble(); return; }
+      if (!res || !res.url) { candAt++; loadCandidate(); return; }
+      song = t; clip = res;
+      var img = el('recall-art-img');
+      if (img) img.src = song.art || clip.cover || '';
+      setLoading(false, '');
+      paintSteps(); paintHud();
+      // One round ahead, never more: these urls are signed and expire in about
+      // ten minutes, so cueing up a queue would be cueing up dead links.
+      if (cands[candAt + 1]) VinalAudio.prefetch(cands[candAt + 1]);
+    });
+  }
+  function trouble() {
+    setLoading(true);
+    say('Could not reach the audio. Check your connection.', 'bad');
+    var r = el('recall-reveal');
+    if (r) {
+      r.classList.add('on');
+      r.innerHTML = '<button class="btn-primary" id="recall-retry">Try again</button>';
+      var b = el('recall-retry');
+      if (b) b.addEventListener('click', function () { r.innerHTML = ''; r.classList.remove('on'); loadCandidate(); });
+    }
+  }
+  function outOfSongs() {
+    if (sess && sess.played) { finishSession('That is every record in the pool.'); return; }
+    say('No songs available just now.', 'bad');
+  }
+
+  /* ---------- playing ---------- */
+  function hear() {
+    if (!song || revealed) return;
+    VinalAudio.prime();
+    var b = el('recall-hear');
+    if (b) b.classList.add('on');
+    if (window.buzz) buzz('tap');
+    VinalAudio.play(song, STEPS[step]).then(function (ok) {
+      if (ok === true) return;
+      if (b) b.classList.remove('on');
+      if (ok === 'blocked') { say('Tap play to hear it.'); return; }
+      trouble();
+    });
+    // The box is only worth focusing once there is something to name, and on a
+    // phone focusing it earlier throws a keyboard over the record.
+    var i = el('recall-input');
+    if (i && !revealed && matchMedia('(hover: hover)').matches) i.focus();
+  }
+
+  function advance() {
+    if (revealed) return;
+    if (step >= STEPS.length - 1) { finishRound(false); return; }
+    step++;
+    paintSteps();
+    hear();
+  }
+
+  /* ---------- answering ---------- */
+  function submit() {
+    if (revealed || !song || busy) return;
+    var i = el('recall-input'), v = (i && i.value || '').trim();
+    if (!v) { shake(); return; }
+    /* Naming the artist is not naming the song, and it is the single most
+       common near-miss — so it says so and costs nothing, rather than being
+       scored as a wrong guess and quietly eating a reveal. */
+    if (Recall.isArtistOnly(v, song)) { say('That is the artist — which song?'); shake(); return; }
+    attempts++;
+    closeSuggest();
+    if (Recall.matches(v, song)) { finishRound(true); return; }
+    shake();
+    if (window.buzz) buzz('bad');
+    if (i) { i.value = ''; i.focus(); }
+    if (step >= STEPS.length - 1) { finishRound(false); return; }
+    step++;
+    paintSteps();
+    say('Not quite. ' + STEPS[step] + ' seconds now.');
+    hear();
+  }
+
+  function finishRound(correct) {
+    revealed = true;
+    VinalAudio.stop();
+    movePlayhead(0);
+    var got = Recall.settle(sess, song, step, attempts, correct);
+    Recall.setBest(sess.mode, sess.score);
+    closeSuggest();
+    paintHud();
+    reveal(correct, got);
+    track2('recall_round', { mode: sess.mode, correct: !!correct, step: step });
+    if (sess.mode === 'daily') finishDaily(correct, got);
+  }
+  function track2(nm, props) { try { if (window.track) window.track(nm, props); } catch (e) {} }
+
+  function reveal(correct, got) {
+    var art = el('recall-art');
+    if (art) art.classList.add('open');
+    var pane = el('recall-play');
+    if (pane) pane.classList.add('revealed');
+    var i = el('recall-input'); if (i) { i.value = ''; i.blur(); }
+    say('');
+    var host = el('recall-reveal');
+    if (!host) return;
+
+    var head = correct ? 'Correct' : 'Missed';
+    var pts = correct ? ('+' + n(got.points)) : '';
+    var bonus = (correct && got.bonus) ? ('<span class="rc-bonus">+' + n(got.bonus) + ' streak</span>') : '';
+    var line = correct
+      ? ('Got it at ' + STEPS[step] + '.0s')
+      : ('It ran the full ' + STEPS[STEPS.length - 1] + ' seconds');
+    var src = VinalAudio.current() === 'deezer'
+      ? ('<a class="rc-src dz-credit" href="' + esc(clip && clip.link ? clip.link : (VinalAudio.link(song) || '#')) +
+         '" target="_blank" rel="noopener"><img src="/assets/deezer-mark.png" alt="" width="12" height="12">Preview from Deezer</a>')
+      : '<span class="rc-src">' + esc(VinalAudio.label()) + '</span>';
+
+    host.innerHTML =
+      '<div class="rc-rev-head ' + (correct ? 'good' : 'bad') + '">' + head +
+        (pts ? ' <b>' + pts + '</b>' : '') + bonus + '</div>' +
+      '<div class="rc-rev-title">' + esc(song.title) + '</div>' +
+      '<div class="rc-rev-sub">' + esc(song.artist) + (song.album ? (' · ' + esc(song.album)) : '') + '</div>' +
+      '<div class="rc-rev-when">' + line + '</div>' +
+      '<div class="rc-rev-actions" id="recall-rev-actions"></div>' + src;
+    host.classList.add('on');
+
+    var acts = el('recall-rev-actions');
+    if (sess.m.endless) {
+      acts.innerHTML = '<button class="btn-primary" id="recall-next">Next song</button>' +
+        '<button class="rc-skip" id="recall-stop">Finish</button>';
+      el('recall-next').addEventListener('click', nextRound);
+      el('recall-stop').addEventListener('click', function () { finishSession(); });
+      setTimeout(function () { var b = el('recall-next'); if (b) b.focus(); }, 40);
+    } else {
+      acts.innerHTML = '<button class="btn-primary" id="recall-daily-done">Done</button>';
+      el('recall-daily-done').addEventListener('click', function () { openLobby(); });
+    }
+
+    if (correct) {
+      if (window.buzz) buzz('good');
+      if (window.burst && art) burst(art, { count: step === 0 ? 34 : 18, spread: 150 });
+    }
+  }
+
+  /* ---------- the daily ---------- */
+  async function finishDaily(correct, got) {
+    var rec = Recall.saveDaily({ mode: 'daily', score: sess.score, step: step,
+                                 correct: !!correct, attempts: attempts });
+    if (window.notePlay) notePlay('recall');
+    if (window.Wallet && Wallet.awardGame && correct) Wallet.awardGame('recall', { reason: 'Recall' });
+    paintCard();
+    dailyExtras(rec);
+    if (!on()) return;
+    try {
+      /* The score is the SERVER's, computed from the step, and correctness is
+         decided there against recall_daily. What goes up is the title being
+         claimed and how far in it was — never a verdict and never a number.
+         The client scored the same round locally a moment ago, so the two are
+         compared and a disagreement is reported rather than papered over: a
+         gap means the schedule has drifted from the pool, which is silent
+         otherwise and would mark honest answers wrong. */
+      var r = await Cloud.recallSubmit({
+        day: Recall.dayNo(), mode: 'daily',
+        guess: correct ? song.title : '', step: step, attempts: attempts,
+        claim: song.title, correct: !!correct
+      });
+      if (r) {
+        if (r.drift && window.reportIssue) {
+          reportIssue('recall_daily disagrees with the client pool', { day: Recall.dayNo(), claimed: song.title });
+        }
+        if (!r.already && r.verified && r.correct !== !!correct && window.reportIssue) {
+          reportIssue('recall_submit disagreed about the answer', { day: Recall.dayNo(), local: !!correct, server: r.correct });
+        }
+        // The streak has just moved, so the cached state is stale by
+        // definition. Cleared and re-read rather than counted up here: a number
+        // this client works out for itself is the shape of field that cost this
+        // app a week over login_last_date.
+        serverState = null;
+        loadState();
+      }
+    } catch (e) {}
+  }
+  /* The share row and the clock to the next one. A daily is only collectible
+     if it ends somewhere — a result that just sits there is a score, and a
+     score with a countdown under it is a habit. */
+  function dailyExtras(rec) {
+    var acts = el('recall-rev-actions');
+    if (!acts) return;
+    acts.insertAdjacentHTML('afterbegin',
+      '<button class="rc-skip" id="recall-share">' + (window.Native ? Native.hand : 'Copy') + ' result</button>');
+    var b = el('recall-share');
+    if (b) b.addEventListener('click', function () {
+      handOff(b, { text: Recall.shareText(rec), copied: 'Copied' });
+    });
+    startCountdown(el('recall-rev-actions'));
+  }
+  function startCountdown(after) {
+    stopCountdown();
+    var old = document.getElementById('recall-countdown');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    var host = document.createElement('div');
+    host.className = 'rc-next-in'; host.id = 'recall-countdown';
+    if (after && after.parentNode) after.parentNode.insertBefore(host, after.nextSibling);
+    function tick() {
+      var ms = Recall.msToNextDay();
+      var h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, s = Math.floor(ms / 1000) % 60;
+      host.textContent = 'Next song in ' + h + 'h ' + ('0' + m).slice(-2) + 'm ' + ('0' + s).slice(-2) + 's';
+    }
+    tick();
+    countdown = setInterval(tick, 1000);
+  }
+  function stopCountdown() { if (countdown) { clearInterval(countdown); countdown = null; } }
+
+  /* ---------- the session summary ---------- */
+  async function finishSession(note) {
+    VinalAudio.stop();
+    stopCountdown();
+    var st = Recall.stats(sess);
+    var isBest = st.score > (sess.bestAtStart || 0);
+    /* Marked finished before anything is filed. close() records an abandoned
+       run so that walking away still counts — without this flag, finishing
+       properly and THEN closing the sheet files the same run twice, once as a
+       session row on the server and once as a play in the game log. */
+    sess.done = true;
+    Recall.setBest('endless', st.score);
+    show('recall-over');
+    // The big number IS the score; the chip beside the wordmark would be the
+    // same number twice.
+    var sc = el('recall-score'); if (sc) sc.style.display = 'none';
+    if (window.notePlay) notePlay('recall');
+    if (window.Wallet && Wallet.awardGame && st.songs > 0) Wallet.awardGame('recall', { reason: 'Recall' });
+    track2('recall_session', { songs: st.songs, score: st.score, streak: st.bestStreak });
+
+    el('recall-final').textContent = n(st.score);
+    el('recall-summary').innerHTML =
+      row('Songs', st.songs + ' of ' + st.played) +
+      row('Longest streak', String(st.bestStreak)) +
+      row('Average reveal', st.avgReveal ? st.avgReveal.toFixed(1) + 's' : '—') +
+      row('Accuracy', st.accuracy + '%') +
+      row('Best', n(Math.max(Recall.best('endless'), st.score)) + (isBest ? ' · new' : ''));
+    var sub = el('recall-over-note');
+    if (sub) sub.textContent = note || (isBest ? 'A new best.' : '');
+
+    var shareRec = { mode: 'endless', score: st.score, songs: st.songs,
+                     bestStreak: st.bestStreak, avgReveal: st.avgReveal };
+    var sh = el('recall-over-share');
+    if (sh) {
+      sh.textContent = (window.Native ? Native.hand : 'Copy') + ' result';
+      sh.onclick = function () { handOff(sh, { text: Recall.shareText(shareRec), copied: 'Copied' }); };
+    }
+    paintCard();
+    if (!on()) return;
+    try { await Cloud.recallSession(st.score, st.songs, st.bestStreak, Math.round(st.avgReveal)); } catch (e) {}
+  }
+  function row(k, v) { return '<div class="rc-sum-row"><span>' + esc(k) + '</span><b>' + esc(v) + '</b></div>'; }
+
+  /* ---------- autocomplete ---------- */
+  var sugIdx = -1;
+  function paintSuggest() {
+    var i = el('recall-input'), host = el('recall-sugg');
+    if (!i || !host) return;
+    var list = revealed ? [] : Recall.suggest(i.value, 6);
+    if (!list.length) { closeSuggest(); return; }
+    sugIdx = -1;
+    host.innerHTML = list.map(function (t, k) {
+      return '<button type="button" class="rc-sug" data-k="' + k + '" data-t="' + esc(t.title) + '">' +
+        '<span>' + esc(t.title) + '</span><small>' + esc(t.artist) + '</small></button>';
+    }).join('');
+    host.style.display = '';
+    host.querySelectorAll('.rc-sug').forEach(function (b) {
+      b.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
+      b.addEventListener('click', function () { i.value = b.dataset.t; closeSuggest(); submit(); });
+    });
+  }
+  function closeSuggest() {
+    var host = el('recall-sugg');
+    if (host) { host.style.display = 'none'; host.innerHTML = ''; }
+    sugIdx = -1;
+  }
+  function moveSuggest(d) {
+    var host = el('recall-sugg');
+    if (!host || host.style.display === 'none') return false;
+    var items = host.querySelectorAll('.rc-sug');
+    if (!items.length) return false;
+    sugIdx = (sugIdx + d + items.length + 1) % (items.length + 1) - 1;
+    items.forEach(function (b, k) { b.classList.toggle('on', k === sugIdx); });
+    if (sugIdx >= 0) el('recall-input').value = items[sugIdx].dataset.t;
+    return true;
+  }
+
+  /* ---------- lobby ---------- */
+  function openLobby() {
+    VinalAudio.stop();
+    stopCountdown();
+    sess = null;
+    show('recall-lobby');
+    paintHud();
+    paintLobby();
+  }
+  function paintLobby() {
+    var done = Recall.dailyDone();
+    var b = el('recall-daily-btn');
+    if (b) {
+      b.disabled = !!done;
+      b.innerHTML = done
+        ? ('Today’s song — ' + (done.correct ? n(done.score) : 'missed'))
+        : 'Play today’s song';
+    }
+    var note = el('recall-lobby-note');
+    if (note) {
+      note.textContent = done
+        ? 'One go a day. Everybody gets the same song.'
+        : 'One second of a record. Name it before it gets easier.';
+    }
+    var line = el('recall-stats-line');
+    if (line) {
+      var bits = [];
+      if (Recall.best('endless')) bits.push('Best run ' + n(Recall.best('endless')));
+      if (serverState && serverState.streak) bits.push(serverState.streak + '-day streak');
+      if (serverState && serverState.days) bits.push(serverState.days + ' solved');
+      line.textContent = bits.join('  ·  ');
+    }
+    if (done) {
+      var host = el('recall-lobby-done');
+      if (host) {
+        host.innerHTML = '';
+        startCountdown(host);
+      }
+    }
+    loadState();
+  }
+  var stateTok = 0;
+  async function loadState() {
+    if (!on() || serverState) return;
+    var tok = ++stateTok;
+    try {
+      var s = await Cloud.recallState();
+      if (tok !== stateTok || !s || !s.signed_in) return;
+      serverState = s;
+      paintHud(); 
+      var line = el('recall-stats-line');
+      if (line && el('recall-lobby').style.display !== 'none') paintLobby();
+      paintCard();
+    } catch (e) {}
+  }
+
+  function startMode(key) {
+    if (key === 'daily' && Recall.dailyDone()) { paintLobby(); return; }
+    sess = Recall.session(key);
+    track2('recall_start', { mode: key });
+    nextRound();
+  }
+
+  /* ---------- open / close ---------- */
+  function open(mode) {
+    modal.classList.add('open');
+    serverState = serverState || null;
+    openLobby();
+    if (mode && Recall.MODES[mode]) startMode(mode);
+  }
+  /* Everything that has to happen when the sheet goes, wherever it went from.
+
+     It is not only the close button: Android's back and the iOS edge swipe are
+     handled centrally for every modal in this app, and that handler simply
+     takes the `open` class off — so a close that never reaches this module
+     would leave the clip playing underneath whatever the person went back to.
+     Hence the observer below rather than more wiring at each exit. Idempotent,
+     because both routes can fire for one close. */
+  function teardown() {
+    VinalAudio.stop();
+    stopCountdown();
+    // A run abandoned mid-way is still a run played, and the summary is where
+    // the score lives — so it is recorded silently rather than reopening the
+    // sheet to tell somebody what they just walked away from.
+    if (sess && sess.played && sess.m.endless && !sess.done) {
+      var st = Recall.stats(sess);
+      Recall.setBest('endless', st.score);
+      if (on()) { try { Cloud.recallSession(st.score, st.songs, st.bestStreak, Math.round(st.avgReveal)); } catch (e) {} }
+      if (window.notePlay) notePlay('recall');
+    }
+    sess = null;
+    paintCard();
+  }
+  function close() { modal.classList.remove('open'); teardown(); }
+  try {
+    new MutationObserver(function () {
+      if (!modal.classList.contains('open')) teardown();
+    }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+  } catch (e) {}
+
+  /* ---------- wiring ---------- */
+  el('recall-close').addEventListener('click', close);
+  modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+  el('recall-daily-btn').addEventListener('click', function () { startMode('daily'); });
+  el('recall-endless-btn').addEventListener('click', function () { startMode('endless'); });
+  el('recall-hear').addEventListener('click', hear);
+  el('recall-skip').addEventListener('click', advance);
+  el('recall-submit').addEventListener('click', submit);
+  el('recall-again').addEventListener('click', function () { startMode('endless'); });
+  el('recall-menu').addEventListener('click', openLobby);
+
+  var input = el('recall-input');
+  input.addEventListener('input', paintSuggest);
+  input.addEventListener('blur', function () { setTimeout(closeSuggest, 120); });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') { if (moveSuggest(1)) e.preventDefault(); return; }
+    if (e.key === 'ArrowUp') { if (moveSuggest(-1)) e.preventDefault(); return; }
+    if (e.key === 'Escape') { closeSuggest(); return; }
+    if (e.key === 'Enter') { e.preventDefault(); submit(); }
+  });
+
+  // Space replays and Enter moves on, but never while somebody is typing in
+  // the box — which is most of the time this modal is open.
+  document.addEventListener('keydown', function (e) {
+    if (!modal.classList.contains('open')) return;
+    var t = e.target, tag = t && t.tagName;
+    var typing = tag === 'INPUT' || tag === 'TEXTAREA' || (t && t.isContentEditable);
+    if (e.key === 'Escape') { close(); return; }
+    if (typing) return;
+    if (e.code === 'Space' && el('recall-play').style.display !== 'none') {
+      e.preventDefault();
+      if (revealed) { var b = el('recall-next'); if (b) b.click(); } else hear();
+    }
+  });
+
+  /* ---------- the card on the grid ---------- */
+  /* Local first and unconditionally, so it says something with no network.
+     Nothing is ever inferred from a stale field — a streak is only printed
+     once recall_state has actually answered. */
+  var cardTok = 0;
+  async function paintCard() {
+    var s = document.getElementById('recall-card-status');
+    if (!s) return;
+    var tok = ++cardTok, bits = [];
+    var done = Recall.dailyDone();
+    bits.push(done ? ('Today · ' + (done.correct ? n(done.score) : 'missed')) : 'Today’s ready');
+    if (Recall.best('endless')) bits.push('Best ' + n(Recall.best('endless')));
+    s.textContent = bits.join(' · ');
+    if (!on()) return;
+    try {
+      var st = serverState || await Cloud.recallState();
+      if (tok !== cardTok || !st || !st.signed_in) return;
+      serverState = st;
+      if (st.streak > 1) s.textContent = st.streak + ' days running' + (done ? '' : ' · today’s ready');
+    } catch (e) {}
+  }
+
+  var card = document.getElementById('recall-card');
+  if (card) card.addEventListener('click', function () { open(); });
+  window.paintRecallCard = paintCard;
+  window.openRecall = open;
+  paintCard();
+
+  /* wildcrate.xyz/#recall opens straight into it. There is no /recall path
+     because this app is one static file with no router and no build step —
+     adding a rewrite to reach a view would be a deploy-config change for a
+     link, and the hash needs neither. */
+  function fromHash() {
+    if (location.hash !== '#recall') return;
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    open();
+  }
+  if (document.readyState === 'complete') fromHash();
+  else window.addEventListener('load', fromHash);
 })();
 </script>
 
