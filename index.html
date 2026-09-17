@@ -7702,8 +7702,21 @@ const SP_CACHE_TTL=24*60*60*1000;
    not change and keeps the day. */
 const SP_CLIP_TTL=4*60*1000;
 function _spTtl(path){ return /^\/albums\/[^/]+(\?|$)/.test(path) ? SP_CLIP_TTL : SP_CACHE_TTL; }
-function _spCacheRead(path){try{const o=JSON.parse(localStorage.getItem('spc:'+path));if(o&&o.x>Date.now())return o.d;}catch(e){}return null;}
-function _spCacheWrite(path,data){var _t=_spTtl(path);try{localStorage.setItem('spc:'+path,JSON.stringify({d:data,x:Date.now()+_t}));}catch(e){try{Object.keys(localStorage).filter(function(k){return k.indexOf('spc:')===0;}).forEach(function(k){localStorage.removeItem(k);});localStorage.setItem('spc:'+path,JSON.stringify({d:data,x:Date.now()+_t}));}catch(e2){}}}
+/* spc2, not spc. The expiry is stored ON the entry, so shortening the TTL in
+   code does nothing to anything already written: every browser that had opened
+   an album was holding that album's response — signed clip urls and all — for
+   a further 24 hours, and playback stayed broken after the fix shipped for
+   exactly as long as those entries had left. A new prefix is the only thing
+   that reaches them. The old ones are swept below.
+
+   Any future change to what is STORED in this cache needs the same bump. */
+const SPC='spc2:';
+function _spCacheRead(path){try{const o=JSON.parse(localStorage.getItem(SPC+path));if(o&&o.x>Date.now())return o.d;}catch(e){}return null;}
+function _spCacheWrite(path,data){var _t=_spTtl(path);try{localStorage.setItem(SPC+path,JSON.stringify({d:data,x:Date.now()+_t}));}catch(e){try{Object.keys(localStorage).filter(function(k){return k.indexOf(SPC)===0;}).forEach(function(k){localStorage.removeItem(k);});localStorage.setItem(SPC+path,JSON.stringify({d:data,x:Date.now()+_t}));}catch(e2){}}}
+/* One-time sweep of the pre-bump generation. Cheap, runs once per browser
+   because after this there is nothing left matching, and it is the difference
+   between the clip fix taking effect now and taking effect tomorrow. */
+try{Object.keys(localStorage).forEach(function(k){if(k.indexOf('spc:')===0)localStorage.removeItem(k);});}catch(e){}
 
 const _spInflight={};
 function spotifyGet(path,opts){
@@ -23893,15 +23906,16 @@ window.track = function (name, props) {
     });
   } catch (e) {}
 
-  function sweep(meta) {
+  function sweep(meta, fresh) {
     var id = meta && meta.id;
     if (!id) return Promise.resolve({});
-    var hit = albCacheGet(id);
+    if (fresh) { try { localStorage.removeItem(CK + id); } catch (e) {} delete sweeps[id]; }
+    var hit = fresh ? null : albCacheGet(id);
     if (hit) return Promise.resolve(hit);
     if (sweeps[id]) return sweeps[id];
     // Deezer first, Apple second. Neither is trusted to be up: an empty map
     // is an ordinary answer and means the row hands off to Spotify.
-    var p = deezerMap(meta).then(function (m) {
+    var p = deezerMap(meta, fresh).then(function (m) {
       return (m && Object.keys(m).length) ? m : appleMap(meta);
     }).then(function (m) {
       m = m || {};
@@ -23923,9 +23937,14 @@ window.track = function (name, props) {
   // Deezer, through /api/preview because Deezer sends no CORS headers. The
   // route caches at the edge for a week, so one album is one Deezer request
   // ever rather than one per listener.
-  function deezerMap(meta) {
+  function deezerMap(meta, fresh) {
     var u = Native.api+'/api/preview?artist=' + encodeURIComponent(meta.artist || '') +
             '&album=' + encodeURIComponent(meta.name || '');
+    /* A retry has to miss the edge cache, or it asks for the same expired
+       signature it just failed on and fails identically. The query is part of
+       the cache key, so a timestamp is all it takes. Only ever set on a retry;
+       a normal lookup still shares everybody else's cached copy. */
+    if (fresh) u += '&t=' + Date.now();
     return fetch(u).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
       var map = {};
       ((j && j.tracks) || []).forEach(function (t) {
@@ -23962,7 +23981,30 @@ window.track = function (name, props) {
     el.addEventListener('ended', function () { next(true); });
     el.addEventListener('play', paint);
     el.addEventListener('pause', paint);
-    el.addEventListener('error', function () { if (cur) flash('Could not play that preview'); });
+    /* A clip url is a SIGNED link that expires about ten minutes after Deezer
+       issues it, so "this src failed" is far more often a stale signature than
+       a record with no preview. One silent retry against a fresh lookup turns
+       the common case into a half-second pause instead of a dead end — and
+       because it is one, a genuinely unplayable track still says so rather
+       than looping. */
+    el.addEventListener('error', function () {
+      if (!cur) return;
+      if (!retryTok || retryTok !== cur) {
+        retryTok = cur;
+        var i = qi;
+        if (album && album.meta) {
+          sweep(album.meta, true).then(function (m) {
+            if (!album || retryTok !== cur) return;
+            album.map = m || {};
+            var t = album.tracks && album.tracks[i];
+            if (t) t.preview = null;      // the embedded one is the stale one
+            playIndex(i);
+          });
+          return;
+        }
+      }
+      flash('Could not play that preview');
+    });
     return el;
   }
   // iOS will only let an element play if play() was called inside a real
@@ -24097,6 +24139,9 @@ window.track = function (name, props) {
      than a tick and is discarded. What is sent is the real listened
      milliseconds, never a flat 30,000. */
   var acc = 0, lastT = 0, counted = false;
+  // Which track we have already spent the one retry on, so a track that truly
+  // will not play says so instead of refetching forever.
+  var retryTok = null;
   function resetHeard() { acc = 0; lastT = 0; counted = false; }
   function accrue() {
     if (!cur || !el) return;
