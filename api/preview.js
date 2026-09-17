@@ -85,7 +85,18 @@ export default async function handler(req, res) {
       .filter(function (t) { return t && t.preview; })
       .map(function (t) { return { title: t.title, preview: t.preview, ms: (t.duration || 0) * 1000 }; });
 
-    res.setHeader('Cache-Control', 'public, s-maxage=604800, stale-while-revalidate=86400');
+    /* Four minutes, not a week, and no stale-while-revalidate. The comment at
+       the top of this file said an album's preview list is "public, identical
+       for everybody and effectively immutable" — the first two are true and
+       the third is not. Deezer SIGNS each clip url with an expiry roughly ten
+       minutes out, so a week-long cache hands out links that 403 and a stale
+       revalidate hands out expired ones on purpose.
+
+       The cost is real and is the right way round: Deezer gets hit per album
+       per four minutes rather than per album ever. A rate limit is a bad
+       minute; a cached dead link is an album that cannot be played for seven
+       days and gives no reason why. */
+    res.setHeader('Cache-Control', 'public, s-maxage=240');
     // `cover` rides along because the album was resolved anyway. VINALL needs a
     // non-Spotify sleeve for the two surfaces Spotify's brand guidelines will
     // not allow theirs on — the Certification finishes, which paint over the

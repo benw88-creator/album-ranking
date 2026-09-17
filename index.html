@@ -1041,7 +1041,6 @@ html[data-motion="none"] .view.enter { animation: none; }
   line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-
 /* ============================================================
    DAILY DROP — one album and one song a day, six guesses each.
    Wordle-style: every guess is scored against the answer across
@@ -2920,7 +2919,6 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
 
 .cf { position: fixed; top: 50%; left: 50%; width: 10px; height: 14px; pointer-events: none; z-index: 221; animation: cfFall 1.6s ease-out forwards; }
 
-
 /* ---- PROFILE ---- */
 .prof-head { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; margin-bottom: 10px; }
 .prof-avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; background: var(--surface-3); border: 2px solid var(--border-strong); flex-shrink: 0; box-shadow: 0 0 0 3px var(--bg); }
@@ -2935,67 +2933,6 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   color: var(--text-faint); margin: 30px 0 16px;
 }
 
-/* ---- THE PROFILE ON A PHONE ---------------------------------------------
-   This page had no mobile rules at all: a 96px avatar next to a 30px name on
-   a 343px row, then eight section titles with 30px of air above each. It is
-   also the longest page in the app — header, Standing, top three, lists,
-   statistics, every album you have rated and every Lore answer — so the air
-   between sections is not a detail, it is most of the scrolling.
-
-   The identity block gets smaller and the rhythm gets tighter. Nothing is
-   removed: this is the same page, asking for less room to say it. */
-@media (max-width: 699px) {
-  /* One flex row holding an avatar, a name, a tag, a bio, four statistics and
-     two buttons. On 343px that is six things competing for one line, and it
-     read exactly as bunched as it was.
-
-     It stacks instead: the avatar, then who you are, then what you have done.
-     Nothing is nested in the markup — the identity block is a single inline
-     styled div built in JS — so the header simply stops being a row and lets
-     everything inside it run full width. */
-  .prof-head { display: block; margin-bottom: var(--s3); }
-  .prof-head > .pa-wrap { display: block; margin-bottom: var(--s3); }
-  /* The info column is inline-styled min-width:200px, which an inline style
-     means nothing else can beat. */
-  .prof-head > div { min-width: 0 !important; }
-  .prof-avatar { width: 76px; height: 76px; }
-  .prof-name { font-size: var(--t-h1); line-height: 1.1; }
-  .prof-bio { font-size: var(--t-sm); margin-top: var(--s2); line-height: 1.5; max-width: none; }
-
-  /* The four numbers were a wrapping flex row of "12 albums" strings. They are
-     the same hairline strip the Home stats use — one tile each, one rule
-     between them — so a number reads as a number rather than as a sentence,
-     and the two places in the app that show you counts finally match. */
-  .prof-stats {
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1px; background: var(--border);
-    border: 1px solid var(--border); border-radius: var(--radius-sm);
-    overflow: hidden; margin-top: var(--s4);
-  }
-  .prof-stat {
-    background: var(--surface); padding: var(--s3) var(--s1);
-    text-align: center; display: block;
-  }
-  .prof-stat.clickable { border-radius: 0; margin: 0; }
-  .prof-stat b { display: block; font-size: 19px; line-height: 1.1; }
-  .prof-stat span {
-    display: block; margin: 3px 0 0; font-size: 10px;
-    text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint);
-  }
-
-  /* Edit profile / Copy share link were a narrow column squeezed beside the
-     bio. Full width, under everything, where an action belongs. */
-  .prof-head > div:last-child:not(.pa-wrap) { margin-top: var(--s4); }
-  .prof-head #prof-edit, .prof-head #prof-share, .prof-head #prof-follow { width: 100%; }
-
-  .prof-section-title { margin: var(--s5) 0 var(--s3); }
-  .prof-section-row { margin: var(--s5) 0 var(--s3); }
-
-  .done-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); }
-  .done-tile { padding: var(--s3) var(--s2); border-radius: 12px; }
-  .dt-v { font-size: 22px; }
-  .top3 { gap: var(--s2); }
-}
 .top3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 420px; }
 .top3-slot {
   aspect-ratio: 1; border-radius: 14px;
@@ -3126,6 +3063,76 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
 
 .prof-stat.clickable { cursor: pointer; border-radius: 8px; padding: 2px 6px; margin: -2px -6px; transition: background 0.12s; }
 .prof-stat.clickable:hover { background: var(--surface-2); }
+
+/* ---- THE PROFILE ON A PHONE ---------------------------------------------
+   This page had no mobile rules at all: a 96px avatar next to a 30px name on
+   a 343px row, then eight section titles with 30px of air above each. It is
+   also the longest page in the app — header, Standing, top three, lists,
+   statistics, every album you have rated and every Lore answer — so the air
+   between sections is not a detail, it is most of the scrolling.
+
+   The identity block gets smaller and the rhythm gets tighter. Nothing is
+   removed: this is the same page, asking for less room to say it. */
+@media (max-width: 699px) {
+  /* One flex row holding an avatar, a name, a tag, a bio, four statistics and
+     two buttons. On 343px that is six things competing for one line, and it
+     read exactly as bunched as it was.
+
+     It stacks instead: the avatar, then who you are, then what you have done.
+     Nothing is nested in the markup — the identity block is a single inline
+     styled div built in JS — so the header simply stops being a row and lets
+     everything inside it run full width. */
+  .prof-head { display: block; margin-bottom: var(--s3); }
+  /* inline-block, NOT block: .pa-wrap is a <span> and its ::before draws the
+     avatar frame at inset:-9px. Made full width, that ring stretches right
+     across the screen — and on the animated frames it stretches the
+     animation with it. It needs to be exactly as wide as the avatar. */
+  .prof-head > .pa-wrap { display: inline-block; margin-bottom: var(--s3); }
+  /* The info column is inline-styled min-width:200px, which an inline style
+     means nothing else can beat. */
+  .prof-head > div { min-width: 0 !important; }
+  .prof-avatar { width: 76px; height: 76px; }
+  .prof-name { font-size: var(--t-h1); line-height: 1.1; }
+  .prof-bio { font-size: var(--t-sm); margin-top: var(--s2); line-height: 1.5; max-width: none; }
+
+  /* The four numbers were a wrapping flex row of "12 albums" strings. They are
+     the same hairline strip the Home stats use — one tile each, one rule
+     between them — so a number reads as a number rather than as a sentence,
+     and the two places in the app that show you counts finally match. */
+  .prof-stats {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    overflow: hidden; margin-top: var(--s4);
+  }
+  .prof-stat {
+    background: var(--surface); padding: var(--s3) var(--s1);
+    text-align: center; display: block;
+  }
+  /* The base rule gives the two clickable tiles a 2px/6px pad and a negative
+     margin to match, so inside the strip they came out smaller than the two
+     that are not clickable. All three properties have to be reset, not just
+     the two that were obvious. */
+  .prof-stat.clickable { border-radius: 0; margin: 0; padding: var(--s3) var(--s1); }
+  .prof-stat b { display: block; font-size: 19px; line-height: 1.1; }
+  .prof-stat span {
+    display: block; margin: 3px 0 0; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint);
+  }
+
+  /* Edit profile / Copy share link were a narrow column squeezed beside the
+     bio. Full width, under everything, where an action belongs. */
+  .prof-head > div:last-child:not(.pa-wrap) { margin-top: var(--s4); }
+  .prof-head #prof-edit, .prof-head #prof-share, .prof-head #prof-follow { width: 100%; }
+
+  .prof-section-title { margin: var(--s5) 0 var(--s3); }
+  .prof-section-row { margin: var(--s5) 0 var(--s3); }
+
+  .done-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); }
+  .done-tile { padding: var(--s3) var(--s2); border-radius: 12px; }
+  .dt-v { font-size: 22px; }
+  .top3 { gap: var(--s2); }
+}
 .prof-section-row { display: flex; align-items: center; justify-content: space-between; margin: 28px 0 16px; }
 
 /* Mini song lists */
@@ -3552,7 +3559,6 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   transition: transform 0.15s, background 0.15s;
 }
 .ap-comment-send:hover { transform: scale(1.1); background: #ffd84a; }
-
 
 @keyframes pop { 0% { transform: scale(0) rotate(-25deg); opacity: 0; } 55% { transform: scale(1.18) rotate(6deg); opacity: 1; } 100% { transform: scale(1) rotate(0); } }
 @keyframes shakeX { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); } }
@@ -4033,7 +4039,6 @@ body.entering-done #artist-hero {
 #view-album-detail.tinted #rate-album-btn:hover {
   filter: brightness(1.1);
 }
-
 
 /* ================================================================
    BID WARS
@@ -6704,7 +6709,6 @@ window.ICONS = {
     <div id="detail-cert"></div>
   </section>
 
-
   <footer class="site-foot">
     <a href="/privacy.html">Privacy</a>
     <span>&middot;</span>
@@ -7677,15 +7681,29 @@ async function _spExec(path,pri){
 }
 
 const SP_CACHE_TTL=24*60*60*1000;
+/* An album response is the one catalogue reply that is not immutable: each
+   track carries a Deezer preview url, and those are SIGNED with an expiry
+   about ten minutes out. Held for a day like everything else, this cache kept
+   handing back links that 403 — so an album played the first time you opened
+   it and never again that day, with "could not play that preview" and no clue
+   why. Everything else here (search, artists, discographies) genuinely does
+   not change and keeps the day. */
+const SP_CLIP_TTL=4*60*1000;
+function _spTtl(path){ return /^\/albums\/[^/]+(\?|$)/.test(path) ? SP_CLIP_TTL : SP_CACHE_TTL; }
 function _spCacheRead(path){try{const o=JSON.parse(localStorage.getItem('spc:'+path));if(o&&o.x>Date.now())return o.d;}catch(e){}return null;}
-function _spCacheWrite(path,data){try{localStorage.setItem('spc:'+path,JSON.stringify({d:data,x:Date.now()+SP_CACHE_TTL}));}catch(e){try{Object.keys(localStorage).filter(function(k){return k.indexOf('spc:')===0;}).forEach(function(k){localStorage.removeItem(k);});localStorage.setItem('spc:'+path,JSON.stringify({d:data,x:Date.now()+SP_CACHE_TTL}));}catch(e2){}}}
+function _spCacheWrite(path,data){var _t=_spTtl(path);try{localStorage.setItem('spc:'+path,JSON.stringify({d:data,x:Date.now()+_t}));}catch(e){try{Object.keys(localStorage).filter(function(k){return k.indexOf('spc:')===0;}).forEach(function(k){localStorage.removeItem(k);});localStorage.setItem('spc:'+path,JSON.stringify({d:data,x:Date.now()+_t}));}catch(e2){}}}
 
 const _spInflight={};
 function spotifyGet(path,opts){
-  if(_spotifyGetCache[path])return Promise.resolve(_spotifyGetCache[path]);
-  const stored=_spCacheRead(path);if(stored){_spotifyGetCache[path]=stored;return Promise.resolve(stored);}
+  /* The memory cache had no clock of any kind, so on a session left open all
+     evening it outlived the signatures on its own. It keeps one now, and for
+     everything but an album that clock is a day, same as before. */
+  var _hit=_spotifyGetCache[path];
+  if(_hit&&(!_hit.__x||_hit.__x>Date.now()))return Promise.resolve(_hit);
+  if(_hit)delete _spotifyGetCache[path];
+  const stored=_spCacheRead(path);if(stored){try{Object.defineProperty(stored,'__x',{value:Date.now()+_spTtl(path),enumerable:false,configurable:true});}catch(e){}_spotifyGetCache[path]=stored;return Promise.resolve(stored);}
   if(_spInflight[path])return _spInflight[path];
-  const p=spotifyFetch(path,opts).then(function(data){if(!_isEmptyResult(data)){_spotifyGetCache[path]=data;_spCacheWrite(path,data);}delete _spInflight[path];return data;},function(err){delete _spInflight[path];throw err;});
+  const p=spotifyFetch(path,opts).then(function(data){if(!_isEmptyResult(data)){try{Object.defineProperty(data,'__x',{value:Date.now()+_spTtl(path),enumerable:false,configurable:true});}catch(e){}_spotifyGetCache[path]=data;_spCacheWrite(path,data);}delete _spInflight[path];return data;},function(err){delete _spInflight[path];throw err;});
   _spInflight[path]=p;return p;
 }
 function _isEmptyResult(d){if(!d||typeof d!=='object')return true;if(d.albums&&Array.isArray(d.albums.items))return d.albums.items.length===0;if(d.artists&&Array.isArray(d.artists.items))return d.artists.items.length===0;if(d.tracks&&Array.isArray(d.tracks.items))return d.tracks.items.length===0;if(Array.isArray(d.items))return d.items.length===0;return false;}
@@ -8246,7 +8264,6 @@ function removeAlbum(id) { const a = loadAlbums(); delete a[id]; persist(ALBUMS_
 function removeSong(id)  { const s = loadSongs(); delete s[id]; persist(SONGS_KEY, s); if (window.Cloud) Cloud.deleteRating('song', id); _recsDirty = true; renderSongs(); }
 window.removeAlbum = removeAlbum;
 window.removeSong = removeSong;
-
 
 /* ================================================================
    STANDING — progression that measures depth instead of activity.
@@ -9428,7 +9445,6 @@ window.renderArtistHero = renderArtistHero;
   });
 })();
 
-
 /* ================================================================
    7. RENDER PANELS + COLOUR + INIT HELPERS
    ================================================================ */
@@ -9685,7 +9701,6 @@ function renderAuthArea(connected){
   if(window.Cloud&&Cloud.syncUI)Cloud.syncUI();
 }
 // gate-connect now reloads — wired inline in HTML
-
 
 /* ================================================================
    8. MINIGAMES
@@ -10136,7 +10151,6 @@ function renderAuthArea(connected){
     loadBoard();
   });
 })();
-
 
 /* ================================================================
    9. ACHIEVEMENTS + ARTIST COMPLETION
@@ -10694,7 +10708,6 @@ function drawCompletion(){
   host.querySelectorAll('.comp-chip').forEach(function(c){c.addEventListener('click',function(){const s=studio.find(function(x){return x.id===c.dataset.album;});if(s)openAlbum({id:s.id,name:s.name,artist:meta.artist,artistId:meta.artistId,art:s.art,year:s.year});});});
 }
 
-
 /* ================================================================
    10. RECENT ACTIVITY + NEW RELEASES
    ================================================================ */
@@ -10917,7 +10930,6 @@ async function pickNewrelArtist(artist) {
   }
 }
 function fmtRelDate(d){if(!d||d.length<10)return d||'';try{return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}catch(e){return d;}}
-
 
 
 /* ================================================================
@@ -11679,7 +11691,6 @@ const Cloud=(function(){
 })();
 window.Cloud=Cloud;
 
-
 /* ================================================================
    12. PROFILES
    ================================================================ */
@@ -11997,7 +12008,6 @@ async function drawProfile(host,prof,isOwner){
   } else {
     favBannerHtml = '';
   }
-
 
   /* A banner is a named gradient from the shop and nothing else now. The
      `album:<url>` keys that a seven-day streak used to grant are gone — day
@@ -12391,7 +12401,6 @@ function openListView(list,isOwner){document.getElementById('listview-title').te
   document.getElementById('follow-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 })();
 window.renderProfile=renderProfile;
-
 
 /* ================================================================
    13. NOTIFICATIONS + SUGGESTIONS
@@ -13219,7 +13228,6 @@ window.handleGrooveLink=handleGrooveLink;
     }
   };
 })();
-
 
 /* ================================================================
    16. INIT
@@ -16724,7 +16732,6 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 })();
 </script>
 
-
 <!-- ================================================================
      Dismiss choreography — the splash transforms into the dashboard.
 
@@ -17801,7 +17808,6 @@ function playDismissAnimation(gateEl, callback) {
     } catch (e) { return {}; }
   }
 
-
   // Creation goes through /api/bid-war-create, not a Postgres function: the
   // values are Last.fm play counts, and they have to be fetched somewhere the
   // player cannot watch. Everything after creation is still pure Postgres.
@@ -18606,7 +18612,6 @@ async function doDeleteAccount() {
   else wireSafety();
 })();
 </script>
-
 
 <!-- ================================================================
      ADMIN STATS — visible only to an admin account, on your own profile.
@@ -22351,7 +22356,6 @@ window.track = function (name, props) {
 };
 </script>
 
-
 <!-- ================================================================
      LORE — the core VINALL loop.
 
@@ -23756,7 +23760,6 @@ window.track = function (name, props) {
   window.Play = { track: fire, url: webUrl, mobile: MOBILE };
 })();
 
-
 /* ================================================================
    PLAYER — VINALL plays the record itself, so pause exists.
 
@@ -23842,8 +23845,23 @@ window.track = function (name, props) {
   // invalidate what the old source cached, and a key bump is the cheapest
   // way to say so. The stale entries are swept below rather than left to sit.
   var CK = 'ap2:alb:';
-  function albCacheGet(id) { try { var v = localStorage.getItem(CK + id); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
-  function albCacheSet(id, m) { try { localStorage.setItem(CK + id, JSON.stringify(m)); } catch (e) {} }
+  /* These hold Deezer clip urls, which are SIGNED and expire about ten
+     minutes after they are issued — so this cache was keeping links that stop
+     working and handing them back forever. It is a cache with a clock now.
+     Four minutes matches what the routes serve; anything older is thrown away
+     and looked up again, which costs one request and is the difference
+     between a record that plays and a record that says "could not play". */
+  var ALB_TTL = 4 * 60 * 1000;
+  function albCacheGet(id) {
+    try {
+      var v = localStorage.getItem(CK + id);
+      if (!v) return null;
+      var o = JSON.parse(v);
+      if (!o || !o.t || !o.m || (Date.now() - o.t) > ALB_TTL) { localStorage.removeItem(CK + id); return null; }
+      return o.m;
+    } catch (e) { return null; }
+  }
+  function albCacheSet(id, m) { try { localStorage.setItem(CK + id, JSON.stringify({ t: Date.now(), m: m })); } catch (e) {} }
   try {
     Object.keys(localStorage).forEach(function (k) {
       if (k.indexOf('ap:alb:') === 0 || k.indexOf('ap:') === 0) localStorage.removeItem(k);
@@ -24259,7 +24277,6 @@ window.track = function (name, props) {
                          next: next, prev: prev, playing: function () { return !!cur && !!el && !el.paused; } };
 })();
 
-
 /* ================================================================
    SPOTIFY ATTRIBUTION
 
@@ -24298,7 +24315,6 @@ window.track = function (name, props) {
 
   window.SpotifyMark = { html: MARK, paint: paint };
 })();
-
 
 /* ================================================================
    COVERS — a non-Spotify sleeve, for the two surfaces that need one

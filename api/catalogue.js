@@ -57,6 +57,13 @@
 const UA = 'VINALL/1.0 (+https://wildcrate.xyz)';
 const WEEK = 'public, s-maxage=604800, stale-while-revalidate=86400';
 const DAY  = 'public, s-maxage=86400, stale-while-revalidate=3600';
+/* For any response carrying a Deezer preview url. Those are SIGNED and live
+   about ten minutes (?hdnea=exp=<unix>), so a cache longer than that serves
+   links that 403 — and deliberately NO stale-while-revalidate, because
+   serving a stale copy here means serving an expired signature, which is
+   precisely the failure. Four minutes leaves every url at least five of its
+   ten remaining when it reaches somebody. */
+const CLIP = 'public, s-maxage=240';
 
 async function dz(path) {
   const r = await fetch('https://api.deezer.com' + path, { headers: { 'User-Agent': UA } });
@@ -169,7 +176,13 @@ export default async function handler(req, res) {
       }
       const out = await fullAlbum(dzId);
       out.legacy_id = numeric ? null : id;      // so the client keeps its key
-      res.setHeader('Cache-Control', WEEK);
+      // CLIP, not WEEK, and this is the whole reason CLIP exists. Everything
+      // else about an album is immutable and cached for a week; the
+      // preview_url on each track is not — Deezer signs it with an expiry
+      // about ten minutes out (?hdnea=exp=...), after which it 403s. Cached
+      // for a week, every record in the app went silent ten minutes after
+      // somebody first opened it and stayed silent for seven days.
+      res.setHeader('Cache-Control', CLIP);
       res.status(200).json(out);
       return;
     }
