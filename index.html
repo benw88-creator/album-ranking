@@ -3832,13 +3832,22 @@ body.entering-done #artist-hero {
   inset: 0;
   width: 100%;
   height: 100%;
-  /* Only ever seen if the dither can't run (a photo served without CORS
-     clearance). Contain, not cover: cover-cropping a square photo into this
-     2.48:1 banner showed ~40% of the image height blown up — a zoomed
-     strip, not a face. */
-  object-fit: contain;
-  object-position: 72% center;
-  filter: grayscale(1) contrast(1.12) brightness(0.95);
+  /* This IS the hero now — the halftone canvas that used to cover it is
+     switched off. So it stops being a fallback and gets dressed properly.
+
+     cover, not contain: contain was right when this was only ever the
+     emergency view, because a letterboxed photo is at least a whole photo.
+     Shown on purpose it has to fill the band, and the band is short enough
+     now (232px on a phone) that cover crops a strip rather than a face.
+
+     `center 28%` rather than dead centre: press shots put the face in the
+     upper third and centring a 1:1 photo into a wide band cuts the head off.
+     The grayscale is gone — the point of the change was a photo in good
+     quality — and what is left is a gentle lift so it sits on VINALL's
+     ground instead of glowing off it. */
+  object-fit: cover;
+  object-position: center 28%;
+  filter: contrast(1.04) saturate(0.92) brightness(0.88);
 }
 /* The canvas shares the layout but NOT the photo treatment: the grayscale
    filter above was silently draining the colour the dither picks out of
@@ -3871,13 +3880,10 @@ body.entering-done #artist-hero {
   -webkit-mask-composite: source-in;
           mask-composite: intersect;
 }
-.artist-hero-duotone {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, var(--bg), var(--gold));
-  mix-blend-mode: color;
-  pointer-events: none;
-}
+/* A colour-blend wash that replaced the photo's hue with a theme gradient.
+   That made sense over a halftone; over an actual photograph it is the one
+   thing standing between "good quality" and "tinted". Off with the dither. */
+.artist-hero-duotone { display: none; }
 /* Once the dots are printing, the duotone layer has nothing to tint but the
    canvas — and tinting it would undo the per-artist ink colour. */
 .artist-hero.artist-hero-dithered .artist-hero-duotone { display: none; }
@@ -3885,12 +3891,18 @@ body.entering-done #artist-hero {
    put a bar across the artist's face for no benefit. Now it only does the
    two jobs it needs to: keep the name legible on the left, and hand the
    band over to the page at the bottom. */
+/* Three jobs: keep the name legible, hand the band over to the page at the
+   bottom, and — new — stop the photo ending in a hard horizontal line. The
+   dither used to handle that last one itself, by thinning its dots out at the
+   edges. A photograph cannot, so the scrim does it: the bottom stop is the
+   page's own colour at full strength, and it starts far enough up that there
+   is no visible seam between picture and page. */
 .artist-hero-fade {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(to top, var(--bg) 0%, rgba(10,9,8,0.72) 14%, rgba(10,9,8,0.22) 34%, transparent 62%),
-    linear-gradient(to right, rgba(10,9,8,0.82) 0%, rgba(10,9,8,0.45) 28%, transparent 58%);
+    linear-gradient(to top, var(--bg) 0%, var(--bg) 6%, rgba(10,9,8,0.80) 22%, rgba(10,9,8,0.30) 46%, transparent 78%),
+    linear-gradient(to right, rgba(10,9,8,0.86) 0%, rgba(10,9,8,0.42) 34%, transparent 66%);
 }
 .artist-hero-content {
   position: relative;
@@ -3943,7 +3955,7 @@ body.entering-done #artist-hero {
      scrim's job changes: carry the bottom half, not the left edge. */
   .artist-hero-fade {
     background:
-      linear-gradient(to top, var(--bg) 0%, rgba(10,9,8,0.86) 22%, rgba(10,9,8,0.4) 44%, transparent 72%);
+      linear-gradient(to top, var(--bg) 0%, var(--bg) 8%, rgba(10,9,8,0.84) 26%, rgba(10,9,8,0.38) 52%, transparent 84%);
   }
   /* 360px was over 40% of a phone screen for a band that introduces the page
      rather than being it, and the -48px pull left the search field sitting on
@@ -14162,7 +14174,20 @@ window.handleGrooveLink=handleGrooveLink;
     return a;
   }
 
+  /* TEMPORARILY OFF. The halftone portrait is parked, not deleted — this one
+     line is the whole switch, the same arrangement Liner Notes and
+     market-mode Bid Wars use. Nothing below is removed and nothing about the
+     markup changes; the plain <img> the canvas used to cover is simply left
+     showing, which is what the fallback path already did for a photo served
+     without CORS clearance. See .artist-hero-bg for how it is dressed.
+
+     Worth knowing before switching it back on: the dots are also what made
+     the band read as VINALL's rather than as any music app's banner. If it
+     comes back, it comes back inked from the theme (see the note at `ink`),
+     not from the photo. */
+  var DITHER_HERO = false;
   async function mountArtistHero(imgEl, canvasEl) {
+    if (!DITHER_HERO) return false;
     if (!imgEl || !canvasEl) return;
     // decode() can simply never settle in a tab that isn't being painted —
     // observed here: a hero left unrendered indefinitely because the promise
