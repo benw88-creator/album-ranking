@@ -3892,3 +3892,132 @@ it lands inside the V and reads as a blemish.
 Generated from `scripts`-style code rather than drawn by hand, so it is
 reproducible: the SVG is written to `assets/icons/icon.svg` and rasterised from
 there, then `npm run assets` fans it out.
+
+## The handover, and four things that were showing their working
+
+### The splash does not fade any more — the record becomes the logo
+
+The dismiss was a dot-field dissolve: the gate stopped being there and the app
+was there instead, with nothing connecting them. Which is a transition in the
+sense that a PowerPoint slide is a transition.
+
+Now the record you are looking at **flies to the header and becomes the mark in
+the corner**. Object permanence is the whole trick — you are not shown a new
+screen, you follow the one object on screen to where it lives from now on, and
+the app is revealed to have been behind it the whole time.
+
+Three movements: a **spin-up** (6s per revolution to a third of a second, with
+blur, while the wordmark and the button lift away), a **flight** (880ms, to the
+header mark's measured position and exact size), and a **landing** (the real
+mark takes over at 1120ms, under a moving object, so the substitution is never
+seen).
+
+Three things it depends on:
+
+- **Everything is measured, nothing is guessed.** The mark's size and position
+  move with the viewport, the safe-area inset and the 700px rule that widens it
+  to 52px. `--fx`, `--fy` and `--fs` are set at runtime from two
+  `getBoundingClientRect()` calls.
+- **The app is forced to its resting state before anything is read.** It still
+  wears `is-entering` when the press lands, which puts a translate and a blur
+  on `.wrap` — measuring then measures the header 26px out of place. The
+  classes are swapped and the transition suppressed for one frame first.
+- **The rotation and the flight are on different elements.** Two animations on
+  one element fight over `transform`; `.sd-vinyl` spins and `.splash-disc`
+  flies, which is the same split that already keeps the centring translate off
+  the rotation.
+
+It degrades to the old fade under reduced motion, and to the old fade if either
+the record or the header mark is missing — a splash that will not go away is
+the one failure that matters here.
+
+### The Draw shows the prize and stops talking
+
+Two things were in the way of the thing you just won.
+
+**The description under it.** Every tier carried a sentence — "wear it under
+your name in the Shop", "equip it in the Shop", "claim it in the Market". All
+true, all *instructions*, and an instruction is the opposite of a prize: it
+turns the half-second you are meant to enjoy into a task list. Anybody who just
+won a theme knows where themes live.
+
+What is left is the tier, the thing, and **a number where there is one** — a
+Disc figure is not a description, it is the prize.
+
+**The full-screen trophy.** A spin already has a result screen: the reel stops
+on the thing and the panel names it. Throwing `celebrate()` over the top said
+the same sentence twice and covered the one you came for — and it said
+*Achievement Unlocked* over a cosmetic that was won by a reel stopping. Nothing
+was achieved. The weight is carried where the prize is now: the panel scales
+with the tier and the confetti fires from the reel and from the result itself.
+
+`celebrate()` is untouched and still right for what it was built for — a
+milestone claimed, a war won, a week of streaks. Those are achievements.
+
+### Login was seventeen round trips in a queue
+
+Pressing GO and waiting several seconds for your own profile was not the
+profile. `onAuthed` awaited `pullAndMerge()`, which ended in `await pushAll()`,
+which was **a for-loop of awaits over all seventeen sync keys** — seventeen
+upserts, one after another, before login was allowed to finish. Almost all of
+them re-uploading blobs identical to the ones just downloaded.
+
+- It pushes **only what the merge changed**, compared against the copy the
+  cloud just handed over, in parallel, and **without blocking**. The merged
+  state is already in localStorage, which is what the UI reads; the upload is
+  housekeeping, and housekeeping that fails is retried by the next write.
+- `Wallet.load()` runs **alongside** the merge rather than after it. One reads
+  `app_state` and the other reads `profiles`; neither was ever waiting on the
+  other.
+- `pushAll()` is `Promise.all` now, for the callers that genuinely want
+  everything.
+
+### The favourite artist photo is a backdrop, not a subject
+
+It looked bad for every artist and the crop was not the reason.
+
+**These images are not ours and are not consistent.** Deezer's artist pictures
+are square, they are whatever the label supplied, and the quality varies
+wildly. Drake's is an out-of-focus portrait *at source* — verified by
+downloading it; there is nothing sharp in the file to show, so no
+`object-position` rescues it. Others are 1000px upscales of thumbnails, some
+are group shots, one or two are a logo.
+
+Filling a wide band at 1:1 with a photo you do not control is the most
+unflattering thing available: it displays an image of unknown quality at the
+largest size the page has, and cuts half of every square off to do it.
+
+So the photo is **blurred hard, darkened and pushed behind** as an ambient wash
+in the artist's own colours — a job a bad photo does perfectly, because a
+backdrop is supposed to be out of focus — and the face goes in a **96px round
+portrait**, where a soft source reads as depth of field and nothing is cropped
+off. A circle is the one crop that cannot cut a head off badly.
+
+The wash's brightness is set for the **brightest plausible source**: a press
+shot against a white background was putting a pale grey slab behind the status
+bar. There is a top-down scrim as well as the bottom-up one for the same
+reason.
+
+The debug hook (`?debugArtist=`) has its own code path and had to be taught
+about the portrait separately — missing that is a wash with an empty circle in
+it, which is exactly what it looked like.
+
+### The icon, third time
+
+- **v1** — a dark grey record on a dark ground. Three near-identical dark
+  tones, which at 60pt is a black square with a gold dot on it.
+- **v2** — a gold record with real groove hairlines. Good at 1024 in a store
+  listing; at 60pt the grooves are grey mush. **Detail you cannot see is not
+  detail, it is dirt.**
+- **v3** — one disc, one V, nothing else. The V is a **knockout** rather than a
+  drawn letter, so the mark and the object are the same thing rather than a
+  logo sitting on one, and a cut-out survives any size because it is pure
+  silhouette. One groove ring inside the rim, because without it this is a
+  circle with a letter in it rather than a record.
+
+The colour is an anodised sweep — gold, rose, violet, cyan and back to gold,
+**first and last stop identical so the seam cannot be seen**. That is the same
+rule the scrolling gradients follow, for the same reason.
+
+It is generated by a script from an SVG written to `assets/icons/icon.svg`, so
+it is reproducible rather than a file somebody once exported.

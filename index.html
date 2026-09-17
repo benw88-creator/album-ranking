@@ -3627,6 +3627,96 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
 }
 .splash-gate.is-hiding { opacity: 0; pointer-events: none; }
 
+/* ---- THE HANDOVER -------------------------------------------------------
+   What the dismiss used to be: the whole gate faded out through a dot field.
+   Which is a transition in the sense that a PowerPoint slide is a transition —
+   one thing stops being there and another thing is there instead, and nothing
+   connects them.
+
+   What it is now: **the record you are looking at becomes the logo in the
+   header.** The same object, continuously, the whole way. Object permanence is
+   the entire trick — you are not shown a new screen, you follow the one thing
+   on screen to where it lives from now on, and the app is simply revealed to
+   have been behind it all along.
+
+   Three movements:
+
+     1. SPIN-UP (0-340ms). The record accelerates from a 6-second revolution to
+        about a third of a second, and picks up motion blur as it goes. The
+        wordmark, tagline and button lift away — they are furniture, and the
+        furniture goes first.
+     2. FLIGHT (340-1180ms). The record flies to the header mark's measured
+        position and scales down to its exact size, while the gate's ground
+        fades off the app underneath. Pure transform on a circle, so it is one
+        composited animation and no amount of it can be janky.
+     3. LANDING. The real header mark takes over mid-spin, so nothing snaps.
+
+   Everything is driven from measured geometry rather than guessed offsets —
+   see playDismissAnimation(). The custom properties are set there. */
+.splash-gate.is-handing { pointer-events: none; }
+.splash-gate.is-handing .splash-scrim,
+.splash-gate.is-handing .splash-content { animation: splashLift 300ms cubic-bezier(.4,0,.9,.3) forwards; }
+@keyframes splashLift {
+  to { opacity: 0; transform: translateY(-16px) scale(.97); }
+}
+/* The ground goes late and fast, so the app is not visible until the record is
+   most of the way home — a reveal that starts too early turns the flight into
+   something happening over the top of the app rather than into it. */
+.splash-gate.is-handing { animation: splashGround 900ms 300ms cubic-bezier(.5,0,.7,1) forwards; }
+@keyframes splashGround { to { background-color: rgba(10,9,8,0); } }
+.splash-gate.is-handing .splash-video-wrap { animation: splashGround 760ms 300ms cubic-bezier(.5,0,.7,1) forwards; }
+
+/* The flight itself. --fx/--fy are the vector from the record's centre to the
+   header mark's centre, --fs the scale that makes it exactly that size, all
+   measured at runtime. */
+.splash-disc.is-flying {
+  animation: discFlight 880ms cubic-bezier(.62,.02,.24,1) forwards;
+}
+@keyframes discFlight {
+  0%   { transform: translate(-50%, -50%) scale(1); filter: blur(0px); }
+  22%  { filter: blur(2.5px); }
+  100% {
+    transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(var(--fs));
+    filter: blur(0px);
+  }
+}
+/* The spin-up. Two animations on one element would fight over `transform`, so
+   the rotation lives on .sd-vinyl and the flight on .splash-disc — which is
+   the same split that already keeps the centring translate off the rotation. */
+.sd-vinyl.is-winding { animation: vinylSpin .34s linear infinite; }
+
+/* A bloom at the moment it lets go: one flash of light out of the label, which
+   is what makes the spin-up read as effort rather than as a speed change. */
+.splash-bloom {
+  position: absolute; left: 50%; top: 50%; width: 2px; height: 2px;
+  border-radius: 50%; pointer-events: none; opacity: 0;
+  box-shadow: 0 0 90px 50px rgba(245,200,66,0.55), 0 0 200px 120px rgba(255,122,77,0.28);
+  transform: translate(-50%, -50%);
+}
+.splash-gate.is-handing .splash-bloom { animation: splashBloom 620ms 240ms cubic-bezier(.2,.8,.3,1) forwards; }
+@keyframes splashBloom {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.2); }
+  35%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(2.6); }
+}
+
+/* The header mark is hidden for the flight and comes back as the record
+   arrives, so the swap happens under a moving object and is never seen. */
+.brand-mark.is-receiving { opacity: 0; }
+.brand-mark.is-landed { animation: markLand 520ms var(--ease); }
+@keyframes markLand {
+  0%   { box-shadow: 0 0 0 0 rgba(245,200,66,0.55); }
+  100% { box-shadow: 0 0 0 16px rgba(245,200,66,0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .splash-gate.is-handing,
+  html:not([data-motion="full"]) .splash-gate.is-handing .splash-scrim,
+  html:not([data-motion="full"]) .splash-gate.is-handing .splash-content,
+  html:not([data-motion="full"]) .splash-disc.is-flying,
+  html:not([data-motion="full"]) .splash-gate.is-handing .splash-bloom { animation: none; }
+}
+
 /* --- Splash deterioration -------------------------------------------------
    The gate breaks into a dot field that thins out to nothing, revealing the
    dashboard already sitting behind it. Two masks intersect: a tiled circle
@@ -3912,22 +4002,38 @@ body.entering-done #artist-hero {
   inset: 0;
   width: 100%;
   height: 100%;
-  /* This IS the hero now — the halftone canvas that used to cover it is
-     switched off. So it stops being a fallback and gets dressed properly.
+  /* THE PHOTO IS NOW THE BACKDROP, NOT THE SUBJECT, and that is the fix.
 
-     cover, not contain: contain was right when this was only ever the
-     emergency view, because a letterboxed photo is at least a whole photo.
-     Shown on purpose it has to fill the band, and the band is short enough
-     now (232px on a phone) that cover crops a strip rather than a face.
+     What was here before: the artist's photo, full bleed, at 375x232. It read
+     badly for every artist and the reason is not the crop — it is that these
+     images are not ours and are not consistent. Deezer's artist pictures are
+     square, they are whatever the label supplied, and the resolution and the
+     framing vary wildly. Drake's is an out-of-focus portrait, deliberately, at
+     source: no amount of object-position rescues that, because there is
+     nothing sharp in the file to show. Others are 1000px upscales of
+     thumbnails. Some are group shots. Some are a logo.
 
-     `center 28%` rather than dead centre: press shots put the face in the
-     upper third and centring a 1:1 photo into a wide band cuts the head off.
-     The grayscale is gone — the point of the change was a photo in good
-     quality — and what is left is a gentle lift so it sits on VINALL's
-     ground instead of glowing off it. */
+     Forcing any of them to fill a wide band at 1:1 means displaying a photo
+     you do not control at the largest size the page has, which is the most
+     unflattering thing you can do with an image of unknown quality — and half
+     of every square gets cut off to do it.
+
+     So it is blurred hard, darkened, and pushed behind: an ambient wash in the
+     artist's own colours, which is a job a bad photo does perfectly, because a
+     backdrop is SUPPOSED to be out of focus. The face goes in the portrait
+     below at 96px, where a soft source reads as depth of field rather than as
+     a mistake, and where nothing is cropped off. That combination is
+     indifferent to what Deezer hands over, which is the property this needs. */
   object-fit: cover;
-  object-position: center 28%;
-  filter: contrast(1.04) saturate(0.92) brightness(0.88);
+  object-position: center 30%;
+  /* Dark enough that a photo shot against a WHITE background — which Drake's
+     is, and a great many press shots are — still produces a dark wash rather
+     than a pale grey slab at the top of the page. The wash has to belong to
+     VINALL's ground whatever it is made of, so the brightness is set for the
+     brightest plausible source and the saturation put back up to keep the
+     artist's colour in it. */
+  filter: blur(30px) saturate(1.35) brightness(0.42);
+  transform: scale(1.2);   /* covers the blur's soft edges */
 }
 /* The canvas shares the layout but NOT the photo treatment: the grayscale
    filter above was silently draining the colour the dither picks out of
@@ -4004,6 +4110,10 @@ body.entering-done #artist-hero {
   /* Left-hand darkening only, for the name to sit on, and all of it lands on
      transparent rather than on a colour. */
   background:
+    /* Top-down as well as bottom-up. The status bar and the app's own header
+       sit against this edge, and a bright source photo was pushing a light
+       band up behind both of them. */
+    linear-gradient(to bottom, rgba(10,9,8,0.72) 0%, rgba(10,9,8,0.28) 34%, transparent 62%),
     linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.34) 26%, transparent 62%),
     linear-gradient(to right, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.34) 34%, transparent 66%);
 }
@@ -4011,9 +4121,32 @@ body.entering-done #artist-hero {
   position: relative;
   height: 100%;
   display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding-bottom: 88px;
+  align-items: flex-end;
+  gap: var(--s4);
+  padding-bottom: 76px;
+}
+.artist-hero-words { min-width: 0; flex: 1; }
+/* The portrait. Round, because a circle is the one crop that cannot cut a
+   head off badly — it takes the middle of the square, which is where a press
+   shot puts the face, and it has no corners for a bad edge to live in. */
+.artist-hero-portrait {
+  width: 96px; height: 96px; flex-shrink: 0; border-radius: 50%;
+  overflow: hidden; position: relative;
+  background: var(--surface-2);
+  box-shadow:
+    0 0 0 1.5px rgba(245,200,66,0.55),
+    0 10px 30px rgba(0,0,0,0.55);
+}
+.artist-hero-portrait img {
+  width: 100%; height: 100%; object-fit: cover; object-position: center 22%;
+  display: block;
+  /* A touch of contrast, and nothing else. At 96px an ordinary photo is
+     flattering and a soft one reads as shallow depth of field. */
+  filter: contrast(1.06) saturate(1.02);
+}
+@media (max-width: 420px) {
+  .artist-hero-portrait { width: 78px; height: 78px; }
+  .artist-hero-content { gap: var(--s3); }
 }
 .artist-hero-eyebrow {
   font-size: 12px;
@@ -4026,11 +4159,14 @@ body.entering-done #artist-hero {
 }
 .artist-hero-name {
   font-family: var(--font-display);
-  font-size: 52px;
-  font-weight: 700;
+  /* Clamps, because it now shares its line with a 96px portrait and some
+     artists are called The Notorious B.I.G. */
+  font-size: clamp(26px, 8vw, 46px);
+  font-weight: 800;
   letter-spacing: -0.03em;
-  line-height: 1;
+  line-height: 1.02;
   text-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  overflow-wrap: anywhere;
 }
 .artist-hero-meta {
   font-size: 14px;
@@ -5362,8 +5498,20 @@ html[data-motion="none"] .games-grid > .game-card .gc-emoji { animation: none; }
 .draw-window.landed .draw-needle { animation: drawPing .5s var(--ease); }
 @keyframes drawPing { 0% { box-shadow: 0 0 0 0 var(--gold-glow); } 100% { box-shadow: 0 0 0 26px transparent; } }
 
-.draw-result { text-align: center; min-height: 74px; }
-.draw-result .dr-label { font: 700 26px/1.1 var(--font-display); color: var(--gold); }
+/* The prize, centred and given room. It is the only thing on the panel now
+   that the instructions have gone, so it is allowed to be big — and the tier
+   chip above it is what says how lucky you were, which is the part a Disc
+   figure on its own cannot tell you. */
+.draw-result { text-align: center; min-height: 92px; display: grid; place-items: center; gap: 6px; position: relative; }
+.draw-result .dr-label {
+  font: 800 clamp(28px, 8.5vw, 40px)/1.05 var(--font-display);
+  letter-spacing: -.03em; color: var(--gold); max-width: 100%;
+}
+.draw-result .dr-val {
+  font: 700 15px/1 var(--font-mono); color: var(--text);
+  padding: 6px 13px; border-radius: 999px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border-strong);
+}
 .draw-result .dr-sub { font-size: 13px; color: var(--text-dim); margin-top: 5px; }
 .draw-result.in { animation: drawIn .5s var(--ease); }
 @keyframes drawIn { 0% { opacity: 0; transform: translateY(10px) scale(.94); } 100% { opacity: 1; transform: none; } }
@@ -6705,6 +6853,7 @@ window.ICONS = {
       </div>
     </div>
   </div>
+  <div class="splash-bloom" aria-hidden="true"></div>
   <div class="splash-scrim" id="splash-scrim"></div>
   <div class="splash-content">
     <div class="splash-word" id="splash-word">VINALL</div>
@@ -6729,9 +6878,17 @@ window.ICONS = {
   <canvas class="artist-hero-canvas" id="artist-hero-canvas" aria-hidden="true" style="display:none;"></canvas>
   <div class="artist-hero-fade"></div>
   <div class="artist-hero-content wrap">
-    <div class="artist-hero-eyebrow">Favourite artist</div>
-    <div class="artist-hero-name" id="artist-hero-name"></div>
-    <div class="artist-hero-meta" id="artist-hero-meta"></div>
+    <!-- The same photo twice: once as an ambient wash behind everything
+         (#artist-hero-bg, blurred) and once here at portrait size. See the CSS
+         for why that is the only presentation that survives the source. -->
+    <div class="artist-hero-portrait">
+      <img id="artist-hero-face" alt="" referrerpolicy="no-referrer">
+    </div>
+    <div class="artist-hero-words">
+      <div class="artist-hero-eyebrow">Favourite artist</div>
+      <div class="artist-hero-name" id="artist-hero-name"></div>
+      <div class="artist-hero-meta" id="artist-hero-meta"></div>
+    </div>
   </div>
 </div>
 
@@ -9866,6 +10023,10 @@ async function renderArtistHero() {
   if (!img) { hideArtistHero(hero); return; }
 
   document.getElementById('artist-hero-bg').src = img;
+  // Same file, second use: the wash above and the portrait in the content row.
+  // One request — the browser serves the second from cache.
+  var face = document.getElementById('artist-hero-face');
+  if (face) { face.src = img; face.alt = fav.name || ''; }
   document.getElementById('artist-hero-name').textContent = fav.name;
   document.getElementById('artist-hero-meta').innerHTML = '';
   hero.dataset.artistId = fav.id;
@@ -11783,11 +11944,32 @@ const Cloud=(function(){
        away whichever device happened to be written second. */
     lsSetRaw('crate_gamelog_v1',mergeGameLog(lsGet('crate_gamelog_v1'),cloud['crate_gamelog_v1']));
     if(cloud['crate_album_size']&&!localStorage.getItem('crate_album_size'))lsSetRaw('crate_album_size',cloud['crate_album_size']);
-    await pushAll();
+    /* Push back only what the merge actually CHANGED, and do not wait for it.
+
+       This line was `await pushAll()`, and pushAll was a for-loop of awaits
+       over all seventeen sync keys — seventeen upserts, one after another,
+       before login was allowed to finish. On a phone at a few hundred
+       milliseconds a trip that is the several seconds between pressing GO and
+       your own profile appearing, every single time, and almost all of it was
+       re-uploading blobs that were already identical to the ones just
+       downloaded.
+
+       So: compare against the copy the cloud just handed us and send the
+       differences, in parallel, without blocking. The merge result is already
+       in localStorage by this point, which is what the UI reads — the upload
+       is housekeeping, and housekeeping that fails is retried by the next
+       write or the next login. */
+    var changed = SYNC_KEYS.filter(function (k) {
+      var local = lsGet(k);
+      if (local === null) return false;
+      try { return JSON.stringify(local) !== JSON.stringify(cloud[k]); } catch (e) { return true; }
+    });
+    Promise.all(changed.map(pushKey)).catch(function () {});
   }
 
   async function pushKey(key){if(!isOn())return;const value=lsGet(key);if(value===null)return;try{await sb.from('app_state').upsert({user_id:user.id,key:key,value:value,updated_at:new Date().toISOString()});}catch(e){}}
-  async function pushAll(){for(let i=0;i<SYNC_KEYS.length;i++)await pushKey(SYNC_KEYS[i]);}
+  // Seventeen small upserts have no reason to queue behind each other.
+  async function pushAll(){await Promise.all(SYNC_KEYS.map(pushKey));}
   function push(key){if(!isOn())return;if(SYNC_KEYS.indexOf(key)===-1)return;clearTimeout(pending[key]);pending[key]=setTimeout(function(){pushKey(key);},600);}
 
   /* Devices only reconciled at login, so a phone left open on the sofa could
@@ -11866,10 +12048,19 @@ const Cloud=(function(){
   document.addEventListener('click',function(){const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');});
 
   async function onAuthed(u){
-    user=u;refreshUI();await pullAndMerge();
+    user=u;refreshUI();
+    /* The merge and the wallet are independent — one reads app_state and the
+       other reads profiles — so they go together rather than one after the
+       other. This is the second half of why pressing GO used to sit there:
+       a serial chain of things that were never waiting on each other. */
+    try{
+      await Promise.all([
+        pullAndMerge(),
+        (window.Wallet?Promise.resolve(Wallet.load()).catch(function(){}):Promise.resolve())
+      ]);
+    }catch(e){}
     // Not awaited: a slow diff must never hold up the rest of the login.
     reconcileRatings();
-    if(window.Wallet)try{await Wallet.load();}catch(e){}
     // The day's reward is NOT claimed automatically. Discs that arrive while
     // you are looking elsewhere are Discs you never saw arrive — the press is
     // the whole moment. Rewards shows the button; this only lights the nav.
@@ -14134,6 +14325,10 @@ window.handleGrooveLink=handleGrooveLink;
     if(!img)return;
     const hero=document.getElementById('artist-hero');
     document.getElementById('artist-hero-bg').src=img;
+    // The portrait takes the same file. Missing this is what made the debug
+    // view a wash with an empty circle in it.
+    const _face=document.getElementById('artist-hero-face');
+    if(_face)_face.src=img;
     document.getElementById('artist-hero-name').textContent=qp.get('debugArtistName')||'Test Artist';
     document.getElementById('artist-hero-meta').innerHTML='';
     showArtistHero(hero);
@@ -17660,15 +17855,20 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
    Every part of it degrades safely. If @property or mask-composite is
    missing the custom properties never interpolate, the mask stays put, and
    the opacity in the same keyframes still carries a clean fade. */
+/* The handover: the record on the splash flies to the header and becomes the
+   logo. See the CSS block for what each movement is and why.
+
+   Everything is MEASURED. The header mark's size and position depend on the
+   viewport, the safe-area inset and whether the wide-screen rule has widened
+   it to 52px, so a hardcoded destination would be right on exactly one device.
+
+   The one subtlety worth knowing: the app is still wearing `is-entering` when
+   this starts, which puts a translate and a blur on .wrap — so measuring the
+   header at that moment measures it 26px out of place. The classes are swapped
+   and the transition suppressed for a single frame before anything is read,
+   so what gets measured is where the mark will actually be standing. */
 function playDismissAnimation(gateEl, callback) {
   var reduced = window.motionReduced ? window.motionReduced() : false;
-
-  // The dashboard is not animated in any more — it is simply already there,
-  // which is the whole point of revealing it rather than introducing it.
-  document.body.classList.add('entering-done');
-
-  var DUR = reduced ? 420 : 1500;
-  gateEl.classList.add(reduced ? 'is-hiding' : 'is-dissolving');
 
   var done = false;
   function finish() {
@@ -17676,8 +17876,70 @@ function playDismissAnimation(gateEl, callback) {
     done = true;
     callback();
   }
-  gateEl.addEventListener('animationend', finish);
-  setTimeout(finish, DUR + 220);
+
+  // The dashboard is not animated in any more — it is simply already there,
+  // which is the whole point of revealing it rather than introducing it.
+  var wrap = document.querySelector('.wrap');
+  var prevTransition = wrap ? wrap.style.transition : '';
+  if (wrap) wrap.style.transition = 'none';
+  document.body.classList.remove('is-entering');
+  document.body.classList.add('entering-done');
+  if (wrap) { void wrap.offsetWidth; wrap.style.transition = prevTransition; }
+
+  if (reduced) {
+    gateEl.classList.add('is-hiding');
+    gateEl.addEventListener('transitionend', finish);
+    setTimeout(finish, 640);
+    return;
+  }
+
+  var disc = document.getElementById('splash-disc');
+  var vinyl = disc && disc.querySelector('.sd-vinyl');
+  var mark = document.querySelector('.brand-mark');
+
+  // No record or no header to fly it to — fall back to the fade rather than
+  // leaving somebody looking at a splash that will not go away.
+  if (!disc || !mark) {
+    gateEl.classList.add('is-hiding');
+    setTimeout(finish, 680);
+    return;
+  }
+
+  var from = disc.getBoundingClientRect();
+  var to = mark.getBoundingClientRect();
+  // Centre to centre, and the scale that makes the record exactly the mark's
+  // width. from.width is the rendered size, so this holds at any viewport.
+  var fx = (to.left + to.width / 2) - (from.left + from.width / 2);
+  var fy = (to.top + to.height / 2) - (from.top + from.height / 2);
+  var fs = to.width / (from.width || 1);
+  disc.style.setProperty('--fx', fx.toFixed(1) + 'px');
+  disc.style.setProperty('--fy', fy.toFixed(1) + 'px');
+  disc.style.setProperty('--fs', fs.toFixed(4));
+
+  if (window.buzz) buzz('good');
+
+  // 1. Wind it up, and lift the furniture off.
+  if (vinyl) vinyl.classList.add('is-winding');
+  gateEl.classList.add('is-handing');
+  mark.classList.add('is-receiving');
+
+  // 2. Let go once it is properly turning. The delay is what makes the flight
+  //    read as being thrown rather than as a slide starting.
+  setTimeout(function () { disc.classList.add('is-flying'); }, 300);
+
+  // 3. The real mark takes over just before the record arrives, under a moving
+  //    object, so the substitution is never seen.
+  setTimeout(function () {
+    mark.classList.remove('is-receiving');
+    mark.classList.add('is-landed');
+    if (window.buzz) buzz('tap');
+    setTimeout(function () { mark.classList.remove('is-landed'); }, 560);
+  }, 1120);
+
+  disc.addEventListener('animationend', function (e) {
+    if (e.animationName === 'discFlight') finish();
+  });
+  setTimeout(finish, 1320);
 }
 </script>
 
@@ -21130,16 +21392,27 @@ window.renderAdminStats = renderAdminStats;
          says "Producer tag" because which one you get is decided from what you
          do not already own, and only the server knows that. The strip shows
          the category and the result shows the thing. */
+      /* The prize, and nothing that explains it.
+
+         Every tier used to carry a sentence underneath saying what the thing
+         was for — "wear it under your name in the Shop", "equip it in the
+         Shop", "claim it in the Market". All true, all instructions, and an
+         instruction is the opposite of a prize: it turns the half-second you
+         are supposed to enjoy into a task list. Anybody who just won a theme
+         knows where themes live, and if they do not, the Shop is two taps away
+         and will still be there in a minute.
+
+         What survives is the tier, the thing, and a NUMBER where there is one.
+         A Disc amount is not a description — it is the prize itself, and
+         "already yours, 1,600 instead" is the only case where the sentence is
+         carrying information rather than direction. */
+      var value = won.kind === 'discs' ? '+' + (Number(won.gained) || 0).toLocaleString('en-GB')
+        : won.duplicate ? 'Already yours · +' + (Number(won.gained) || 0).toLocaleString('en-GB')
+        : won.kind === 'picks' ? (won.picks === 1 ? '1 free record' : won.picks + ' free records')
+        : '';
       r.innerHTML = '<div class="dr-tier">' + esc(tierName(won.tier)) + '</div>' +
         '<div class="dr-label">' + esc(won.granted || won.label) + '</div>' +
-        '<div class="dr-sub">' + esc(
-          won.kind === 'discs' ? '+' + (Number(won.gained) || 0).toLocaleString() + ' Discs'
-          : won.duplicate ? 'Already yours — ' + (Number(won.gained) || 0).toLocaleString() + ' Discs instead'
-          : won.kind === 'picks'
-            ? (won.picks === 1 ? 'One record of your choice, free. Claim it in the Market.'
-                               : won.picks + ' records of your choice, free. Claim them in the Market.')
-          : won.kind === 'tag' ? 'A producer tag — wear it under your name in the Shop'
-          : 'Unlocked — equip it in the Shop') + '</div>';
+        (value ? '<div class="dr-val">' + esc(value) + '</div>' : '');
 
       applyFeedback(won);
       // The free spin has just been taken, so the button has to stop offering
@@ -21163,43 +21436,30 @@ window.renderAdminStats = renderAdminStats;
      different from the tier below it, or the top of the ladder is just a
      slightly better middle. Everything here degrades to nothing under
      prefers-reduced-motion. */
-  /* What the overlay calls this. A theme, banner, flair, frame or tag out of
-     the reel is a cosmetic, and calling it an achievement is the overlay
-     describing the wrong thing — nothing was achieved, a reel stopped. Discs
-     and album picks are neither, so they keep the plain word. */
-  function eyebrowFor(won) {
-    var COSMETIC = { theme: 1, banner: 1, flair: 1, frame: 1, tag: 1 };
-    if (won.duplicate) return { eyebrow: 'Already Yours' };
-    if (COSMETIC[won.kind]) return { eyebrow: 'Cosmetic Unlocked' };
-    return undefined;
-  }
+  /* The overlay is gone from here entirely, and eyebrowFor() with it.
+
+     A spin already HAS a result screen — the reel stops on the thing and the
+     panel under it names the thing. Throwing a full-screen trophy over the top
+     of that says the same sentence twice and hides the one you actually came
+     for, and it said "Achievement Unlocked" over a cosmetic that was won by a
+     reel stopping. Nothing was achieved.
+
+     So the weight is carried where the prize is: the panel scales with the
+     tier, the confetti fires from the reel's own window, and a Mythic lands
+     hard without a second screen having to announce it. celebrate() is still
+     there and is still right for the things it was built for — a milestone
+     claimed, a war won, a week of streaks — which are achievements. */
 
   function applyFeedback(won) {
     var wnd = el('draw-window');
-    var name = won.granted || won.label;
     if (won.tier === 'mythic') {
       if (window.burst) burst(wnd, { count: 80, spread: 320 });
+      if (window.burst) setTimeout(function () { burst(el('draw-result'), { count: 46, spread: 240 }); }, 160);
       if (window.buzz) buzz('big');
-      if (typeof window.celebrate === 'function') {
-        window.celebrate('✦ MYTHIC — ' + name,
-          won.kind === 'picks' ? won.picks + ' records of your choice, free. Go and take them.'
-          : won.kind === 'tag' ? 'A producer tag. Wear it under your name.'
-          : won.duplicate ? 'You had every tag already, so it paid out instead.'
-          : 'The top of the ladder.', eyebrowFor(won));
-      }
     } else if (won.tier === 'legendary') {
       if (window.burst) burst(wnd, { count: 42, spread: 220 });
+      if (window.burst) setTimeout(function () { burst(el('draw-result'), { count: 20, spread: 150 }); }, 160);
       if (window.buzz) buzz('big');
-      if (typeof window.celebrate === 'function') {
-        // No odds in the subtitle. "One spin in seven lands here" publishes a
-        // probability on a win screen, which is the same thing the odds panel
-        // above the reel was removed for — and a win is a moment, not a
-        // statistics lesson. A prize that explains its own rarity is smaller
-        // than one that just arrives.
-        window.celebrate('Legendary — ' + name, won.kind === 'picks'
-          ? 'A record of your choice, free. Take it in the Market.'
-          : '', eyebrowFor(won));
-      }
     } else if (won.tier === 'epic') {
       if (window.burst) burst(wnd, { count: 22, spread: 150 });
       if (window.buzz) buzz('big');
