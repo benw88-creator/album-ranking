@@ -2713,6 +2713,19 @@ one caller's copy, headers and all, to everybody — and a copy cached for a
 browser has no `Access-Control-Allow-Origin` on it, so the app's fetch of it is
 blocked. A week at a time, on the route that is the audio.
 
+**Two consequences of `Vary` that were measured rather than guessed.** A browser
+sends no `Origin` header on a same-origin GET, so the site and the app occupy
+**two different cache entries** per album — Deezer is hit about twice per record
+ever rather than once. That is the price and it is small. The other is a window:
+entries cached **before** this deploy carry no `Vary` and no
+`Access-Control-Allow-Origin`, so the CDN will hand one of them to the app and
+the fetch is blocked. Confirmed live — the first probe of `/api/preview` after
+the deploy came back a stale-while-revalidate serve with no CORS headers on it,
+and the next one was correct. It heals itself one path and one region at a time
+and is fully gone within the week those entries live, which is long before
+anybody can install this. If it ever needs forcing, the button is Purge Cache in
+the Vercel dashboard.
+
 `CapacitorHttp` would also have sidestepped CORS, by patching `window.fetch` to
 go through native networking. It was rejected rather than missed: it replaces
 the fetch the Supabase client and every one of these call sites rides on, in an
