@@ -604,12 +604,15 @@ nav.modes {
   max-width: 460px;
   display: flex;
   gap: 0;
-  padding: 6px;
+  padding: 5px;
   margin: 0;
-  border-radius: 22px;
+  /* Fully round. A capsule is what reads as a thing floating over the page
+     rather than a panel stuck to the bottom of it, and it is the shape a
+     phone already has at the other end of the screen. */
+  border-radius: 999px;
   background: var(--surface-2);
   border: 1px solid var(--border-strong);
-  box-shadow: var(--e3);
+  box-shadow: var(--e3), 0 2px 10px rgba(0,0,0,0.5);
 }
 /* Translucent where it is supported, and solid where it is not — the bar sits
    over scrolling artwork and the blur is most of why it reads as floating
@@ -624,7 +627,7 @@ nav.modes {
 }
 .nav-indicator {
   position: absolute; top: 6px; bottom: 6px; left: 0;
-  width: 0; border-radius: 17px;
+  width: 0; border-radius: 999px;
   background: var(--section-dim);
   transition: transform var(--dur) var(--ease), width var(--dur) var(--ease),
               background-color var(--dur-slow) ease;
@@ -639,7 +642,7 @@ nav.modes button {
   /* 48 clears Apple's 44pt floor, which the old 37px tabs did not. */
   min-height: 48px;
   padding: 7px var(--s1) 6px;
-  border-radius: 17px;
+  border-radius: 999px;
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: -0.005em;
@@ -2238,6 +2241,25 @@ button.idx.loading { opacity: 0.6; }
 }
 .save-flash.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* Sits above the floating nav rather than over it, and looks like a thing you
+   press rather than a notice you have to dismiss — because the only useful
+   response to it is one tap. */
+.sw-update {
+  position: fixed; left: 50%;
+  bottom: calc(var(--nav-h) + var(--s5) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%) translateY(10px);
+  z-index: 170;
+  background: var(--section); color: var(--bg);
+  border: 0; border-radius: 999px;
+  padding: 10px 18px;
+  font: 700 var(--t-sm) var(--font-body);
+  box-shadow: var(--e2);
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.sw-update.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+@media (min-width: 700px) { .sw-update { bottom: var(--s5); } }
+
 /* ---- GATE ---- */
 .gate {
   background: var(--surface);
@@ -2923,16 +2945,48 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
    The identity block gets smaller and the rhythm gets tighter. Nothing is
    removed: this is the same page, asking for less room to say it. */
 @media (max-width: 699px) {
-  .prof-head { gap: var(--s4); margin-bottom: var(--s2); }
-  .prof-avatar { width: 72px; height: 72px; }
-  .prof-name { font-size: var(--t-h1); }
-  .prof-bio { font-size: var(--t-sm); margin-top: var(--s1); line-height: 1.5; }
-  /* The info column is inline-styled min-width:200px, which is more than the
-     row can spare once an avatar is in it. */
+  /* One flex row holding an avatar, a name, a tag, a bio, four statistics and
+     two buttons. On 343px that is six things competing for one line, and it
+     read exactly as bunched as it was.
+
+     It stacks instead: the avatar, then who you are, then what you have done.
+     Nothing is nested in the markup — the identity block is a single inline
+     styled div built in JS — so the header simply stops being a row and lets
+     everything inside it run full width. */
+  .prof-head { display: block; margin-bottom: var(--s3); }
+  .prof-head > .pa-wrap { display: block; margin-bottom: var(--s3); }
+  /* The info column is inline-styled min-width:200px, which an inline style
+     means nothing else can beat. */
   .prof-head > div { min-width: 0 !important; }
-  .prof-stats { gap: var(--s4); margin-top: var(--s2); }
-  .prof-stat b { font-size: 18px; }
-  .prof-stat span { font-size: var(--t-xs); margin-left: 4px; }
+  .prof-avatar { width: 76px; height: 76px; }
+  .prof-name { font-size: var(--t-h1); line-height: 1.1; }
+  .prof-bio { font-size: var(--t-sm); margin-top: var(--s2); line-height: 1.5; max-width: none; }
+
+  /* The four numbers were a wrapping flex row of "12 albums" strings. They are
+     the same hairline strip the Home stats use — one tile each, one rule
+     between them — so a number reads as a number rather than as a sentence,
+     and the two places in the app that show you counts finally match. */
+  .prof-stats {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    overflow: hidden; margin-top: var(--s4);
+  }
+  .prof-stat {
+    background: var(--surface); padding: var(--s3) var(--s1);
+    text-align: center; display: block;
+  }
+  .prof-stat.clickable { border-radius: 0; margin: 0; }
+  .prof-stat b { display: block; font-size: 19px; line-height: 1.1; }
+  .prof-stat span {
+    display: block; margin: 3px 0 0; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint);
+  }
+
+  /* Edit profile / Copy share link were a narrow column squeezed beside the
+     bio. Full width, under everything, where an action belongs. */
+  .prof-head > div:last-child:not(.pa-wrap) { margin-top: var(--s4); }
+  .prof-head #prof-edit, .prof-head #prof-share, .prof-head #prof-follow { width: 100%; }
 
   .prof-section-title { margin: var(--s5) 0 var(--s3); }
   .prof-section-row { margin: var(--s5) 0 var(--s3); }
@@ -3756,7 +3810,6 @@ body.entering-done #artist-hero {
   animation: heroFadeIn 0.6s ease both;
   transition: height 0.55s var(--ease), margin-bottom 0.55s var(--ease), opacity 0.45s var(--ease);
 }
-.artist-hero.artist-hero-collapsed { height: 160px; }
 /* Shown by expanding from zero height rather than flipping display:none
    -> block. The flip was the "glitch" when a favourite artist loaded: the
    whole page below it jumped down 460px in a single frame. Expanding lets
@@ -3833,23 +3886,6 @@ body.entering-done #artist-hero {
     linear-gradient(to top, var(--bg) 0%, rgba(10,9,8,0.72) 14%, rgba(10,9,8,0.22) 34%, transparent 62%),
     linear-gradient(to right, rgba(10,9,8,0.82) 0%, rgba(10,9,8,0.45) 28%, transparent 58%);
 }
-.artist-hero-toggle {
-  position: absolute;
-  top: 16px; right: 16px;
-  z-index: 3;
-  width: 36px; height: 36px;
-  border-radius: 10px;
-  background: rgba(10,9,8,0.55);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,245,235,0.18);
-  color: var(--text);
-  font-size: 16px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  transition: background 0.15s, transform 0.3s;
-}
-.artist-hero-toggle:hover { background: rgba(10,9,8,0.8); }
-.artist-hero.artist-hero-collapsed .artist-hero-toggle { transform: rotate(180deg); }
 .artist-hero-content {
   position: relative;
   height: 100%;
@@ -3882,9 +3918,6 @@ body.entering-done #artist-hero {
   text-shadow: 0 2px 10px rgba(0,0,0,0.6);
 }
 .artist-hero-meta b { color: var(--text); font-weight: 700; }
-.artist-hero.artist-hero-collapsed .artist-hero-name { font-size: 30px; }
-.artist-hero.artist-hero-collapsed .artist-hero-content { padding-bottom: 28px; }
-.artist-hero.artist-hero-collapsed .artist-hero-eyebrow { margin-bottom: 4px; }
 /* The tab bar is wider than a phone screen — six labels plus three icon
    buttons — and being a plain inline-flex it simply pushed the document
    out instead of adapting. Measured at a 487px viewport it ran to 618px,
@@ -3893,19 +3926,11 @@ body.entering-done #artist-hero {
    itself instead, with no visible scrollbar of its own. The sliding
    indicator is absolutely positioned within this element, so it scrolls
    along with the tabs and keeps tracking the active one. */
-@media (max-width: 760px) {
-  nav.modes {
-    display: flex;
-    max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    overscroll-behavior-x: contain;
-  }
-  nav.modes::-webkit-scrollbar { display: none; }
-  nav.modes button { flex: 0 0 auto; }
-}
+/* The tab bar used to be a strip at the top that ran wider than a phone, and
+   this is what let it scroll inside itself. It is a five-item capsule at the
+   bottom now and nothing overflows, so all this did was undo the capsule's
+   width cap and make it scrollable. Removed rather than adjusted: the
+   behaviour it exists for cannot happen any more. */
 
 @media (max-width: 640px) {
   /* The portrait sits above the name here rather than beside it, so the
@@ -3914,10 +3939,14 @@ body.entering-done #artist-hero {
     background:
       linear-gradient(to top, var(--bg) 0%, rgba(10,9,8,0.86) 22%, rgba(10,9,8,0.4) 44%, transparent 72%);
   }
-  .artist-hero { height: 360px; margin-bottom: -48px; }
-  .artist-hero.artist-hero-collapsed { height: 140px; }
-  .artist-hero-name { font-size: 34px; }
-  .artist-hero-content { padding-bottom: 64px; }
+  /* 360px was over 40% of a phone screen for a band that introduces the page
+     rather than being it, and the -48px pull left the search field sitting on
+     top of the portrait's chin. Shorter, and the overlap is gentler. */
+  .artist-hero { height: 232px; margin-bottom: -28px; }
+  .artist-hero-name { font-size: var(--t-h1); }
+  .artist-hero-eyebrow { font-size: 10px; letter-spacing: 0.14em; }
+  .artist-hero-meta { font-size: var(--t-sm); margin-top: var(--s1); }
+  .artist-hero-content { padding-bottom: var(--s6); }
 }
 
 /* ============================================================
@@ -6144,7 +6173,6 @@ window.ICONS = {
   <div class="artist-hero-duotone" aria-hidden="true"></div>
   <canvas class="artist-hero-canvas" id="artist-hero-canvas" aria-hidden="true" style="display:none;"></canvas>
   <div class="artist-hero-fade"></div>
-  <button class="artist-hero-toggle" id="artist-hero-toggle" title="Collapse">&#8593;</button>
   <div class="artist-hero-content wrap">
     <div class="artist-hero-eyebrow">Favourite artist</div>
     <div class="artist-hero-name" id="artist-hero-name"></div>
@@ -6436,42 +6464,42 @@ window.ICONS = {
       <div class="game-card" id="drop-card">
         <div class="gc-emoji" data-icon="disc"></div>
         <h3>Daily Drop</h3>
-        <p>One album and one song a day &mdash; guess each in six. Same for everyone.</p>
+        <p>One album, one song, six guesses.</p>
         <div class="gc-go">Play today &rarr;</div>
         <div class="gc-best" id="drop-card-status"></div>
       </div>
       <div class="game-card" id="ew-card">
         <div class="gc-emoji" data-icon="mic"></div>
         <h3>Earworm</h3>
-        <p>Spell the record, letter by letter. A daily one, or endless from your own library.</p>
+        <p>Spell the record, letter by letter.</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" id="ew-card-status"></div>
       </div>
       <div class="game-card" data-game="cover">
         <div class="gc-emoji" data-icon="camera"></div>
         <h3>Guess the Cover</h3>
-        <p>See an album cover &mdash; name the album. 5 rounds.</p>
+        <p>Name the album from its sleeve.</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="cover"></div>
       </div>
       <div class="game-card" data-game="coverx">
         <div class="gc-emoji" data-icon="fire"></div>
         <h3>Cover EXTREME</h3>
-        <p>You only get the middle square. Brutal.</p>
+        <p>The middle square only. Brutal.</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="coverx"></div>
       </div>
       <div class="game-card" data-game="tracklist">
         <div class="gc-emoji" data-icon="note"></div>
         <h3>Guess from Tracklist</h3>
-        <p>A handful of tracks &mdash; which album are they from?</p>
+        <p>A few tracks. Which album?</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="tracklist"></div>
       </div>
       <div class="game-card" data-game="year">
         <div class="gc-emoji" data-icon="calendar"></div>
         <h3>Guess the Year</h3>
-        <p>Album cover shown &mdash; guess its release year (&plusmn;1).</p>
+        <p>Name the year, give or take one.</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="year"></div>
       </div>
@@ -6480,14 +6508,14 @@ window.ICONS = {
       <div class="game-card" id="blitz-card">
         <div class="gc-emoji" data-icon="trophy"></div>
         <h3>Cover Fire</h3>
-        <p>Ten rounds of sleeves against a mate. Fast, and the streak is where the points are.</p>
+        <p>Ten sleeves, one minute, vs a mate.</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" id="blitz-card-status"></div>
       </div>
       <div class="game-card" id="hl-card">
         <div class="gc-emoji" data-icon="fire"></div>
         <h3>Higher or Lower</h3>
-        <p>Your own records, head to head. More streams, or higher rated? Keep the run alive.</p>
+        <p>Your own records, head to head.</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" id="hl-card-status"></div>
       </div>
@@ -6499,13 +6527,13 @@ window.ICONS = {
       <div class="game-card" id="war-card">
         <div class="gc-emoji" data-icon="trophy"></div>
         <h3>Bid Wars</h3>
-        <p>Outbid a mate on five records, blind. Winner takes 3,000 Discs.</p>
+        <p>Outbid a mate on five records, blind.</p>
         <div class="gc-go">Challenge someone &rarr;</div>
       </div>
       <div class="game-card" id="leaderboard-card">
         <div class="gc-emoji" data-icon="stopwatch"></div>
         <h3>Speed Leaderboard</h3>
-        <p>Fastest perfect (5/5) runs across every minigame &mdash; global rankings.</p>
+        <p>Fastest perfect runs, worldwide.</p>
         <div class="gc-go">View &rarr;</div>
       </div>
     </div>
@@ -9181,18 +9209,12 @@ async function renderArtistHero() {
   // any reason (see the catch inside mountArtistHero itself).
   if (window.VinalDither) window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
 }
-(function wireHeroToggle(){
-  const btn = document.getElementById('artist-hero-toggle');
-  const hero = document.getElementById('artist-hero');
-  if (!btn || !hero) return;
-  btn.addEventListener('click', function (e) {
-    e.stopPropagation();
-    const collapsed = hero.classList.toggle('artist-hero-collapsed');
-    hero.classList.toggle('artist-hero-expanded', !collapsed);
-    btn.title = collapsed ? 'Expand' : 'Collapse';
-    btn.innerHTML = collapsed ? '&#8595;' : '&#8593;';
-  });
-})();
+/* The collapse button is gone. It was a control for getting a feature out of
+   the way, which is the app admitting the feature is in the way — and it
+   offered a second state that had to be styled, remembered and reasoned about
+   for something that is one band at the top of one page. Either the hero earns
+   its room or it should not be there; making it smaller is what fixes it, not
+   a chevron. */
 
 /* ================================================================
    5c. DYNAMIC COLOUR — extract dominant colour from album art
@@ -9396,6 +9418,8 @@ document.getElementById('modes').addEventListener('click', function (e) {
   if (window.buzz && b.dataset.mode !== currentMode) buzz('tap');
   setMode(b.dataset.mode);
 });
+window.renderArtistHero = renderArtistHero;
+
 (function wireRecoRefresh() {
   const r = document.getElementById('reco-refresh');
   if (r) r.addEventListener('click', function () {
@@ -13253,6 +13277,21 @@ window.handleGrooveLink=handleGrooveLink;
         console.warn('VINALL: service worker did not register', e);
       });
     };
+    /* The worker serves the cached shell instantly and fetches the real one
+       behind it, so a push can land while somebody is looking at the previous
+       build. This is the half that stops that being invisible — which was the
+       entire objection to caching the shell in the first place. */
+    navigator.serviceWorker.addEventListener('message', function (ev) {
+      if (ev.data !== 'vinall-sw-updated') return;
+      if (document.getElementById('sw-update')) return;
+      var b = document.createElement('button');
+      b.id = 'sw-update';
+      b.className = 'sw-update';
+      b.textContent = 'New version ready \u2014 tap to refresh';
+      b.addEventListener('click', function () { location.reload(); });
+      document.body.appendChild(b);
+      requestAnimationFrame(function () { b.classList.add('show'); });
+    });
     if (document.readyState === 'complete') reg();
     else window.addEventListener('load', reg);
   }
@@ -13857,10 +13896,23 @@ window.handleGrooveLink=handleGrooveLink;
     const bufW = Math.max(8, Math.floor(W / cell)), bufH = Math.max(8, Math.floor(H / cell));
     const bg = themeColor('--bg', '#0a0908');
 
-    let ink, crop;
+    /* The dots take the equipped theme's accent, not the artist photo's
+       dominant colour.
+
+       Sampling the photo was the cleverer answer and the wrong one: it meant
+       the one full-width band on the home page was the only surface in the app
+       that ignored the skin somebody had spent Discs on, and it changed colour
+       every time their favourite artist did. The accent is what every other
+       themed surface reads, so the hero now belongs to the page it opens.
+
+       dominantInk still runs — shouldInvert() needs a real reading of the
+       photo to decide which way round to print — its colour is just not what
+       gets inked. */
+    let ink, crop, photoInk;
     try {
       crop = subjectRect(imgEl);
-      ink = dominantInk(imgEl, bg);
+      photoInk = dominantInk(imgEl, bg);
+      ink = themeColor('--gold', photoInk);
     } catch (e) {
       // Cross-origin photo without CORS clearance: nothing can be read out
       // of it, so leave the plain <img> showing rather than a blank canvas.
@@ -13932,7 +13984,7 @@ window.handleGrooveLink=handleGrooveLink;
     // and stacking both floods plain backgrounds with ink.
     const contrast = 20, brightness = 20;
     const cf = (259 * (contrast + 255)) / (255 * (259 - contrast));
-    const invert = shouldInvert(ink, bg);
+    const invert = shouldInvert(photoInk || ink, bg);
 
     // Feather the photo's own rectangle away so its edges never show, and
     // fade the whole band at top and bottom so it dissolves into the page.
@@ -14477,6 +14529,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   function applyTheme() {
     document.documentElement.dataset.theme = (state.active_theme && state.active_theme !== 'classic') ? state.active_theme : '';
+    /* Everything else on the page reskins for free, because everything else is
+       painted from the tokens this line swaps. The artist hero is the one
+       surface that is not CSS — it is a canvas of dots inked once, so it keeps
+       the old theme's colour until something repaints it. This is that. */
+    if (window.renderArtistHero && typeof currentMode !== 'undefined' && currentMode === 'home') {
+      try { renderArtistHero(); } catch (e) {}
+    }
   }
 
   function toast(msg) {

@@ -4,16 +4,18 @@
  * page — which Apple rejects specifically — and (b) to stop the static media
  * being refetched on every visit.
  *
- * The deliberate design decision here is that the app itself is NEVER served
- * from cache in preference to the network. index.html is one 650KB file that
- * changes on every push, and a cache-first shell would happily serve a build
- * from last week with no way for anyone to tell. So navigations are
- * network-first: the cache is a fallback for being offline, not a fast path.
- * Getting this backwards is the classic way a service worker turns into a
- * bug nobody can reproduce.
+ * It was network-first for navigations, so that a deploy was always
+ * authoritative and nobody could be left on a stale build without knowing.
+ * The cost of that turned out to be the whole of the app's start-up: index.html
+ * is 375KB brotli, the server sends max-age=0/must-revalidate, and a cold fetch
+ * measured 2.4 SECONDS — paid on every single load, before anything appeared.
+ *
+ * It is stale-while-revalidate now, which keeps the property that mattered and
+ * drops the one that cost. See the long note on the navigate branch: you are
+ * never more than one load behind, and when you are, the app says so out loud.
  */
 
-const VERSION = 'vinall-v1';
+const VERSION = 'vinall-v2';
 const SHELL = VERSION + '-shell';
 const MEDIA = VERSION + '-media';
 
@@ -80,29 +82,62 @@ self.addEventListener('fetch', (event) => {
   // is a broken one.
   if (url.pathname.startsWith('/api/')) return;
 
-  // Navigations: network first, cache as a fallback, offline page as a last
-  // resort. This is what keeps a deploy authoritative.
+  /* Navigations: serve the cached copy immediately, then fetch in the
+     background and keep the new one for next time.
+     ---------------------------------------------------------------------
+     This used to be network-first, on the reasoning that index.html changes
+     on every push and a cache-first shell would serve last week's build with
+     nothing to indicate it. That reasoning was right about cache-FIRST and
+     wrong about this, and the cost of it was measured: index.html is 375KB
+     brotli, the server sends `max-age=0, must-revalidate`, and a cold fetch
+     of it took 2.4 SECONDS. Every single load paid that before anything
+     appeared.
+
+     Stale-while-revalidate is a different bargain. You are never more than
+     ONE load behind, not a week — and when you are, the app says so: the
+     background copy is compared with what was served and a message goes to
+     every open page, which puts a "new version, tap to refresh" line on
+     screen. A stale build nobody can detect was the actual objection, and
+     this answers it rather than accepting it.
+
+     First visit still goes to the network, because there is nothing to
+     serve. Offline still falls back the same way. */
   if (req.mode === 'navigate') {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          // Only keep a good response. The first version cached whatever came
-          // back, so a 404 got stored and would then be served as the offline
-          // fallback for that path — a cached 'not found' instead of the app.
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(SHELL).then((c) => c.put(req, copy)).catch(() => {});
-          }
-          return res;
-        })
-        .catch(() => caches.match(req)
-          .then((hit) => hit || caches.match('/offline.html'))
-          .then((hit) => hit || new Response(
-            '<h1>Offline</h1><p>VINALL needs a connection to load.</p>',
-            { headers: { 'Content-Type': 'text/html; charset=utf-8' }, status: 503 }
-          ))
-        )
-    );
+    event.respondWith((async () => {
+      const cache = await caches.open(SHELL);
+      const hit = await cache.match(req);
+
+      const fresh = fetch(req).then(async (res) => {
+        if (!res || !res.ok) return res;
+        // Only keep a good response. The first version cached whatever came
+        // back, so a 404 got stored and would then be served as the offline
+        // fallback for that path — a cached 'not found' instead of the app.
+        const copy = res.clone();
+        // Compare before storing, so "changed" means changed against what the
+        // person is actually looking at rather than against nothing.
+        let changed = false;
+        if (hit) {
+          try {
+            const [a, b] = await Promise.all([hit.clone().text(), copy.clone().text()]);
+            changed = a.length !== b.length || a !== b;
+          } catch (e) { /* a body that cannot be read is not a reason to fail */ }
+        }
+        await cache.put(req, copy).catch(() => {});
+        if (changed) {
+          const clients = await self.clients.matchAll({ type: 'window' });
+          clients.forEach((c) => c.postMessage('vinall-sw-updated'));
+        }
+        return res;
+      }).catch(() => null);
+
+      if (hit) return hit;                 // instant, and the fetch runs on
+      const net = await fresh;             // first visit there is nothing yet
+      if (net) return net;
+      return (await caches.match('/offline.html')) || new Response(
+        '<h1>Offline</h1><p>VINALL needs a connection to load.</p>',
+        { headers: { 'Content-Type': 'text/html; charset=utf-8' }, status: 503 }
+      );
+    })());
     return;
   }
 
