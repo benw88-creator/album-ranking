@@ -55,19 +55,25 @@
 	<array>
 		<string>armv7</string>
 	</array>
+	<!-- Portrait only, on both. Every layout in this app is mobile-first and
+	     portrait: the album page is a sleeve above a tracklist, the nav is a
+	     floating bar at thumb height, and the game sheets are bottom sheets.
+	     None of it has a landscape design, so allowing the rotation was
+	     offering a broken screen rather than a feature. -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Shake-to-undo off. It is a system alert ("Undo Typing") thrown over
+	     the app by a gesture nobody performs on purpose, and this app has no
+	     text editing deep enough to want it. -->
+	<key>UIApplicationSupportsShakeToEdit</key>
+	<false/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 </dict>

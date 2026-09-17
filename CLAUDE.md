@@ -3702,3 +3702,193 @@ allow-list, so a wrong Site URL breaks reset for everyone with no error anywhere
 Do **not** try to fix this with `supabase config push`. It pushes the whole `config.toml`,
 and any auth setting absent from that file is reset to the CLI's default — which on a live
 project can disable signups or change token expiry as a side effect of a two-field change.
+
+## The polish pass — dialogs, the shell, the Collection, and a drawn record
+
+A batch of small things, several of which turned out to be real defects rather
+than cosmetics.
+
+### `ask()` replaced every native dialog, and one of them was deleting ratings
+
+`confirm()` and `alert()` draw a **system** dialog, and in a webview that dialog
+is titled with the origin — so spending a Mythic album pick came with a box
+saying *wildcrate.xyz says…*, which is an app admitting it is a web page. There
+were seven confirms, six alerts and a prompt; there are now none.
+
+`ask(opts)` is promise-based, themed, and carries three rules the native one
+could not:
+
+- **The confirm button names the action** — *Delete rating*, never *OK*. A
+  dialog whose buttons are OK and Cancel makes you read the sentence twice to
+  find out which one you want.
+- **Destructive is red and is never the default focus.**
+- Escape and the backdrop both answer no, which is the safe answer to every
+  question it asks. `opts.input` turns it into a prompt, and the empty string
+  is a cancel rather than an answer.
+
+Two deliberate asymmetries in where it got applied:
+
+- **An album pick now takes the record with no dialog at all.** It is the one
+  purchase in the app that cannot cost anything you had not already won, the
+  card says what a pick does and how many are left, and the button says *Use a
+  pick*. That is the confirmation.
+- **Deleting a rating now asks, and names the record.** This file has carried a
+  *found, not fixed* note about that bin button since the design pass: one tap,
+  no confirmation, on a control that sits inside a card you are usually trying
+  to open. A rating is the most expensive thing in the app to lose, because it
+  carries the score history — the one thing here that can only be earned by
+  time and cannot be recreated.
+
+### "Your call" on records you had already rated
+
+The Crate's feed offered the rate-it button on albums people had definitely
+rated, and it clustered by artist, which is what made it look mad — *all* the
+Drake albums at once.
+
+It is the catalogue switch. `myScoreFor` looked the album up by id, a rating
+made before the move carries a Spotify base62 id and a feed row posted after it
+carries a Deezer numeric one; same record, two keys, no match. Whole artists go
+together because they were rated in one sitting on one side of the move.
+
+It falls back to a **normalised name + artist** index now, built once per render
+and cached against the size of the crate. Nothing is re-keyed and nothing is
+written — this is a read, and the ids stay exactly as they are.
+
+### The Collection was refetching everything, and racing itself
+
+Two separate faults with one symptom, "it bugs out when you switch quickly".
+
+- **No render token.** `render()` is async and every tab awaits at least once,
+  so flicking between Yours and the Market put two renders in flight and the
+  **slower one landed last and won** — the shelf under the Market's highlighted
+  tab, or a half-painted grid. Same shape as the price sweep's `_sweep`, the
+  player's `loadTok` and the Cover Fire card's fetch token, and the same fix.
+- **Everything was `force`d.** The shelf was refetched from scratch on every
+  visit *and every sort change* — a round trip and a "Loading your shelf…"
+  between you and a list that had not changed in ten seconds. It paints from
+  cache first and refreshes behind, and re-sorting is now an array operation on
+  records already in memory rather than a trip to the server to put the same
+  records in a different order.
+
+**Standings reads two ways now** — net worth or number of records — because a
+shelf of forty cheap albums and a shelf of two expensive ones are different
+achievements and the page could only show one of them. One fetch, both orders,
+and the reading you are not ranked by stays beside it in the quiet slot.
+
+### The profile did seven round trips before painting anything
+
+`drawProfile` awaited ratings, then follow counts, then net worth, then claims,
+then following state, then lists, then the Masters shelf — **one after another,
+and not one of them depends on another's answer**. At 150ms a trip on a phone
+that is over a second of "Loading your profile…" on the slowest screen in the
+app and the one people open most. `Promise.all`, each promise carrying its own
+catch so a single failure degrades its own section instead of emptying the page.
+
+### The record on the splash is drawn, not filmed
+
+It was a 1280x720 clip of some grooves scaled up to cover a portrait phone — a
+2.3x blow-up of a 720p source, and it looked like one. It is CSS now: a radial
+body, `repeating-radial-gradient` grooves at a 3px pitch that are exactly one
+hairline wide at any density, a conic sheen that turns **with** the record, and
+a dark label with a gold rim.
+
+- **Centred by transform, not by the grid.** An item larger than its track does
+  not reliably overflow both edges of a centred grid area — it pins to one side,
+  which is a record sitting in the bottom-right corner of the screen.
+- **The label is dark on purpose.** The wordmark and the tagline sit directly
+  over it, and a bright gold disc behind white type is the difference between a
+  splash screen and a mess. A black label with a gold rim is also what a good
+  pressing looks like.
+- The old independent light sweep is gone. It existed because a `<video>` of
+  grooves cannot be rotated — its corners swing into frame and shear the picture
+  — so the turning had to be faked by a layer spinning over the top. A drawn
+  circle turns for real, and two rotations at different rates over one object is
+  noise.
+- 451KB of video and its 76KB poster left the app, the service worker's
+  precache list and the native bundle with it.
+
+### Each minigame moves differently
+
+Ten cards in ten colours still read as one card printed ten times. Every card
+keeps its hue and gains a second layer that moves in its own way — drift, sweep,
+breathe, orbit, tilt, rise, ripple, glint — assigned by `nth-child` like the
+hues, so the grid stays correct whatever it contains.
+
+Durations are 9–22s and mutually non-multiple, so two neighbours never fall into
+step. Scrolling gradients travel in **pixels at 90deg with matching end stops**,
+which is the rule this app has broken four times. And the one that barely moves
+is what makes the others read as deliberate.
+
+**`z-index: -1`, not `> * { position: relative }`.** Those look equivalent and
+are not: `.gc-best` — the status line each game writes its result into — is
+absolutely positioned in the card's corner, and forcing every direct child to
+`position: relative` dropped it into flow at the bottom of the card where it
+wrapped under the Play row.
+
+### The shell
+
+- **Portrait only**, on both platforms and in the web manifest. Nothing in this
+  app has a landscape design, so allowing the rotation was offering a broken
+  screen rather than a feature.
+- **No pinch, no double-tap magnify.** `user-scalable=no` plus
+  `touch-action: manipulation`, which is what actually kills the double-tap —
+  and takes ~300ms off every tap on iOS as a side effect.
+- **Shake-to-undo off** (`UIApplicationSupportsShakeToEdit`). It is a system
+  alert thrown over the app by a gesture nobody performs on purpose.
+- **No scrollbars anywhere.** The thin grey overlay is the OS's furniture, not
+  this app's — it sits on a bottom sheet's rounded corner and over album
+  artwork. Scrolling is untouched; only the indicator is hidden.
+
+### The favourite-artist photo dissolves instead of ending
+
+The old scrim faded down to `var(--bg)` with its middle stops typed out as
+`rgba(10,9,8,…)`. Two faults, one visible result — a hard line across the bottom
+of the photograph:
+
+- **The page is not flat `--bg`.** It carries four radial washes, so a band of
+  flat `--bg` laid over it meets a slightly different colour, and a seam between
+  two almost-identical colours is exactly the edge an eye finds.
+- Under any theme but the default those literals are simply the wrong colour.
+
+The media is **masked** now instead. There is nothing to match: the image runs
+out of opacity and whatever is behind it shows through, theme and washes
+included.
+
+### Groove taste match
+
+The Grooves card has promised "see everyone's taste" since it shipped and
+listed names. `grooveTaste()` is the mean of your individual matches with each
+member, **weighted by how many records each is based on** — unweighted, a
+91%-on-six drags the room's figure as hard as a 74%-on-ninety, and the whole
+reason the individual chips print their shared count is that those are not the
+same kind of fact. It costs no extra round trip: the per-person matches the rows
+already fetched are the ingredients. Members with private rankings are absent
+rather than counted as zero — "we do not agree" and "they did not say" are
+different.
+
+### Privacy and Terms read as documents now
+
+Same substance, with the apparatus a policy needs: a masthead saying which
+document and which version, an effective date, a numbered contents list you can
+jump from and cite, one accent used only for links and numerals, a footer
+saying who is responsible, and a print stylesheet. Terms gained sections on
+music and artwork (VINALL hosts none; clips are Deezer's) and on governing law.
+
+Two rules leaked into the contents list and both had to be shut off explicitly:
+the section counter put a numeral on the *Contents* heading, and the global list
+bullet put a dash in front of every entry's own number.
+
+### The icon
+
+The old one was a dark grey record on a dark ground with a small gold label —
+three near-identical dark tones, which at 60px on a home screen is a black
+square with a gold dot in it. The record is **gold** now: the one image that is
+both a vinyl and an award, which is what an app for rating records should look
+like, and it gives the tile a single high-contrast shape. Grooves are real
+concentric hairlines so it holds up at 1024 in a store listing, and the label
+carries a V so it is VINALL's record rather than a stock one. No spindle hole —
+it lands inside the V and reads as a blemish.
+
+Generated from `scripts`-style code rather than drawn by hand, so it is
+reproducible: the SVG is written to `assets/icons/icon.svg` and rasterised from
+there, then `npm run assets` fans it out.

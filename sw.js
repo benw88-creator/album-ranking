@@ -19,16 +19,15 @@ const VERSION = 'vinall-v2';
 const SHELL = VERSION + '-shell';
 const MEDIA = VERSION + '-media';
 
-/* Small, and safe to have slightly stale. The 451KB splash clip is
-   deliberately absent: precaching half a megabyte of video on first visit
-   costs more than it saves. */
+/* Small, and safe to have slightly stale. There is no splash media in here
+   any more because there is none to cache: the record on the splash is drawn
+   in CSS, which removed a 451KB clip and its 76KB poster from the app. */
 const PRECACHE = [
   '/offline.html',
   '/manifest.webmanifest',
   '/assets/icons/icon-192.png',
   '/assets/icons/icon-512.png',
-  '/assets/icons/apple-touch-icon.png',
-  '/assets/splash-poster.jpg'
+  '/assets/icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (event) => {

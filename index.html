@@ -5,7 +5,14 @@
 <!-- viewport-fit=cover lets the page paint under the notch and home
      indicator; the safe-area insets further down put the content back
      inside them. Without cover, iOS letterboxes the page in black. -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- user-scalable=no and maximum-scale=1 turn off pinch zoom and, with the
+     touch-action rule in the stylesheet, the double-tap magnify that was
+     firing by accident on the album page and in the games. This is a fixed
+     mobile-first layout with its own type scale that clamps up rather than
+     down, so there is nothing a zoom reveals that the layout does not
+     already give you — and an accidental 2x on a bottom sheet is not a
+     feature. Safari on the open web ignores this; a webview honours it. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>VINALL — Music Ranker</title>
 <meta name="description" content="Rate, rank and discover the albums and songs you love.">
 <meta name="theme-color" content="#0a0908">
@@ -294,6 +301,22 @@ html[data-theme="cassette"] body {
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
+
+/* ---- no scrollbars, anywhere -------------------------------------------
+   The thin grey overlay bar is the operating system's furniture, not this
+   app's: it sits on top of a bottom sheet's rounded corner, it appears over
+   album artwork, and in a webview it reads as a browser leaking through the
+   app. Scrolling itself is untouched — this hides the indicator, it does not
+   make anything unscrollable, and every scrolling surface here is either a
+   page or a sheet whose edge is already obvious. */
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* Kills the double-tap magnify that the viewport tag alone does not, and
+   takes ~300ms off every tap on iOS as a side effect. Set on body rather than
+   on * so a genuinely scrollable child can still declare its own. */
+body { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -3638,10 +3661,6 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
 @media (prefers-reduced-motion: reduce) {
   .splash-gate.is-dissolving { animation-duration: 420ms; }
 }
-.splash-video {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; background: var(--bg);
-}
 .splash-scrim {
   position: absolute; inset: 0;
   background:
@@ -3701,7 +3720,91 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   position: absolute; inset: 0; overflow: hidden;
   border-radius: 0;
   will-change: top, left, width, height, border-radius, filter;
+  background: #050404;
+  display: grid; place-items: center;
 }
+
+/* ---- the record, drawn ---------------------------------------------------
+   Four layers and no image file:
+
+     * the vinyl — a dark radial body, so the disc reads as curved rather than
+       as a flat black circle;
+     * the grooves — repeating-radial-gradient at a 3px pitch. This is the part
+       a video could never do well: at any screen density these are exactly one
+       hairline wide, where a scaled-up clip turns them into grey mush;
+     * a soft conic sheen that turns WITH the record, which is what makes it
+       read as a moving object rather than a texture;
+     * the label and spindle in the middle, which the old close-up did not
+       have in frame at all — and a record with no label is a black circle.
+
+   Sized past the viewport on purpose, so it bleeds off every edge the way the
+   clip did. It is a true circle rotating about its own centre, so there are no
+   corners to swing into frame — the exact problem that stopped the old version
+   being rotated directly. */
+/* Centred by transform rather than by the grid. An item larger than its track
+   does not reliably overflow both edges of a centred grid area — it ends up
+   pinned toward one side, which is exactly what it did: a record sitting
+   bottom-right of the screen reads as a bad crop rather than a design. */
+.splash-disc {
+  position: absolute; top: 50%; left: 50%;
+  width: min(132vh, 132vw); height: min(132vh, 132vw);
+  transform: translate(-50%, -50%);
+  display: grid; place-items: center;
+}
+/* The spin lives on the circle, not on the positioned box, so the centring
+   translate and the rotation never have to share one transform. */
+.sd-vinyl {
+  position: relative; width: 100%; height: 100%; border-radius: 50%;
+  display: grid; place-items: center;
+  animation: vinylSpin 6s linear infinite;
+  will-change: transform;
+  background:
+    /* the sheen, turning with the disc */
+    conic-gradient(from 210deg at 50% 50%,
+      rgba(255,255,255,0.000) 0deg,  rgba(255,255,255,0.055) 26deg,
+      rgba(255,255,255,0.012) 66deg, rgba(255,255,255,0.000) 120deg,
+      rgba(255,255,255,0.000) 200deg, rgba(255,255,255,0.038) 232deg,
+      rgba(255,255,255,0.008) 270deg, rgba(255,255,255,0.000) 340deg),
+    /* the grooves */
+    repeating-radial-gradient(circle at 50% 50%,
+      rgba(255,255,255,0.045) 0px, rgba(255,255,255,0.045) 0.5px,
+      rgba(0,0,0,0.55) 1.5px, rgba(0,0,0,0.00) 3px),
+    /* a wider band every so often, the way a real pressing has them */
+    repeating-radial-gradient(circle at 50% 50%,
+      rgba(255,255,255,0.030) 0px, rgba(255,255,255,0.030) 1px,
+      transparent 1px, transparent 27px),
+    /* the body */
+    radial-gradient(circle at 38% 32%, #2a2724 0%, #141211 26%, #0b0a09 62%, #050404 100%);
+}
+/* The dead wax and the label.
+
+   Deliberately a DARK label with a gold edge rather than a gold one. The
+   wordmark and the tagline sit directly over this, and a bright disc behind
+   white type is the difference between a splash screen and a mess — which is
+   what the first version was. A black label with a gold rim is also simply
+   what a good pressing looks like. */
+.sd-label {
+  position: relative; width: 27%; height: 27%; border-radius: 50%;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(circle at 38% 32%, #2b2620 0%, #17130f 46%, #0d0b09 100%);
+  box-shadow:
+    0 0 0 2.5% #060505,
+    inset 0 0 0 1.5px rgba(245,200,66,0.55),
+    inset 0 0 44px rgba(0,0,0,0.55),
+    0 0 70px rgba(245,200,66,0.10);
+}
+.sd-label-ring {
+  position: absolute; inset: 15%; border-radius: 50%;
+  border: 1px solid rgba(245,200,66,0.18);
+}
+.sd-hole {
+  width: 8%; height: 8%; border-radius: 50%;
+  background: #050404;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.9), 0 0 0 1px rgba(245,200,66,0.22);
+}
+/* Held still if motion is off — a still record is still a record. */
+html[data-motion="none"] .sd-vinyl { animation: none; }
 /* Why the record didn't look like it was turning on a desktop.
    The clip is a tight close-up of the grooves — no disc edge in frame —
    and a field of concentric grooves rotating about its own centre is
@@ -3722,37 +3825,14 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
    what turns is a soft band of light rather than a wedge with an edge.
    The layer is inset well beyond the frame so the blur never reveals its
    own boundary. */
-.splash-video-wrap::after {
-  content: '';
-  position: absolute; inset: -60%;
-  pointer-events: none;
-  background: conic-gradient(from 0deg at 50% 50%,
-    transparent 0deg,
-    rgba(255,255,255,0.015) 10deg,
-    rgba(255,255,255,0.045) 20deg,
-    rgba(255,255,255,0.085) 32deg,
-    rgba(255,255,255,0.105) 44deg,
-    rgba(255,255,255,0.085) 56deg,
-    rgba(255,255,255,0.045) 70deg,
-    rgba(255,255,255,0.015) 84deg,
-    transparent 100deg,
-    transparent 170deg,
-    rgba(255,255,255,0.012) 182deg,
-    rgba(255,255,255,0.038) 196deg,
-    rgba(255,255,255,0.062) 210deg,
-    rgba(255,255,255,0.038) 226deg,
-    rgba(255,255,255,0.012) 240deg,
-    transparent 254deg,
-    transparent 360deg);
-  filter: blur(26px);
-  animation: vinylSpin 3.04s linear infinite;
-}
-/* There is deliberately no "spin the poster instead" fallback here any
-   more. Rotating the <video> rotates a RECTANGLE, so its corners swing
-   into frame and the record appears sheared across a diagonal — which is
-   exactly what it was doing. The sweep above already carries the rotation
-   whether or not the clip is playing, so a stalled poster still reads as a
-   turning record without anything being rotated. */
+/* The independent light sweep that used to live here is gone with the clip.
+   It existed for one reason: a <video> of grooves cannot be rotated (its
+   corners swing into frame and shear the picture), so the sense of turning had
+   to be faked by a separate layer spinning over the top. The drawn record IS a
+   circle and turns for real, with its own sheen rotating WITH it rather than
+   across it. Two rotations at different rates over one object is noise, so
+   only the honest one survives. */
+
 .splash-video-wrap.is-morphing {
   /* Motion blur peaks mid-flight, which is what sells it as movement
      rather than a resize. */
@@ -3897,12 +3977,35 @@ body.entering-done #artist-hero {
    edges. A photograph cannot, so the scrim does it: the bottom stop is the
    page's own colour at full strength, and it starts far enough up that there
    is no visible seam between picture and page. */
+/* The picture DISSOLVES; nothing paints the page's colour over it.
+
+   The old scrim faded down to var(--bg) and its middle stops were the default
+   background typed out as rgba(10,9,8,…). Two things went wrong with that and
+   both of them draw the same hard horizontal line across the bottom of the
+   photograph:
+
+     * The page is not flat --bg. It carries four radial washes, so a band of
+       flat --bg laid over it meets a slightly different colour at the seam,
+       and a seam between two almost-identical colours is exactly the kind of
+       edge an eye picks out.
+     * Under any theme but the default those rgba stops are simply the wrong
+       colour, because they are a literal and --bg is not.
+
+   Masking the media instead means there is nothing to match: the image runs
+   out of opacity and whatever is behind it — theme, washes and all — is what
+   shows through. */
+.artist-hero-bg, .artist-hero-canvas {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 46%, rgba(0,0,0,0.72) 68%, rgba(0,0,0,0.28) 86%, transparent 99%);
+          mask-image: linear-gradient(to bottom, #000 0%, #000 46%, rgba(0,0,0,0.72) 68%, rgba(0,0,0,0.28) 86%, transparent 99%);
+}
 .artist-hero-fade {
   position: absolute;
   inset: 0;
+  /* Left-hand darkening only, for the name to sit on, and all of it lands on
+     transparent rather than on a colour. */
   background:
-    linear-gradient(to top, var(--bg) 0%, var(--bg) 6%, rgba(10,9,8,0.80) 22%, rgba(10,9,8,0.30) 46%, transparent 78%),
-    linear-gradient(to right, rgba(10,9,8,0.86) 0%, rgba(10,9,8,0.42) 34%, transparent 66%);
+    linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.34) 26%, transparent 62%),
+    linear-gradient(to right, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.34) 34%, transparent 66%);
 }
 .artist-hero-content {
   position: relative;
@@ -4808,6 +4911,165 @@ body.entering-done #artist-hero {
 /* A locked card has no business advertising a colour. */
 .games-grid > .game-card.locked::before { opacity: .25; }
 
+/* ---- each game gets its own MOVEMENT, not just its own hue --------------
+   Ten cards in ten colours still read as one card printed ten times, because
+   the only thing separating them is a swatch. What makes a tile feel like a
+   different thing is how it behaves.
+
+   So every card keeps its hue and gains a second layer — ::after — that moves
+   in its own way. Eight signatures, assigned by position like the hues, so
+   the grid stays correct whatever it contains that day and nothing has to be
+   wired per card.
+
+   Rules these follow, all of them learned the hard way elsewhere in this file:
+
+     * Anything that SCROLLS a gradient through itself travels in PIXELS at
+       90deg with matching first and last stops. Percentage positioning does
+       not mean "shift by this much" and the frame-0-to-frame-1 jump is the
+       glitch this app has shipped four times.
+     * Durations are long (9-22s) and mutually non-multiple, so two cards next
+       to each other never fall into step and the grid never pulses as one.
+     * Everything is behind the content and pointer-events: none. Nothing here
+       may cost a tap.
+     * Opacity stays low. This is a grid you read, not a light show — the
+       motion should be noticed on the second look, not the first. */
+/* z-index -1, and NOT a `> * { position: relative }` to lift the content over
+   it. That rule looked equivalent and was not: `.gc-best` — the status line
+   each game writes its result into — is absolutely positioned in the card's
+   top corner, and forcing every direct child to position: relative dropped it
+   into flow at the bottom of the card, where it wrapped across two lines under
+   the Play row. A negative z-index paints above the card's own background and
+   below its content, which is the whole requirement. */
+.games-grid > .game-card::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  border-radius: inherit; z-index: -1; opacity: .9;
+}
+.games-grid > .game-card.locked::after { opacity: .22; }
+
+/* 1 — DRIFT: a soft light moving across the corner. */
+.games-grid > .game-card:nth-child(8n+1)::after {
+  background: radial-gradient(ellipse 60% 55% at 50% 50%, color-mix(in srgb, var(--tile) 26%, transparent), transparent 70%);
+  animation: gcDrift 17s ease-in-out infinite;
+}
+@keyframes gcDrift {
+  0%, 100% { transform: translate(-32%, -26%); }
+  50%      { transform: translate(34%, 22%); }
+}
+
+/* 2 — SWEEP: a band crossing the tile. Pixel tile, 90deg, ends matching. */
+.games-grid > .game-card:nth-child(8n+2)::after {
+  background: linear-gradient(90deg,
+    transparent 0px, transparent 40px,
+    color-mix(in srgb, var(--tile) 22%, transparent) 110px,
+    transparent 180px, transparent 220px);
+  background-size: 220px 100%;
+  animation: gcSweep 9s linear infinite;
+}
+@keyframes gcSweep { from { background-position: 0 0; } to { background-position: 220px 0; } }
+
+/* 3 — BREATHE: the whole tile swells and settles. */
+.games-grid > .game-card:nth-child(8n+3)::after {
+  background: radial-gradient(ellipse 120% 90% at 50% 105%, color-mix(in srgb, var(--tile) 24%, transparent), transparent 68%);
+  animation: gcBreathe 11s ease-in-out infinite;
+}
+@keyframes gcBreathe {
+  0%, 100% { opacity: .45; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.13); }
+}
+
+/* 4 — ORBIT: the light goes round rather than back and forth. */
+.games-grid > .game-card:nth-child(8n+4)::after {
+  background: radial-gradient(circle 46% at 50% 50%, color-mix(in srgb, var(--tile) 28%, transparent), transparent 72%);
+  animation: gcOrbit 14s linear infinite;
+}
+@keyframes gcOrbit {
+  0%   { transform: translate(-26%, 16%); }
+  25%  { transform: translate(0%, -28%); }
+  50%  { transform: translate(28%, 14%); }
+  75%  { transform: translate(2%, 30%); }
+  100% { transform: translate(-26%, 16%); }
+}
+
+/* 5 — TILT: two tones rotating around the middle. */
+.games-grid > .game-card:nth-child(8n+5)::after {
+  background: conic-gradient(from 0deg at 30% 20%,
+    transparent 0turn,
+    color-mix(in srgb, var(--tile) 20%, transparent) .18turn,
+    transparent .42turn, transparent .72turn,
+    color-mix(in srgb, var(--tile) 13%, transparent) .88turn,
+    transparent 1turn);
+  animation: gcTilt 22s linear infinite;
+}
+@keyframes gcTilt { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* 6 — RISE: a wash coming up from the floor of the card. */
+.games-grid > .game-card:nth-child(8n+6)::after {
+  background: linear-gradient(0deg,
+    color-mix(in srgb, var(--tile) 30%, transparent) 0%,
+    color-mix(in srgb, var(--tile) 8%, transparent) 38%,
+    transparent 72%);
+  animation: gcRise 13s ease-in-out infinite;
+}
+@keyframes gcRise {
+  0%, 100% { transform: translateY(24%); opacity: .5; }
+  50%      { transform: translateY(-6%); opacity: 1; }
+}
+
+/* 7 — RIPPLE: rings going out from the icon. */
+.games-grid > .game-card:nth-child(8n+7)::after {
+  background: radial-gradient(circle at 24% 26%,
+    transparent 0px, transparent 14px,
+    color-mix(in srgb, var(--tile) 20%, transparent) 26px,
+    transparent 44px, transparent 64px,
+    color-mix(in srgb, var(--tile) 12%, transparent) 78px,
+    transparent 98px);
+  animation: gcRipple 15s ease-out infinite;
+}
+@keyframes gcRipple {
+  0%   { transform: scale(.7); opacity: .25; }
+  55%  { opacity: .9; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+
+/* 8 — GLINT: mostly still, with an occasional pass. The one that does almost
+   nothing is what makes the others read as deliberate. */
+.games-grid > .game-card:nth-child(8n+8)::after {
+  background: linear-gradient(90deg,
+    transparent 0px,
+    color-mix(in srgb, var(--tile) 24%, transparent) 60px,
+    transparent 120px, transparent 600px);
+  background-size: 600px 100%;
+  animation: gcGlint 19s cubic-bezier(.7,0,.3,1) infinite;
+}
+@keyframes gcGlint { from { background-position: -120px 0; } to { background-position: 600px 0; } }
+
+/* The icon well takes the card's own colour and holds a slow pulse, so the
+   thing your eye lands on first is the thing wearing the hue. */
+.games-grid > .game-card .gc-emoji {
+  background: color-mix(in srgb, var(--tile) 13%, var(--surface-2));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tile) 22%, transparent);
+  animation: gcWell 8s ease-in-out infinite;
+}
+.games-grid > .game-card:nth-child(2n) .gc-emoji { animation-duration: 10.5s; }
+.games-grid > .game-card:nth-child(3n) .gc-emoji { animation-duration: 13s; }
+@keyframes gcWell {
+  0%, 100% { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tile) 22%, transparent), 0 0 0 0 transparent; }
+  50%      { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tile) 44%, transparent), 0 0 18px -4px color-mix(in srgb, var(--tile) 34%, transparent); }
+}
+
+/* Motion off means off — the colour stays, which is the half that carries the
+   meaning. */
+/* The gate, written to match motionReduced() exactly: forced off is off,
+   and the system preference wins unless somebody has forced motion ON.
+   Getting this backwards switches the animations off for everybody, because
+   the default state is no attribute at all. */
+html[data-motion="none"] .games-grid > .game-card::after,
+html[data-motion="none"] .games-grid > .game-card .gc-emoji { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .games-grid > .game-card::after,
+  html:not([data-motion="full"]) .games-grid > .game-card .gc-emoji { animation: none; }
+}
+
 /* ---- locked minigames -------------------------------------------------- */
 .game-card { position: relative; }
 /* Locked used to be .42 opacity and a quarter saturation, which was fine when
@@ -5497,6 +5759,59 @@ button.rw-day {
   .bl-final { font-size: 42px; }
 }
 @media (prefers-reduced-motion: reduce) { .bl-float.in { animation: none; } }
+
+/* ---- ASK: the app's own confirm ----------------------------------------
+   Sized and worded like a decision rather than an error. The destructive
+   button is the one that says what it does — "Delete the rating", never
+   "OK" — because a dialog whose buttons are OK and Cancel makes you re-read
+   the sentence above them to find out which one you want. */
+/* The room's taste match. One number, and the two facts that say how much to
+   trust it directly underneath — the same arrangement as an individual chip,
+   which greys out below twelve shared records for the same reason. */
+.groove-taste {
+  text-align: center; padding: var(--s4) var(--s3); margin-bottom: var(--s4);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  background: linear-gradient(150deg, var(--c-violet-dim), var(--surface) 70%);
+}
+.gt-pct {
+  font: 800 clamp(30px, 9vw, 40px)/1 var(--font-display);
+  letter-spacing: -.03em; color: var(--c-violet);
+}
+.gt-pct.thin { color: var(--text-dim); }
+.gt-k { font-size: var(--t-sm); color: var(--text); margin-top: var(--s2); }
+.gt-s { font: 11px/1.4 var(--font-mono); color: var(--text-faint); margin-top: 3px; }
+
+.board-sorts { margin-bottom: var(--s4); }
+.ask-modal { z-index: 300; }
+.ask-panel { max-width: 340px; text-align: center; padding: var(--s6) var(--s5) var(--s5); }
+@media (max-width: 699px) {
+  .ask-modal { align-items: center; padding: var(--gutter); }
+  .ask-panel { border-radius: 22px; border-bottom: 1px solid var(--border-strong); max-width: 340px; }
+  .ask-panel::before { display: none; }   /* no grab handle: this is not a sheet */
+}
+.ask-title { font-family: var(--font-display); font-size: var(--t-h2); font-weight: 800; letter-spacing: -.02em; line-height: 1.25; }
+.ask-body { font-size: var(--t-sm); color: var(--text-dim); margin-top: var(--s2); line-height: 1.5; }
+.ask-body b { color: var(--text); }
+.ask-input {
+  width: 100%; margin-top: var(--s3); padding: 12px var(--s3); border-radius: 11px;
+  background: var(--surface-2); border: 1.5px solid var(--border-strong); color: var(--text);
+  font: 400 16px/1.2 var(--font-body); text-align: center;
+}
+.ask-input:focus { outline: none; border-color: var(--gold); }
+.ask-acts { display: flex; gap: var(--s2); margin-top: var(--s5); }
+.ask-acts button { flex: 1; min-width: 0; padding-left: var(--s2); padding-right: var(--s2); font-size: 14px; }
+.ask-no {
+  padding: 12px; border-radius: 12px; cursor: pointer;
+  background: none; border: 1px solid var(--border-strong); color: var(--text-dim);
+  font: 600 14px/1 var(--font-body);
+  transition: border-color var(--dur-quick), color var(--dur-quick);
+}
+.ask-no:hover { border-color: var(--border-strong); color: var(--text); }
+.ask-yes.danger {
+  background: var(--red); color: #fff;
+  box-shadow: 0 6px 18px rgba(226,75,74,.28);
+}
+.ask-modal.only-ok .ask-no { display: none; }
 
 /* ---- RECALL -------------------------------------------------------------
    The record is the screen. Everything else is one line of type, one button
@@ -6379,7 +6694,16 @@ window.ICONS = {
        circle) while object-fit:cover keeps the record correctly framed the
        whole way. See playDismissAnimation(). -->
   <div class="splash-video-wrap" id="splash-video-wrap">
-    <video class="splash-video" id="splash-video" poster="assets/splash-poster.jpg" muted autoplay loop playsinline preload="auto" aria-hidden="true"></video>
+    <!-- The record is DRAWN, not filmed. It used to be a 1280x720 clip of some
+         grooves, scaled up to cover a portrait phone — which is roughly a 2.3x
+         blow-up of a 720p source, and looked it. This is the same record at
+         whatever the screen's pixel density happens to be, it is 450KB lighter,
+         it needs no autoplay permission, and it cannot stall. -->
+    <div class="splash-disc" id="splash-disc" aria-hidden="true">
+      <div class="sd-vinyl">
+        <div class="sd-label"><span class="sd-label-ring"></span><span class="sd-hole"></span></div>
+      </div>
+    </div>
   </div>
   <div class="splash-scrim" id="splash-scrim"></div>
   <div class="splash-content">
@@ -7632,6 +7956,10 @@ window.ICONS = {
       <button class="btn-mini" id="groove-copy-btn">Copy join link</button>
       <button class="btn-mini" id="groove-leave-btn" style="color:var(--red);">Leave</button>
     </div>
+    <!-- The room's taste match. Sits above the member list because it is the
+         answer to the question the Grooves card has always asked, and the
+         names underneath it are the evidence. -->
+    <div class="groove-taste" id="groove-taste" style="display:none;"></div>
     <div id="groove-invite-panel" style="display:none; margin-bottom:14px;">
       <input id="groove-invite-search" class="g-input" type="text" placeholder="Invite someone you follow&hellip;" autocomplete="off" style="margin-bottom:8px;">
       <div id="groove-invite-list" style="max-height:30vh; overflow-y:auto;"></div>
@@ -7820,6 +8148,26 @@ window.ICONS = {
 </div>
 
 <!-- ============================ CELEBRATION ============================ -->
+<!-- ===================== ASK =====================
+     VINALL's own confirm. The browser's confirm() and alert() draw a SYSTEM
+     dialog, and in a webview that dialog is titled with the origin — an app
+     that says "wildcrate.xyz says…" over a question about an album is an app
+     that has just admitted it is a web page. It also cannot be styled, cannot
+     be themed, and blocks the whole thread while it is up.
+
+     One sheet, promise-based, and it is the only one: every confirm() and
+     alert() in this file goes through it. -->
+<div class="modal ask-modal" id="ask-modal">
+  <div class="modal-panel ask-panel">
+    <div class="ask-title" id="ask-title"></div>
+    <div class="ask-body" id="ask-body"></div>
+    <div class="ask-acts">
+      <button type="button" class="ask-no" id="ask-no">Cancel</button>
+      <button type="button" class="btn-primary ask-yes" id="ask-yes">OK</button>
+    </div>
+  </div>
+</div>
+
 <div class="celebrate" id="celebrate">
   <div class="celebrate-shine"></div>
   <div class="celebrate-inner">
@@ -9832,7 +10180,22 @@ function renderAlbums(){
   }).join('');
   grid.querySelectorAll('.card').forEach(function(el){
     el.addEventListener('click',function(ev){
-      if(ev.target.closest('[data-del]')){ev.stopPropagation();removeAlbum(ev.target.closest('[data-del]').dataset.del);return;}
+      if(ev.target.closest('[data-del]')){
+        ev.stopPropagation();
+        /* This used to delete on one tap with nothing in between, on a button
+           that sits inside a card you are usually trying to open. A rating is
+           the most expensive thing in this app to lose — it carries its score
+           history, which is the one thing here that can only be earned by
+           time and cannot be recreated. */
+        const _id=ev.target.closest('[data-del]').dataset.del;
+        const _a=(loadAlbums()||{})[_id]||{};
+        ask({ title:'Delete this rating?',
+              body:'<b>'+esc(_a.name||'This album')+'</b>'+(_a.artist?(' &middot; '+esc(_a.artist)):'')+
+                   '<br>Your score and everything you remembered about it go with it.',
+              confirm:'Delete rating', danger:true })
+          .then(function(ok){ if(ok) removeAlbum(_id); });
+        return;
+      }
       const a=loadAlbums()[el.dataset.id];if(a)openAlbum(a);
     });
   });
@@ -9872,7 +10235,12 @@ function renderSongs(){
       if(rec){if(v<=0){delete all2[sl.dataset.song];}else{rec.score=v;}persist(SONGS_KEY,all2);}
     });
   });
-  host.querySelectorAll('[data-delsong]').forEach(function(b){b.addEventListener('click',function(){removeSong(b.dataset.delsong);});});
+  host.querySelectorAll('[data-delsong]').forEach(function(b){b.addEventListener('click',async function(){
+    const sg=(loadSongs()||{})[b.dataset.delsong]||{};
+    if(await ask({ title:'Delete this rating?',
+                   body:'<b>'+esc(sg.name||'This song')+'</b>'+(sg.artist?(' &middot; '+esc(sg.artist)):''),
+                   confirm:'Delete rating', danger:true })) removeSong(b.dataset.delsong);
+  });});
 }
 
 (function wireControls(){
@@ -10614,6 +10982,86 @@ window.buzz = buzz;
    The label follows what happened rather than what was attempted, for the
    same reason, and the idle string is read off the button so a caller cannot
    get the two out of step. */
+/* ask() and say() — this app's confirm and alert.
+
+   Promise-based rather than blocking, so every call site becomes `await`
+   instead of a branch, and the answer is a real boolean. Three rules the
+   native dialogs could not follow:
+
+     * The confirm button NAMES THE ACTION. "Delete the rating", not "OK".
+       A dialog whose buttons are OK and Cancel makes you read the sentence
+       twice to work out which one you want.
+     * Destructive is red and never the default focus.
+     * It never says the domain name. That is the whole reason it exists.
+
+   Escape and the backdrop both answer no, which is the safe answer for every
+   question this asks. */
+function ask(opts) {
+  opts = opts || {};
+  var modal = document.getElementById('ask-modal');
+  if (!modal) return Promise.resolve(window.confirm(opts.title || ''));
+  var titleEl = document.getElementById('ask-title');
+  var bodyEl = document.getElementById('ask-body');
+  var yes = document.getElementById('ask-yes');
+  var no = document.getElementById('ask-no');
+
+  titleEl.textContent = opts.title || '';
+  bodyEl.innerHTML = (opts.body || '') +
+    (opts.input ? '<input class="ask-input" id="ask-input" type="text" maxlength="' +
+       (opts.maxlength || 60) + '" placeholder="' + (opts.placeholder || '') + '">' : '');
+  bodyEl.style.display = (opts.body || opts.input) ? '' : 'none';
+  yes.textContent = opts.confirm || 'OK';
+  no.textContent = opts.cancel || 'Cancel';
+  yes.classList.toggle('danger', !!opts.danger);
+  modal.classList.toggle('only-ok', !!opts.onlyOk);
+  modal.classList.add('open');
+  if (window.buzz) buzz('tap');
+
+  return new Promise(function (resolve) {
+    function done(v) {
+      modal.classList.remove('open');
+      yes.removeEventListener('click', onYes);
+      no.removeEventListener('click', onNo);
+      modal.removeEventListener('click', onBack);
+      document.removeEventListener('keydown', onKey);
+      resolve(v);
+    }
+    function onYes() {
+      // With an input, the answer IS the text — and an empty one is a cancel,
+      // because "OK" over an empty box is not an answer to anything.
+      if (opts.input) {
+        var f = document.getElementById('ask-input');
+        var v = (f && f.value || '').trim();
+        done(v || null);
+        return;
+      }
+      done(true);
+    }
+    function onNo() { done(opts.input ? null : false); }
+    function onBack(e) { if (e.target === modal) done(opts.input ? null : false); }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); done(opts.input ? null : false); }
+      else if (e.key === 'Enter' && !opts.danger) { e.preventDefault(); done(true); }
+    }
+    yes.addEventListener('click', onYes);
+    no.addEventListener('click', onNo);
+    modal.addEventListener('click', onBack);
+    document.addEventListener('keydown', onKey);
+    // Focus the safe one. On a destructive question the default must not be
+    // the thing that cannot be undone.
+    setTimeout(function () {
+      var f = opts.input && document.getElementById('ask-input');
+      if (f) { f.value = opts.value || ''; f.focus(); return; }
+      (opts.danger && !opts.onlyOk ? no : yes).focus();
+    }, 30);
+  });
+}
+// An alert with one button. Same sheet so a message and a question look like
+// they came from the same application.
+function say(title, body) { return ask({ title: title, body: body, onlyOk: true, confirm: 'Got it' }); }
+window.ask = ask;
+window.say = say;
+
 function handOff(btn, opts) {
   if (!btn) return;
   var idle = opts.idle || btn.textContent;
@@ -12178,30 +12626,45 @@ function tasteMatchHtml(tm,uname){
   return h;
 }
 
+/* Everything this profile needs, fetched AT ONCE.
+
+   This was seven round trips one after another before a single pixel was
+   painted — ratings, follow counts, net worth, claims, following state, lists,
+   and the Masters shelf — each one waiting on the one before it for no reason
+   at all, because not one of them depends on another's answer. On a phone at
+   150ms a trip that is over a second of "Loading your profile…" every time the
+   tab is opened, which is the slowest screen in the app and the one people
+   open most.
+
+   In parallel it is one round trip's worth of waiting. Every promise carries
+   its own catch, so a single failing call degrades its own section rather than
+   emptying the page — which is also why this is Promise.all over already-safe
+   promises rather than a pile of try/catch around awaits. */
 async function drawProfile(host,prof,isOwner){
-  let albumsObj,songsObj;
-  if(isOwner){albumsObj=loadAlbums();songsObj=loadSongs();}
-  else{const r=await Cloud.fetchUserRatings(prof.id);albumsObj=r.albums;songsObj=r.songs;}
+  const me=Cloud.getUser&&Cloud.getUser();
+  function safe(p,fallback){
+    try{return Promise.resolve(p).catch(function(){return fallback;});}
+    catch(e){return Promise.resolve(fallback);}
+  }
+  const jobs=await Promise.all([
+    isOwner?Promise.resolve({albums:loadAlbums(),songs:loadSongs()})
+           :safe(Cloud.fetchUserRatings(prof.id),{albums:{},songs:{}}),
+    safe(Cloud.followCounts(prof.id),{followers:0,following:0}),
+    safe(Cloud.client().rpc('collection_net_worth',{p_user:prof.id}),null),
+    (isOwner&&window.Wallet&&Wallet.loadClaims)?safe(Wallet.loadClaims(),null):Promise.resolve(null),
+    (!isOwner&&me)?safe(Cloud.isFollowing(prof.id),false):Promise.resolve(false),
+    safe(Cloud.fetchLists(prof.id),[])
+  ]);
+  const albumsObj=jobs[0].albums||{},songsObj=jobs[0].songs||{};
+  const counts=jobs[1]||{followers:0,following:0};
+  const netWorth=(jobs[2]&&jobs[2].data&&Number(jobs[2].data.net_worth))||0;
+  const following=!!jobs[4];
+  const lists=jobs[5]||[];
   const albumsArr=Object.values(albumsObj);
   const nAlbums=albumsArr.length,nSongs=Object.keys(songsObj).length;
   const top3=(prof.top3||[]);const topAll=(prof.top_songs_all||[]);const topNow=(prof.top_songs_now||[]);
   const av=prof.avatar_url||'';
-  const counts=await Cloud.followCounts(prof.id);
-  /* Net worth for the Statistics block. `collection_net_worth` takes a user id
-     and reads a publicly-readable table, so it works for anybody's profile —
-     unlike the lore and Completionist counts below it, which are local. */
-  let netWorth=0;
-  try{
-    const nw=await Cloud.client().rpc('collection_net_worth',{p_user:prof.id});
-    netWorth=(nw&&nw.data&&Number(nw.data.net_worth))||0;
-  }catch(e){}
-  // Milestone claims, for the Completionist tile below. Owner-only by RLS,
-  // which is correct — it is a count of your own rewards.
-  if(isOwner&&window.Wallet&&Wallet.loadClaims){try{await Wallet.loadClaims();}catch(e){}}
-  const me=Cloud.getUser&&Cloud.getUser();
-  const following=(!isOwner&&me)?await Cloud.isFollowing(prof.id):false;
   const badges=computeBadges(prof,nAlbums,isOwner);
-  const lists=await Cloud.fetchLists(prof.id);
   /* Against your own crate, not the server's copy of it: local is the newest
      and this is the one screen where the two could differ by a rating you
      made thirty seconds ago. */
@@ -12566,6 +13029,34 @@ function tasteChip(tm){
     tm.shared+' records you have both rated">'+tm.pct+'%<span> \u00b7 '+tm.shared+'</span></span>';
 }
 window.tasteChip=tasteChip;
+
+/* A taste match for a ROOM rather than a person.
+
+   Every other number in this app describes one library or a pair of them. A
+   groove is the only place where "how close is this lot" is a question worth
+   asking, and the card on the Grooves page has promised to answer it since it
+   shipped — it listed names.
+
+   It is the mean of your individual matches with each member, weighted by how
+   many records each one is based on. Weighted, because an unweighted mean lets
+   a 91%-on-six drag the room's figure around as hard as a 74%-on-ninety, and
+   the whole reason the individual chips print their shared count is that those
+   two numbers are not the same kind of fact. The room's own count is the total
+   it was computed over, so it greys out below the confidence floor exactly
+   like a single chip does.
+
+   Members with private rankings are absent from `chips` entirely, so they are
+   not counted rather than counted as zero — the difference between "we do not
+   agree" and "they did not say". */
+function grooveTaste(chips){
+  const rows=Object.keys(chips||{}).map(function(k){return chips[k];}).filter(function(t){return t&&t.enough;});
+  if(rows.length<2)return null;
+  let wsum=0,w=0,shared=0;
+  rows.forEach(function(t){ wsum+=t.pct*t.shared; w+=t.shared; shared+=t.shared; });
+  if(!w)return null;
+  return { pct: Math.round(wsum/w), people: rows.length, shared: shared };
+}
+window.grooveTaste=grooveTaste;
 /* Taste match for a list of people in one round trip, or {} when it cannot be
    had. Never throws and never blocks the list: a row with no chip is a row. */
 async function tasteFor(ids){
@@ -12677,7 +13168,7 @@ function openFavArtistPicker(){
     const res = await Cloud.saveProfile({ fav_artist: { id: item.id, name: item.name, image: hiRes || item.art || '' } });
     if (res.error) {
       console.error('Could not save favourite artist:', res.error);
-      alert('Couldn\u2019t save your favourite artist: ' + res.error +
+      say('Could not save that', 'Your favourite artist did not stick: ' + res.error +
         (/column|schema|fav_artist/i.test(res.error) ? '\n\nThis usually means the database is missing the fav_artist column on the profiles table \u2014 it needs to be added in Supabase.' : ''));
       return;
     }
@@ -12732,7 +13223,7 @@ function openListView(list,isOwner){document.getElementById('listview-title').te
   document.getElementById('list-modal').addEventListener('click',function(e){if(e.target===this)closeListEditor();});
   document.getElementById('list-kind-seg').addEventListener('click',function(e){const b=e.target.closest('button');if(!b||!_listEditing)return;_listEditing.kind=b.dataset.kind;_listEditing.items=[];this.querySelectorAll('button').forEach(function(x){x.classList.toggle('active',x===b);});drawListItems();});
   document.getElementById('list-save-btn').addEventListener('click',saveListEdits);
-  document.getElementById('list-del-btn').addEventListener('click',async function(){if(!_listEditing||!_listEditing.id){closeListEditor();return;}if(!confirm('Delete this list?'))return;await Cloud.deleteList(_listEditing.id);closeListEditor();renderProfile();});
+  document.getElementById('list-del-btn').addEventListener('click',async function(){if(!_listEditing||!_listEditing.id){closeListEditor();return;}if(!await ask({title:'Delete this list?',confirm:'Delete it',danger:true}))return;await Cloud.deleteList(_listEditing.id);closeListEditor();renderProfile();});
   document.getElementById('listview-close').addEventListener('click',function(){document.getElementById('listview-modal').classList.remove('open');});
   document.getElementById('listview-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
   document.getElementById('follow-modal-close').addEventListener('click',function(){document.getElementById('follow-modal').classList.remove('open');});
@@ -12838,6 +13329,19 @@ async function openGroove(grooveId){
   const gchips=(me&&window.tasteFor)
     ? await tasteFor(members.filter(function(p){return p.id!==me.id;}).map(function(p){return p.id;}))
     : {};
+  /* The room's number, from the same fetch the rows already made — no extra
+     round trip, because the per-person matches are the ingredients. */
+  const room=window.grooveTaste?grooveTaste(gchips):null;
+  const roomHost=document.getElementById('groove-taste');
+  if(roomHost){
+    roomHost.innerHTML=room
+      ? '<div class="gt-pct'+(room.shared<24?' thin':'')+'">'+room.pct+'%</div>'+
+        '<div class="gt-k">How close you are to this room</div>'+
+        '<div class="gt-s">across '+room.people+' '+(room.people===1?'member':'members')+
+        ' and '+room.shared+' shared records</div>'
+      : '';
+    roomHost.style.display=room?'':'none';
+  }
 
   function roleBadge(r){
     if(r==='president')return'<span class="groove-role pres">President</span>';
@@ -12864,15 +13368,15 @@ async function openGroove(grooveId){
     ev.stopPropagation();
     b.disabled=true;b.textContent='\u2026';
     const res=await Cloud.setGrooveRole(grooveId,b.dataset.grole,b.dataset.to);
-    if(res.error){alert(res.error);b.disabled=false;}
+    if(res.error){say('That did not work',res.error);b.disabled=false;}
     openGroove(grooveId);
   });});
   mhost.querySelectorAll('[data-gkick]').forEach(function(b){b.addEventListener('click',async function(ev){
     ev.stopPropagation();
-    if(!confirm('Remove this person from '+g.name+'?'))return;
+    if(!await ask({title:'Remove them from '+g.name+'?',body:'They can rejoin with the invite link.',confirm:'Remove',danger:true}))return;
     b.disabled=true;b.textContent='\u2026';
     const res=await Cloud.removeGrooveMember(grooveId,b.dataset.gkick);
-    if(res.error){alert(res.error);b.disabled=false;}
+    if(res.error){say('That did not work',res.error);b.disabled=false;}
     openGroove(grooveId);
   });});
 
@@ -12927,14 +13431,14 @@ async function drawGrooveInviteList(filter){
 
 (function wireGrooves(){
   const cb=document.getElementById('groove-create-btn');
-  if(cb)cb.addEventListener('click',async function(){if(!Cloud.isOn()){Cloud.openAuth();return;}const name=prompt('Name your Groove:');if(!name||!name.trim())return;const clean=name.replace(/[<>]/g,'').slice(0,40).trim();if(hasSlur(clean)){alert('Please keep the name respectful.');return;}const res=await Cloud.createGroove(clean);if(res.error){alert('Could not create: '+res.error);return;}renderGrooves();});
+  if(cb)cb.addEventListener('click',async function(){if(!Cloud.isOn()){Cloud.openAuth();return;}const name=await ask({title:'Name your Groove',input:true,maxlength:40,placeholder:'e.g. Sunday listening',confirm:'Create it'});if(!name)return;const clean=name.replace(/[<>]/g,'').slice(0,40).trim();if(hasSlur(clean)){say('Pick another name','Keep it respectful and try again.');return;}const res=await Cloud.createGroove(clean);if(res.error){say('Could not create that',res.error);return;}renderGrooves();});
   document.getElementById('groove-close').addEventListener('click',function(){document.getElementById('groove-modal').classList.remove('open');});
   document.getElementById('groove-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
   document.getElementById('groove-invite-btn').addEventListener('click',function(){const p=document.getElementById('groove-invite-panel');const showing=p.style.display!=='none';p.style.display=showing?'none':'block';if(!showing){document.getElementById('groove-invite-search').value='';drawGrooveInviteList('');}});
   document.getElementById('groove-invite-search').addEventListener('input',function(){clearTimeout(_grooveInviteTimer);const v=this.value;_grooveInviteTimer=setTimeout(function(){drawGrooveInviteList(v);},250);});
   document.getElementById('groove-copy-btn').textContent=Native.hand+' join link';
   document.getElementById('groove-copy-btn').addEventListener('click',function(){if(!_currentGroove)return;handOff(document.getElementById('groove-copy-btn'),{url:Native.site+'?groove='+_currentGroove.id,text:'Join my Groove on VINALL',copied:'Copied!'});});
-  document.getElementById('groove-leave-btn').addEventListener('click',async function(){if(!_currentGroove)return;if(!confirm('Leave '+_currentGroove.name+'?'))return;await Cloud.leaveGroove(_currentGroove.id);document.getElementById('groove-modal').classList.remove('open');renderGrooves();});
+  document.getElementById('groove-leave-btn').addEventListener('click',async function(){if(!_currentGroove)return;if(!await ask({title:'Leave '+_currentGroove.name+'?',confirm:'Leave',danger:true}))return;await Cloud.leaveGroove(_currentGroove.id);document.getElementById('groove-modal').classList.remove('open');renderGrooves();});
 })();
 window.renderGrooves=renderGrooves;
 
@@ -13154,7 +13658,7 @@ window.handleGrooveLink=handleGrooveLink;
     const all = (scores && scores[post.album_id]) || [];
     if (all.length < 2) { host.innerHTML = ''; host.style.display = 'none'; return; }
     host.style.display = '';
-    const mine = myScoreFor(post.album_id);
+    const mine = myScoreFor(post.album_id, post.album_name, post.album_artist);
     const avg = Math.round(all.reduce(function (n, r) { return n + r.s; }, 0) / all.length);
     const dots = all.map(function (r) {
       const isPoster = r.u === post.user_id;
@@ -13174,16 +13678,60 @@ window.handleGrooveLink=handleGrooveLink;
       '</div>';
   }
 
-  function myScoreFor(albumId) {
-    try { const a = (window.loadAlbums ? loadAlbums() : {})[albumId]; return a && typeof a.score === 'number' ? a.score : null; }
-    catch (e) { return null; }
+  /* What you gave this record, if anything.
+
+     The id lookup alone was wrong, and it was wrong in a way that read as the
+     feed being broken: it offered "Your call" on records you had definitely
+     rated. The cause is the catalogue switch. A rating made before it carries
+     a Spotify base62 id and a feed row posted after it carries a Deezer
+     numeric one — same record, two keys, no match. Whole artists could be
+     affected at once, because somebody's Drake albums were all rated in the
+     same sitting on the same side of the move.
+
+     So: id first, because it is exact and free, then name and artist. The
+     index is built once per feed render and cached against the size of the
+     crate, so it costs nothing on the common path and rebuilds when a rating
+     is added. Nothing is re-keyed and nothing is written — this is a read. */
+  var _byName = null, _byNameN = -1;
+  function nameKey(name, artist) {
+    function flat(x) {
+      return String(x || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().replace(/\([^)]*\)/g, ' ')
+        .replace(/[^a-z0-9]+/g, '').trim();
+    }
+    return flat(name) + '|' + flat(artist);
+  }
+  function nameIndex() {
+    const all = window.loadAlbums ? loadAlbums() : {};
+    const keys = Object.keys(all);
+    if (_byName && _byNameN === keys.length) return _byName;
+    const out = {};
+    keys.forEach(function (k) {
+      const a = all[k];
+      if (!a || typeof a.score !== 'number') return;
+      const nk = nameKey(a.name, a.artist);
+      if (nk !== '|' && out[nk] == null) out[nk] = a.score;
+    });
+    _byName = out; _byNameN = keys.length;
+    return out;
+  }
+  function myScoreFor(albumId, name, artist) {
+    try {
+      const all = window.loadAlbums ? loadAlbums() : {};
+      const a = all[albumId];
+      if (a && typeof a.score === 'number') return a.score;
+      if (!name) return null;
+      const hit = nameIndex()[nameKey(name, artist)];
+      return typeof hit === 'number' ? hit : null;
+    } catch (e) { return null; }
   }
 
   /* ---------- the response ---------- */
   function renderActions(div, post) {
     const bar = div.querySelector('[data-bar]');
     if (!bar) return;
-    const mine = myScoreFor(post.album_id);
+    const mine = myScoreFor(post.album_id, post.album_name, post.album_artist);
     const isMine = _myId && post.user_id === _myId;
     const listed = window.shortlistHas && shortlistHas(post.album_id);
     let html = '';
@@ -13227,7 +13775,7 @@ window.handleGrooveLink=handleGrooveLink;
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { if (window.Cloud) Cloud.openAuth(); return; }
     const bar = div.querySelector('[data-bar]');
     if (!bar || bar.querySelector('.cf-slider')) return;
-    const mine = myScoreFor(post.album_id);
+    const mine = myScoreFor(post.album_id, post.album_name, post.album_artist);
     const start = mine != null ? mine : (post.score != null ? post.score : 70);
     bar.innerHTML =
       '<div class="cf-callbox">' +
@@ -17158,46 +17706,20 @@ function playDismissAnimation(gateEl, callback) {
   // effect, and a static poster instead reads as "broken" rather than
   // "accessible". The genuinely disorienting stuff (the dot-burst dismiss,
   // card entrances, etc.) still respects reduced-motion elsewhere.
-  var video = document.getElementById('splash-video');
-  if (video) {
-    // Belt and suspenders against browser autoplay quirks: set both the
-    // muted PROPERTY (not just the HTML attribute — some browsers only
-    // honour autoplay-without-gesture if this is set before src/load) and
-    // the native autoplay property, then still call .play() ourselves
-    // since some browsers only actually start on that explicit call. If
-    // it's blocked anyway, don't silently leave a frozen poster forever —
-    // retry on the very first interaction with the gate, which will
-    // happen regardless since dismissing it requires a click anyway.
-    video.muted = true;
-    video.autoplay = true;
-    video.src = 'assets/splash-vinyl.mp4';
-    video.load();
-    var tryPlay = function () {
-      var p = video.play();
-      if (p && p.catch) p.catch(function (err) { console.warn('VINALL splash: autoplay blocked, will retry on interaction', err); });
-    };
-    tryPlay();
-    gate.addEventListener('pointerdown', tryPlay);
-    video.addEventListener('canplay', tryPlay);
-
-    // A stall check used to live here, comparing currentTime at 1.2s and
-    // 2.1s. The clip loops every 3.04s, so whenever the loop wrapped inside
-    // that window the later reading was SMALLER than the earlier one and a
-    // perfectly healthy video was declared stalled — about a one-in-three
-    // chance per load. Nothing depends on the answer now that the sweep
-    // animates independently, so there is nothing left to get wrong.
-  }
+  /* The <video> and everything that kept it alive — the muted/autoplay
+     belt-and-braces, the retry on first interaction, the stall check — went
+     with the clip. A drawn record has no playback state to babysit: no
+     autoplay permission to be refused, nothing to buffer, and nothing that
+     can be "playing perfectly while looking frozen", which is the bug that
+     cost this splash two separate investigations. */
 
   // bfcache restore (browser back/forward within the tab) reuses the exact
   // DOM state from unload rather than re-running this script — if the gate
   // was already dismissed and removed, a restore should stay on the app,
   // not resurrect a half-dismissed splash. If it somehow comes back still
   // present, just make sure the video is actually playing again.
-  window.addEventListener('pageshow', function (e) {
-    if (e.persisted && document.getElementById('splash-gate') && video && !reduced) {
-      video.play().catch(function () {});
-    }
-  });
+  /* Nothing to restart on a bfcache restore any more — the record is CSS and
+     is already turning. */
 
   function dismiss() {
     if (gate.dataset.dismissing) return; // double-click shouldn't restart the choreography
@@ -18906,7 +19428,7 @@ async function submitReport() {
     } else {
       document.getElementById('report-modal').classList.remove('open');
       if (window.celebrate) {} // no celebration for this, obviously
-      alert('Thanks — that has been sent for review.');
+      say('Thanks', 'That has been sent for review.');
     }
   } catch (e) { err.textContent = String((e && e.message) || e); }
   btn.disabled = false; btn.textContent = 'Send report';
@@ -18936,7 +19458,7 @@ async function doDeleteAccount() {
     const d = await res.json();
     if (!res.ok) { err.textContent = d.error || 'Could not delete.'; btn.disabled = false; btn.textContent = 'Delete for good'; return; }
     try { localStorage.clear(); } catch (e) {}
-    alert('Your account and everything in it has been deleted.');
+    await say('Account deleted', 'Your account and everything in it has gone.');
     location.href = location.pathname;
   } catch (e) {
     err.textContent = String((e && e.message) || e);
@@ -19489,6 +20011,17 @@ window.renderAdminStats = renderAdminStats;
   var tab = 'mine';
   var busy = false;
   var _mine = null, _market = null;
+  /* A render token, not a flag. `render()` is async and every tab does at least
+     one await, so flicking between Yours and the Market puts two renders in
+     flight and the SLOWER one lands last and wins — you end up looking at the
+     shelf with the Market's tab highlighted, or a half-painted grid. Same shape
+     as the price sweep's `_sweep`, the player's `loadTok` and the Cover Fire
+     card's fetch token, and the same fix: every await checkpoint asks whether
+     it is still the current render and gives up if it is not. */
+  var _rev = 0;
+  // Standings can be read two ways and they are different questions: who has
+  // spent the most, and who has the most records.
+  var _boardBy = 'worth', _board = null;
   // Search results, when a search is showing. Null means "show the crate".
   var _results = null, _qTimer = null;
 
@@ -19666,8 +20199,12 @@ window.renderAdminStats = renderAdminStats;
       p.addEventListener('click', function () {
         var r2 = (_results || []).concat(_market || [])
           .filter(function (x) { return x.album_id === albumId; })[0] || {};
-        if (!confirm('Use one album pick on ' + (r2.name || 'this record') +
-                     '? It is worth ' + n(r2.price || 0) + ' Discs, and a picked record cannot be sold.')) return;
+        /* No confirmation. A pick is the one purchase in the app that cannot
+           cost you anything you did not already win, and the dialog that used
+           to be here was a system alert titled with the domain — so spending a
+           Mythic prize came with a reminder that this is a web page. The card
+           already says what a pick does and how many are left; the button says
+           Use a pick. That is the confirmation. */
         buy(p, albumId, true);
       });
       btn.insertAdjacentElement('afterend', p);
@@ -19867,6 +20404,8 @@ window.renderAdminStats = renderAdminStats;
   async function render() {
     var body = el('col-body');
     if (!body) return;
+    var rev = ++_rev;
+    function stale() { return rev !== _rev; }
 
     if (!on()) {
       body.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.disc +
@@ -19887,10 +20426,20 @@ window.renderAdminStats = renderAdminStats;
     body.style.display = '';
 
     if (tab === 'mine') {
-      body.innerHTML = '<p class="reco-note">Loading your shelf…</p>';
-      var mine = await loadMine(true);
+      /* Paint what we already have, THEN refresh. The shelf was re-fetched
+         from scratch on every visit and every sort change — a round trip and a
+         "Loading your shelf…" between you and a list that had not changed
+         since ten seconds ago, which is most of why this page felt dead.
+         Records do not appear on your own shelf without you buying them, so
+         the cached copy is right virtually always, and when it is not the
+         repaint below is one frame. */
+      if (_mine && _mine.length) paintShelf(_mine);
+      else body.innerHTML = '<p class="reco-note">Loading your shelf…</p>';
+      var mine = await loadMine(!_mine);
+      if (stale()) return;
       // One call for the whole shelf before any card is built.
       try { await Cert.all(); } catch (e) {}
+      if (stale()) return;
       paintHeader();
       if (!mine.length) {
         body.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.disc +
@@ -19901,33 +20450,22 @@ window.renderAdminStats = renderAdminStats;
         if (g) g.addEventListener('click', function () { tab = 'market'; render(); });
         return;
       }
-      var w = worthOf(mine);
-      /* A shelf you can only sort by price is a portfolio. These are the other
-         orders a person actually walks their records in: what they have had
-         longest, what they think most of, and what has grown on them. */
-      var sorted = sortShelf(mine.slice());
-      body.innerHTML =
-        '<div class="col-worth-box"><div class="cw-v">' + n(w) + '</div>' +
-        '<div class="cw-k">Net worth</div>' +
-        '<div class="cw-s">' + mine.length + ' record' + (mine.length === 1 ? '' : 's') +
-        ' · best is ' + esc(mine[0].name) + '</div></div>' +
-        '<div class="col-sorts">' + SHELF_SORTS.map(function (o) {
-          return '<button class="col-sort' + (o.k === _shelfSort ? ' active' : '') + '" data-shelf-sort="' + o.k + '">' + o.label + '</button>';
-        }).join('') + '</div>' +
-        '<div class="col-grid">' + sorted.map(function (a) { return card(a, { owned: true }); }).join('') + '</div>';
-      wire(body);
+      paintShelf(mine);
       return;
     }
 
     if (tab === 'market') {
       el('col-search').style.display = '';
-      body.innerHTML = '<p class="reco-note">Reading the crate…</p>';
-      var items = _results || await loadMarket(true);
+      if (!_results && !_market) body.innerHTML = '<p class="reco-note">Reading the crate…</p>';
+      var items = _results || await loadMarket(!_market);
+      if (stale()) return;
       var owned = {};
       // The row, not just a flag: the Sell button has to print 70% of what you
       // paid, and only the collection row knows that number.
       var mineRow = {};
-      (await loadMine()).forEach(function (a) { owned[a.album_id] = true; mineRow[a.album_id] = a; });
+      var mineNow = await loadMine();
+      if (stale()) return;
+      mineNow.forEach(function (a) { owned[a.album_id] = true; mineRow[a.album_id] = a; });
       var discs = (window.Wallet && Wallet.get) ? (Wallet.get().discs || 0) : 0;
       var admin = (window.Wallet && Wallet.get) ? Wallet.get().is_admin : false;
       var picks = (window.Wallet && Wallet.get) ? (Wallet.get().album_picks || 0) : 0;
@@ -19962,31 +20500,91 @@ window.renderAdminStats = renderAdminStats;
     }
 
     // Standings
-    body.innerHTML = '<p class="reco-note">Counting everybody…</p>';
-    var rows = [];
-    try {
-      var r = await sb().rpc('collection_leaderboard', { p_limit: 25 });
-      rows = r.data || [];
-    } catch (e) {}
+    if (!_board) body.innerHTML = '<p class="reco-note">Counting everybody…</p>';
+    var rows = _board;
+    if (!rows) {
+      try {
+        var r = await sb().rpc('collection_leaderboard', { p_limit: 25 });
+        rows = _board = r.data || [];
+      } catch (e) { rows = []; }
+      if (stale()) return;
+    }
     if (!rows.length) {
       body.innerHTML = '<div class="reco-note">Nobody owns anything yet. Be first.</div>';
       return;
     }
+    paintBoard(rows);
+  }
+
+  /* Two orders over one fetch. Net worth is who has spent the most and how
+     well; records is who has the most of them — a shelf of forty cheap albums
+     and a shelf of two expensive ones are different achievements and the page
+     could only ever show one of them. Switching is a re-sort in memory, never
+     another round trip. */
+  function paintBoard(rows) {
+    var body = el('col-body');
+    if (!body) return;
     var meId = uid();
-    body.innerHTML = '<div class="col-board">' + rows.map(function (x, i) {
+    var sorted = rows.slice().sort(function (a, b) {
+      return _boardBy === 'owned' ? (b.owned - a.owned) || (b.net_worth - a.net_worth)
+                                  : (b.net_worth - a.net_worth) || (b.owned - a.owned);
+    });
+    body.innerHTML =
+      '<div class="col-sorts board-sorts">' +
+        '<button class="col-sort' + (_boardBy === 'worth' ? ' active' : '') + '" data-board="worth">Net worth</button>' +
+        '<button class="col-sort' + (_boardBy === 'owned' ? ' active' : '') + '" data-board="owned">Records</button>' +
+      '</div>' +
+      '<div class="col-board">' + sorted.map(function (x, i) {
       return '<div class="cb-row' + (x.user_id === meId ? ' me' : '') + '">' +
         '<span class="cb-rank">' + (i + 1) + '</span>' +
         '<img src="' + esc(window.avatarSrc ? avatarSrc(x.avatar_url) : (x.avatar_url || '')) + '" alt="">' +
         '<span class="cb-nm">' + esc(x.username) + '</span>' +
         '<span class="cb-lv">Lv ' + x.level + '</span>' +
-        '<span class="cb-n">' + n(x.net_worth) + '</span>' +
-        '<span class="cb-o">' + x.owned + ' rec</span></div>';
+        // Whichever reading is selected leads, and the other one stays beside
+        // it in the quiet slot — the ranking changes, the facts do not.
+        (_boardBy === 'owned'
+          ? '<span class="cb-n">' + x.owned + '</span><span class="cb-o">' + n(x.net_worth) + '</span>'
+          : '<span class="cb-n">' + n(x.net_worth) + '</span><span class="cb-o">' + x.owned + ' rec</span>') +
+        '</div>';
     }).join('') + '</div>';
+    body.querySelectorAll('[data-board]').forEach(function (b) {
+      b.addEventListener('click', function () { _boardBy = b.dataset.board; paintBoard(rows); });
+    });
+  }
+
+  /* Pulled out of render() so the cached paint and the fresh paint are the
+     same code rather than two copies that drift. */
+  function paintShelf(mine) {
+    var body = el('col-body');
+    if (!body || !mine || !mine.length) return;
+    var w = worthOf(mine);
+    /* A shelf you can only sort by price is a portfolio. These are the other
+       orders a person actually walks their records in: what they have had
+       longest, what they think most of, and what has grown on them. */
+    var sorted = sortShelf(mine.slice());
+    body.innerHTML =
+      '<div class="col-worth-box"><div class="cw-v">' + n(w) + '</div>' +
+      '<div class="cw-k">Net worth</div>' +
+      '<div class="cw-s">' + mine.length + ' record' + (mine.length === 1 ? '' : 's') +
+      // loadMine() comes back price-descending, so mine[0] is the best record
+      // on the shelf whatever order the cards are currently in.
+      ' · best is ' + esc((mine[0] && mine[0].name) || '') + '</div></div>' +
+      '<div class="col-sorts">' + SHELF_SORTS.map(function (o) {
+        return '<button class="col-sort' + (o.k === _shelfSort ? ' active' : '') + '" data-shelf-sort="' + o.k + '">' + o.label + '</button>';
+      }).join('') + '</div>' +
+      '<div class="col-grid">' + sorted.map(function (a) { return card(a, { owned: true }); }).join('') + '</div>';
+    wire(body);
   }
 
   function wire(body) {
     body.querySelectorAll('[data-shelf-sort]').forEach(function (b2) {
-      b2.addEventListener('click', function () { _shelfSort = b2.dataset.shelfSort; render(); });
+      /* Re-sorting is a local array operation over records already in memory.
+         It used to go all the way back through render(), which re-fetched the
+         shelf from the server to put the same records in a different order. */
+      b2.addEventListener('click', function () {
+        _shelfSort = b2.dataset.shelfSort;
+        if (_mine) paintShelf(_mine); else render();
+      });
     });
     // "Never rated" is the one line on a shelf worth acting on, so it acts.
     body.querySelectorAll('[data-rate-own]').forEach(function (p) {
@@ -20010,11 +20608,7 @@ window.renderAdminStats = renderAdminStats;
       b.addEventListener('click', function () {
         var rec = (_results || []).concat(_market || [])
           .filter(function (x) { return x.album_id === b.dataset.pick; })[0] || {};
-        // The only confirm in this module. A pick is a Mythic prize with three
-        // uses and no way back — spending one by mis-tapping a card is a
-        // different kind of mistake from overpaying for a record.
-        if (!confirm('Use one album pick on ' + (rec.name || 'this record') +
-                     '? It is worth ' + n(rec.price || 0) + ' Discs, and a picked record cannot be sold.')) return;
+        // Straight through, deliberately — see the note at the other pick site.
         buy(b, b.dataset.pick, true);
       });
     });
@@ -20086,7 +20680,7 @@ window.renderAdminStats = renderAdminStats;
     if (window.buzz) buzz('big');
     if (window.Wallet && Wallet.refresh) Wallet.refresh();
     else if (window.Wallet && Wallet.load) Wallet.load();
-    _mine = null; _market = null;
+    _mine = null; _market = null; _board = null;
     // Both buy paths return the new net worth, so the Home tile updates from
     // this response rather than a second round trip.
     if (window.CollectionWorth) CollectionWorth.set(j.net_worth);
@@ -20098,7 +20692,11 @@ window.renderAdminStats = renderAdminStats;
     if (busy) return;
     var row = (_mine || []).filter(function (x) { return x.album_id === albumId; })[0];
     var back = row ? Math.floor(row.price * 0.7) : 0;
-    if (!confirm('Sell ' + (row ? row.name : 'this record') + ' for ' + n(back) + ' Discs? You paid ' + n(row ? row.price : 0) + '.')) return;
+    if (!await ask({
+      title: 'Sell ' + (row ? row.name : 'this record') + '?',
+      body: 'You get <b>' + n(back) + ' Discs</b> back. You paid ' + n(row ? row.price : 0) + '.',
+      confirm: 'Sell it', danger: true
+    })) return;
     busy = true;
     btn.disabled = true;
     btn.textContent = '…';
@@ -20115,7 +20713,7 @@ window.renderAdminStats = renderAdminStats;
     if (window.buzz) buzz('tap');
     if (window.Wallet && Wallet.refresh) Wallet.refresh();
     else if (window.Wallet && Wallet.load) Wallet.load();
-    _mine = null; _market = null;
+    _mine = null; _market = null; _board = null;
     if (window.CollectionWorth && r.data) CollectionWorth.set(r.data.net_worth);
     render();
   }
@@ -23984,7 +24582,9 @@ window.renderAdminStats = renderAdminStats;
 
     var clr = document.getElementById('lh-clear');
     if (clr) clr.addEventListener('click', async function () {
-      if (!confirm('Remove your imported listening history? Your ratings and lore stay.')) return;
+      if (!await ask({ title: 'Remove your listening history?',
+                       body: 'The import goes. Your ratings, notes and lore all stay.',
+                       confirm: 'Remove it', danger: true })) return;
       clr.disabled = true;
       try { await sb().from('listening_plays').delete().eq('user_id', uid()); } catch (e) {}
       _plays = null;
