@@ -8,7 +8,7 @@
     "sync": "npm run sync:web && npx cap sync",
     "ios": "npm run sync && npx cap open ios",
     "android": "npm run sync && npx cap open android",
-    "assets": "node scripts/make-assets.mjs && npx @capacitor/assets generate --iconBackgroundColor \"#0a0908\" --iconBackgroundColorDark \"#0a0908\" --splashBackgroundColor \"#0a0908\" --splashBackgroundColorDark \"#0a0908\""
+    "assets": "node scripts/make-assets.mjs && npx @capacitor/assets generate --iconBackgroundColor \"#0a0908\" --iconBackgroundColorDark \"#0a0908\" --splashBackgroundColor \"#0a0908\" --splashBackgroundColorDark \"#0a0908\" && node scripts/trim-splash.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

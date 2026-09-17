@@ -90,6 +90,71 @@
      this instead of picking its own easing, so motion reads as one system
      rather than a pile of unrelated effects. */
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ---- the scales -----------------------------------------------------
+     There were none. Every spacing, size and duration in this file was
+     chosen on the spot, which is why nothing lined up with anything: 9px
+     here, 11px there, 14, 16, 20, 22, 26. A reader cannot tell a deliberate
+     gap from a typed one, and neither could the person adding the next rule.
+
+     These are small on purpose. Seven spaces, six type sizes and three
+     durations is enough to build anything in here, and a scale you can hold
+     in your head is a scale people actually use. Reach for a raw pixel value
+     only when the thing genuinely is not on the grid — a 1px rule, a
+     measured dash length. */
+
+  /* Space. Doubling with a half-step at the bottom, where the eye is
+     fussiest and 4px genuinely reads differently from 8px. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+
+  /* Type, MOBILE FIRST, growing on wider screens rather than shrinking on
+     narrow ones. The old sizes were picked on a desktop and then let loose
+     on a phone: a 32px page title on a 375px screen is a tenth of the width
+     per character. Lower bound is what a phone gets; the clamp only ever
+     adds. */
+  --t-hero: clamp(28px, 7vw, 44px);
+  --t-h1:   clamp(21px, 5.2vw, 30px);
+  --t-h2:   clamp(17px, 4.2vw, 22px);
+  --t-h3:   15px;
+  --t-body: 15px;
+  --t-sm:   13px;
+  --t-xs:   11px;
+
+  /* Motion. One curve already; these are the three speeds that go with it.
+     Quick is a state change you should feel and not watch, base is anything
+     that moves across the screen, slow is something arriving for the first
+     time. Anything longer than slow is an animation, and those declare
+     their own duration where they live. */
+  --dur-quick: 120ms;
+  --dur:       220ms;
+  --dur-slow:  420ms;
+
+  /* Depth. Three steps, all warm-black rather than neutral, because a
+     neutral shadow on this ground reads blue. e1 is a surface that has
+     lifted, e2 is something floating over content, e3 is a sheet. */
+  --e1: 0 1px 2px rgba(0,0,0,0.30);
+  --e2: 0 6px 18px rgba(0,0,0,0.42);
+  --e3: 0 18px 44px rgba(0,0,0,0.58);
+
+  /* Layout. --gutter is the page margin and it is the single biggest number
+     on a phone: at the old flat 28px, 15% of a 375px screen was empty edge.
+     --nav-h is the floating bar's footprint, which several things need to
+     stay clear of. */
+  --gutter: 16px;
+  --nav-h:  62px;
+  --topbar-h: 54px;
+}
+
+/* From tablet up there is room to breathe again, so the page margin grows.
+   Nothing else in the scale changes — the type clamps handle themselves. */
+@media (min-width: 700px) {
+  :root { --gutter: 28px; }
 }
 
 /* ---- COSMETIC THEMES (Shop-unlockable — see Wallet module near the end
@@ -299,27 +364,60 @@ header, nav.modes, .stats, .stat, .modal-panel, .gate, .game-card, .shop-item,
    Still gated below: the splash morph's blur/scale, card-grid entrance
    stagger, and the Discs particle burst. */
 a { color: inherit; text-decoration: none; }
-.wrap { max-width: 1140px; margin: 0 auto; padding: 0 28px; }
+.wrap { max-width: 1140px; margin: 0 auto; padding: 0 var(--gutter); }
 
 /* Notch, rounded corners and the home indicator — see the block at the very
    bottom of this stylesheet. It has to be last and that is not tidiness. */
 
 /* ---- HEADER ---- */
+/* ---- TOP BAR ----------------------------------------------------------
+   This was 157px tall on a phone — a 52px spinning record, a 32px title, a
+   tagline and a row of pills — and with the search field and the old tab
+   strip under it, content did not begin until 362px of an 812px screen.
+   Forty-five per cent of the first thing anybody saw was furniture.
+
+   So it is mobile first now and grows on a desktop rather than the other way
+   round. The record shrinks, the tagline and the waveform go (they say
+   nothing the title does not, and they said it on every screen), and what is
+   left is a name and the controls. The full brand comes back at 700px, where
+   there is room for it to be the flourish it was meant to be. */
 header {
-  padding: 32px 0 20px;
+  padding: var(--s3) 0 var(--s2);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  gap: var(--s3);
   position: relative;
 }
+.head-actions { display: flex; align-items: center; gap: var(--s2); flex-shrink: 0; }
+/* The brand has to be the thing that gives way, because the controls cannot:
+   a button that has been squeezed to nothing is a button nobody can press. */
+.brand { min-width: 0; }
+.brand-text { min-width: 0; }
+.brand-text h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.brand { display: flex; align-items: center; gap: 18px; }
+/* Six controls in a 402pt bar is four too many, and they overlapped the
+   wordmark. Two go, and neither is lost:
+     - the Shop, because the Discs page already has a door to it and that page
+       is one thumb-tap away in the bar below;
+     - recent activity, which moves into the account menu beside the other
+       things that are about you rather than about where you are.
+   The bell stays, because it is the one that lights up. */
+@media (max-width: 699px) {
+  #shop-open-btn, #activity-toggle { display: none; }
+}
+
+@media (min-width: 700px) {
+  header { padding: var(--s6) 0 var(--s5); gap: var(--s4); flex-wrap: wrap; }
+  .head-actions { gap: 10px; }
+}
+
+.brand { display: flex; align-items: center; gap: var(--s3); min-width: 0; }
+@media (min-width: 700px) { .brand { gap: 18px; } }
 
 /* Spinning vinyl disc — the hero mark */
 .brand-mark {
-  width: 52px; height: 52px;
+  width: 32px; height: 32px;
   border-radius: 50%;
   position: relative;
   flex-shrink: 0;
@@ -356,7 +454,9 @@ header {
   content: '';
   position: absolute;
   inset: 0; margin: auto;
-  width: 12px; height: 12px;
+  /* A share of the disc rather than a fixed 12px, so the label stays a label
+     at every size the mark is drawn at. */
+  width: 23%; height: 23%;
   border-radius: 50%;
   /* Two-tone label so the mark itself carries the theme's colour pair */
   background: radial-gradient(circle at 35% 35%, var(--accent-2), var(--gold) 70%);
@@ -367,7 +467,7 @@ header {
 .brand-text {}
 .brand-text h1 {
   font-family: var(--font-display);
-  font-size: 32px;
+  font-size: var(--t-h1);
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1;
@@ -377,12 +477,14 @@ header {
   background-clip: text;
 }
 .brand-text p {
-  font-size: 12px;
+  font-size: var(--t-xs);
   color: var(--text-faint);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   margin-top: 3px;
+  display: none;
 }
+@media (min-width: 700px) { .brand-text p { display: block; } .brand-mark { width: 52px; height: 52px; } }
 
 /* Waveform — 5 animated bars next to the brand */
 .waveform {
@@ -392,7 +494,11 @@ header {
   height: 20px;
   margin-left: 4px;
   opacity: 0.6;
+  /* Ambient decoration, and the phone has no room for ambience above the
+     fold. It comes back with the rest of the brand at tablet width. */
+  display: none;
 }
+@media (min-width: 700px) { .waveform { display: flex; } }
 .waveform span {
   display: block;
   width: 3px;
@@ -470,53 +576,150 @@ button:active { transform: scale(0.96); }
 .auth-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px rgba(245,200,66,0.6); }
 
 /* ---- NAV ---- */
+/* ---- NAV ---------------------------------------------------------------
+   A strip of text tabs at the top of the page, which on a phone measured
+   651px of buttons inside a 317px window: five of the eight destinations were
+   simply off-screen, nothing said so, and the whole thing sat at the far end
+   of the screen from a thumb. Tap targets were 37px against Apple's 44.
+
+   It is a floating bar at the bottom on a phone and the same strip it always
+   was from 700px up, where a bar hovering over a 1400px desktop would be
+   silly. Mobile is the primary layout and the desktop is what it grows into,
+   which is the way round this whole file is moving.
+
+   Five destinations, because five is what fits at a size a thumb can hit, and
+   because the bar should hold PLACES. Achievements, notifications and recent
+   activity are not places — they are things that happened — so they went to
+   the account menu and the top bar respectively. */
 nav.modes {
-  display: inline-flex;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 5px;
-  gap: 2px;
-  margin: 8px 0 0;
-  position: relative;
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--s2) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 150;
+  width: calc(100% - var(--gutter) * 2);
+  max-width: 460px;
+  display: flex;
+  gap: 0;
+  padding: 6px;
+  margin: 0;
+  border-radius: 22px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--e3);
+}
+/* Translucent where it is supported, and solid where it is not — the bar sits
+   over scrolling artwork and the blur is most of why it reads as floating
+   rather than as a block stuck to the bottom. color-mix is the feature test
+   because it is the newer of the two. */
+@supports (background: color-mix(in srgb, red 50%, transparent)) {
+  nav.modes {
+    background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+    backdrop-filter: blur(22px) saturate(150%);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+  }
 }
 .nav-indicator {
-  position: absolute; top: 5px; bottom: 5px; left: 0;
-  width: 0; border-radius: 10px;
-  background: var(--surface-3);
-  transition: transform 0.3s var(--ease), width 0.3s var(--ease);
+  position: absolute; top: 6px; bottom: 6px; left: 0;
+  width: 0; border-radius: 17px;
+  background: var(--section-dim);
+  transition: transform var(--dur) var(--ease), width var(--dur) var(--ease),
+              background-color var(--dur-slow) ease;
   z-index: 0; pointer-events: none;
 }
 nav.modes button {
+  flex: 1 1 0;
+  min-width: 0;
   background: transparent;
   border: none;
-  color: var(--text-dim);
-  padding: 9px 20px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
+  color: var(--text-faint);
+  /* 48 clears Apple's 44pt floor, which the old 37px tabs did not. */
+  min-height: 48px;
+  padding: 7px var(--s1) 6px;
+  border-radius: 17px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
   position: relative;
   z-index: 1;
-  transition: color 0.15s, background 0.15s;
+  transition: color var(--dur-quick) var(--ease);
 }
-nav.modes button.active {
-  /* Background now comes from the sliding .nav-indicator behind it, not a
-     static per-button fill — that's what makes tab switches slide instead
-     of just popping between buttons. */
-  color: var(--text);
+nav.modes button .nl {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Five labels across 375px land shoulder to shoulder and read as one run of
+     words. Tightening the letterforms and giving each a little air separates
+     them without making the type any smaller than it can afford to be. */
+  letter-spacing: -0.015em;
+  padding: 0 1px;
 }
-nav.modes button.active::after {
-  content: '';
-  position: absolute;
-  bottom: 6px; left: 50%;
-  transform: translateX(-50%);
-  width: 18px; height: 2px;
-  border-radius: 2px;
-  background: var(--gold);
+/* The label is the section's own colour, so the bar tells you where you are
+   in the same language the page heading and the background wash use. */
+nav.modes button.active { color: var(--section); }
+nav.modes button.active .nav-icon { transform: translateY(-1px); }
+nav.modes button .nav-icon { transition: transform var(--dur) var(--ease); }
+nav.modes button:active { transform: scale(0.94); }
+
+@media (min-width: 700px) {
+  nav.modes {
+    position: static;
+    transform: none;
+    width: auto;
+    max-width: none;
+    display: inline-flex;
+    padding: 5px;
+    gap: 2px;
+    margin: var(--s2) 0 0;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .nav-indicator { top: 5px; bottom: 5px; border-radius: 10px; background: var(--surface-3); }
+  nav.modes button {
+    flex: 0 0 auto;
+    min-height: 0;
+    flex-direction: row;
+    gap: 7px;
+    padding: 9px 18px;
+    border-radius: 10px;
+    font-size: var(--t-body);
+    font-weight: 500;
+    color: var(--text-dim);
+  }
+  nav.modes button.active { color: var(--text); }
+  nav.modes button:hover:not(.active) { color: var(--text); }
 }
-nav.modes button:hover:not(.active) { color: var(--text); background: var(--surface-2); }
+
 .nav-icon-btn { display: inline-flex; align-items: center; gap: 7px; }
 .nav-icon { width: 15px; height: 15px; flex-shrink: 0; }
+nav.modes .nav-icon { width: 21px; height: 21px; }
+@media (min-width: 700px) { nav.modes .nav-icon { width: 15px; height: 15px; } }
+
+/* The two status controls that left the nav. Round, quiet, and the same size
+   as everything else a thumb has to find in the top bar. */
+.head-icon-btn {
+  position: relative;
+  width: 38px; height: 38px;
+  display: inline-grid; place-items: center;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  transition: background var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease),
+              border-color var(--dur-quick) var(--ease);
+}
+.head-icon-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+.head-icon-btn .nav-icon { width: 17px; height: 17px; }
 
 /* Shared stroke-icon language (see window.ICONS) — default size fits inline
    with text; .ui-icon-lg is for modal-head-scale replacements of what used
@@ -618,25 +821,33 @@ nav.modes button:hover:not(.active) { color: var(--text); background: var(--surf
 html[data-motion="none"] .disc-particle { animation: none; display: none; }
 
 /* ---- SEARCH ---- */
-.search-block { padding: 28px 0 24px; position: relative; z-index: 30; }
+.search-block { padding: var(--s3) 0 var(--s4); position: relative; z-index: 30; }
+@media (min-width: 700px) {
+  .search-block { padding: 28px 0 24px; }
+  #search-input { height: 58px; padding: 0 22px 0 56px; border-radius: 18px; font-size: 17px; }
+  .search-icon { left: 22px; }
+}
 .search-field { position: relative; }
 .search-icon {
   position: absolute;
-  left: 22px; top: 50%; transform: translateY(-50%);
+  left: var(--s4); top: 50%; transform: translateY(-50%);
   color: var(--text-faint);
   pointer-events: none;
   font-size: 18px;
 }
 #search-input {
   width: 100%;
-  height: 64px;
-  padding: 0 22px 0 56px;
+  /* 64px was a desktop hero field. 48 is still a comfortable thumb target and
+     gives back a sixth of the space above the fold. */
+  height: 48px;
+  padding: 0 var(--s4) 0 46px;
   background: var(--surface-2);
   border: 1.5px solid var(--border-strong);
-  border-radius: 20px;
+  border-radius: 14px;
   color: var(--text);
   font-family: var(--font-body);
-  font-size: 17px;
+  /* 16px minimum: anything smaller and iOS zooms the page when it focuses. */
+  font-size: 16px;
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 #search-input::placeholder { color: var(--text-faint); }
@@ -707,11 +918,24 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
 }
 .section-head h2 {
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: var(--t-h2);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
-.section-head .muted { font-size: 13px; color: var(--text-dim); }
+.section-head .muted { font-size: var(--t-sm); color: var(--text-dim); }
+
+/* ---- VERTICAL RHYTHM -----------------------------------------------------
+   Every top-level view carried an inline margin-top:32px, which a media query
+   cannot override, so a phone got desktop gaps between everything and a
+   screen that scrolled twice as far as it needed to. They are a class now.
+   The numbers below are the space scale and nothing else. */
+.view { margin-top: var(--s5); }
+@media (min-width: 700px) { .view { margin-top: var(--s6); } }
+
+@media (max-width: 699px) {
+  .section-head { margin: 0 0 var(--s4); gap: var(--s2); }
+  .site-foot { margin: var(--s6) 0 var(--s4); padding-top: var(--s4); font-size: var(--t-xs); gap: var(--s2); }
+}
 
 /* ---- STATS STRIP ---- */
 .stats {
@@ -1347,8 +1571,22 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--card-min, 200px), 1fr));
-  gap: 16px;
-  margin-bottom: 48px;
+  gap: var(--s4);
+  margin-bottom: var(--s7);
+}
+
+/* A crate you can only see one record of is not a crate, it is a queue. At
+   375px the old minmax(200px) resolved to a single 281px column, so a phone
+   showed one and a half albums — and the size control did nothing, because
+   medium and large both came out as one column.
+   Columns directly on a phone, then, rather than a minimum width: the three
+   sizes become three, two and one, so the control means something on the
+   device most people hold. Two is the default and it is what a record shelf
+   looks like. */
+@media (max-width: 699px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); }
+  .grid[data-size="s"] { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
+  .grid[data-size="l"] { grid-template-columns: minmax(0, 1fr); }
 }
 
 .card {
@@ -1440,6 +1678,21 @@ html[data-motion="none"] .card { animation: none; }
 }
 .card:hover .art { transform: scale(1.04) translateZ(0); }
 
+/* Every affordance on this card was a hover: a cursor-tracking spotlight, a
+   6px lift and an art zoom. On a phone all three are dead — and worse, iOS
+   keeps :hover applied to the last thing you tapped, so a card stayed lit
+   after you left it. None of them run on a touch device; a press does
+   instead, which is the gesture that actually exists there. */
+@media (hover: none) {
+  .card:hover { transform: none; box-shadow: none; }
+  .card:hover::before { opacity: 0; }
+  .card:hover .art { transform: none; }
+  .card:active {
+    transform: scale(0.975) translateZ(0);
+    transition: transform var(--dur-quick) var(--ease);
+  }
+}
+
 /* Score overlaid on art */
 .card .art-score {
   position: absolute;
@@ -1487,7 +1740,30 @@ html[data-motion="none"] .card { animation: none; }
   letter-spacing: -0.01em;
 }
 
-.card-body { padding: 12px 14px 14px; }
+/* Tighter at two-up, where the tile is ~160px and 14px of side padding is
+   nine per cent of it. */
+@media (max-width: 699px) {
+  .card { border-radius: var(--radius-sm); border-top-width: 2px; }
+  /* The remove button had a row of its own under every single card — 27px of
+     permanent destructive affordance on a 161px tile, which is a seventh of
+     the card given over to the one thing nobody opened the crate to do. It
+     moves into the corner of the body, same size, same one tap.
+     Not onto the artwork, deliberately: removeAlbum() takes no confirmation,
+     so a control that deletes a rating should not sit where the thumb lands
+     when somebody means to open the record. */
+  .card-body { position: relative; }
+  .card-name, .card-artist { padding-right: 30px; }
+  .card-row { position: absolute; right: var(--s2); bottom: 10px; margin: 0; }
+  .del-btn { width: 26px; height: 26px; border-radius: var(--radius-xs); }
+  .card .art-score { font-size: 30px; bottom: var(--s2); left: var(--s2); letter-spacing: -0.045em; }
+  .card .art-score span { font-size: 11px; }
+  .rank-badge { top: 7px; left: 7px; min-width: 24px; height: 24px; padding: 0 6px; font-size: 11px; }
+  .grid[data-size="s"] .card .art-score { font-size: 22px; }
+  .grid[data-size="s"] .card-body { padding: var(--s2) 9px 9px; }
+  .grid[data-size="s"] .card-artist { display: none; }
+}
+.card-body { padding: var(--s3); }
+@media (min-width: 700px) { .card-body { padding: 12px 14px 14px; } }
 .card-name {
   font-family: var(--font-display);
   font-weight: 600; font-size: 14px;
@@ -1581,14 +1857,35 @@ button.idx.sent .pi { display: block; }
    mid-note, which is the #draw-block rule again.
    z-index sits under the modals (200+) so a sheet still covers it. */
 #player-bar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 160;
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
-  background: var(--surface-2); border-top: 1px solid var(--border-strong);
-  backdrop-filter: blur(12px);
-  transform: translateY(110%); transition: transform 0.22s ease;
+  position: fixed; z-index: 160;
+  /* Sits ABOVE the floating nav rather than under it, so you can still move
+     around the app while something is playing — which is the whole reason a
+     player is a bar and not a page. It is shaped like the nav on purpose:
+     two things floating at the bottom of the same screen should look like
+     they belong to each other. */
+  left: 50%; bottom: calc(var(--nav-h) + var(--s3) + env(safe-area-inset-bottom, 0px));
+  width: calc(100% - var(--gutter) * 2); max-width: 460px;
+  display: flex; align-items: center; gap: 10px;
+  padding: var(--s2) var(--s3);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  box-shadow: var(--e3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transform: translateX(-50%) translateY(160%);
+  transition: transform var(--dur) var(--ease);
 }
-#player-bar.up { transform: translateY(0); }
+#player-bar.up { transform: translateX(-50%) translateY(0); }
+@media (min-width: 700px) {
+  #player-bar {
+    left: 0; right: 0; bottom: 0; width: auto; max-width: none;
+    transform: translateY(110%); border-radius: 0;
+    border: 0; border-top: 1px solid var(--border-strong);
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  #player-bar.up { transform: translateY(0); }
+}
 html[data-motion="none"] #player-bar { transition: none; }
 #player-bar[hidden] { display: none; }
 /* The scrub line rides the top edge, with a fat invisible hit area —
@@ -1862,7 +2159,12 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 .games-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px; margin-bottom: 40px;
+  gap: var(--s4); margin-bottom: var(--s6);
+}
+/* Ten cards in one column was 2,888px of scrolling to see a grid of games.
+   Two-up halves it and lets you take the whole thing in. */
+@media (max-width: 699px) {
+  .games-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); }
 }
 .game-card {
   background: var(--surface);
@@ -3702,6 +4004,28 @@ body.entering-done #artist-hero {
 .home-fold[open] > summary { border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 @media (prefers-reduced-motion: reduce) { .home-fold > summary::after { transition: none; } }
 
+/* Title and subtitle sat on one baseline with the chevron pushed right by
+   margin-left:auto. At 370px that runs out of room, the subtitle clips under
+   the chevron and the row reads as broken. Stacked instead, with the chevron
+   pinned — which is also the right hierarchy: the subtitle explains what is
+   inside a thing you have not opened yet, so it belongs under the name of it
+   rather than beside it. */
+@media (max-width: 699px) {
+  .home-fold { margin-top: var(--s5); padding: 0 var(--s4); border-radius: var(--radius-sm); }
+  .home-fold > summary {
+    position: relative;
+    flex-direction: column; align-items: flex-start;
+    flex-wrap: nowrap; gap: 2px;
+    padding: var(--s3) var(--s5) var(--s3) 0;
+  }
+  .home-fold > summary::after {
+    position: absolute; right: 0; top: 50%; margin: 0;
+    transform: translateY(-50%) rotate(90deg);
+  }
+  .home-fold[open] > summary::after { transform: translateY(-50%) rotate(-90deg); }
+  .hf-t { font-size: var(--t-h3); }
+}
+
 /* Sub-tabs. One shape shared by the Crate and the Collection, because two
    different pill bars doing the same job is exactly the kind of thing that
    makes an app feel busier than it is. */
@@ -5266,10 +5590,16 @@ button.rw-day {
    ================================================================ */
 @supports (padding: max(0px)) {
   .wrap {
-    padding-left: max(28px, env(safe-area-inset-left));
-    padding-right: max(28px, env(safe-area-inset-right));
+    /* var(--gutter), not a second copy of 28 — this block is the last thing
+       in the stylesheet and so it wins every time, which means a literal
+       here silently overrides the page margin everywhere else. */
+    padding-left: max(var(--gutter), env(safe-area-inset-left));
+    padding-right: max(var(--gutter), env(safe-area-inset-right));
   }
-  body { padding-bottom: env(safe-area-inset-bottom); }
+  /* The floating nav is fixed, so it covers whatever the page ends with
+     unless the page ends early enough. This is that. */
+  body { padding-bottom: calc(var(--nav-h) + var(--s5) + env(safe-area-inset-bottom, 0px)); }
+  @media (min-width: 700px) { body { padding-bottom: env(safe-area-inset-bottom); } }
   header { padding-top: max(32px, calc(env(safe-area-inset-top) + 12px)); }
   .activity { padding-top: env(safe-area-inset-top); }
   .splash-content { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
@@ -5547,7 +5877,9 @@ window.ICONS = {
         <span></span><span></span><span></span><span></span><span></span>
       </div>
     </div>
-    <div style="display:flex; align-items:center; gap:10px;">
+    <div class="head-actions">
+      <button class="activity-toggle head-icon-btn" id="notif-toggle" title="Notifications" aria-label="Notifications"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 2.2c-1.8 0-3.1 1.4-3.1 3.4v2c0 .8-.3 1.6-.9 2.3l-.5.6h9l-.5-.6c-.6-.7-.9-1.5-.9-2.3v-2c0-2-1.3-3.4-3.1-3.4Z"/><path d="M6.3 11.8a1.8 1.8 0 0 0 3.4 0"/></svg><span class="dot" id="notif-dot" style="display:none;"></span></button>
+      <button class="activity-toggle head-icon-btn" id="activity-toggle" title="Recent activity" aria-label="Recent activity"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.6 1.5"/></svg><span class="dot"></span></button>
       <button id="shop-open-btn" class="shop-open-btn" title="Disc Shop">
         <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>
         <span id="shop-open-discs">Shop</span>
@@ -5569,20 +5901,17 @@ window.ICONS = {
   <!-- ============================ MODE NAV ============================ -->
   <nav class="modes" id="modes">
     <span class="nav-indicator" id="nav-indicator"></span>
-    <button data-mode="home" class="active">Home</button>
+    <button data-mode="home" class="active"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 7.1 8 2.6l5.6 4.5v5.8a.9.9 0 0 1-.9.9H3.3a.9.9 0 0 1-.9-.9Z"/><path d="M6.4 13.8V9.5h3.2v4.3"/></svg><span class="nl">Home</span></button>
     <!-- Albums, Songs and The Crate were three nav items for one idea: music
          that has been rated. They are one button now with a sub-tab bar, which
          is the single biggest thing that made the top of the app feel busy.
          Bid Wars and The Draw both lost their tabs the same way — one into the
          Minigames grid, one into Collection — because a nav item should be a
          place you go, not every feature that exists. -->
-    <button data-mode="albums" class="nav-icon-btn"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>Crate</button>
-    <button data-mode="games">Minigames</button>
-    <button data-mode="collection">Collection</button>
-    <button data-mode="rewards">Discs</button>
-    <button data-mode="achievements" class="nav-icon-btn" aria-label="Achievements" title="Achievements"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="6.5" r="4"/><path d="M5.2 9.8 4 14l4-1.6 4 1.6-1.2-4.2"/></svg></button>
-    <button class="activity-toggle nav-icon-btn" id="notif-toggle" title="Notifications" aria-label="Notifications"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 2.2c-1.8 0-3.1 1.4-3.1 3.4v2c0 .8-.3 1.6-.9 2.3l-.5.6h9l-.5-.6c-.6-.7-.9-1.5-.9-2.3v-2c0-2-1.3-3.4-3.1-3.4Z"/><path d="M6.3 11.8a1.8 1.8 0 0 0 3.4 0"/></svg><span class="dot" id="notif-dot" style="display:none;"></span></button>
-    <button class="activity-toggle nav-icon-btn" id="activity-toggle" title="Recent activity" aria-label="Recent activity"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.6 1.5"/></svg><span class="dot"></span></button>
+    <button data-mode="albums"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.2 5.6h11.6v7.2a1 1 0 0 1-1 1H3.2a1 1 0 0 1-1-1Z"/><path d="m2.2 5.6 1.4-3h8.8l1.4 3"/><path d="M5.7 8.4v2.8M8 8.4v2.8M10.3 8.4v2.8"/></svg><span class="nl">Crate</span></button>
+    <button data-mode="games"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.4" y="2.4" width="11.2" height="11.2" rx="2.8"/><circle cx="5.9" cy="5.9" r=".95" fill="currentColor" stroke="none"/><circle cx="10.1" cy="10.1" r=".95" fill="currentColor" stroke="none"/></svg><span class="nl">Minigames</span></button>
+    <button data-mode="collection"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.7" y="2.6" width="8.9" height="8.9" rx="1.5"/><path d="M11.3 13.4H4a1.4 1.4 0 0 1-1.4-1.4V4.7"/></svg><span class="nl">Collection</span></button>
+    <button data-mode="rewards"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg><span class="nl">Discs</span></button>
   </nav>
 
   <!-- connect gate -->
@@ -5594,7 +5923,7 @@ window.ICONS = {
 
   <!-- ============================ TODAY ============================ -->
   <!-- ============================ HOME ============================ -->
-  <section id="view-home" style="margin-top:32px;">
+  <section id="view-home" class="view">
     <!-- Anything waiting to be claimed, at the very top and nowhere else on
          this page. It only exists when there is something to take, so it is
          never furniture — and it saves a trip to Rewards for the one action
@@ -5708,7 +6037,7 @@ window.ICONS = {
   </section>
 
   <!-- ============================ THE CRATE ============================ -->
-  <section id="view-crate" style="display:none; margin-top:28px;">
+  <section id="view-crate" class="view" style="display:none;">
     <div class="section-head">
       <div>
         <h2 style="font-size:26px; letter-spacing:-0.025em;">The Crate <span style="font-size:14px; color:var(--text-faint); font-weight:500; letter-spacing:0;">everyone's ratings, live</span></h2>
@@ -5743,7 +6072,7 @@ window.ICONS = {
 
   <!-- ============================ ALBUM RANKING ============================ -->
   <!-- ============================ DIARY ============================ -->
-  <section id="view-albums" style="display:none; margin-top:32px;">
+  <section id="view-albums" class="view" style="display:none;">
     <div class="section-head"><h2 id="albums-title">Your album rankings</h2></div>
     <div class="controls-row">
       <div class="ctrl" style="flex:1; min-width:200px;">
@@ -5781,7 +6110,7 @@ window.ICONS = {
   </section>
 
   <!-- ============================ SONG RANKING ============================ -->
-  <section id="view-songs" style="display:none; margin-top:32px;">
+  <section id="view-songs" class="view" style="display:none;">
     <div class="section-head"><h2 id="songs-title">Your song rankings</h2></div>
     <div class="controls-row">
       <div class="ctrl" style="flex:1; min-width:200px;">
@@ -5812,7 +6141,7 @@ window.ICONS = {
   </section>
 
   <!-- ============================ GAMES ============================ -->
-  <section id="view-games" style="display:none; margin-top:32px;">
+  <section id="view-games" class="view" style="display:none;">
     <div class="section-head"><h2>Minigames</h2><span class="muted">Test yourself on any artist, genre or era</span></div>
     <div class="games-grid" id="games-grid">
       <div class="game-card" id="drop-card" style="border-color: var(--gold-dim); background: linear-gradient(150deg, var(--gold-dim), var(--surface) 60%);">
@@ -5894,7 +6223,7 @@ window.ICONS = {
   </section>
 
   <!-- ============================ BID WARS ============================ -->
-  <section id="view-wars" style="display:none; margin-top:32px;">
+  <section id="view-wars" class="view" style="display:none;">
     <div class="section-head"><h2><span data-icon="trophy"></span> Bid Wars</h2><button class="btn-primary" id="war-new-btn" style="margin-left:auto;">Start a war</button></div>
     <p class="reco-note">Five records, dealt one at a time. Spread 100 chips across them without seeing what is still to come, and without seeing what any of them is worth. Outbid them on a record and you take its value. Most value wins.</p>
     <div id="war-challenges"></div>
@@ -5911,7 +6240,7 @@ window.ICONS = {
        Records you own. Buy with Discs, hold them, and what you hold adds up.
        The distinction from Bid Wars matters: a war is a match that resolves
        and the records were never yours. This is a position you keep. -->
-  <section id="view-collection" style="display:none; margin-top:32px;">
+  <section id="view-collection" class="view" style="display:none;">
     <div class="section-head"><h2><span data-icon="disc"></span> Collection</h2>
       <span class="muted" id="col-worth"></span></div>
     <!-- The Draw used to be a fourth tab here, and a card in Minigames as
@@ -5936,7 +6265,7 @@ window.ICONS = {
        Where Discs come from and where they go: the seven-day ladder, then The
        Draw, then the Shop. The view id stays `rewards` — renaming it buys
        nothing and walks into the `views` map trap in setMode. -->
-  <section id="view-rewards" style="display:none; margin-top:32px;">
+  <section id="view-rewards" class="view" style="display:none;">
     <div class="section-head"><h2><span data-icon="disc"></span> Discs</h2><span class="muted" id="rw-streak"></span></div>
     <div id="rewards-body"></div>
 
@@ -5989,7 +6318,7 @@ window.ICONS = {
   </section>
 
   <!-- ============================ ACHIEVEMENTS ============================ -->
-  <section id="view-achievements" style="display:none; margin-top:32px;">
+  <section id="view-achievements" class="view" style="display:none;">
     <div class="section-head"><h2><span data-icon="trophy"></span> Achievements</h2><span class="muted" id="ach-summary"></span></div>
     <h3 class="ach-group-title">Album milestones</h3>
     <div class="ach-grid" id="ach-milestones"></div>
@@ -5999,7 +6328,7 @@ window.ICONS = {
   </section>
 
   <!-- ============================ PROFILE ============================ -->
-  <section id="view-profile" style="display:none; margin-top:32px;">
+  <section id="view-profile" class="view" style="display:none;">
     <div id="profile-body"></div>
     <div class="section-head" style="margin-top:34px;"><h2>Your Music Lore</h2><span class="muted" id="lore-count"></span></div>
     <p class="reco-note">Everything you&rsquo;ve said about your records.</p>
@@ -6009,7 +6338,7 @@ window.ICONS = {
   </section>
 
   <!-- ============================ PEOPLE ============================ -->
-  <section id="view-people" style="display:none; margin-top:32px;">
+  <section id="view-people" class="view" style="display:none;">
     <div class="section-head"><h2><span data-icon="people"></span> People</h2></div>
     <div class="g-field" style="max-width:420px; margin-bottom:8px;">
       <input id="people-search" class="g-input" type="text" placeholder="Find someone by exact username&hellip;" autocomplete="off">
@@ -6020,7 +6349,7 @@ window.ICONS = {
   </section>
 
   <!-- ============================ GROOVES ============================ -->
-  <section id="view-grooves" style="display:none; margin-top:32px;">
+  <section id="view-grooves" class="view" style="display:none;">
     <div class="section-head"><h2><span data-icon="groove"></span> Grooves</h2><button class="btn-primary" id="groove-create-btn" style="margin-left:auto;">+ New Groove</button></div>
     <p class="reco-note">Groups for you and your mates. Create one, invite people, see everyone&rsquo;s taste.</p>
     <div id="groove-invites"></div>
@@ -8746,7 +9075,10 @@ function positionNavIndicator() {
   const navRect = nav.getBoundingClientRect();
   const btnRect = active.getBoundingClientRect();
   indicator.style.width = btnRect.width + 'px';
-  indicator.style.transform = 'translateX(' + (btnRect.left - navRect.left - 5) + 'px)';
+  // Was a hardcoded 5, which was the nav's padding copied into the JS. Read
+  // it instead, so restyling the bar cannot leave the pill a few px out.
+  const pad = parseFloat(getComputedStyle(nav).paddingLeft) || 0;
+  indicator.style.transform = 'translateX(' + (btnRect.left - navRect.left - pad) + 'px)';
 }
 window.positionNavIndicator = positionNavIndicator;
 window.addEventListener('resize', positionNavIndicator);
@@ -8813,6 +9145,9 @@ function sortSongList(list,mode){
 function applyAlbumSize(){
   const grid=document.getElementById('albums-grid');
   if(grid)grid.style.setProperty('--card-min',SIZE_MAP[albumSize]||'200px');
+  // A phone lays the grid out in columns rather than by minimum width — see
+  // the .grid rules — so it needs the size as a name, not a pixel value.
+  if(grid)grid.dataset.size=albumSize;
   document.querySelectorAll('#albums-size button').forEach(function(b){b.classList.toggle('active',b.dataset.size===albumSize);});
 }
 
@@ -10384,6 +10719,15 @@ const Cloud=(function(){
         '<div class="acct-menu" id="acct-menu">'+
           '<div class="acct-menu-head">'+esc((user.email||'account').split('@')[0])+'</div>'+
           '<button class="acct-menu-item" data-go="profile">'+ICONS.person+' My profile</button>'+
+          /* Left the nav bar when that became five places and a thumb. An
+             achievement is not a place you go, it is something that happened
+             to you, so it belongs next to your profile rather than beside
+             Home. */
+          '<button class="acct-menu-item" data-go="achievements">'+ICONS.trophy+' Achievements</button>'+
+          /* Its button in the top bar is hidden on a phone, where there was
+             no room for it — so this is the only way in there, not a second
+             one. */
+          '<button class="acct-menu-item" id="acct-activity">'+ICONS.stopwatch+' Recent activity</button>'+
           '<button class="acct-menu-item" data-go="people">'+ICONS.people+' People</button>'+
           '<button class="acct-menu-item" data-go="grooves">'+ICONS.groove+' Grooves</button>'+
           '<button class="acct-menu-item" id="acct-settings">\u2699 Settings</button>'+
@@ -10406,6 +10750,16 @@ const Cloud=(function(){
       e.stopPropagation();
       const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');
       if(window.openSettings)openSettings();
+    });
+    /* Opens the same drawer the top-bar button does, by pressing that button
+       rather than reaching into the drawer itself — one way in, so whatever
+       that handler does next (marking things seen, refreshing) keeps
+       happening. */
+    const act=document.getElementById('acct-activity');
+    if(act)act.addEventListener('click',function(e){
+      e.stopPropagation();
+      const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');
+      const t=document.getElementById('activity-toggle');if(t)t.click();
     });
   }
   document.addEventListener('click',function(){const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');});
