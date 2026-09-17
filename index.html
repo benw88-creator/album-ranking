@@ -2307,24 +2307,76 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
   position: relative; overflow: hidden;
 }
+/* The corner glow was hover-only, which on a phone means it never existed —
+   so the card's one piece of life was visible to nobody holding one. It is on
+   at rest now, in the card's own hue, and hover just turns it up. */
 .game-card::before {
   content: '';
   position: absolute;
-  top: -40px; right: -40px;
-  width: 120px; height: 120px;
+  top: -46px; right: -46px;
+  width: 132px; height: 132px;
   border-radius: 50%;
-  background: var(--gold-glow);
-  opacity: 0;
-  transition: opacity 0.3s;
+  background: var(--g-dim);
+  opacity: 0.85;
+  transition: opacity var(--dur) var(--ease);
   pointer-events: none;
 }
-.game-card:hover::before { opacity: 1; }
-.game-card:hover { transform: translateY(-4px); border-color: rgba(245,200,66,0.25); box-shadow: 0 12px 36px rgba(0,0,0,0.5); }
-.gc-emoji { font-size: 32px; }
-.game-card h3 { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin: 12px 0 6px; letter-spacing: -0.01em; }
-.game-card p { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
-.gc-go { margin-top: 16px; font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.02em; text-transform: uppercase; }
-.gc-best { position: absolute; top: 18px; right: 18px; font-size: 12px; color: var(--text-faint); font-family: var(--font-display); font-weight: 600; }
+.game-card { border-color: color-mix(in srgb, var(--g) 16%, var(--border)); }
+.game-card:hover::before { opacity: 1.6; }
+.game-card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--g) 40%, transparent); box-shadow: var(--e2); }
+@media (hover: none) {
+  .game-card:hover { transform: none; box-shadow: none; }
+  .game-card:active { transform: scale(0.975); transition: transform var(--dur-quick) var(--ease); }
+}
+@media (max-width: 699px) {
+  .game-card { padding: var(--s4) var(--s3) var(--s4) var(--s4); border-radius: var(--radius-sm); }
+  .gc-emoji { width: 40px; height: 40px; border-radius: 12px; }
+  .gc-emoji .ui-icon, .gc-emoji svg { width: 21px; height: 21px; }
+  .game-card h3 { font-size: 15px; margin-top: var(--s2); }
+  .gc-best { top: var(--s3); right: var(--s3); }
+}
+/* ---- MINIGAME CARDS ------------------------------------------------------
+   Ten cards that were the same card ten times: one surface, one border, one
+   small grey glyph, and the same gold "Play" on every one. Three of them had
+   an inline gradient so they at least looked different, which made the point —
+   colour was the thing that was missing, and it was being applied by hand to
+   the favourites.
+
+   Every card owns a hue now, assigned by position the way the stats strip
+   already does it, so the grid reads as a set of DIFFERENT THINGS rather than
+   a list. The hues are the fixed ones, so they survive a theme change.
+
+   The icon becomes the card. It sits in a tinted well at a size you can see
+   from across the room, which is most of what makes a tile look worth
+   pressing; the description drops to two lines, because a full sentence on a
+   166px tile is a paragraph and nobody reads it twice. */
+.games-grid > .game-card:nth-child(7n+1) { --g: var(--gold);     --g-dim: var(--gold-dim); }
+.games-grid > .game-card:nth-child(7n+2) { --g: var(--c-cyan);   --g-dim: var(--c-cyan-dim); }
+.games-grid > .game-card:nth-child(7n+3) { --g: var(--c-violet); --g-dim: var(--c-violet-dim); }
+.games-grid > .game-card:nth-child(7n+4) { --g: var(--c-lime);   --g-dim: var(--c-lime-dim); }
+.games-grid > .game-card:nth-child(7n+5) { --g: var(--c-pink);   --g-dim: var(--c-pink-dim); }
+.games-grid > .game-card:nth-child(7n+6) { --g: var(--accent-2); --g-dim: var(--accent-2-dim); }
+.games-grid > .game-card:nth-child(7n+7) { --g: var(--c-blue);   --g-dim: var(--c-blue-dim); }
+.game-card { --g: var(--gold); --g-dim: var(--gold-dim); }
+
+.gc-emoji {
+  display: inline-grid; place-items: center;
+  width: 46px; height: 46px;
+  border-radius: 14px;
+  font-size: 24px; line-height: 1;
+  color: var(--g);
+  background: var(--g-dim);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.gc-emoji .ui-icon, .gc-emoji svg { width: 24px; height: 24px; }
+.game-card h3 { font-family: var(--font-display); font-size: 17px; font-weight: 700; margin: var(--s3) 0 5px; letter-spacing: -0.015em; }
+.game-card p {
+  font-size: var(--t-sm); color: var(--text-dim); line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.gc-go { margin-top: var(--s3); font-size: 11px; font-weight: 700; color: var(--g); letter-spacing: 0.06em; text-transform: uppercase; }
+.gc-best { position: absolute; top: var(--s4); right: var(--s4); font-size: var(--t-xs); color: var(--text-faint); font-family: var(--font-display); font-weight: 600; max-width: 45%; text-align: right; line-height: 1.25; }
 
 /* ---- MODAL ---- */
 .modal {
@@ -2859,6 +2911,36 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   font-family: var(--font-display); font-size: 12px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--text-faint); margin: 30px 0 16px;
+}
+
+/* ---- THE PROFILE ON A PHONE ---------------------------------------------
+   This page had no mobile rules at all: a 96px avatar next to a 30px name on
+   a 343px row, then eight section titles with 30px of air above each. It is
+   also the longest page in the app — header, Standing, top three, lists,
+   statistics, every album you have rated and every Lore answer — so the air
+   between sections is not a detail, it is most of the scrolling.
+
+   The identity block gets smaller and the rhythm gets tighter. Nothing is
+   removed: this is the same page, asking for less room to say it. */
+@media (max-width: 699px) {
+  .prof-head { gap: var(--s4); margin-bottom: var(--s2); }
+  .prof-avatar { width: 72px; height: 72px; }
+  .prof-name { font-size: var(--t-h1); }
+  .prof-bio { font-size: var(--t-sm); margin-top: var(--s1); line-height: 1.5; }
+  /* The info column is inline-styled min-width:200px, which is more than the
+     row can spare once an avatar is in it. */
+  .prof-head > div { min-width: 0 !important; }
+  .prof-stats { gap: var(--s4); margin-top: var(--s2); }
+  .prof-stat b { font-size: 18px; }
+  .prof-stat span { font-size: var(--t-xs); margin-left: 4px; }
+
+  .prof-section-title { margin: var(--s5) 0 var(--s3); }
+  .prof-section-row { margin: var(--s5) 0 var(--s3); }
+
+  .done-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); }
+  .done-tile { padding: var(--s3) var(--s2); border-radius: 12px; }
+  .dt-v { font-size: 22px; }
+  .top3 { gap: var(--s2); }
 }
 .top3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 420px; }
 .top3-slot {
@@ -4682,8 +4764,27 @@ body.entering-done #artist-hero {
 
 /* ---- locked minigames -------------------------------------------------- */
 .game-card { position: relative; }
-.game-card.locked { opacity: .42; filter: saturate(.25); cursor: not-allowed; }
-.game-card.locked .gc-go { visibility: hidden; }
+/* Locked used to be .42 opacity and a quarter saturation, which was fine when
+   every card was the same grey anyway. Now that each one owns a hue, that
+   recipe grinds the whole grid back to brown — and on a fresh account eight of
+   the ten are locked, so the first thing anybody sees is the thing the colour
+   was added to fix. A locked card should still look like something you want,
+   just out of reach. */
+.game-card.locked { opacity: .55; filter: saturate(.5); cursor: not-allowed; }
+
+/* The pill takes the "Play →" line's place instead of floating over the
+   bottom of the card. Absolute positioning meant it landed on the description
+   once that was clamped to two lines, and reserving room for it lower down
+   put the same dead space into every UNLOCKED card, because grid rows stretch
+   to match. In flow, a card says either "Play" or "Rate 3 more albums" on the
+   same line, and the two are the same height because they are the same thing:
+   the one line at the bottom that tells you where you stand. */
+.game-card.locked .gc-go { display: none; }
+.game-card.locked .gc-lock {
+  position: static; inset: auto;
+  display: block; width: fit-content;
+  margin-top: var(--s3);
+}
 .gc-lock {
   position: absolute; inset: auto 12px 12px 12px; text-align: center;
   font: 700 10px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
@@ -6332,14 +6433,14 @@ window.ICONS = {
   <section id="view-games" class="view" style="display:none;">
     <div class="section-head"><h2>Minigames</h2><span class="muted">Test yourself on any artist, genre or era</span></div>
     <div class="games-grid" id="games-grid">
-      <div class="game-card" id="drop-card" style="border-color: var(--gold-dim); background: linear-gradient(150deg, var(--gold-dim), var(--surface) 60%);">
+      <div class="game-card" id="drop-card">
         <div class="gc-emoji" data-icon="disc"></div>
         <h3>Daily Drop</h3>
         <p>One album and one song a day &mdash; guess each in six. Same for everyone.</p>
         <div class="gc-go">Play today &rarr;</div>
         <div class="gc-best" id="drop-card-status"></div>
       </div>
-      <div class="game-card" id="ew-card" style="border-color: var(--gold-dim); background: linear-gradient(150deg, var(--gold-dim), var(--surface) 60%);">
+      <div class="game-card" id="ew-card">
         <div class="gc-emoji" data-icon="mic"></div>
         <h3>Earworm</h3>
         <p>Spell the record, letter by letter. A daily one, or endless from your own library.</p>
@@ -6395,7 +6496,7 @@ window.ICONS = {
            wallet_award_game('tournament') case are all left in place — parked
            the same way market-mode Bid Wars is, so bringing it back is putting
            a card back rather than rebuilding it. -->
-      <div class="game-card" id="war-card" style="border-color: var(--accent-2-dim); background: linear-gradient(150deg, var(--accent-2-dim), var(--surface) 60%);">
+      <div class="game-card" id="war-card">
         <div class="gc-emoji" data-icon="trophy"></div>
         <h3>Bid Wars</h3>
         <p>Outbid a mate on five records, blind. Winner takes 3,000 Discs.</p>

@@ -3023,6 +3023,43 @@ beside it at hero size**, then one obvious action with the two quiet ones under 
 `'Your score: 94/100'` became `'<i>Your score: </i>94<span>/100</span>'` purely so a phone can
 drop the label. Beside the title at that size the number is the sentence.
 
+### The minigame grid, and locked cards that still look worth having
+
+Ten cards that were the same card ten times — one surface, one border, one small grey glyph,
+the same gold "Play" on each. Three of them carried an **inline** gradient so they at least
+looked different, which made the point: colour was what was missing, and it was being applied
+by hand to the favourites.
+
+Every card owns a hue now, assigned by `nth-child` the way the stats strip already does it, so
+the grid reads as a set of different things. The icon sits in a tinted well at a size you can
+see across the room, which is most of what makes a tile look worth pressing, and the
+description clamps to two lines because a full sentence on a 166px tile is a paragraph.
+
+**The corner glow used to be hover-only**, which on a phone means it never existed — the
+card's one piece of life was invisible to everybody holding one. It is on at rest now.
+
+Two things about the locked state, which on a fresh account is **eight of the ten cards**:
+
+- `saturate(.25)` was fine when every card was the same grey. With a hue each it grinds the
+  whole grid back to brown — the exact thing the colour was added to fix. It is `.5` now. A
+  locked card should still look like something you want, just out of reach.
+- **The lock pill took the "Play →" line's place instead of floating over the bottom.** It was
+  absolutely positioned, so it landed on the description once that clamped to two lines — and
+  reserving room for it put the same dead space into every *unlocked* card, because grid rows
+  stretch to match. In flow, a card says either "Play" or "Rate 3 more albums" on one line,
+  and they are the same height because they are the same thing.
+
+### The profile page had no mobile rules at all
+
+A 96px avatar beside a 30px name on a 343px row, and eight section titles with 30px of air
+above each. It is also the longest page in the app — header, Standing, top three, lists,
+statistics, every rated album and every Lore answer — so the air between sections *is* the
+scrolling. Smaller identity block, tighter rhythm, nothing removed.
+
+`.prof-head > div { min-width: 0 !important }` is the one honest `!important` in this pass:
+that column is inline-styled `min-width:200px` from the JS that builds it, and an inline style
+cannot be beaten any other way.
+
 ### Three more source-order traps, all the same shape
 
 Every one of these was a rule further down the file quietly beating a newer one:
