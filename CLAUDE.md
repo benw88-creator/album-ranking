@@ -1304,14 +1304,24 @@ Deezer sleeve now sits on the same screen as it.
 
 VINALL credited Deezer in plain text and showed no logo at all, which does not meet that.
 
-`assets/deezer-mark.png` is **Deezer's own published icon, taken unaltered from their CDN**.
-It is deliberately not redrawn: a brand mark reproduced from memory is an altered brand mark,
-and the same guidelines forbid altering it. Their brand site was erroring at the time, so this
-was the faithful route available — swap it for the full wordmark from deezerbrand.com when
-that is reachable. Do not recolour, crop or squash it.
+**Two files, both Deezer's own and both taken unaltered from their CDN.** Neither is redrawn:
+a brand mark reproduced from memory is an altered brand mark, and the same guidelines forbid
+exactly that.
 
-It appears in the footer, in Settings and on the album page button. `.dz-credit` is the one
-class that lays it out.
+- `assets/deezer-logo.png` — the **full wordmark**, heart plus DEEZER, off deezerbrand.com.
+  This is what carries the attribution, in the footer and in Settings, because "clearly
+  visible and identified" is what the guideline asks for and a wordmark identifies itself.
+  605x168; every size it is drawn at holds that ratio.
+- `assets/deezer-mark.png` — the square icon, which stays on the two inline controls that
+  **link** to Deezer, the album page button and the player bar. A 3.6:1 wordmark beside text
+  already saying Deezer says it twice.
+
+The wordmark is white and only legible on a dark ground, which is the only ground this app
+has. Do not recolour, crop or squash either. `.dz-credit` lays both out and `.dz-wordmark`
+drops the icon's border-radius, which means nothing on transparency.
+
+The icon shipped alone at first because deezerbrand.com was erroring that day — the note here
+said to swap in the wordmark when the site came back, and it did.
 
 **The Spotify marks came off every surface in the same pass**, for two reasons that agree:
 
@@ -1551,12 +1561,26 @@ the same ladder: grey, cyan, violet, gold, and Mythic prismatic — Mythic had t
 kind* from Legendary rather than in brightness, because gold was already the top of the old
 ladder.
 
-**The on-page odds panel and the paragraph above the reel were both removed** at the owner's
-request. `spin_items` still has a public select policy and the server still walks those exact
-weights, so the numbers did not stop being true — they stopped being printed. Two things
-before that stays gone for good: Apple's guideline 3.1.1 wants published odds for anything
-loot-box shaped, so an App Store submission needs the panel back (it read from `loadItems()`
-and nothing else, so restoring it is small), and see the paragraph above about paid Discs.
+**The odds panel is back; the paragraph above the reel is not.** It was removed at the
+owner's request and `spin_items` kept its public select policy the whole time, so the numbers
+never stopped being true — they stopped being printed. Apple's guideline 3.1.1 wants published
+odds for anything loot-box shaped and this is one, so `paintOdds()` prints them again.
+
+**It computes them from the pool rather than restating them.** The percentages come out of the
+same `loadItems()` rows the strip is built from, which are the rows `wallet_spin` walks, so
+there is no second copy to go stale — the same rule `LADDER` against `v_ladder` exists to
+avoid, applied where it can actually be enforced instead of merely warned about. Weights sum
+to 1000, so the tier figures are exact rather than rounded, and `fmtPct` keeps two decimals at
+the bottom end so the one-in-333 jackpot reads 0.3% rather than 0%.
+
+A **`<details>`, collapsed**, under the reel. A table of percentages printed above it is
+exactly the manual the rest of the Discs page was cleared of; a disclosure that opens when
+somebody wants it is not. It carries the two facts that change what the percentages *mean* —
+spins are independent, and winning a duplicate pays its shop price back in Discs — and that
+Discs cannot be bought, which is the sentence keeping this out of UK gambling regulation.
+
+**It is behind login**, because the whole Discs page is. App Review therefore needs the demo
+account to see it, which `STORE-SUBMISSION.md` says in the notes.
 
 ### Mythic, and why the spin costs 5,000
 
@@ -2805,6 +2829,44 @@ can have.
 would have registered one. Inside the binary the assets are already local, so a
 cache of them buys nothing and the only thing a worker could still do is serve
 a stale shell — the exact failure `sw.js` is written to avoid.
+
+### Safe areas, and a rule that had been losing for months
+
+The header sat under the clock and the dynamic island the first time the app ran, and the
+cause was not the app. The `@supports` block carrying every inset lived near the top of the
+stylesheet next to `.wrap`, which reads better and is wrong: **`header` is declared 200 lines
+further down with a padding SHORTHAND**, and a shorthand at equal specificity later in the
+file resets the longhand above it. `.splash-content { padding: 24px; }` did the same to the
+bottom inset.
+
+**Nothing showed on the website**, because mobile Safari reports a top inset of zero while its
+own chrome is on screen. So the bug needed the app — or anybody adding the site to their home
+screen — to become visible at all.
+
+That block is now the **last thing in the stylesheet** and should stay there. Third time this
+app has shipped a rule outranked by one further down the file, after the `.song-row .idx` oval
+and the checkbox before it. If a rule is meant to win, put it where it can.
+
+### Icons and splash
+
+`npm run assets` (`scripts/make-assets.mjs`) builds the sources from
+`assets/icons/icon-1024.png`, which the web app already ships, and `npx @capacitor/assets
+generate` fans them out. Nothing is hand-drawn. Two details that are not cosmetic: **iOS
+refuses an app icon with an alpha channel**, so it is flattened onto `#0a0908`; and the
+**Android adaptive foreground is the maskable icon**, already drawn at 66%, so the circular
+mask does not crop the record.
+
+### The plugins, and the one that was removed
+
+`@capacitor/haptics`, `@capacitor/share`, `@capacitor/status-bar`, `@capacitor/keyboard`,
+`@capacitor/app`. `@capacitor/browser` was installed and then taken out unused: an external
+`target="_blank"` already hands off to the system browser, and an unused plugin is a line in a
+privacy label and an answer to give App Review for nothing.
+
+**`@capacitor/app` is not wired to the back button and must not be.** Capacitor's Android
+default — go back in the webview's history, finish the activity when there is none — is
+already what `index.html`'s history pushes and its `MutationObserver` on `.modal`/`.activity`
+expect. Registering a `backButton` listener would take that over and break it.
 
 ### Do not change the scheme or hostname later
 
