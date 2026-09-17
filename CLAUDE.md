@@ -2913,6 +2913,110 @@ recoverable for a signed-in account and gone for everybody else.
   capacitor scheme is not on Supabase's redirect allow-list and would silently
   fall back to Site URL anyway.
 
+## The design system, and the mobile-first turn
+
+Added when VINALL was wrapped as an app and it became obvious that it was a desktop layout
+being poured into a phone. The numbers, measured on a 375x812 viewport rather than eyeballed:
+
+| | before | after |
+|---|---|---|
+| content begins at | **362px of 812** — 45% chrome | 186 |
+| nav | 651px of tabs in a 317px window, **334px hidden**, no affordance | nothing hidden |
+| tap targets | 37px (Apple's floor is 44) | 53 |
+| album grid | **one column**, 281px | two, 166px |
+| Minigames | one column, 2,888px of scroll | two |
+| page gutter | 28px = **15% of the width** | 16 |
+
+### The scales, and why there were none
+
+Every spacing, size and duration in this file had been chosen on the spot — 9px here, 11
+there, 14, 16, 20, 22, 26 — so a reader could not tell a deliberate gap from a typed one,
+and neither could the next person adding a rule. `:root` now carries **seven spaces
+(`--s1`..`--s7`), six type sizes, three durations and three shadows**, plus `--gutter` and
+`--nav-h`.
+
+They are small on purpose. A scale you can hold in your head is a scale people use; reach
+for a raw pixel only when the thing genuinely is not on the grid, like a 1px rule or a
+measured dash length.
+
+**Type is mobile first and clamps UP.** `--t-h1` is `clamp(21px, 5.2vw, 30px)`, so a phone
+gets the lower bound and a desktop grows into the upper one. The old sizes were picked on a
+desktop and then let loose on a phone, which is how a 32px page title ended up on a 375px
+screen.
+
+### The nav bar holds places; sheets hold status
+
+A floating bar at the bottom under 700px, and the same inline strip it always was above it —
+a bar hovering over a 1400px desktop would be silly. Mobile is the primary layout and the
+desktop is what it grows into.
+
+Five destinations, on one rule: **the bar holds places.** Home, Crate, Minigames, Collection
+and Discs are places you go. Achievements, notifications and recent activity are things that
+*happened*, so they went to the account menu and the top bar. That rule is what to apply when
+somebody wants a sixth item.
+
+`#modes` keeps its `button[data-mode]` structure exactly, because `setMode` finds its buttons
+that way and `positionNavIndicator` measures them. The one JS change is that the indicator
+reads the nav's padding instead of a hardcoded `5` — that 5 *was* the padding, typed a second
+time with nothing keeping the two in step, and the bar's padding changed.
+
+**The player bar moved above the nav and took its shape** — same width, same radius, same
+float. Two things at the bottom of one screen should look like they belong to each other, and
+you should be able to move around the app while something is playing.
+
+### Interactions were mouse-shaped
+
+The album card's entire affordance set was hover: a cursor-tracking spotlight, a 6px lift and
+an art zoom. On a phone all three are dead — and worse, **iOS keeps `:hover` applied to the
+last thing you tapped**, so a card stayed lit after you had left it. Under `(hover: none)`
+they are all off and a press scale takes over. Do not add a hover-only affordance without an
+`(hover: none)` answer beside it.
+
+`buzz('tap')` fires on a nav change, which is the most repeated gesture in the app and was
+the only one with no feedback at all.
+
+### Views animate, and the transform lands on `none`
+
+Switching tabs was a hard cut, which is most of what made this read as a website.
+`.view.enter` runs 220ms and eight pixels. The keyframe ends at `transform: none` rather than
+a value on purpose: a finished transform would create a containing block and quietly break
+anything `position: fixed` inside a view.
+
+The class is removed and `void offsetWidth` forces a reflow before it is re-added — same
+idiom as the Cover Fire timer bar, and for the same reason.
+
+### Modals are sheets on a phone
+
+Anchored to the bottom, full width, rounded at the top, with a grab handle drawn by
+`.modal-panel::before` rather than added to a dozen panels' markup. No handler changed; the
+backdrop keeps its tap-to-close.
+
+### Three traps worth not falling into again
+
+- **`.stats` has `gap: 1px` and that is not a gap.** It is the hairline between tiles, drawn
+  by the grid's own background showing through. Changing it to a real gap removes every
+  divider on the Home stats strip.
+- **Inline `style="margin-top:32px"` on all twelve views could not be overridden by a media
+  query**, which is why a phone got desktop gaps. They are `class="view"` now. `setMode` only
+  ever writes `display`, so the attribute was safe to replace.
+- **Source order decides.** The safe-area block is deliberately last (see its own note), so
+  anything it sets — including the page gutter — outranks the rule that looks like it owns
+  that property. It reads `var(--gutter)` rather than a second literal for exactly that
+  reason.
+
+### What was deliberately left alone
+
+The colour system, the token discipline, the shared easing curve and the typefaces.
+Instrument Sans has real character and Plex Mono is right for an app about numbers — the
+problem was a 32px heading on a 375px screen, not the face it was set in.
+
+### Found, not fixed
+
+`removeAlbum()` takes **no confirmation** — the bin on a crate card deletes a rating on one
+tap. That is pre-existing and a design pass is the wrong place to change behaviour, but it is
+why the button was tucked into the card body's corner rather than onto the artwork, where a
+thumb lands when somebody means to open the record.
+
 ## Colour
 
 The app used to have two accents — `--gold` and `--accent-2` — on near-black grey, so every

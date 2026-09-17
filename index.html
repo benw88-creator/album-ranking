@@ -932,6 +932,24 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
 .view { margin-top: var(--s5); }
 @media (min-width: 700px) { .view { margin-top: var(--s6); } }
 
+/* Views were swapped by toggling display, so moving between tabs was a hard
+   cut — the single biggest thing making this read as a website rather than an
+   app. 220ms and eight pixels is enough; anything more and you are watching
+   the transition instead of arriving.
+
+   transform lands on `none` rather than a value, so the finished state
+   creates no containing block and nothing position:fixed inside a view can be
+   broken by it. */
+@keyframes viewIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.view.enter { animation: viewIn var(--dur) var(--ease) both; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .view.enter { animation: none; }
+}
+html[data-motion="none"] .view.enter { animation: none; }
+
 @media (max-width: 699px) {
   .section-head { margin: 0 0 var(--s4); gap: var(--s2); }
   .site-foot { margin: var(--s6) 0 var(--s4); padding-top: var(--s4); font-size: var(--t-xs); gap: var(--s2); }
@@ -952,6 +970,14 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
   background: var(--surface);
   padding: 22px 20px;
   position: relative;
+}
+/* Stated rather than left to minmax(140px), which gave two columns on a phone
+   by luck and three the moment the screen was a little wider. The 1px gap is
+   NOT touched: it is not a gap, it is the hairline between tiles, drawn by the
+   grid's own background showing through. */
+@media (max-width: 699px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: var(--s5); }
+  .stat { padding: var(--s4) var(--s3); }
 }
 .stat::after {
   content: '';
@@ -2219,6 +2245,42 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   position: absolute; inset: 0; width: 100%; height: 100%;
   pointer-events: none;
 }
+/* ---- SHEETS -------------------------------------------------------------
+   A centred dialog floating in the middle of a phone is a website's idea of a
+   modal. Every one of these becomes a sheet instead: anchored to the bottom
+   where a thumb is, full width, rounded only at the top, and with the grab
+   handle that is the universal signal for "this came up and can go back
+   down". Nothing about the markup or the open/close handlers changes.
+
+   The backdrop keeps its tap-to-close, so the sheet has two ways out. */
+@media (max-width: 699px) {
+  .modal { align-items: flex-end; padding: 0; }
+  .modal-panel {
+    max-width: none;
+    border-radius: 24px 24px 0 0;
+    border-bottom: 0;
+    max-height: 88vh;
+    padding: var(--s6) var(--s4) calc(var(--s5) + env(safe-area-inset-bottom, 0px));
+    animation: sheetUp var(--dur) var(--ease) both;
+  }
+  /* The handle. Drawn rather than added to the markup, because there are a
+     dozen panels and none of them should have to know about it. */
+  .modal-panel::before {
+    content: '';
+    position: absolute; top: 9px; left: 50%;
+    width: 38px; height: 4px; margin-left: -19px;
+    border-radius: 2px;
+    background: var(--border-strong);
+    pointer-events: none;
+  }
+  .modal-close { top: var(--s4); right: var(--s3); width: 40px; height: 40px; }
+}
+@keyframes sheetUp { from { transform: translateY(6%); opacity: 0.6; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .modal-panel { animation: none; }
+}
+html[data-motion="none"] .modal-panel { animation: none; }
+
 .modal-close {
   position: absolute; top: 18px; right: 18px;
   width: 32px; height: 32px; border-radius: 8px;
@@ -2231,7 +2293,17 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 .modal-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
 .mh-emoji { font-size: 28px; }
 .modal-head h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
-.modal-head p { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+.modal-head p { font-size: var(--t-sm); color: var(--text-dim); margin-top: 2px; }
+/* In a sheet the head sits under the grab handle and beside a close button, so
+   it gets less room and has to ask for less: the icon was half again the size
+   of the heading it was introducing, which read as an ornament that had come
+   adrift rather than as part of the title. */
+@media (max-width: 699px) {
+  .modal-head { gap: var(--s3); margin-bottom: var(--s4); padding-right: 46px; }
+  .modal-head .ui-icon-lg { width: 22px; height: 22px; }
+  .mh-emoji { font-size: 22px; }
+  .modal-head h2 { font-size: var(--t-h2); }
+}
 
 /* Game modal specifics */
 .g-label { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; display: block; font-weight: 500; }
@@ -8967,6 +9039,12 @@ function setMode(mode, fromCode) {
   if (!fromCode && mode !== currentMode && window.pushViewHistory) window.pushViewHistory(mode);
   currentMode = mode;
   Object.keys(views).forEach(function (k) { views[k].style.display = (k === mode) ? 'block' : 'none'; });
+  /* Replay the entrance every time rather than only on first show — the class
+     is removed and the reflow forced, which is the same idiom the timer bar in
+     Cover Fire needs and for the same reason: without it both changes land in
+     one computed style and the browser sees nothing to animate. */
+  var _v = views[mode];
+  if (_v) { _v.classList.remove('enter'); void _v.offsetWidth; _v.classList.add('enter'); }
   // Repaints --section, which the background washes and every section heading
   // read from. One attribute, and the whole page changes temperature.
   document.body.dataset.section = mode;
@@ -9092,6 +9170,10 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(positionNa
 document.getElementById('modes').addEventListener('click', function (e) {
   const b = e.target.closest('button'); if (!b) return;
   if (location.search.indexOf('u=') !== -1) { history.replaceState(null, '', location.pathname); }
+  // Moving between the five places is the most repeated gesture in the app and
+  // it was the only one with no feedback at all. On iPhone this is the Taptic
+  // engine; on the web it is nothing, which is what it always was.
+  if (window.buzz && b.dataset.mode !== currentMode) buzz('tap');
   setMode(b.dataset.mode);
 });
 (function wireRecoRefresh() {
