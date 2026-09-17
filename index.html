@@ -301,21 +301,8 @@ header, nav.modes, .stats, .stat, .modal-panel, .gate, .game-card, .shop-item,
 a { color: inherit; text-decoration: none; }
 .wrap { max-width: 1140px; margin: 0 auto; padding: 0 28px; }
 
-/* Notch, rounded corners and the home indicator. max() rather than a bare
-   env() so a phone with no insets keeps the normal 28px gutter instead of
-   collapsing to zero. Guarded, because a browser without max() support
-   would otherwise drop the whole declaration. */
-@supports (padding: max(0px)) {
-  .wrap {
-    padding-left: max(28px, env(safe-area-inset-left));
-    padding-right: max(28px, env(safe-area-inset-right));
-  }
-  body { padding-bottom: env(safe-area-inset-bottom); }
-  header { padding-top: max(32px, calc(env(safe-area-inset-top) + 12px)); }
-  .activity { padding-top: env(safe-area-inset-top); }
-  .splash-content { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
-  .modal-panel { margin-bottom: env(safe-area-inset-bottom); }
-}
+/* Notch, rounded corners and the home indicator — see the block at the very
+   bottom of this stylesheet. It has to be last and that is not tidiness. */
 
 /* ---- HEADER ---- */
 header {
@@ -5164,10 +5151,23 @@ button.rw-day {
    Deezer Logo... The respect of these logo guidelines is mandatory. Deezer
    Logo must be clearly visible and identified."
 
-   The mark in `assets/deezer-mark.png` is Deezer's own published icon, taken
-   unaltered from their CDN — not redrawn, because a brand mark reproduced
-   from memory is an altered brand mark and the same guidelines forbid that.
-   Do not recolour it, crop it or squash it; keep it square.
+   Two files, both Deezer's own and both taken unaltered from their CDN —
+   never redrawn, because a brand mark reproduced from memory is an altered
+   brand mark and the same guidelines forbid exactly that.
+
+     - `assets/deezer-logo.png` is the full wordmark, heart plus DEEZER, off
+       deezerbrand.com. It is what carries the attribution, in the footer and
+       in Settings, because "clearly visible and identified" is what the
+       guideline asks for and a wordmark identifies itself.
+     - `assets/deezer-mark.png` is the square icon, and stays on the two
+       inline controls that LINK to Deezer — the album page button and the
+       player bar — where a 3.6:1 wordmark beside text already saying Deezer
+       would read as it being said twice.
+
+   Do not recolour, crop or squash either. The wordmark is 605x168 and every
+   size it is drawn at holds that ratio; the icon stays square. The wordmark
+   is white and only legible on a dark ground, which is the only ground this
+   app has.
 
    The Spotify mark was removed from every surface at the same time. Spotify
    supplies none of this app's content any more, so their attribution no
@@ -5177,6 +5177,8 @@ button.rw-day {
    clearest possible example of. */
 .dz-credit { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; }
 .dz-credit img { display: block; flex-shrink: 0; border-radius: 3px; }
+/* No border-radius and no rounding: this one is a wordmark on transparency. */
+.dz-wordmark { border-radius: 0 !important; }
 .sp-mark { width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.16em; fill: #1ED760; }
 .sp-link {
   display: inline-flex; align-items: center; gap: 7px;
@@ -5210,6 +5212,69 @@ button.rw-day {
 .errow { padding: 9px 0; border-bottom: 1px solid var(--border); }
 .errmsg { font-family: var(--font-mono); font-size: 12px; color: var(--red); word-break: break-word; }
 .errmeta { font-size: 11px; color: var(--text-faint); margin-top: 3px; }
+
+/* ---- THE DRAW: published odds ---- */
+.draw-odds { margin: 16px auto 0; max-width: 460px; border: 1px solid var(--border);
+  border-radius: 12px; background: var(--surface-2); overflow: hidden; }
+.draw-odds > summary { cursor: pointer; padding: 11px 14px; font-size: 13px;
+  color: var(--text-dim); list-style: none; user-select: none; }
+.draw-odds > summary::-webkit-details-marker { display: none; }
+.draw-odds > summary::after { content: '+'; float: right; color: var(--text-faint); }
+.draw-odds[open] > summary::after { content: '\2212'; }
+.draw-odds > div { padding: 2px 14px 14px; }
+.odds-tier { display: flex; justify-content: space-between; align-items: baseline;
+  margin: 14px 0 4px; padding-bottom: 5px; border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em;
+  text-transform: uppercase; }
+/* The same ladder the tiles wear, so a row here and a tile going past read as
+   the same thing. Common stays plain for the same reason it does on the strip:
+   a list where every line glows is a list where none does. */
+.odds-tier.t-rare .ot-name { color: #a8f2ff; }
+.odds-tier.t-epic .ot-name { color: #e9c6ff; }
+.odds-tier.t-legendary .ot-name { color: #fff0bd; }
+.odds-tier.t-mythic .ot-name { color: #ff8fb4; }
+.odds-tier .ot-pct { color: var(--text); font-weight: 700; }
+.odds-row { display: flex; justify-content: space-between; gap: 12px;
+  font-size: 13px; color: var(--text-dim); padding: 3px 0; }
+.odds-row .or-pct { font-family: var(--font-mono); font-size: 12px;
+  color: var(--text-faint); white-space: nowrap; }
+.odds-note { margin-top: 14px; }
+
+/* ================================================================
+   SAFE AREAS — deliberately the LAST thing in this stylesheet.
+
+   Notch, rounded corners, the home indicator. max() rather than a bare env()
+   so a phone with no insets keeps the normal 28px gutter instead of
+   collapsing to zero, and guarded by @supports because a browser without
+   max() would otherwise drop the whole declaration.
+
+   It used to sit near the top, next to .wrap, which read better and was
+   wrong: `header` is declared 200 lines further down with a padding
+   SHORTHAND, and a shorthand at equal specificity later in the file resets
+   the longhand above it. So padding-top was overwritten on every render and
+   the header sat under the clock. Same for .splash-content, which sets
+   padding: 24px.
+
+   On the website nothing showed, because mobile Safari reports a top inset
+   of zero while its own chrome is on screen — so the bug was invisible until
+   the app put the page under the status bar, and it would have hit anybody
+   who added the site to their home screen too.
+
+   Third time this app has shipped a rule outranked by one further down the
+   file: the song-row .idx oval and the checkbox before it. If a rule is
+   meant to win, put it where it can.
+   ================================================================ */
+@supports (padding: max(0px)) {
+  .wrap {
+    padding-left: max(28px, env(safe-area-inset-left));
+    padding-right: max(28px, env(safe-area-inset-right));
+  }
+  body { padding-bottom: env(safe-area-inset-bottom); }
+  header { padding-top: max(32px, calc(env(safe-area-inset-top) + 12px)); }
+  .activity { padding-top: env(safe-area-inset-top); }
+  .splash-content { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+  .modal-panel { margin-bottom: env(safe-area-inset-bottom); }
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -5906,6 +5971,19 @@ window.ICONS = {
              said before the spin, not after it. -->
         <div class="draw-free-note" id="draw-free-note" style="display:none;"></div>
       </div>
+
+      <!-- Odds. Apple's guideline 3.1.1 wants published odds for anything
+           loot-box shaped and this is one, so the panel that was taken out is
+           back — but computed from `spin_items` rather than typed, because a
+           second copy of the weights is a second copy to drift and the whole
+           point of publishing them is that they are the ones the server uses.
+           A <details>, because it is a disclosure and not a pitch: printing a
+           table of percentages above the reel is the manual problem the rest
+           of this page was cleared of. -->
+      <details class="draw-odds" id="draw-odds">
+        <summary>Odds</summary>
+        <div id="draw-odds-body"></div>
+      </details>
     </div>
     </div>
   </section>
@@ -5999,7 +6077,7 @@ window.ICONS = {
          what a mark is for. -->
     <span>&middot;</span>
     <a class="foot-note dz-credit" href="https://www.deezer.com" target="_blank" rel="noopener">
-      <img src="/assets/deezer-mark.png" alt="Deezer" width="18" height="18">Powered by Deezer</a>
+      Powered by <img class="dz-wordmark" src="/assets/deezer-logo.png" alt="Deezer" width="72" height="20"></a>
   </footer>
 </div>
 
@@ -6391,7 +6469,7 @@ window.ICONS = {
         <a href="/privacy.html">Privacy</a>
         <a href="/terms.html">Terms</a>
       </div>
-      <p class="set-note" style="margin-top:8px;"><a class="dz-credit" style="color:inherit;text-decoration:none;" href="https://www.deezer.com" target="_blank" rel="noopener"><img src="/assets/deezer-mark.png" alt="Deezer" width="16" height="16">Powered by Deezer</a></p>
+      <p class="set-note" style="margin-top:8px;"><a class="dz-credit" style="color:inherit;text-decoration:none;" href="https://www.deezer.com" target="_blank" rel="noopener">Powered by <img class="dz-wordmark" src="/assets/deezer-logo.png" alt="Deezer" width="72" height="20"></a></p>
     </div>
   </div>
 </div>
@@ -19072,9 +19150,9 @@ window.renderAdminStats = renderAdminStats;
   function el(id) { return document.getElementById(id); }
   function W() { return window.Wallet; }
 
-  // The strip is built from the same table the server draws from, so what goes
-  // past is at least the real set of possible prizes even though the odds
-  // panel that used to publish the weights is gone.
+  // The strip and the odds panel are both built from the same table the server
+  // draws from, so what goes past is the real set of prizes and the published
+  // percentages are the ones actually being walked.
   async function loadItems(force) {
     if (items && !force) return items;
     try {
@@ -19217,19 +19295,67 @@ window.renderAdminStats = renderAdminStats;
     return 'Open for ' + COST.toLocaleString() + ' Discs';
   }
 
-  /* The odds panel that used to live here is gone at the owner's request,
-     along with the paragraph above the reel. Nothing about the machine
-     changed: `spin_items` still has a public select policy, the server still
-     walks those exact weights, and the tier percentages are written down in
-     ..._20260913180000_mythic_tags_and_shop.sql. The disclosure moved out of
-     the UI; it did not stop being true.
+  /* The odds panel, back for Apple's guideline 3.1.1, which wants published
+     odds for anything loot-box shaped.
 
-     Two things to know before this stays gone for good. Apple's guideline
-     3.1.1 requires published odds for anything loot-box shaped, so an App
-     Store submission needs it back — the rendering below is deliberately easy
-     to restore, it read from `loadItems()` and nothing else. And if a way to
-     buy Discs for money is ever added, published odds stop being a courtesy
-     and become a legal requirement in the UK and elsewhere. */
+     It was removed at the owner's request and nothing about the machine ever
+     changed: `spin_items` kept its public select policy and the server kept
+     walking those exact weights, so the numbers did not stop being true, they
+     stopped being printed. Which is why this reads them out of the pool
+     instead of restating them — the table it prints IS the table the server
+     draws from, and there is no second copy to go stale. The migration's
+     weights sum to 1000, so the tier percentages come out exact rather than
+     rounded.
+
+     If a way to buy Discs for money is ever added, publishing these stops
+     being a courtesy and becomes a legal requirement here and elsewhere. */
+  var TIER_ORDER = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+
+  /* Two decimals at most, and trailing zeros dropped, so 30% reads as 30% and
+     the one-in-333 jackpot still reads as 0.3% rather than as 0%. */
+  function fmtPct(frac) {
+    var n = frac * 100;
+    var s = n >= 10 ? n.toFixed(0) : n >= 1 ? n.toFixed(1) : n.toFixed(2);
+    return s.replace(/\.0+$/, '') + '%';
+  }
+
+  function paintOdds(pool) {
+    var host = el('draw-odds-body');
+    if (!host) return;
+    var total = 0;
+    (pool || []).forEach(function (it) { total += (it.weight || 0); });
+    // No pool is not 0% of anything. Saying nothing is the honest answer.
+    if (!total) { host.innerHTML = '<p class="reco-note">Odds unavailable just now.</p>'; return; }
+
+    var by = {};
+    pool.forEach(function (it) { var t = it.tier || 'common'; (by[t] = by[t] || []).push(it); });
+
+    var html = '';
+    TIER_ORDER.forEach(function (t) {
+      var rows = by[t];
+      if (!rows || !rows.length) return;
+      var sum = 0;
+      rows.forEach(function (r) { sum += (r.weight || 0); });
+      html += '<div class="odds-tier t-' + esc(t) + '"><span class="ot-name">' +
+        esc(t.charAt(0).toUpperCase() + t.slice(1)) + '</span>' +
+        '<span class="ot-pct">' + fmtPct(sum / total) + '</span></div>';
+      rows.slice().sort(function (a, b) { return (b.weight || 0) - (a.weight || 0); })
+        .forEach(function (r) {
+          html += '<div class="odds-row"><span>' + esc(r.label) + '</span>' +
+            '<span class="or-pct">' + fmtPct((r.weight || 0) / total) + '</span></div>';
+        });
+    });
+
+    /* Both of these change what the percentages mean, so they belong with
+       them rather than in a help page. The second is the one that decides
+       whether a rare tier is worth landing on once you own things. */
+    html += '<p class="reco-note odds-note">Every spin is independent — the odds are the ' +
+      'same on the first and the hundredth, and nothing you have already won changes them. ' +
+      'Winning something you already own pays its shop price back in Discs instead.</p>' +
+      '<p class="reco-note">Discs cannot be bought with money, only earned.</p>';
+
+    host.innerHTML = html;
+  }
 
   // Draws the Draw pane inside Collection. The Collection tab bar calls this.
   async function render() {
@@ -19244,6 +19370,7 @@ window.renderAdminStats = renderAdminStats;
     var pool = await loadItems();
     // A resting strip so the window is never empty before the first spin.
     el('draw-strip').innerHTML = buildStrip(pool, weightedPick(pool)).slice(0, 20).map(tileHTML).join('');
+    paintOdds(pool);
     paintBalance();
     checkFree();   // paints again when it answers
   }
