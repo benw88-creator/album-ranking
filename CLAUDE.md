@@ -962,6 +962,46 @@ arrangement `LADDER` against `v_ladder` is written up to avoid.
 Both Apple's and Deezer's terms want the clip kept beside a link back, so `#pb-src` names
 whichever source served the audio. It is not decoration.
 
+### Deezer's clip urls are SIGNED, and caching them as metadata killed playback
+
+The header of `api/preview.js` said an album's preview list is *"public, identical for
+everybody and effectively immutable"*. The first two are true. **The third is not**, and it
+cost the app its audio.
+
+Every clip url carries `?hdnea=exp=<unix>~acl=...~hmac=...` — a signature valid for about
+**ten minutes**. After that the CDN returns **403**. VINALL was holding those urls in four
+caches as though they were facts about a record:
+
+| | was | why it is wrong |
+|---|---|---|
+| `/api/catalogue` `path=album` | a week | `preview_url` on every track |
+| `/api/preview` | a week | the whole clip list |
+| `spotifyGet` localStorage | a day | the album response, clips included |
+| `spotifyGet` memory cache | **forever** | no clock of any kind |
+
+So a record played for whoever opened it first and was silent for everyone else — *"could not
+play that preview"*, no reason offered — until the cache aged out up to seven days later. It
+looked exactly like a regression in whatever had shipped most recently, which is the worst
+property a bug can have.
+
+All four expire in **four minutes** now, which leaves every url at least five of its ten when
+it reaches somebody, and the two routes carry **no `stale-while-revalidate`** on purpose:
+serving stale here means serving an expired signature, which is precisely the failure. Things
+that genuinely are immutable keep their long caches — search, artists, discographies, and
+`/api/preview`'s miss case.
+
+The cost is Deezer hit per album per four minutes rather than per album ever, and that is the
+right way round: **a rate limit is a bad minute; a cached dead link is a record that cannot be
+played for a week and never says why.**
+
+**The rule worth keeping: a url with a signature in it is not metadata, it is a credential.**
+Cache it for less than its lifetime, never revalidate it stale, and check for an `exp=` before
+deciding how long anything holding it may live. `album_plays`, `album_market` and the
+catalogue's own week-long caches are all fine — none of them carry one.
+
+Found by fetching what the live route hands out: 403 on every track, and a freshly issued url
+with six and a half minutes left on its clock.
+
 ### The unlock timer was killing the track the same tap had started
 
 The bar filled in correctly, the row lit up, the media session carried the right title,
