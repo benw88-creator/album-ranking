@@ -2830,6 +2830,34 @@ would have registered one. Inside the binary the assets are already local, so a
 cache of them buys nothing and the only thing a worker could still do is serve
 a stale shell — the exact failure `sw.js` is written to avoid.
 
+### Lock-screen controls needed two things the webview does not get for free
+
+`navigator.mediaSession` and `MediaMetadata` both exist in a WKWebView, which was the
+open question and is answered: the player's existing metadata code needed no native
+route. But a webview's audio session is **ambient** by default, which means the ringer
+switch silences it and it stops dead the instant the screen locks — the one moment
+lock-screen controls are for. Two lines fix it and both are needed:
+
+- `AVAudioSession.setCategory(.playback)` in `AppDelegate`. Deliberately **not**
+  `setActive(true)`: activating at launch would interrupt whatever the person is already
+  listening to just because they opened the app, and the system activates it by itself
+  when something starts.
+- `UIBackgroundModes: [audio]` in `Info.plist`. The category alone does not survive
+  backgrounding. Apple rejects apps that declare this and do not use it; VINALL plays
+  audio, so it is honest, and `STORE-SUBMISSION.md` says so in the review notes.
+
+Verified on the simulator rather than assumed. Playing Nikes off Blonde put a real entry
+in the system's Now Playing centre — `kMRMediaRemoteNowPlayingInfoTitle = Nikes`,
+`Artist = Frank Ocean`, `Album = Blonde`, artwork, duration 29.99 — and
+`MRMediaRemoteSetCanBeNowPlayingApplication` flipped to YES. If this ever needs checking
+again, that is where to look: `xcrun simctl spawn booted log show --last 90s` filtered on
+`kMRMediaRemoteNowPlayingInfo`.
+
+**Android gets foreground playback only.** Keeping audio alive there needs a foreground
+service and a notification, which is a real piece of native work rather than a flag. For
+thirty-second previews that is an acceptable place to stop; it is written down so it is a
+decision and not a surprise.
+
 ### Safe areas, and a rule that had been losing for months
 
 The header sat under the clock and the dynamic island the first time the app ran, and the

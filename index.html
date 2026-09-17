@@ -19316,7 +19316,9 @@ window.renderAdminStats = renderAdminStats;
   function fmtPct(frac) {
     var n = frac * 100;
     var s = n >= 10 ? n.toFixed(0) : n >= 1 ? n.toFixed(1) : n.toFixed(2);
-    return s.replace(/\.0+$/, '') + '%';
+    // Trailing zeros only AFTER a decimal point, so 0.30 reads 0.3 and 10 is
+    // not quietly turned into 1.
+    return s.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '') + '%';
   }
 
   function paintOdds(pool) {

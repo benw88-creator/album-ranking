@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import AVFoundation
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,7 +8,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // VINALL owns an <audio> element and puts real controls on the lock
+        // screen, and a WKWebView gets neither for free. Without .playback the
+        // session is ambient: the audio is silenced by the ringer switch and
+        // stops dead the moment the screen locks, which is the one moment
+        // lock-screen controls are for.
+        //
+        // The session is deliberately NOT activated here. Activating it at
+        // launch would interrupt whatever the person is already listening to
+        // just because they opened the app; the system activates it by itself
+        // when something actually starts playing. Paired with the `audio`
+        // entry in UIBackgroundModes — the category alone does not survive
+        // backgrounding.
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+        } catch {
+            // Not fatal and not worth a crash: audio still plays in the
+            // foreground, it just will not outlive the lock screen.
+            CAPLog.print("VINALL: could not set the audio session category — \(error)")
+        }
         return true
     }
 
