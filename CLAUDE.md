@@ -3004,6 +3004,38 @@ backdrop keeps its tap-to-close.
   that property. It reads `var(--gutter)` rather than a second literal for exactly that
   reason.
 
+### Empty states are the first thing a new account sees
+
+They were 128px of padding around a grey glyph — the least designed screens in the app, and
+the only ones somebody with no ratings can see. The mark now takes `var(--section)` and sits
+in a ring, so an empty Crate is cyan and an empty Collection is lime: the same language the
+nav pill and the heading rule already speak. **A grey glyph on grey says "nothing here". A
+coloured one says "not yet."**
+
+### The album page leads with the record
+
+It was a desktop hero that wrapped, and four controls of four different shapes sat on one
+row — a filled pill, an outlined pill, a link-button and a 36px number. The sleeve is 62% of
+the width now (full-bleed was tried and filled the entire screen, so you scrolled past the
+record to find out what you thought of it), then one line of who and what with **the score
+beside it at hero size**, then one obvious action with the two quiet ones under it.
+
+`'Your score: 94/100'` became `'<i>Your score: </i>94<span>/100</span>'` purely so a phone can
+drop the label. Beside the title at that size the number is the sentence.
+
+### Three more source-order traps, all the same shape
+
+Every one of these was a rule further down the file quietly beating a newer one:
+
+- `@media (max-width: 640px)` held `.detail-cover { width: 140px }` a thousand lines below the
+  new album-page block, so a full-width sleeve came out 140px.
+- The earlier sweep that turned twelve inline `margin-top:32px` into `class="view"` matched
+  `id="view-[a-z]+"` and **missed `view-album-detail`**, whose id has a hyphen in it.
+- `#view-album-detail.tinted` bled to the page edge with `margin: 0 -28px`, which was right
+  only while the gutter happened to be 28. At 16 the tint overhangs the viewport and the page
+  scrolls sideways. It is `calc(var(--gutter) * -1)` now — the same token twice rather than
+  the same number twice.
+
 ### What was deliberately left alone
 
 The colour system, the token discipline, the shared easing curve and the typefaces.

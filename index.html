@@ -147,6 +147,9 @@
      --nav-h is the floating bar's footprint, which several things need to
      stay clear of. */
   --gutter: 16px;
+  /* What the floating bar actually measures, not an estimate: 48px button +
+     6px padding top and bottom, plus its border. Several things clear it by
+     this number, so a guess here puts the footer under the nav. */
   --nav-h:  62px;
   --topbar-h: 54px;
 }
@@ -2079,6 +2082,71 @@ button.idx.loading { opacity: 0.6; }
   letter-spacing: -0.025em; line-height: 1.1;
 }
 .detail-info .d-artist { color: var(--text-dim); font-size: 16px; margin: 4px 0 20px; }
+.detail-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+#rate-album-btn { padding: 12px 24px; }
+
+/* ---- the album page on a phone -----------------------------------------
+   It was a desktop hero that wrapped: a 200px cover, then a 32px title, then
+   four controls of four different shapes on one row — a filled pill, an
+   outlined pill, a link-button and a 36px number — which is a lot of things
+   asking to be looked at first.
+
+   The record is the page, so the cover is the page: full width, square. Then
+   one line of who and what, with THE SCORE beside it, which is the only
+   number in this app that is about you and the thing the whole product is
+   for. Then one obvious action, and the two quieter ones under it. */
+@media (max-width: 699px) {
+  .detail-top { display: block; margin-bottom: var(--s5); }
+  /* Full width put the sleeve at 343pt, which with the bar and the search
+     above it filled the screen — you had to scroll past the record to find
+     out what you thought of it or to do anything about it. 62% leads with the
+     artwork and still leaves the title, the score and the one real action
+     above the fold, which is what the page is for. */
+  .detail-cover {
+    width: 62%; max-width: 260px; height: auto; aspect-ratio: 1;
+    border-radius: var(--radius); margin-bottom: var(--s4);
+    box-shadow: var(--e3);
+  }
+  /* The whole run from the tab bar to the sleeve was chrome. */
+  #view-album-detail { margin-top: var(--s4); }
+  .back-link { margin-bottom: var(--s2); }
+  .detail-info {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--s3);
+    align-items: center;
+  }
+  .detail-info h2 { grid-column: 1; font-size: var(--t-h1); }
+  .detail-info .d-artist { grid-column: 1; font-size: var(--t-body); margin: 2px 0 0; }
+  .detail-album-score {
+    grid-column: 2; grid-row: 1 / span 2;
+    min-width: 0; font-size: var(--t-hero); line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .detail-album-score span { font-size: var(--t-sm); }
+  .detail-album-score i { display: none; }
+  .detail-actions {
+    grid-column: 1 / -1;
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2);
+    margin-top: var(--s4);
+  }
+  /* One primary, full width, because there is one thing this page is for. */
+  #rate-album-btn { grid-column: 1 / -1; padding: 14px 20px; }
+  /* A .btn-mini and a .sp-link are different components with different
+     padding, so side by side they came out 41px and 44px — three pixels of
+     wrongness that reads as carelessness rather than as anything. Matched
+     explicitly, because a pair is only a pair if it looks like one. */
+  #suggest-album-btn, #detail-spotify {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 7px;
+    min-height: 44px; padding: 0 var(--s2); white-space: nowrap;
+    font-size: var(--t-sm);
+  }
+  #detail-note { grid-column: 1 / -1; }
+  .back-link { margin-bottom: var(--s3); padding: 8px 14px; font-size: var(--t-sm); }
+  .tracks-head { margin-bottom: var(--s3); font-size: var(--t-xs); }
+}
 .detail-album-rate { display: flex; align-items: center; gap: 16px; max-width: 460px; }
 .detail-album-rate input[type=range] {
   -webkit-appearance: none; appearance: none;
@@ -2100,6 +2168,7 @@ button.idx.loading { opacity: 0.6; }
   color: var(--score, var(--gold));
 }
 .detail-album-score span { font-size: 14px; color: var(--text-faint); }
+.detail-album-score i { font-style: normal; }
 .back-link {
   background: transparent;
   border: 1px solid var(--border-strong);
@@ -2120,11 +2189,38 @@ button.idx.loading { opacity: 0.6; }
 /* ---- RECO + HOME ---- */
 .reco-note { font-size: 13px; color: var(--text-dim); margin-bottom: 18px; line-height: 1.6; }
 
-/* ---- EMPTY STATE ---- */
-.empty { text-align: center; padding: 64px 24px; color: var(--text-dim); }
-.empty .emoji { font-size: 42px; display: block; margin-bottom: 16px; }
-.empty h3 { font-family: var(--font-display); font-weight: 700; font-size: 20px; color: var(--text); margin-bottom: 8px; }
-.empty p { font-size: 14px; max-width: 320px; margin: 0 auto; }
+/* ---- EMPTY STATE --------------------------------------------------------
+   These were 128px of padding around a grey glyph, which on a phone is most
+   of a screen spent saying nothing. They are also the screens somebody sees
+   FIRST — a new account is nothing but empty states — so they were the worst
+   possible first impression and the least designed thing in the app.
+
+   Three changes, and the middle one is the real one:
+     - less air, so the message and the way out fit on one screen;
+     - the mark belongs to its page. It takes the section hue and sits in a
+       ring, so an empty Crate is cyan and an empty Collection is lime, the
+       same language the nav pill and the heading rule already speak. A grey
+       glyph on grey says "nothing here". A coloured one says "not yet".
+     - the copy is sized off the scale rather than by hand.
+*/
+.empty { text-align: center; padding: var(--s6) var(--s4); color: var(--text-dim); }
+.empty .emoji {
+  display: inline-grid; place-items: center;
+  width: 62px; height: 62px; margin-bottom: var(--s4);
+  font-size: 26px; line-height: 1;
+  color: var(--section);
+  border-radius: 50%;
+  background: var(--section-dim);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.empty .emoji .ui-icon, .empty .emoji svg { width: 26px; height: 26px; }
+.empty h3 {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: var(--t-h2); color: var(--text); margin-bottom: var(--s1);
+  letter-spacing: -0.02em;
+}
+.empty p { font-size: var(--t-sm); max-width: 30ch; margin: 0 auto; line-height: 1.55; }
+@media (min-width: 700px) { .empty { padding: var(--s7) var(--s5); } }
 
 /* ---- SAVE FLASH ---- */
 .save-flash {
@@ -2157,6 +2253,17 @@ button.idx.loading { opacity: 0.6; }
 
 /* ---- CONTROLS ROW ---- */
 .controls-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+/* Filter, sort and size took 130pt before a single record — on the screen
+   where there might not BE any records yet. The SORT and SIZE labels go: a
+   select reading "Score down" and a segment reading S M L have already said
+   what they are, and a word in front of each is 90pt of the width spent
+   repeating it. */
+@media (max-width: 699px) {
+  .controls-row { gap: var(--s2); margin-bottom: var(--s3); }
+  .controls-row .ctrl label { display: none; }
+  select.ctrl-select { padding: 9px 10px; font-size: var(--t-sm); }
+  .seg button { padding: 7px 15px; }
+}
 .ctrl { display: inline-flex; align-items: center; gap: 8px; }
 .ctrl label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600; }
 select.ctrl-select {
@@ -3334,9 +3441,11 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
 
 /* Responsive */
 @media (max-width: 640px) {
-  .brand-text h1 { font-size: 26px; }
-  .detail-cover { width: 140px; height: 140px; }
-  .detail-info h2 { font-size: 24px; }
+  /* .brand-text h1, .detail-cover and .detail-info h2 used to be set here.
+     They are not any more: the title clamps itself now, and the album page's
+     mobile layout lives with the rest of that page. This block sat a thousand
+     lines below the rules it was overriding, which is how a full-width cover
+     came out 140px wide and took a while to explain. */
   .stat .s-val { font-size: 28px; }
 }
 
@@ -3798,8 +3907,13 @@ body.entering-done #artist-hero {
 #view-album-detail.tinted {
   background:
     radial-gradient(ellipse 900px 500px at 15% -5%, var(--accent-soft, transparent) 0%, transparent 65%);
-  margin: 0 -28px;
-  padding: 32px 28px 0;
+  /* Bleeds out to the page edge by pulling back exactly the gutter it sits
+     in. It was a hardcoded -28px, which was right only while the gutter
+     happened to be 28 — at 16 the tint overhangs the viewport by 12px each
+     side and the page scrolls sideways. The pair has to move together, so it
+     is the same token twice rather than the same number twice. */
+  margin: 0 calc(var(--gutter) * -1);
+  padding: var(--s6) var(--gutter) 0;
   border-radius: 24px;
 }
 #view-album-detail.tinted #rate-album-btn {
@@ -5670,7 +5784,9 @@ button.rw-day {
   }
   /* The floating nav is fixed, so it covers whatever the page ends with
      unless the page ends early enough. This is that. */
-  body { padding-bottom: calc(var(--nav-h) + var(--s5) + env(safe-area-inset-bottom, 0px)); }
+  /* nav-h, plus where the bar floats (--s2), plus a gap so the last line of a
+     page is not tucked right against it. */
+  body { padding-bottom: calc(var(--nav-h) + var(--s2) + var(--s6) + env(safe-area-inset-bottom, 0px)); }
   @media (min-width: 700px) { body { padding-bottom: env(safe-area-inset-bottom); } }
   header { padding-top: max(32px, calc(env(safe-area-inset-top) + 12px)); }
   .activity { padding-top: env(safe-area-inset-top); }
@@ -6120,7 +6236,7 @@ window.ICONS = {
       <div>
         <div class="crate-feed" id="crate-feed"></div>
         <div class="empty" id="crate-empty" style="display:none;">
-          <span class="emoji">🎵</span>
+          <span class="emoji" data-icon="note"></span>
           <h3>The Crate is empty</h3>
           <p>Rate an album to be the first one here.</p>
         </div>
@@ -6429,21 +6545,21 @@ window.ICONS = {
   </section>
 
   <!-- ============================ ALBUM DETAIL ============================ -->
-  <section id="view-album-detail" style="margin-top:32px;">
+  <section id="view-album-detail" class="view">
     <button class="back-link" id="detail-back">&#8592; Back</button>
     <div class="detail-top">
       <img class="detail-cover" id="detail-cover" alt="">
       <div class="detail-info">
         <h2 id="detail-name"></h2>
         <div class="d-artist" id="detail-artist"></div>
-        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-          <button class="btn-primary" id="rate-album-btn" style="padding:12px 24px;">&#9733; Rate Album</button>
+        <div id="detail-current-score" class="detail-album-score" style="display:none;"></div>
+        <div class="detail-actions">
+          <button class="btn-primary" id="rate-album-btn">&#9733; Rate Album</button>
           <button class="btn-mini" id="suggest-album-btn"><span data-icon="share"></span> Recommend</button>
           <!-- Required, not decorative: metadata and cover art must link back
                to the record on Spotify. "Play on Spotify" is one of the three
                strings their guidelines permit here. -->
           <a class="sp-link" id="detail-spotify" target="_blank" rel="noopener" href="https://www.deezer.com"><img src="/assets/deezer-mark.png" alt="" width="16" height="16">Open in Deezer</a>
-          <div id="detail-current-score" class="detail-album-score" style="display:none;"></div>
         </div>
         <div id="detail-note"></div>
       </div>
@@ -7690,7 +7806,10 @@ function updateDetailScore(v) {
   const el = document.getElementById('detail-current-score');
   if (!el) return;
   el.style.display = 'block';
-  el.innerHTML = 'Your score: ' + v + '<span>/100</span>';
+  // The label is wrapped so a phone can drop it — see .detail-album-score i.
+  // Beside the title at hero size the number IS the sentence, and "Your
+  // score:" in front of it is 130px of the screen spent saying so.
+  el.innerHTML = '<i>Your score: </i>' + v + '<span>/100</span>';
   el.style.color = albumColor(v);
 }
 function updateRatePreview() {
