@@ -349,17 +349,27 @@ body {
    which part of the app you were in. */
 body[data-section="home"]         { --section: var(--gold);      --section-dim: var(--gold-dim); }
 body[data-section="crate"]        { --section: var(--c-cyan);    --section-dim: var(--c-cyan-dim); }
-body[data-section="albums"]       { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
-body[data-section="songs"]        { --section: var(--c-pink);    --section-dim: var(--c-pink-dim); }
-body[data-section="games"]        { --section: var(--c-lime);    --section-dim: var(--c-lime-dim); }
-/* Violet, not lime. Minigames is lime, and these are two separate
-   destinations in the same five-item bar — the page temperature is supposed to
-   tell you where you are, and two places painted the same colour cannot. */
-body[data-section="collection"]   { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
-/* Pink, matching its nav button. --accent-2 is THEMED, so the Shop's identity
-   colour used to change with whatever skin was equipped — which is no identity
-   colour at all. */
-body[data-section="rewards"]      { --section: var(--c-pink);    --section-dim: var(--c-pink-dim); }
+/* ALL THREE OF THE CRATE'S SUB-TABS TAKE THE CRATE'S OWN HUE.
+
+   Albums was violet and Songs was pink, which gave the three sub-tabs their
+   own temperatures — a nice touch while they were the only things wearing
+   those colours. They are not: Games is violet and Records is pink now, so
+   opening the Albums tab painted the page the same colour as a destination
+   you are not in, while the Crate button you pressed stayed cyan. Under one
+   nav button, one colour. */
+body[data-section="albums"]       { --section: var(--c-cyan);    --section-dim: var(--c-cyan-dim); }
+body[data-section="songs"]        { --section: var(--c-cyan);    --section-dim: var(--c-cyan-dim); }
+/* Each of these MATCHES its nav button's hue above. The bar says where you
+   are and the page's temperature agrees with it; two destinations painted the
+   same colour, or one painted differently from the button you pressed, and
+   neither is saying anything. */
+body[data-section="foryou"]       { --section: var(--c-lime);    --section-dim: var(--c-lime-dim); }
+body[data-section="games"]        { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
+body[data-section="collection"]   { --section: var(--c-pink);    --section-dim: var(--c-pink-dim); }
+/* A fixed neon, matching its nav button. It used to be --accent-2, which is
+   THEMED — so the Shop's identity colour changed with whatever skin was
+   equipped, which is no identity colour at all. */
+body[data-section="rewards"]      { --section: var(--c-blue);    --section-dim: var(--c-blue-dim); }
 body[data-section="achievements"] { --section: var(--c-blue);    --section-dim: var(--c-blue-dim); }
 body[data-section="wars"]         { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
 body[data-section="people"]       { --section: var(--c-blue);    --section-dim: var(--c-blue-dim); }
@@ -744,6 +754,18 @@ nav.modes button {
   z-index: 1;
   transition: color var(--dur-quick) var(--ease);
 }
+/* SIX LABELS DO NOT FIT AT 375px AND TWO OF THEM WERE BEING CLIPPED.
+
+   Measured with the sixth destination in: every button is 55.2px wide, which
+   leaves about 45 for the text, and "Minigames" needs 56 and "Collection" 54.
+   Both ellipsised. Trimming the padding and the size recovers four or five
+   pixels, which is not ten — at six items the bar simply cannot carry a
+   nine-letter word.
+
+   So the two longest are shortened HERE AND ONLY HERE. The page headings are
+   still Minigames and The Collection; this is the chip, and a chip has always
+   been allowed to be the short name. Reversing it is two words in the markup
+   and a fifth destination. */
 nav.modes button .nl {
   max-width: 100%;
   overflow: hidden;
@@ -775,13 +797,19 @@ nav.modes button .nl {
    has no identity colour. Same reason --c-cyan and the rest are not themed.
    The inactive state stays --text-faint — five lit colours at once is a
    fairground, and the point is to say which one you are on. */
-nav.modes button:nth-child(2) { --nav-c: var(--gold);     --nav-c-dim: var(--gold-dim); }      /* Home */
-nav.modes button:nth-child(3) { --nav-c: var(--c-cyan);   --nav-c-dim: var(--c-cyan-dim); }    /* Crate */
-nav.modes button:nth-child(4) { --nav-c: var(--c-lime);   --nav-c-dim: var(--c-lime-dim); }    /* Minigames */
-nav.modes button:nth-child(5) { --nav-c: var(--c-violet); --nav-c-dim: var(--c-violet-dim); }  /* Collection */
-nav.modes button:nth-child(6) { --nav-c: var(--c-pink);   --nav-c-dim: var(--c-pink-dim); }    /* Shop */
-nav.modes button:nth-child(7) { --nav-c: var(--c-blue);   --nav-c-dim: var(--c-blue-dim); }    /* spare */
-/* nth-child(1) is .nav-indicator, which is why the buttons start at 2. */
+nav.modes button:nth-child(2) { --nav-c: var(--gold);     --nav-c-dim: var(--gold-dim); }      /* Home       */
+nav.modes button:nth-child(3) { --nav-c: var(--c-cyan);   --nav-c-dim: var(--c-cyan-dim); }    /* Crate      */
+nav.modes button:nth-child(4) { --nav-c: var(--c-lime);   --nav-c-dim: var(--c-lime-dim); }    /* For You    */
+nav.modes button:nth-child(5) { --nav-c: var(--c-violet); --nav-c-dim: var(--c-violet-dim); }  /* Games      */
+nav.modes button:nth-child(6) { --nav-c: var(--c-pink);   --nav-c-dim: var(--c-pink-dim); }    /* Records    */
+nav.modes button:nth-child(7) { --nav-c: var(--c-blue);   --nav-c-dim: var(--c-blue-dim); }    /* Shop       */
+/* nth-child(1) is .nav-indicator, which is why the buttons start at 2.
+
+   POSITIONAL, so the body[data-section] map below has to be kept in step with
+   it BY HAND. Adding For You at position three shifted every hue after it by
+   one — the bar stayed correct and unique, and the page temperature silently
+   stopped agreeing with the button that got you there. The comments name the
+   destination for exactly that reason. */
 nav.modes button.active { color: var(--nav-c, var(--section)); }
 nav.modes button.active .nav-icon { transform: translateY(-1px); }
 nav.modes button .nav-icon { transition: transform var(--dur) var(--ease); }
@@ -7436,8 +7464,8 @@ window.ICONS = {
          place you go, not every feature that exists. -->
     <button data-mode="albums"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.2 5.6h11.6v7.2a1 1 0 0 1-1 1H3.2a1 1 0 0 1-1-1Z"/><path d="m2.2 5.6 1.4-3h8.8l1.4 3"/><path d="M5.7 8.4v2.8M8 8.4v2.8M10.3 8.4v2.8"/></svg><span class="nl">Crate</span></button>
     <button data-mode="foryou"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.4S2.6 10.2 2.6 6.5a2.9 2.9 0 0 1 5.4-1.5 2.9 2.9 0 0 1 5.4 1.5c0 3.7-5.4 6.9-5.4 6.9Z"/></svg><span class="nl">For You</span></button>
-    <button data-mode="games"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.4" y="2.4" width="11.2" height="11.2" rx="2.8"/><circle cx="5.9" cy="5.9" r=".95" fill="currentColor" stroke="none"/><circle cx="10.1" cy="10.1" r=".95" fill="currentColor" stroke="none"/></svg><span class="nl">Minigames</span></button>
-    <button data-mode="collection"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.7" y="2.6" width="8.9" height="8.9" rx="1.5"/><path d="M11.3 13.4H4a1.4 1.4 0 0 1-1.4-1.4V4.7"/></svg><span class="nl">Collection</span></button>
+    <button data-mode="games"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.4" y="2.4" width="11.2" height="11.2" rx="2.8"/><circle cx="5.9" cy="5.9" r=".95" fill="currentColor" stroke="none"/><circle cx="10.1" cy="10.1" r=".95" fill="currentColor" stroke="none"/></svg><span class="nl">Games</span></button>
+    <button data-mode="collection"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.7" y="2.6" width="8.9" height="8.9" rx="1.5"/><path d="M11.3 13.4H4a1.4 1.4 0 0 1-1.4-1.4V4.7"/></svg><span class="nl">Records</span></button>
     <!-- The data-mode stays `rewards`, and must. It is what setMode's explicit
          `views` map is keyed on, what positionNavIndicator measures and what
          every `#modes button[data-mode="rewards"]` selector in the file finds.
