@@ -309,12 +309,22 @@ end $$;
 grant execute on function public.referral_state() to authenticated;
 
 -- ---------------------------------------------------------------- badges
--- The pin trigger below reads and writes profiles.badges, and it is the single
--- most load-bearing object in this database — it guards the whole economy. So
--- the column's type is checked HERE, before anything is replaced: a mismatch
--- stops the migration cleanly rather than installing a trigger that raises on
--- every profile write.
-alter table public.profiles add column if not exists badges text[] not null default '{}'::text[];
+-- profiles.badges is JSONB on this database. The first version of this file
+-- assumed text[] and its guard refused to go on, which is exactly what that
+-- guard is for: the pin trigger is the single most load-bearing object here —
+-- it guards the whole economy — and a trigger that raises on every profile
+-- write is far worse than a migration that will not apply.
+--
+-- THE COLUMN IS LEFT ALONE and the trigger is written in jsonb instead. There
+-- is nothing to gain by converting it: PostgREST hands a jsonb array and a
+-- text[] to the browser identically, so `computeBadges` reading
+-- `profile.badges` does not know or care, and converting means a data
+-- migration on a live column carrying CEO and Verified for no behaviour
+-- change at all.
+--
+-- The type is still asserted, so if it ever moves this stops rather than
+-- installing a trigger whose expressions no longer type-check.
+alter table public.profiles add column if not exists badges jsonb not null default '[]'::jsonb;
 
 do $$
 declare v_type text;
@@ -323,8 +333,8 @@ begin
     from pg_attribute a
    where a.attrelid = 'public.profiles'::regclass
      and a.attname = 'badges' and a.attnum > 0 and not a.attisdropped;
-  if v_type is distinct from 'text[]' then
-    raise exception 'profiles.badges is % — expected text[]; fix the column before installing the pin trigger', coalesce(v_type, 'missing');
+  if v_type is distinct from 'jsonb' then
+    raise exception 'profiles.badges is % — this file is written for jsonb; the pin trigger below will not type-check against anything else', coalesce(v_type, 'missing');
   end if;
 end $$;
 
@@ -377,9 +387,21 @@ begin
     new.referral_code       := null;
     new.referred_by         := null;
     new.referral_paid_count := 0;
-    -- Every account is an OG. Awarded here rather than by the client, because
-    -- `badges` is what CEO and Verified live in — see the badge migration.
-    new.badges              := array(select distinct unnest(coalesce(new.badges, '{}'::text[]) || array['og']));
+    /* Every account is an OG. Awarded HERE rather than by the client, because
+       `badges` is the column CEO, Beta Tester and Verified live in.
+
+       jsonb_typeof is checked first: a row arriving with anything but an array
+       in that column — an object, a bare string — would make
+       jsonb_array_elements_text raise, and this trigger fires on EVERY insert
+       into profiles. A badge list is not worth failing a sign-up over. */
+    if jsonb_typeof(coalesce(new.badges, '[]'::jsonb)) = 'array' then
+      new.badges := coalesce(
+        (select jsonb_agg(distinct v)
+           from jsonb_array_elements_text(coalesce(new.badges, '[]'::jsonb) || '["og"]'::jsonb) as t(v)),
+        '["og"]'::jsonb);
+    else
+      new.badges := '["og"]'::jsonb;
+    end if;
     return new;
   end if;
 
@@ -452,9 +474,19 @@ create trigger pin_profile_economy_trg
 -- ---------------------------------------------------------------- back-award
 -- Everybody who already has an account is an OG too — the badge is for being
 -- here early, and the people here now are the earliest there will ever be.
+--
+-- @> is a containment test on jsonb, so this touches only the rows that do not
+-- already have it and re-running changes nothing. Rows whose badges is not an
+-- array are skipped rather than rewritten: this is a back-award, not a repair,
+-- and silently reshaping a column it did not understand is how a migration
+-- destroys something.
 update public.profiles
-   set badges = array(select distinct unnest(coalesce(badges, '{}'::text[]) || array['og']))
- where not ('og' = any(coalesce(badges, '{}'::text[])));
+   set badges = coalesce(
+     (select jsonb_agg(distinct v)
+        from jsonb_array_elements_text(coalesce(badges, '[]'::jsonb) || '["og"]'::jsonb) as t(v)),
+     '["og"]'::jsonb)
+ where jsonb_typeof(coalesce(badges, '[]'::jsonb)) = 'array'
+   and not (coalesce(badges, '[]'::jsonb) @> '["og"]'::jsonb);
 
 -- ---------------------------------------------------------------- guards
 do $$
