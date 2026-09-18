@@ -161,7 +161,7 @@ async function fullAlbum(id) {
 
 import { cors } from './_cors.js';
 import {
-  pickArtist, classifyRelease, dedupeReleases, countsForCompletion,
+  pickArtist, classifyRelease, dedupeReleases, countsForCompletion, dedupeArtists,
 } from './_artists.js';
 
 export default async function handler(req, res) {
@@ -272,6 +272,31 @@ export default async function handler(req, res) {
         id: String(a.id), name: a.name, source: 'deezer',
         images: [a.picture_xl && { url: a.picture_xl, width: 1000, height: 1000 }].filter(Boolean),
         external_urls: { spotify: a.link || '' }
+      });
+      return;
+    }
+
+    // ---- popular artists -------------------------------------------------
+    // Deezer's own chart. The minigames needed a "pick one of these" list to
+    // stand beside typing a name, and the alternative was baking one — which
+    // would be a hand-maintained list of who is popular, wrong within a
+    // season and wrong in a way nobody would notice.
+    //
+    // Cached for a DAY rather than a week: a chart that is a week stale is a
+    // chart, but the whole point of it is being current.
+    if (path === 'chart-artists') {
+      const limit = Math.min(parseInt(q.limit, 10) || 24, 50);
+      const j = await dz('/chart/0/artists?limit=' + limit);
+      // Through the same dedupe as everything else, so the list cannot show
+      // one artist twice under two ids.
+      const { artists, merges } = dedupeArtists(j.data || []);
+      merges.forEach(m => console.log('[catalogue:chart-artists] merged ' + JSON.stringify(m)));
+      res.setHeader('Cache-Control', DAY);
+      res.status(200).json({
+        items: artists.map(a => ({
+          id: String(a.id), name: a.name, fans: a.nb_fan || 0,
+          images: [a.picture_medium && { url: a.picture_medium, width: 250, height: 250 }].filter(Boolean),
+        })),
       });
       return;
     }

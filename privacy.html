@@ -37,12 +37,26 @@
   .doc-top {
     position:sticky; top:0; z-index:5;
     display:flex; align-items:center; gap:14px;
-    padding:14px max(18px, env(safe-area-inset-left)) 14px max(18px, env(safe-area-inset-right));
+    /* THE TOP INSET IS THE WHOLE FIX. The left and right insets were here and
+       the top one was not, so on a notched phone — and inside the app, which
+       sets viewport-fit=cover — this bar sat UNDER the status bar and the
+       Dynamic Island. Back to the app and the Privacy/Terms switch were both
+       up there, half-covered and hard to hit.
+
+       max(), not a bare env(): a phone with no inset keeps the normal 14px
+       rather than collapsing to zero. Same rule as the app's own safe-area
+       block, which learned it the same way. */
+    padding:max(14px, calc(env(safe-area-inset-top) + 10px))
+            max(18px, env(safe-area-inset-right))
+            14px
+            max(18px, env(safe-area-inset-left));
     background:rgba(10,9,8,0.82); backdrop-filter:blur(14px);
     border-bottom:1px solid var(--border);
   }
   .doc-top a.home {
-    display:flex; align-items:center; gap:9px;
+    /* 44px of height, which is Apple's floor and which neither of these
+       controls had: they were text links at their line height. */
+    display:flex; align-items:center; gap:9px; min-height:44px;
     color:var(--text); text-decoration:none;
     font-weight:800; letter-spacing:.14em; font-size:13px; text-transform:uppercase;
   }
@@ -56,9 +70,14 @@
     content:''; position:absolute; inset:42%; border-radius:50%; background:var(--gold);
   }
   .doc-top nav { margin-left:auto; display:flex; gap:4px; }
+  .doc-top nav { display:flex; gap:4px; }
   .doc-top nav a {
     color:var(--dim); text-decoration:none; font-size:12.5px; font-weight:600;
-    padding:6px 11px; border-radius:999px; border:1px solid transparent;
+    /* 6px of vertical padding on a 12.5px link is a 30px target. These are the
+       only two controls on the page and one of them is the way back to the
+       app, so they get the 44 that a thumb needs. */
+    padding:0 13px; min-height:44px; display:inline-flex; align-items:center;
+    border-radius:999px; border:1px solid transparent;
   }
   .doc-top nav a[aria-current="page"] { color:var(--text); border-color:var(--border-2); background:var(--surface); }
   .doc-top nav a:hover { color:var(--text); }

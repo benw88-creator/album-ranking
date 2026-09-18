@@ -6707,6 +6707,42 @@ button.rw-day {
   color: var(--text-faint); white-space: nowrap; }
 .odds-note { margin-top: 14px; }
 
+/* ---- the minigames' Popular tab --------------------------------------
+   Faces, not a list of names. The whole reason this tab exists is that
+   picking is faster than typing, and a column of text is not faster to read
+   than a field is to type into — recognising somebody's photograph is. */
+.g-pop {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: var(--s2); max-height: 44vh; overflow-y: auto;
+  padding: 2px; scrollbar-width: none;
+}
+.g-pop::-webkit-scrollbar { display: none; }
+.g-pop-a {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: none; border: 0; padding: 6px 2px; cursor: pointer;
+  color: var(--text-dim); font: inherit; font-size: 11.5px; font-weight: 600;
+  border-radius: 12px;
+  transition: color var(--dur-quick) var(--ease), background var(--dur-quick) var(--ease);
+}
+.g-pop-a img, .g-pop-ph {
+  width: 64px; height: 64px; border-radius: 50%; object-fit: cover;
+  background: var(--surface-3); border: 1.5px solid transparent;
+  transition: border-color var(--dur-quick) var(--ease), transform var(--dur-quick) var(--ease);
+}
+.g-pop-n {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  line-height: 1.2;
+}
+.g-pop-a:hover { color: var(--text); background: var(--surface-2); }
+.g-pop-a:hover img { border-color: var(--section); }
+.g-pop-a.sel img { border-color: var(--gold); transform: scale(1.04); }
+.g-pop-a:active { transform: scale(.95); }
+/* A tap on a phone leaves :hover applied to the last thing touched, so the
+   hover lift is desktop-only — the rule this app already learned on the album
+   card, where a card stayed lit after you had left it. */
+@media (hover: none) { .g-pop-a:hover { background: none; color: var(--text-dim); } }
+.g-pop-note { grid-column: 1 / -1; padding: 18px 0; text-align: center; color: var(--text-faint); font-size: 13px; }
+
 /* ---- a preview button on a rated song row ----------------------------
    Sized to Apple's 44pt floor at the tap target even though the circle reads
    as 30 — the padding does the work, so the control can be small in a dense
@@ -7836,10 +7872,19 @@ window.ICONS = {
       <div><h2 id="g-title">Game</h2><p id="g-sub"></p></div></div>
 
     <div id="g-view-start">
+      <!-- Genre and Era are gone. Both built their pool by SEARCHING for the
+           word — `genre:"rock"` and `year:1990-1999` are Spotify query syntax
+           and have done nothing since the catalogue moved to Deezer, so those
+           two modes had been quietly degrading to a plain text search for
+           months. And an artist is the only pool where the question "how well
+           do you know this" means anything: a 90s pool is a pool of records
+           you have no particular relationship with.
+
+           What replaces them is not a third way to filter, it is the same
+           input with the typing done for you. -->
       <div class="seg" id="g-mode-seg" style="margin-bottom:16px; width:100%; display:flex;">
-        <button data-gmode="artist" class="active" style="flex:1;">Artist</button>
-        <button data-gmode="genre" style="flex:1;">Genre</button>
-        <button data-gmode="era" style="flex:1;">Era</button>
+        <button data-gmode="artist" class="active" style="flex:1;">Type a name</button>
+        <button data-gmode="popular" style="flex:1;">Popular</button>
       </div>
       <div id="g-mode-artist">
         <label class="g-label" for="g-artist-input">Pick an artist to be tested on</label>
@@ -7849,25 +7894,9 @@ window.ICONS = {
           <div class="g-sugg" id="g-artist-sugg"></div>
         </div>
       </div>
-      <div id="g-mode-genre" style="display:none;">
-        <label class="g-label" for="g-genre-select">Pick a genre</label>
-        <select class="g-input" id="g-genre-select" style="height:50px;">
-          <option value="hip hop">Hip hop</option><option value="rap">Rap</option><option value="trap">Trap</option>
-          <option value="uk drill">UK drill</option><option value="grime">Grime</option><option value="r&b">R&amp;B</option>
-          <option value="pop">Pop</option><option value="rock">Rock</option><option value="indie">Indie</option>
-          <option value="metal">Metal</option><option value="electronic">Electronic</option><option value="house">House</option>
-          <option value="jazz">Jazz</option><option value="soul">Soul</option><option value="country">Country</option>
-          <option value="afrobeats">Afrobeats</option><option value="reggaeton">Reggaeton</option><option value="k-pop">K-pop</option>
-        </select>
-      </div>
-      <div id="g-mode-era" style="display:none;">
-        <label class="g-label" for="g-era-select">Pick an era</label>
-        <select class="g-input" id="g-era-select" style="height:50px;">
-          <option value="2020-2026">2020s</option><option value="2010-2019">2010s</option>
-          <option value="2000-2009">2000s</option><option value="1990-1999">1990s</option>
-          <option value="1980-1989">1980s</option><option value="1970-1979">1970s</option>
-          <option value="1960-1969">1960s</option>
-        </select>
+      <div id="g-mode-popular" style="display:none;">
+        <label class="g-label">Pick one of these</label>
+        <div class="g-pop" id="g-popular"></div>
       </div>
       <button class="btn-primary g-btn-full" id="g-start-btn">Start</button>
       <div class="g-loading" id="g-loading">Loading albums&hellip;</div>
@@ -11089,8 +11118,9 @@ function renderAuthArea(connected){
     poolMode=m;
     document.querySelectorAll('#g-mode-seg button').forEach(function(b){b.classList.toggle('active',b.dataset.gmode===m);});
     document.getElementById('g-mode-artist').style.display=m==='artist'?'block':'none';
-    document.getElementById('g-mode-genre').style.display=m==='genre'?'block':'none';
-    document.getElementById('g-mode-era').style.display=m==='era'?'block':'none';
+    const pop=document.getElementById('g-mode-popular');
+    if(pop)pop.style.display=m==='popular'?'block':'none';
+    if(m==='popular')loadPopular();
     errEl.textContent='';
   }
   document.getElementById('g-mode-seg').addEventListener('click',function(e){const b=e.target.closest('button');if(b)setPoolMode(b.dataset.gmode);});
@@ -11168,6 +11198,65 @@ function renderAuthArea(connected){
   async function resolveArtist(term){const data=await spotifyFetch('/search?'+new URLSearchParams({q:term,type:'artist'}).toString(),{priority:true});const a=(data.artists&&data.artists.items&&data.artists.items[0]);return a?{id:a.id,name:a.name}:null;}
   async function fetchTracks(albumId){const data=await spotifyGet('/albums/'+encodeURIComponent(albumId)+'?market=US',{priority:true});return((data.tracks&&data.tracks.items)||[]).map(function(t){return t.name;});}
 
+  /* ---- Popular -------------------------------------------------------
+     Deezer's own chart, through /api/catalogue?path=chart-artists, cached a
+     day at the edge. Deliberately NOT a baked list: a hand-maintained list of
+     who is popular is wrong within a season, and wrong in a way nobody would
+     ever notice — unlike the baked game pools, where being fixed is the whole
+     point because two people have to be asked the same question.
+
+     Fetched once per session. A chart is not worth a round trip every time
+     somebody flips to the tab, and it does not move inside an afternoon. */
+  var _popular = null, _popularAt = 0;
+  async function loadPopular(){
+    const host=document.getElementById('g-popular');
+    if(!host)return;
+    if(_popular&&Date.now()-_popularAt<1800000){paintPopular(_popular);return;}
+    host.innerHTML='<div class="g-pop-note">Loading\u2026</div>';
+    try{
+      const r=await fetch(Native.api+'/api/catalogue?path=chart-artists&limit=24');
+      if(!r.ok)throw new Error('http '+r.status);
+      const j=await r.json();
+      _popular=(j.items||[]);_popularAt=Date.now();
+      paintPopular(_popular);
+    }catch(e){
+      /* A dead chart is not a dead game — typing a name still works, so this
+         says so and points at the thing that does rather than leaving an
+         empty panel that reads as broken. */
+      host.innerHTML='<div class="g-pop-note">Couldn\u2019t load the chart. Type a name instead.</div>';
+    }
+  }
+  function paintPopular(list){
+    const host=document.getElementById('g-popular');
+    if(!host)return;
+    if(!list.length){host.innerHTML='<div class="g-pop-note">Nothing in the chart just now.</div>';return;}
+    host.innerHTML=list.map(function(a){
+      const img=(a.images&&a.images[0]&&a.images[0].url)||'';
+      return '<button class="g-pop-a" data-popid="'+esc(a.id)+'" data-popname="'+esc(a.name)+'">'+
+        (img?'<img src="'+esc(img)+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">':'<span class="g-pop-ph"></span>')+
+        '<span class="g-pop-n">'+esc(a.name)+'</span></button>';
+    }).join('');
+  }
+  /* Delegated on the host, because paintPopular replaces its innerHTML — and
+     it goes straight into start() rather than selecting and waiting for the
+     Start button. One tap on a face is the whole point of this tab; a tap
+     that only fills in a field you then have to confirm is the typing path
+     with an extra step. */
+  (function(){
+    const host=document.getElementById('g-popular');
+    if(!host)return;
+    host.addEventListener('click',function(e){
+      const b=e.target.closest('[data-popid]');
+      if(!b)return;
+      host.querySelectorAll('.g-pop-a').forEach(function(n){n.classList.remove('sel');});
+      b.classList.add('sel');
+      selectedArtistId=b.dataset.popid;
+      artistName=b.dataset.popname;
+      if(window.buzz)buzz('tap');
+      start();
+    });
+  })();
+
   function fail(msg){loadEl.style.display='none';startBtn.disabled=false;errEl.textContent=msg;}
 
   async function start(){
@@ -11181,14 +11270,14 @@ function renderAuthArea(connected){
         if(!id){const r=await resolveArtist(term);if(!r){fail('Couldn\u2019t find that artist.');return;}id=r.id;artistName=r.name;}
         list=await fetchArtistAlbums(id);
         if(list.length<ROUNDS){fail((artistName||'That artist')+' doesn\u2019t have enough albums for this game \u2014 needs at least '+ROUNDS+' (found '+list.length+'). Try a different artist.');return;}
-      }else if(poolMode==='genre'){
-        const g=document.getElementById('g-genre-select').value;artistName=g;
-        list=await buildGenrePool(g);
-        if(list.length<ROUNDS){fail('Not enough albums found for '+g+' \u2014 try another genre.');return;}
       }else{
-        const era=document.getElementById('g-era-select').value;artistName='the '+era.slice(0,4)+'s';
-        list=await buildEraPool(era);
-        if(list.length<ROUNDS){fail('Not enough albums found for that era \u2014 try another.');return;}
+        /* Popular. Deliberately falls through to exactly the artist path: a
+           chart tile sets selectedArtistId and artistName and then calls
+           start(), so there is ONE way a pool is built and one place it can
+           be wrong. The tab is an input method, not a second game. */
+        if(!selectedArtistId){fail('Pick an artist first.');return;}
+        list=await fetchArtistAlbums(selectedArtistId);
+        if(list.length<ROUNDS){fail((artistName||'That artist')+' doesn\u2019t have enough albums for this game \u2014 needs at least '+ROUNDS+' (found '+list.length+'). Try another.');return;}
       }
       pool=list;startBtn.disabled=false;await beginRounds();
     }catch(e){
@@ -11197,97 +11286,32 @@ function renderAuthArea(connected){
     }
   }
 
-  async function buildGenrePool(genre){
-    let out=[];const seen={};
-    function add(al,artistNameOverride,artistIdOverride){
-      if(!al||!al.id||!al.name)return;
-      const images = al.images || (al.art ? [{url:al.art}] : []);
-      if(!images.length)return;
-      const k=nTitle(al.name);if(!k||seen[k])return;
-      if(isNonStudio(al.name))return;
-      seen[k]=1;
-      out.push({
-        id:al.id, name:al.name,
-        artist: artistNameOverride || (al.artists&&al.artists[0]&&al.artists[0].name) || '',
-        artistId: artistIdOverride || (al.artists&&al.artists[0]&&al.artists[0].id) || '',
-        art: al.art || pickImage(images,500),
-        year: al.year || (al.release_date||'').slice(0,4)
-      });
-    }
-    // Primary path: artist search scoped by genre field (reliable on Spotify's
-    // search API, unlike free-text album search for a genre word) — pull a
-    // handful of well-known artists in that genre, then their real studio albums.
-    // This is what avoids pools full of random albums that just happen to have
-    // "hip hop" in their metadata.
-    try{
-      const da=await spotifyFetch('/search?'+new URLSearchParams({q:'genre:"'+genre+'"',type:'artist'}).toString(),{priority:true});
-      let artists=((da.artists&&da.artists.items)||[]).filter(function(a){return a.id&&a.popularity!=null;});
-      // sort by popularity so we pull from well-known acts, not obscure noise
-      artists.sort(function(a,b){return (b.popularity||0)-(a.popularity||0);});
-      artists=shuffle(artists.slice(0,10)).slice(0,6);
-      for(let i=0;i<artists.length&&out.length<24;i++){
-        try{
-          const albums=await fetchArtistAlbums(artists[i].id);
-          albums.forEach(function(al){add(al,artists[i].name,artists[i].id);});
-        }catch(e){}
-      }
-    }catch(e){}
-    // Fallback only if the genre field search came back thin (some niche genre
-    // tags return few/no artists) — broaden via plain artist name search.
-    if(out.length<ROUNDS){
-      try{
-        const da2=await spotifyFetch('/search?'+new URLSearchParams({q:genre,type:'artist'}).toString(),{priority:true});
-        const artists2=shuffle((da2.artists&&da2.artists.items)||[]).slice(0,5);
-        for(let i=0;i<artists2.length&&out.length<24;i++){
-          try{const albums=await fetchArtistAlbums(artists2[i].id);albums.forEach(function(al){add(al,artists2[i].name,artists2[i].id);});}catch(e){}
-        }
-      }catch(e){}
-    }
-    return shuffle(out);
-  }
+  /* buildGenrePool and buildEraPool are GONE, not parked, and this is the
+     one removal in this pass that is a deletion rather than a switch.
 
-  async function buildEraPool(range){
-    // Spotify's search syntax wants a single year per "year:" filter, not a
-    // free-text range string — querying "year:2020-2026" as one term returns
-    // sparse, semi-random matches. Instead sample several individual years
-    // across the decade and merge results, which also naturally surfaces
-    // more well-known albums since each query gets Spotify's normal ranking.
-    const parts=range.split('-');
-    const startY=parseInt(parts[0],10), endY=parseInt(parts[1],10)||startY;
-    const span=Math.max(1,endY-startY);
-    const sampleYears=[];
-    const step=Math.max(1,Math.round(span/4));
-    for(let y=startY;y<=endY&&sampleYears.length<5;y+=step) sampleYears.push(y);
-    if(sampleYears.indexOf(endY)===-1) sampleYears.push(endY);
+     They were dead in the only sense that matters: both built their pool
+     with Spotify query syntax — genre:"rock" and year:1990-1999 — which
+     /api/catalogue has not understood since the catalogue moved to
+     Deezer. Every genre game since then was a plain text search for the
+     word "rock", and every era game a search for "1990". They did not
+     error; they quietly returned whatever a keyword match produced.
 
-    let items=[];
-    for(let i=0;i<sampleYears.length;i++){
-      try{
-        const data=await spotifyFetch('/search?'+new URLSearchParams({q:'year:'+sampleYears[i],type:'album'}).toString(),{priority:true});
-        items=items.concat((data.albums&&data.albums.items)||[]);
-      }catch(e){}
-    }
-    const seen={};const out=[];
-    items.forEach(function(al){
-      if(!al.id||!al.name||!al.images||!al.images.length)return;
-      if(isNonStudio(al.name))return;
-      const k=nTitle(al.name);if(!k||seen[k])return;seen[k]=1;
-      const yr=parseInt((al.release_date||'').slice(0,4),10);
-      if(!yr||yr<startY||yr>endY)return; // guard against off-range stragglers
-      out.push({id:al.id,name:al.name,artist:(al.artists&&al.artists[0]&&al.artists[0].name)||'',artistId:(al.artists&&al.artists[0]&&al.artists[0].id)||'',art:pickImage(al.images,500),year:(al.release_date||'').slice(0,4),_pop:al.popularity||0});
-    });
-    // Favour better-known albums (Spotify popularity score) so the pool isn't
-    // dominated by obscure long-tail releases that happen to share a year.
-    out.sort(function(a,b){return b._pop-a._pop;});
-    const top=out.slice(0,Math.max(30,ROUNDS*4));
-    return shuffle(top);
-  }
+     Nothing is parked for later because there is nothing working to
+     bring back. If a genre pool is ever wanted again it has to be built
+     against Deezer's genre ids, which is a different function.
+
+     Popular needs no builder of its own: it sets selectedArtistId and
+     calls start(), so it goes down the artist path. */
 
   async function beginRounds(){
     rounds=shuffle(pool).slice(0,ROUNDS);loadEl.style.display='none';loadEl.textContent='Loading albums\u2026';idx=0;score=0;streak=0;showV('play');
     // Mode key/label used for leaderboard rows — distinct per artist/genre/era
     // so "fastest on Drake" and "fastest on the 90s" are separate boards.
-    _lastModeKey = poolMode + ':' + (poolMode==='artist' ? (selectedArtistId||artistName) : poolMode==='genre' ? document.getElementById('g-genre-select').value : document.getElementById('g-era-select').value);
+    /* Always an ARTIST key now, and deliberately not prefixed with the tab:
+       typing "Drake" and tapping Drake in the Popular list are the same pool
+       and must land on the same board, or a leaderboard splits in two for a
+       reason nobody can see. */
+    _lastModeKey = 'artist:' + (selectedArtistId||artistName);
     _lastModeLabel = artistName || '';
     _gameStartTime = performance.now();
     if(timerEl){
