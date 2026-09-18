@@ -6904,133 +6904,161 @@ button.rw-day {
 .sr-play.no-clip, .sr-play.needs-tap { border-color: var(--red); color: var(--red); }
 .sr-play.no-clip::after { border-left-color: currentColor; }
 
-/* ---- FOR YOU ---------------------------------------------------------
-   One record a screen, scroll-snapped. The snap is what makes the
-   IntersectionObserver honest: without it a card can sit half on screen
-   indefinitely and the 60% threshold either never fires or fires for two
-   cards at once, which is how a feed ends up playing two records.
+/* ---- FOR YOU — one song a screen -------------------------------------
+   The sleeve is SQUARE and is sized off the card, never stretched to fill it.
+   The first version gave it `flex: 1 1 auto` inside a full-height card, so a
+   square cover was cropped to whatever was left over after the text — and a
+   record sleeve is square in every viewport there has ever been.
 
-   Not `position: fixed` and not 100dvh of its own — it is a view like every
-   other, under the same floating nav, so the height allows for the bar. */
+   `min()` against both the width and the remaining height, so it is as large
+   as it can be on a wide phone and still shrinks rather than pushing the
+   rating control off the bottom on a short one. */
 .fy-feed {
   scroll-snap-type: y mandatory;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  /* A fallback only: fitFeed() measures the real bound against the
-     floating nav as soon as the feed is built. Deliberately on the short
-     side, because being short shows a gap for one frame and being long puts
-     the rating slider underneath the bar. */
+  /* A fallback only: fitFeed() measures the real bound against the floating
+     nav as soon as the feed is built. Deliberately on the short side, because
+     being short shows a gap for one frame and being long puts the rating
+     slider underneath the bar. */
   height: calc(100vh - 260px);
   min-height: 360px;
-  border-radius: 18px;
   scrollbar-width: none;
 }
 .fy-feed::-webkit-scrollbar { display: none; }
 @supports (height: 100dvh) {
   /* dvh, because 100vh on iOS Safari is the height WITH the address bar
-     retracted — the card is then taller than the window and the snap point
-     for the next one sits below the fold, so the feed will not advance. */
+     retracted — the card is then taller than the window and the next snap
+     point sits below the fold, so the feed will not advance. */
   .fy-feed { height: calc(100dvh - 260px); }
 }
 .fy-card {
   scroll-snap-align: center;
-  scroll-snap-stop: always;   /* one record per flick, never two */
+  scroll-snap-stop: always;      /* one song per flick, never two */
   height: 100%;
   display: flex; flex-direction: column;
-  padding-bottom: var(--s3);
+  align-items: center; justify-content: center;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  text-align: center;
+}
+.fy-why {
+  font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--c-lime); flex: 0 0 auto;
 }
 .fy-art {
-  position: relative; flex: 1 1 auto; min-height: 0;
+  position: relative;
+  /* SQUARE, AND SIZED OFF THE SPACE ACTUALLY LEFT — not off the viewport.
+     `width: min(100%, 58vh)` looked right and was not: the card also holds a
+     reason line, a title, a subtitle and the rating row, so on a short screen
+     the sleeve's own height had nowhere to go and it came out 445x265. A
+     sleeve is square in every viewport there has ever been.
+
+     Flexible in height with `min-height: 0` so it can give way to the text
+     rather than the other way round, `aspect-ratio: 1` to derive the width
+     from whatever height it ends up with, and `max-width: 100%` for the wide
+     case — where the clamp applies to the width and the aspect ratio pulls
+     the height back down with it. Square both ways. */
+  /* The side is set by fitFeed(), for the same reason the feed's height is:
+     CSS could not be made to do it reliably. `aspect-ratio: 1` loses to flex
+     sizing — with `flex: 1 1 auto` the height grew to fill the card and
+     `max-width: 100%` clamped only the width, so it came out 343x360. Every
+     combination of max-width/max-height/aspect-ratio has an axis where one
+     constraint wins and the ratio is dropped.
+
+     One number, measured against the two things that actually bound it: the
+     card's width, and the height left after the text. */
+  flex: 0 0 auto;
+  width: var(--fy-art, 300px);
+  height: var(--fy-art, 300px);
+  margin: 0 auto;
+  border: 0; padding: 0; cursor: pointer;
   border-radius: 16px; overflow: hidden;
   background: var(--surface-2);
+  box-shadow: 0 24px 60px rgba(0,0,0,.55);
+  transition: transform var(--dur) var(--ease);
 }
+.fy-art:active { transform: scale(.985); }
 .fy-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fy-shade {
-  position: absolute; inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 42%);
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to top, rgba(0,0,0,.35) 0%, transparent 38%);
 }
-/* The play control is the whole sleeve, not a small button on it: the first
-   card needs a gesture before iOS will let anything sound, and a 44pt target
-   in the corner is a worse thing to ask somebody to find than the picture
-   they are already looking at. */
-.fy-play {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  background: transparent; border: 0; cursor: pointer;
-  display: grid; place-items: center;
-}
-.fy-play-i {
-  width: 64px; height: 64px; border-radius: 50%;
-  background: rgba(10,9,8,0.55); backdrop-filter: blur(8px);
-  border: 1.5px solid rgba(255,245,235,0.35);
+/* The cue is only there until audio is unlocked. iOS will not let an <audio>
+   element play outside a real gesture, so the first card genuinely needs a
+   tap — and a feed that looks like it should be playing and is not is worse
+   than one that asks. It goes the moment the first clip starts and never
+   comes back for the session. */
+.fy-cue {
+  position: absolute; left: 50%; top: 50%; width: 68px; height: 68px;
+  margin: -34px 0 0 -34px; border-radius: 50%; pointer-events: none;
+  background: rgba(10,9,8,.55); backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(255,245,235,.4);
   display: grid; place-items: center;
   transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
-.fy-play-i::after {
-  content: ''; width: 0; height: 0; margin-left: 5px;
-  border-left: 18px solid var(--text);
-  border-top: 11px solid transparent; border-bottom: 11px solid transparent;
+.fy-cue::after {
+  content: ''; margin-left: 5px;
+  border-left: 19px solid var(--text);
+  border-top: 12px solid transparent; border-bottom: 12px solid transparent;
 }
-.fy-card.is-playing .fy-play-i { opacity: 0; transform: scale(.8); }
-.fy-card.is-loading .fy-play-i { opacity: .5; }
-/* The equaliser, the same idea as the one on a playing track row: the bars
-   are in the markup on every card and hidden until the card is sounding,
-   rather than injected into whichever one is — a node added to a card the
-   feed rebuilds would be wiped by the next build. */
-.fy-bars {
-  position: absolute; left: 14px; bottom: 14px;
-  display: none; align-items: flex-end; gap: 3px; height: 18px;
-}
-.fy-card.is-playing .fy-bars { display: flex; }
-.fy-bars span {
-  width: 3px; border-radius: 2px; background: var(--c-pink);
-  animation: fyBar 1s ease-in-out infinite;
-}
-/* Three durations, none a multiple of another, so the pattern does not
-   visibly loop. Heights, not transforms — a scaled bar grows from its centre
-   and these sit on a floor. */
-.fy-bars span:nth-child(1) { height: 7px;  animation-duration: .74s; }
-.fy-bars span:nth-child(2) { height: 16px; animation-duration: .97s; }
-.fy-bars span:nth-child(3) { height: 11px; animation-duration: 1.19s; }
-@keyframes fyBar { 0%,100% { height: 5px; } 50% { height: 18px; } }
-.fy-card.no-clip .fy-play-i { opacity: .25; }
-.fy-card.no-clip .fy-art::after {
-  content: 'No preview for this one'; position: absolute; left: 0; right: 0; bottom: 14px;
-  text-align: center; font-size: 12px; color: var(--text-faint);
-}
-.fy-card.needs-tap .fy-play-i { animation: fyTap 1.6s ease-in-out infinite; }
+.fy-card.is-playing .fy-cue,
+.fy-card.is-rated .fy-cue { opacity: 0; transform: scale(.8); }
+.fy-card.is-loading .fy-cue { opacity: .45; }
+.fy-card.needs-tap .fy-cue { animation: fyTap 1.6s ease-in-out infinite; }
 @keyframes fyTap { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+.fy-card.no-clip .fy-art::after {
+  content: 'No preview for this one';
+  position: absolute; left: 0; right: 0; bottom: 14px;
+  font-size: 12px; color: var(--text-faint);
+}
 
-.fy-meta { padding: var(--s3) 2px 0; flex: 0 0 auto; }
-.fy-why {
-  font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
-  color: var(--c-pink); margin-bottom: 4px;
+.fy-head {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  max-width: 100%; flex: 0 0 auto;
 }
+/* The equaliser, beside the title. The spans are in the markup on EVERY card
+   and hidden until it is sounding, rather than injected into whichever one is
+   playing — the feed rebuilds itself and a node added to a card would be wiped
+   by the next build. Same reasoning as the album page's track rows. */
+.fy-eq { display: none; align-items: flex-end; gap: 3px; height: 16px; flex: 0 0 auto; }
+.fy-card.is-playing .fy-eq { display: flex; }
+.fy-eq i { width: 3px; border-radius: 2px; background: var(--c-lime); animation: fyBar 1s ease-in-out infinite; }
+/* Three durations, none a multiple of another, so the pattern does not
+   visibly loop. HEIGHTS, not transforms — a scaled bar grows from its centre
+   and these sit on a floor. */
+.fy-eq i:nth-child(1) { height: 6px;  animation-duration: .74s; }
+.fy-eq i:nth-child(2) { height: 15px; animation-duration: .97s; }
+.fy-eq i:nth-child(3) { height: 10px; animation-duration: 1.19s; }
+@keyframes fyBar { 0%,100% { height: 5px; } 50% { height: 16px; } }
+
 .fy-title {
+  background: none; border: 0; padding: 0; cursor: pointer; color: var(--text);
   font-family: var(--font-display); font-size: var(--t-h2); font-weight: 800;
-  letter-spacing: -0.03em; line-height: 1.06; cursor: pointer;
-  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  letter-spacing: -0.03em; line-height: 1.1; text-align: center;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.fy-artist { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
-.fy-rate { display: flex; align-items: center; gap: var(--s2); margin-top: var(--s3); }
-.fy-rate input[type="range"] { flex: 1 1 auto; min-width: 0; accent-color: var(--c-pink); }
+.fy-sub { font-size: 13px; color: var(--text-dim); flex: 0 0 auto; max-width: 100%; }
+.fy-alb { cursor: pointer; text-decoration: underline; text-decoration-color: var(--border-strong); }
+.fy-alb:hover { color: var(--text); }
+
+.fy-rate {
+  display: flex; align-items: center; gap: var(--s2);
+  width: 100%; flex: 0 0 auto;
+}
+.fy-rate input[type="range"] { flex: 1 1 auto; min-width: 0; accent-color: var(--c-lime); }
 .fy-rate output {
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: 15px; font-weight: 700; min-width: 30px; text-align: right;
+  font-size: 16px; font-weight: 700; min-width: 22px; text-align: right;
 }
-.fy-save { padding: 9px 14px; white-space: nowrap; }
+.fy-save { padding: 9px 16px; white-space: nowrap; }
 .fy-card.is-rated .fy-art { outline: 2px solid var(--c-lime); outline-offset: -2px; }
-.fy-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); margin-top: 8px; }
-.fy-open { background: none; border: 0; color: var(--text-dim); font: inherit; font-size: 13px; cursor: pointer; padding: 4px 0; }
-.fy-open:hover { color: var(--text); }
-/* Deezer's terms ask for the clip to sit beside an acknowledgement, and it is
-   also the honest label: this is thirty seconds, not the song. */
-.fy-src { font-size: 11px; color: var(--text-faint); }
+
 .fy-loading { padding: 40px 0; text-align: center; color: var(--text-faint); }
-.fy-more { margin-top: var(--s5); }
 
 @media (prefers-reduced-motion: reduce) {
-  .fy-bars span, .fy-card.needs-tap .fy-play-i { animation: none; }
+  .fy-eq i, .fy-card.needs-tap .fy-cue { animation: none; }
   .fy-feed { scroll-snap-type: none; }
 }
 
@@ -7583,32 +7611,6 @@ window.ICONS = {
        the problem. -->
   <section id="view-foryou" class="view" style="display:none;">
     <div class="fy-feed" id="fy-feed"></div>
-    <div class="fy-more">
-
-    <div class="section-head">
-      <h2>Recommended for you</h2>
-      <span class="muted" id="reco-status"></span>
-      <button class="btn-mini" id="reco-refresh" style="margin-left:auto;">&#8635; Refresh</button>
-    </div>
-    <p class="reco-note">Based on your highest-rated artists. Rate a few albums to improve these.</p>
-    <div class="grid" id="reco-grid"></div>
-    <div class="empty" id="reco-empty">
-      <span class="emoji" data-icon="sparkle"></span>
-      <h3>No recommendations yet</h3>
-      <p>Rate a few albums and we&rsquo;ll suggest more from artists you love.</p>
-    </div>
-    <div class="section-head" style="margin-top:40px;">
-      <h2>Upcoming Releases</h2>
-      <span class="muted" id="newrel-status"></span>
-    </div>
-    <p class="reco-note">Search an artist to check if they have anything dropping soon.</p>
-    <div class="g-field" style="max-width:420px; margin-bottom:18px; position:relative;">
-      <input id="newrel-artist-input" class="g-input" type="text" placeholder="Search an artist&hellip;" autocomplete="off">
-      <div class="g-spinner" id="newrel-artist-spinner"></div>
-      <div class="g-sugg" id="newrel-artist-sugg"></div>
-    </div>
-    <div id="newrel-result"></div>
-    </div>
   </section>
 
   <section id="view-crate" class="view" style="display:none;">
@@ -10373,6 +10375,13 @@ let _recsBuilt = false;
 let _recsBuilding = false;
 async function renderRecommendations() {
   const grid = document.getElementById('reco-grid');
+  /* The Discover fold went to For You and then For You became a songs feed,
+     so this block is on no page at all any more. Kept rather than deleted —
+     the candidate-building in _buildRecommendations is the only artist-affinity
+     walk in the file and For You's own gather() is modelled on it — but it
+     returns rather than throwing on a missing host, because a function that
+     dies on `grid.innerHTML` of null takes its whole caller with it. */
+  if (!grid) return;
   const emptyEl = document.getElementById('reco-empty');
   const status = document.getElementById('reco-status');
   if (_recsBuilding) return;
@@ -10788,10 +10797,7 @@ function setMode(mode, fromCode) {
   if (mode === 'crate' && window.renderCrate) window.renderCrate();
   if (mode === 'albums') renderAlbums();
   if (mode === 'songs') renderSongs();
-  if (mode === 'foryou') {
-    if (window.renderForYou) window.renderForYou();
-    renderRecommendations(); renderNewReleases();
-  }
+  if (mode === 'foryou' && window.renderForYou) window.renderForYou();
   /* LEAVING has to silence it. setMode only changes `display`, and an <audio>
      element does not care that the card holding it is hidden — without this,
      a record carries on playing over whatever you went to look at. */
@@ -12421,6 +12427,8 @@ const newrelResult = document.getElementById('newrel-result');
 let newrelTimer = null, newrelSugg = [], newrelActive = -1;
 
 function renderNewReleases() {
+  // Same: no host on any page since For You became a songs feed.
+  if (!newrelResult) return;
   // Called on entering Home. Nothing to fetch until the person searches an
   // artist, so just show the prompt state once.
   if (newrelResult && !newrelResult.dataset.shown) {
@@ -12830,7 +12838,7 @@ const Cloud=(function(){
     // the whole moment. Rewards shows the button; this only lights the nav.
     if(window.markRewardsDot)markRewardsDot();
     
-    try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderArtistHero();if(window.renderToday)renderToday(true);if(window.renderDiary)renderDiary();}if(currentMode==='foryou'){renderRecommendations();if(window.ForYou)ForYou.build(true);}if(currentMode==='profile'&&window.renderProfile)renderProfile();}catch(e){}
+    try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderArtistHero();if(window.renderToday)renderToday(true);if(window.renderDiary)renderDiary();}if(currentMode==='foryou'&&window.ForYou)ForYou.build(true);if(currentMode==='profile'&&window.renderProfile)renderProfile();}catch(e){}
     flashSaved();
   }
   /* Reconcile, not backfill — and the difference is the whole point.
@@ -24385,7 +24393,21 @@ window.renderAdminStats = renderAdminStats;
     // Two things playing at once is never right, and the player is a sibling
     // of every view rather than of this modal, so it survives one opening.
     try { if (window.VinalPlayer && VinalPlayer.playing()) VinalPlayer.stop(); } catch (e) {}
-    return resolve(track, !!(opts && opts.fresh)).then(function (res) {
+    /* A caller that ALREADY HAS the clip hands it over rather than making this
+       look it up again. The album lookup in For You returns every track with
+       its preview url attached, and re-resolving from the title would be the
+       player's old bug exactly — it threw away the clip it was given and ran a
+       second search by name, so a deluxe or a regional pressing matched a
+       different record and half an album read as "no preview".
+
+       Everything else still happens here: the element, the [0, seconds]
+       window, the three-way stop, and the one silent retry on a stale
+       signature — which falls back to a REAL resolve, because a supplied url
+       that 403s is exactly the case a fresh lookup is for. */
+    var pre = (opts && opts.clip && opts.clip.url && !(opts && opts.fresh))
+      ? Promise.resolve(opts.clip)
+      : resolve(track, !!(opts && opts.fresh));
+    return pre.then(function (res) {
       if (tok !== playTok) return false;
       if (!res || !res.url) return false;
       stopAt = seconds;
@@ -28194,61 +28216,58 @@ window.track = function (name, props) {
 })();
 
 /* ================================================================
-   FOR YOU — a vertical feed of records, one screen each
+   FOR YOU — a feed of SONGS, one screen each
    ================================================================
 
-   Discover was a `<details>` on Home: a fold, closed by default, under the
-   Today stack. Recommendations that live behind a disclosure are
-   recommendations nobody reads, and a grid of small covers asks you to
-   evaluate twelve records at once, which is a chore rather than a feed.
+   It was an album feed and it did not work. Three faults, and they are worth
+   naming because two of them are bugs this file already warns about:
 
-   One record per screen, playing, with the rating slider already under your
-   thumb, is a different thing entirely: the unit of attention is one record
-   and the action is the one this app is for.
+   1. NO AUDIO. A card played `{artist, title: '', album}` — it had an album and
+      no track, so the resolver had nothing to match on. The fix is not a better
+      guess at which track to play; it is that the unit of this feed was wrong.
+      A feed you scroll through plays SONGS.
 
-   WHAT THE AUDIO ACTUALLY IS. Thirty seconds, from Deezer, the same clip the
-   player and Recall use — VINALL has no full-track playback and cannot have
-   any while the catalogue is Deezer's, so nothing here says "song" when it
-   means "preview". The card says 30s and the Deezer mark sits on it, which
-   their guidelines ask for and which is the honest label besides.
+   2. THE ARTWORK WAS STRETCHED. The sleeve was `flex: 1 1 auto` inside a
+      full-height card, so a square cover was cropped to whatever was left after
+      the text. A record sleeve is square and there is no viewport it is square
+      in by accident.
 
-   AND WHY THE FIRST CARD DOES NOT AUTOPLAY. iOS grants an <audio> element
-   permission inside a real gesture and not before, so a feed that started
-   playing on load would be silent for every iPhone, with no error and no way
-   to tell. The first card carries a play button, and every card after it
-   autoplays on scroll — because by then a gesture has happened. That is the
-   whole of the difference and it is not a degraded mode: one tap buys the
-   rest of the session.
+   3. RECOMMENDED FOR YOU SAT UNDERNEATH IT. A full-bleed feed and a grid of
+      small covers on one page are two answers to the same question, and the
+      scroll-snap fought the page scroll the whole way down.
 
-   RANKING IS A LIST OF SIGNALS, NOT A FORMULA. Each entry in SIGNALS is
-   {key, weight, score()}, scoring 0..1 on its own terms, and `rank()` sums
-   weight x score. Tuning is changing a weight; adding a signal is appending
-   one object. Nothing outside SIGNALS knows what the signals are, and
-   `explain()` prints the breakdown for any card, so a bad ordering can be
-   read rather than guessed at.
+   WHAT IT IS NOW. One song a screen: the sleeve of the record it is from, the
+   title, a play animation while it sounds, and 1-10 under it. Tap the sleeve or
+   the title and you are on that album's page — the same page search reaches.
+
+   THE CLIP IS THE ONE THE ALBUM HANDED OVER. `/api/preview?artist=&album=`
+   returns every track with its own preview url, so the feed is built out of
+   clips that are known to exist and `VinalAudio.play` is handed the url rather
+   than being asked to find it again. That is the player's own hard-won rule —
+   "the clip comes off the track, not a second search" — which cost it most of
+   an album's playable rows when it was got wrong.
+
+   RANKING IS STILL A LIST OF SIGNALS. They score the RECORD, because that is
+   what taste attaches to; the songs inherit their album's score and are then
+   ordered within it. Tuning is still editing one column of numbers.
 ================================================================ */
 (function () {
   'use strict';
 
-  var SEEN_KEY = 'crate_foryou_seen';   // ids already shown, so the feed moves on
-  var PAGE = 12;                        // cards per build
-  var CLIP_S = 30;                      // Deezer's whole preview
+  var SEEN_KEY = 'crate_foryou_seen';
+  var ALBUMS = 10;      // records to draw songs from
+  var PER_ALBUM = 2;    // songs from each, so one artist cannot own the feed
+  var CLIP_S = 30;
 
   var _built = false, _busy = false, _items = [], _tok = 0;
-  var _unlocked = false;                // has a gesture happened this session
-  var _playing = null;                  // the card index currently sounding
-  var _io = null;
+  var _unlocked = false, _playing = null, _io = null;
 
   function el(id) { return document.getElementById(id); }
-  function sbOn() { return !!(window.Cloud && Cloud.isOn && Cloud.isOn()); }
 
   function seen() { try { return JSON.parse(localStorage.getItem(SEEN_KEY)) || {}; } catch (e) { return {}; } }
   function markSeen(ids) {
     var s = seen();
     ids.forEach(function (i) { s[i] = Date.now(); });
-    /* Trimmed to the most recent 400. Without a cap this is a list that only
-       ever grows in localStorage, and the oldest entries are the ones it is
-       safe to show somebody again anyway. */
     var keys = Object.keys(s);
     if (keys.length > 400) {
       keys.sort(function (a, b) { return s[b] - s[a]; }).slice(400).forEach(function (k) { delete s[k]; });
@@ -28256,37 +28275,25 @@ window.track = function (name, props) {
     try { localStorage.setItem(SEEN_KEY, JSON.stringify(s)); } catch (e) {}
   }
 
-  /* ---- the context every signal reads ------------------------------
-     Built once per feed rather than per candidate: these are all O(crate)
-     scans and doing them inside a scorer would make ranking O(n*m) over a
-     crate that can run to hundreds of records. */
+  function norm(x) {
+    return String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  /* ---- the context every signal reads --------------------------------
+     Built once per feed: these are O(crate) scans and doing them inside a
+     scorer makes ranking O(n*m) over a crate that can run to hundreds. */
   function buildContext() {
     var albums = (window.loadAlbums ? loadAlbums() : {}) || {};
     var songs = (window.loadSongs ? loadSongs() : {}) || {};
     var ctx = {
-      artist: {},        // artistId -> { avg, n }
-      artistName: {},    // normalised artist name -> avg, for legacy-keyed rows
-      genre: {},         // genre -> weight
-      owned: {},         // album ids in the Collection
-      plays: {},         // normalised artist -> play count
+      artist: {}, artistName: {}, genre: {}, owned: {}, plays: {},
       shortlist: (window.loadShortlist ? loadShortlist() : {}) || {},
-      rated: {},         // album ids and name|artist keys already rated
-      seen: seen(),
-      maxPlays: 1,
-      crateSize: Object.keys(albums).length,
+      ratedAlbum: {}, ratedSong: {}, seen: seen(), maxPlays: 1, norm: norm,
     };
-    function norm(s) {
-      return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
-        .toLowerCase().replace(/[^a-z0-9]+/g, '');
-    }
-    ctx.norm = norm;
 
     function addArtist(id, name, val) {
       var k = id || ('name:' + norm(name));
-      // The NAME is kept alongside, because a crate from before the catalogue
-      // moved carries Spotify artist ids and /api/catalogue 400s on one with
-      // no name to resolve it by. Exactly the bug that left pre-switch crates
-      // with no recommendations at all.
       ctx.artist[k] = ctx.artist[k] || { sum: 0, n: 0, name: name || '' };
       if (!ctx.artist[k].name && name) ctx.artist[k].name = name;
       ctx.artist[k].sum += val; ctx.artist[k].n++;
@@ -28296,18 +28303,21 @@ window.track = function (name, props) {
         ctx.artistName[nk].sum += val; ctx.artistName[nk].n++;
       }
     }
+
     Object.keys(albums).forEach(function (k) {
       var a = albums[k];
       addArtist(a.artistId, a.artist, a.score || 0);
-      if (a.genre) ctx.genre[String(a.genre).toLowerCase()] = (ctx.genre[String(a.genre).toLowerCase()] || 0) + ((a.score || 0) >= 60 ? 2 : 1);
-      ctx.rated[a.id] = true;
-      ctx.rated[norm(a.name) + '|' + norm(a.artist)] = true;
+      if (a.genre) { var g = String(a.genre).toLowerCase(); ctx.genre[g] = (ctx.genre[g] || 0) + ((a.score || 0) >= 60 ? 2 : 1); }
+      ctx.ratedAlbum[a.id] = true;
+      ctx.ratedAlbum[norm(a.name) + '|' + norm(a.artist)] = true;
     });
-    // A song rating is a tenth of an album rating's scale, so it is scaled to
-    // match before the two are summed — otherwise every song counts as a 9.
+    // A song score is out of 10 and an album's out of 100, so it is scaled
+    // before the two are summed — otherwise every song counts as a 9.
     Object.keys(songs).forEach(function (k) {
-      var s = songs[k];
-      addArtist(s.artistId, s.artist, (s.score || 0) * 10);
+      var so = songs[k];
+      addArtist(so.artistId, so.artist, (so.score || 0) * 10);
+      // Already rated, so it is not something to ask about again.
+      ctx.ratedSong[norm(so.name) + '|' + norm(so.artist)] = true;
     });
 
     try {
@@ -28316,9 +28326,6 @@ window.track = function (name, props) {
     } catch (e) {}
 
     try {
-      // Kicked off but never awaited: the feed must not wait on a table that
-      // is empty for most accounts, and the signal degrades to zero until it
-      // lands rather than holding the whole build.
       if (window.VinalListening && VinalListening.loadByArtist) VinalListening.loadByArtist();
       var lp = (window.VinalListening && VinalListening.byArtist) ? VinalListening.byArtist() : null;
       if (lp) {
@@ -28330,116 +28337,68 @@ window.track = function (name, props) {
     return ctx;
   }
 
-  /* ---- THE SIGNALS -------------------------------------------------
+  /* ---- THE SIGNALS ---------------------------------------------------
      Each scores 0..1 on its own terms and says nothing about the others.
-     Weight is the only thing that decides how much it matters, so tuning
-     this feed is editing numbers in one column. */
+     They score the RECORD: taste attaches to records, and the songs inherit
+     their album's score and are ordered within it. */
   var SIGNALS = [
-    {
-      key: 'shortlist',
-      weight: 5.0,
-      note: 'you said you had not heard it',
-      /* The strongest signal there is, and the only one that is an explicit
-         request: a shortlist entry is somebody having seen a record scored
-         highly by a person they follow and having said, in as many words,
-         that they have not heard it. */
-      score: function (c, ctx) { return ctx.shortlist[c.id] ? 1 : 0; },
-    },
-    {
-      key: 'artist',
-      weight: 3.0,
-      note: 'how you rate this artist',
+    { key: 'shortlist', weight: 5.0, note: 'you said you had not heard it',
+      score: function (c, ctx) { return ctx.shortlist[c.id] ? 1 : 0; } },
+
+    { key: 'artist', weight: 3.0, note: 'how you rate this artist',
       score: function (c, ctx) {
-        var a = ctx.artist[c.artistId] ||
-                ctx.artistName[ctx.norm(c.artist)];
+        var a = ctx.artist[c.artistId] || ctx.artistName[norm(c.artist)];
         if (!a || !a.n) return 0;
-        // 0..100 in, 0..1 out, and a 50 is worth nothing rather than half —
-        // the question is whether you LIKE them, not whether you have heard
-        // of them.
+        // A 50 is worth nothing rather than half: the question is whether you
+        // LIKE them, not whether you have heard of them.
         return Math.max(0, (a.sum / a.n) - 50) / 50;
-      },
-    },
-    {
-      key: 'genre',
-      weight: 1.6,
-      note: 'genres you rate highly',
+      } },
+
+    { key: 'listening', weight: 2.2, note: 'what you actually play',
       score: function (c, ctx) {
-        if (!c.genre) return 0;
-        var g = ctx.genre[String(c.genre).toLowerCase()] || 0;
-        var top = 1;
-        Object.keys(ctx.genre).forEach(function (k) { if (ctx.genre[k] > top) top = ctx.genre[k]; });
-        return Math.min(1, g / top);
-      },
-    },
-    {
-      key: 'listening',
-      weight: 2.2,
-      note: 'what you actually play',
-      /* listening_plays, which is the only signal here that is about
-         behaviour rather than opinion. Returns 0 for the great many accounts
-         with no imported history and no plays yet, which degrades the
-         ranking rather than breaking it. */
-      score: function (c, ctx) {
-        /* The listening module's OWN key rule, not a second copy of it. Its
-           norm() strips "(feat. …)" and remaster tails and this one does not,
-           so a local reimplementation would bucket the same artist two ways
-           and quietly score them zero. */
+        // The listening module's OWN key rule — its norm() strips "(feat. …)"
+        // and remaster tails, and a local copy would bucket one artist two ways.
         var k = (window.VinalListening && VinalListening.keyOf)
-          ? VinalListening.keyOf(c.artist, '').split('|')[0] : ctx.norm(c.artist);
+          ? VinalListening.keyOf(c.artist, '').split('|')[0] : norm(c.artist);
         var n = ctx.plays[k] || 0;
         if (!n) return 0;
-        // Log, not linear: the gap between 1 play and 10 says far more than
-        // the gap between 200 and 209.
+        // Log: the gap between 1 play and 10 says far more than 200 to 209.
         return Math.min(1, Math.log(1 + n) / Math.log(1 + ctx.maxPlays));
-      },
-    },
-    {
-      key: 'community',
-      weight: 1.2,
-      note: 'how it is being scored in the Crate',
-      score: function (c) {
-        if (c.communityScore == null) return 0;
-        return Math.max(0, (c.communityScore - 55)) / 45;
-      },
-    },
-    {
-      key: 'collection',
-      weight: 1.4,
-      note: 'you own it and have never rated it',
-      /* The one state on the shelf worth acting on. A record somebody paid
-         Discs for and has never had an opinion about is the most pointed
-         thing this feed can hand them. */
-      score: function (c, ctx) { return ctx.owned[c.id] ? 1 : 0; },
-    },
-    {
-      key: 'fresh',
-      weight: 0.7,
-      note: 'recent',
+      } },
+
+    { key: 'genre', weight: 1.6, note: 'genres you rate highly',
+      score: function (c, ctx) {
+        if (!c.genre) return 0;
+        var g = ctx.genre[String(c.genre).toLowerCase()] || 0, top = 1;
+        Object.keys(ctx.genre).forEach(function (k) { if (ctx.genre[k] > top) top = ctx.genre[k]; });
+        return Math.min(1, g / top);
+      } },
+
+    { key: 'collection', weight: 1.4, note: 'you own it and have never rated it',
+      score: function (c, ctx) { return ctx.owned[c.id] ? 1 : 0; } },
+
+    { key: 'community', weight: 1.2, note: 'how the Crate is scoring it',
+      score: function (c) { return c.communityScore == null ? 0 : Math.max(0, c.communityScore - 55) / 45; } },
+
+    { key: 'fresh', weight: 0.7, note: 'recent',
       score: function (c) {
         var y = parseInt(String(c.year || '').slice(0, 4), 10);
         if (!y) return 0;
         var age = (new Date()).getFullYear() - y;
         return age <= 0 ? 1 : Math.max(0, 1 - age / 12);
-      },
-    },
-    {
-      key: 'repeat',
-      weight: -2.5,
-      note: 'shown before',
-      /* Negative, and deliberately not a filter. A record seen a month ago
-         and never rated is worth offering again eventually; a hard exclusion
-         would empty the feed for anybody with a small crate. */
+      } },
+
+    /* Negative, and deliberately not a filter: a hard exclusion empties the
+       feed for a small crate, and a record seen a month ago is worth offering
+       again. */
+    { key: 'repeat', weight: -2.5, note: 'shown before',
       score: function (c, ctx) {
         var at = ctx.seen[c.id];
         if (!at) return 0;
-        var days = (Date.now() - at) / 86400000;
-        return Math.max(0, 1 - days / 30);
-      },
-    },
+        return Math.max(0, 1 - ((Date.now() - at) / 86400000) / 30);
+      } },
   ];
 
-  /* weight x score, summed. `explain` is the same walk with the parts kept —
-     an ordering nobody can read is an ordering nobody can tune. */
   function rank(c, ctx) {
     var t = 0;
     for (var i = 0; i < SIGNALS.length; i++) t += SIGNALS[i].weight * (SIGNALS[i].score(c, ctx) || 0);
@@ -28453,9 +28412,8 @@ window.track = function (name, props) {
       .sort(function (a, b) { return Math.abs(b.weighted) - Math.abs(a.weighted); });
   }
 
-  /* The line under the title. It names the strongest POSITIVE reason, so the
-     feed can say why a record is in front of you — which is the difference
-     between a recommendation and a shuffle. */
+  // The strongest POSITIVE reason, so the feed can say why this is in front of
+  // you. That is the difference between a recommendation and a shuffle.
   function reasonFor(c, ctx) {
     var best = null;
     SIGNALS.forEach(function (s) {
@@ -28476,114 +28434,144 @@ window.track = function (name, props) {
     }
   }
 
-  /* ---- candidates --------------------------------------------------
+  /* ---- candidate RECORDS ---------------------------------------------
      Four sources, all things the app already fetches for other reasons, so
-     the feed adds no new dependency and no new table. */
-  async function gather(ctx) {
+     this adds no new dependency and no new table. */
+  async function gatherAlbums(ctx) {
     var out = {}, order = [];
     function add(c) {
-      if (!c || !c.id || !c.art) return;
-      if (ctx.rated[c.id]) return;
-      if (ctx.rated[ctx.norm(c.name) + '|' + ctx.norm(c.artist)]) return;
+      if (!c || !c.id || !c.art || !c.name) return;
+      if (ctx.ratedAlbum[c.id]) return;
+      if (ctx.ratedAlbum[norm(c.name) + '|' + norm(c.artist)]) return;
       if (out[c.id]) { Object.keys(c).forEach(function (k) { if (out[c.id][k] == null) out[c.id][k] = c[k]; }); return; }
       out[c.id] = c; order.push(c.id);
     }
 
-    // 1. The community, which needs no catalogue call at all.
     try {
       var tr = (window.Cloud && Cloud.fetchTrending) ? await Cloud.fetchTrending() : [];
       (tr || []).forEach(function (r) {
         add({ id: r.album_id, name: r.album_name, artist: r.album_artist, art: r.album_art,
-              communityScore: r.avg != null ? r.avg : r.score, source: 'crate' });
+              communityScore: r.avg != null ? r.avg : r.score });
       });
     } catch (e) {}
 
-    // 2. The artists you rate highest — their records you have not got.
     var tops = Object.keys(ctx.artist)
       .map(function (k) { return { k: k, name: ctx.artist[k].name, avg: ctx.artist[k].sum / ctx.artist[k].n }; })
-      .sort(function (a, b) { return b.avg - a.avg; })
-      .slice(0, 5);
+      .sort(function (a, b) { return b.avg - a.avg; }).slice(0, 5);
     for (var i = 0; i < tops.length; i++) {
-      var id = tops[i].k;
-      if (id.indexOf('name:') === 0) continue;   // legacy row with no usable id
-      // The name rides along for exactly the reason the recommendation seeds
-      // do — see addArtist.
-      var nm = tops[i].name || '';
+      if (tops[i].k.indexOf('name:') === 0) continue;
       try {
+        // The name rides along because a crate from before the catalogue moved
+        // carries Spotify artist ids, and the route 400s on one with no name.
         var q = { include_groups: 'album' };
-        if (nm) q.name = nm;
-        var d = await spotifyGet('/artists/' + encodeURIComponent(id) + '/albums?' + new URLSearchParams(q).toString());
+        if (tops[i].name) q.name = tops[i].name;
+        var d = await spotifyGet('/artists/' + encodeURIComponent(tops[i].k) + '/albums?' + new URLSearchParams(q).toString());
         (d.items || []).slice(0, 4).forEach(function (al) {
           add({ id: al.id, name: al.name,
-                artist: (al.artists && al.artists[0] && al.artists[0].name) || '',
-                artistId: (al.artists && al.artists[0] && al.artists[0].id) || id,
+                artist: (al.artists && al.artists[0] && al.artists[0].name) || tops[i].name || '',
+                artistId: (al.artists && al.artists[0] && al.artists[0].id) || tops[i].k,
                 art: (al.images && al.images[0] && al.images[0].url) || '',
-                year: (al.release_date || '').slice(0, 4), source: 'artist' });
+                year: (al.release_date || '').slice(0, 4) });
         });
       } catch (e) {}
     }
 
-    // 3. The shortlist. Its rows are already whole records.
     try {
-      var sl = ctx.shortlist;
-      Object.keys(sl).forEach(function (k) {
-        var r = sl[k];
+      Object.keys(ctx.shortlist).forEach(function (k) {
+        var r = ctx.shortlist[k];
         if (!r || typeof r !== 'object') return;
-        add({ id: k, name: r.name, artist: r.artist, art: r.art, year: r.year || '', source: 'shortlist' });
+        add({ id: k, name: r.name, artist: r.artist, art: r.art, year: r.year || '' });
       });
     } catch (e) {}
 
-    // 4. Your own shelf, unrated. No request — CollectionWorth is a cache.
     try {
       var mine = (window.CollectionWorth && CollectionWorth.mine && CollectionWorth.mine()) || [];
-      mine.forEach(function (r) {
-        add({ id: r.album_id, name: r.name, artist: r.artist, art: r.art, source: 'collection' });
-      });
+      mine.forEach(function (r) { add({ id: r.album_id, name: r.name, artist: r.artist, art: r.art }); });
     } catch (e) {}
 
     return order.map(function (k) { return out[k]; });
   }
 
-  /* ---- the card ---------------------------------------------------- */
-  function cardHtml(c, i, ctx) {
-    var sc = c.myScore != null ? c.myScore : 70;
-    return '<article class="fy-card" data-i="' + i + '" data-id="' + esc(c.id) + '">' +
-      '<div class="fy-art">' +
-        '<img src="' + esc(c.art || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
-        '<div class="fy-shade"></div>' +
-        '<button class="fy-play" data-play="' + i + '" aria-label="Play preview">' +
-          '<span class="fy-play-i"></span></button>' +
-        '<div class="fy-bars" aria-hidden="true"><span></span><span></span><span></span></div>' +
+  /* ---- records become songs -------------------------------------------
+     One request per record, which returns every track WITH its preview url —
+     so a song only reaches the feed if its clip is known to exist. Nothing
+     here has to guess later whether a track is playable, and nothing has to
+     look the clip up a second time.
+
+     Sequential, in a small batch. Each uncached album is a Deezer fetch, and
+     firing ten at once at one host is how you get rate-limited off it — the
+     same reason the Collection's price sweep walks its chunks one after
+     another. */
+  async function songsFor(alb) {
+    var base = ((window.Native && Native.api) || '') + '/api/preview';
+    var u = base + '?artist=' + encodeURIComponent(alb.artist || '') +
+                   '&album=' + encodeURIComponent(alb.name || '');
+    var j;
+    try {
+      var r = await fetch(u);
+      if (!r.ok) return [];
+      j = await r.json();
+    } catch (e) { return []; }
+    var tracks = (j && j.tracks) || [];
+    var art = alb.art || j.cover || '';
+    var out = [];
+    for (var i = 0; i < tracks.length && out.length < PER_ALBUM; i++) {
+      var t = tracks[i];
+      if (!t || !t.preview || !t.title) continue;
+      /* INTROS, OUTROS AND SKITS ARE NOT SONGS TO RATE. The first card the
+         feed ever produced was "Start" — channel ORANGE's 45-second intro —
+         because it is track one, and being asked to score a record out of ten
+         on its doorbell sample is a bad first impression of the whole feature.
+         Anything under a minute is an interlude far more often than it is a
+         song. `ms` is the track's REAL length, not the clip's. */
+      if (t.ms && t.ms < 60000) continue;
+      if (_ctxRatedSong[norm(t.title) + '|' + norm(alb.artist)]) continue;
+      out.push({
+        key: alb.id + ':' + norm(t.title),
+        title: t.title,
+        artist: alb.artist || j.artist || '',
+        artistId: alb.artistId || '',
+        albumId: alb.id, albumName: alb.name, albumLink: j.link || '',
+        art: art,
+        clip: { url: t.preview, ms: t.ms || 30000 },
+        why: alb._why, score: alb._score,
+      });
+    }
+    return out;
+  }
+  var _ctxRatedSong = {};
+
+  /* ---- the card -------------------------------------------------------- */
+  function cardHtml(c, i) {
+    return '<article class="fy-card" data-i="' + i + '">' +
+      '<div class="fy-why">' + esc(c.why || '') + '</div>' +
+      '<button class="fy-art" data-open="' + i + '" aria-label="Open ' + esc(c.albumName || '') + '">' +
+        '<img src="' + esc(c.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+        '<span class="fy-shade"></span>' +
+        '<span class="fy-cue"></span>' +
+      '</button>' +
+      '<div class="fy-head">' +
+        '<span class="fy-eq" aria-hidden="true"><i></i><i></i><i></i></span>' +
+        '<button class="fy-title" data-open="' + i + '">' + esc(c.title || '') + '</button>' +
       '</div>' +
-      '<div class="fy-meta">' +
-        '<div class="fy-why">' + esc(reasonFor(c, ctx)) + '</div>' +
-        '<h3 class="fy-title" data-open="' + i + '">' + esc(c.name || '') + '</h3>' +
-        '<div class="fy-artist">' + esc(c.artist || '') + (c.year ? ' &middot; ' + esc(c.year) : '') + '</div>' +
-        '<div class="fy-rate">' +
-          '<input type="range" min="0" max="100" value="' + sc + '" data-rate="' + i + '" aria-label="Your score">' +
-          '<output data-out="' + i + '">' + sc + '</output>' +
-          '<button class="btn-primary fy-save" data-save="' + i + '">Rate it</button>' +
-        '</div>' +
-        '<div class="fy-foot">' +
-          '<button class="fy-open" data-open="' + i + '">Open album &rarr;</button>' +
-          '<span class="fy-src">30s preview &middot; Deezer</span>' +
-        '</div>' +
+      '<div class="fy-sub">' + esc(c.artist || '') +
+        (c.albumName ? ' &middot; <span class="fy-alb" data-open="' + i + '">' + esc(c.albumName) + '</span>' : '') +
+      '</div>' +
+      '<div class="fy-rate">' +
+        '<input type="range" min="0" max="10" step="1" value="7" data-rate="' + i + '" aria-label="Your score out of 10">' +
+        '<output data-out="' + i + '">7</output>' +
+        '<button class="btn-primary fy-save" data-save="' + i + '">Rate</button>' +
       '</div>' +
     '</article>';
   }
 
-  /* ---- playback ---------------------------------------------------- */
-  function trackFor(c) {
-    // No title: the provider falls back to ?album= and takes the first clip on
-    // the record, which is what a feed wants anyway — the opener.
-    return { artist: c.artist || '', title: c.previewTrack || '', album: c.name || '' };
-  }
+  /* ---- playback -------------------------------------------------------- */
+  function trackOf(c) { return { artist: c.artist, title: c.title, album: c.albumName }; }
 
   async function playCard(i) {
     var c = _items[i];
-    if (!c) return;
     var host = el('fy-feed');
-    if (!host) return;
+    if (!c || !host) return;
     if (_playing === i) return;
     stopAll();
     _playing = i;
@@ -28593,55 +28581,29 @@ window.track = function (name, props) {
     var ok = false;
     try {
       VinalAudio.prime();
-      ok = await VinalAudio.play(trackFor(c), CLIP_S);
+      // The clip the album handed over, not a second search for it.
+      ok = await VinalAudio.play(trackOf(c), CLIP_S, { clip: c.clip });
     } catch (e) { ok = false; }
     if (mine !== _tok) return;
     if (card) card.classList.remove('is-loading');
     if (ok === 'blocked') {
-      /* Autoplay refused. Not an error and not a dead clip — the browser is
-         asking for a gesture, so the card asks for one too. */
-      _unlocked = false;
+      /* Autoplay refused. Not an error and not a dead clip — the browser wants
+         a gesture, so the card asks for one. */
+      _unlocked = false; _playing = null;
       if (card) card.classList.add('needs-tap');
-      _playing = null;
       return;
     }
     if (!ok) {
-      if (card) card.classList.add('no-clip');
-      _playing = null;
-      return;
+      /* The url is signed and lives about ten minutes, so a clip that was fine
+         when the feed was built can be stale by the time you reach it. One
+         retry through a real lookup, which is what `fresh` is for. */
+      try { ok = await VinalAudio.play(trackOf(c), CLIP_S, { fresh: true }); } catch (e) { ok = false; }
+      if (mine !== _tok) return;
+      if (!ok) { if (card) card.classList.add('no-clip'); _playing = null; return; }
     }
     _unlocked = true;
     if (card) card.classList.add('is-playing');
-    // The next card's clip, fetched while this one plays, so a scroll lands on
-    // sound rather than on a spinner.
-    if (_items[i + 1]) { try { VinalAudio.prefetch(trackFor(_items[i + 1])); } catch (e) {} }
   }
-
-  /* THE FEED IS MEASURED, NOT GUESSED.
-
-     `height: calc(100dvh - 210px)` put the bottom 45px UNDER the floating nav
-     — measured: the feed ran to 786 and the bar starts at 741, so the rating
-     slider and the Open album row sat behind it. The 210 was a guess at the
-     header plus the search field plus the bar, and every one of those moves:
-     the header grew when the wordmark did, the search field is not on every
-     viewport, and the bar's own height is a token.
-
-     So it is read off the two things that actually bound it. The CSS keeps a
-     calc() as the fallback, which is only ever seen for one frame before this
-     runs and is wrong in the safe direction (too short, never underneath). */
-  function fitFeed() {
-    var host = el('fy-feed');
-    var nav = document.querySelector('nav.modes');
-    if (!host || !nav) return;
-    var top = host.getBoundingClientRect().top;
-    var navR = nav.getBoundingClientRect();
-    // Above 700px the bar is not floating — it is in flow at the top of the
-    // page — so there is nothing below the feed to clear.
-    var floor = (navR.top > top) ? navR.top : window.innerHeight;
-    var h = Math.round(floor - top - 12);
-    if (h > 320) host.style.height = h + 'px';
-  }
-  window.addEventListener('resize', function () { if (_built) fitFeed(); });
 
   function stopAll() {
     try { VinalAudio.stop(); } catch (e) {}
@@ -28649,103 +28611,169 @@ window.track = function (name, props) {
     var host = el('fy-feed');
     if (!host) return;
     host.querySelectorAll('.fy-card').forEach(function (n) {
-      n.classList.remove('is-playing', 'is-loading');
+      n.classList.remove('is-playing', 'is-loading', 'no-clip');
     });
   }
 
-  /* One observer for the whole feed, rebuilt with it. A card is "the one you
-     are looking at" at 60% visible — lower and two cards qualify at once on a
-     short phone, which is how a feed ends up playing two records. */
+  /* One observer for the feed, rebuilt with it. 60% visible is "the one you
+     are looking at" — lower and two cards qualify at once on a short phone,
+     which is how a feed ends up playing two songs. */
   function observe(host) {
     if (_io) { _io.disconnect(); _io = null; }
     _io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         if (!en.isIntersecting) return;
         var i = parseInt(en.target.dataset.i, 10);
-        if (isNaN(i)) return;
-        if (!_unlocked) return;          // the first card waits for a gesture
+        if (isNaN(i) || !_unlocked) return;   // the first card waits for a gesture
         playCard(i);
       });
     }, { threshold: 0.6 });
     host.querySelectorAll('.fy-card').forEach(function (n) { _io.observe(n); });
   }
 
-  function wire(host, ctx) {
+  /* THE FEED IS MEASURED AGAINST THE FLOATING NAV, NOT GUESSED. A CSS
+     calc() put its bottom under the bar with the rating slider behind it, and
+     every term in that guess moves: the header grew when the wordmark did, the
+     search field is not on every viewport, and the bar's height is a token. */
+  function fitFeed() {
+    var host = el('fy-feed'), nav = document.querySelector('nav.modes');
+    if (!host || !nav) return;
+    var top = host.getBoundingClientRect().top;
+    var navR = nav.getBoundingClientRect();
+    var floor = (navR.top > top) ? navR.top : window.innerHeight;
+    var h = Math.round(floor - top - 12);
+    if (h > 320) host.style.height = h + 'px';
+
+    /* And the sleeve's side, which CSS could not be trusted with — see the
+       note on .fy-art. The largest square that fits BOTH the card's width and
+       the height left once the reason line, the title, the subtitle and the
+       rating row have taken theirs. CHROME is measured off the live card
+       rather than typed, so changing any of that copy cannot leave this
+       wrong. */
+    var card = host.querySelector('.fy-card');
+    if (!card) return;
+    var w = card.clientWidth;
+    var avail = card.clientHeight;
+    ['.fy-why', '.fy-head', '.fy-sub', '.fy-rate'].forEach(function (sel) {
+      var n = card.querySelector(sel);
+      if (n) avail -= n.getBoundingClientRect().height;
+    });
+    // The column's gaps, plus the card's own vertical padding.
+    var cs = window.getComputedStyle(card);
+    avail -= (parseFloat(cs.rowGap) || 0) * 4;
+    avail -= (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    var side = Math.max(140, Math.floor(Math.min(w, avail)));
+    host.style.setProperty('--fy-art', side + 'px');
+  }
+  window.addEventListener('resize', function () { if (_built) fitFeed(); });
+
+  function wire(host) {
     host.addEventListener('click', function (e) {
-      var t = e.target.closest('[data-play],[data-save],[data-open]');
+      var t = e.target.closest('[data-open],[data-save]');
       if (!t) return;
-      if (t.dataset.play != null) {
-        var i = +t.dataset.play;
-        if (_playing === i) { stopAll(); return; }
-        _unlocked = true;                 // this IS the gesture
-        var card = host.querySelector('.fy-card[data-i="' + i + '"]');
-        if (card) card.classList.remove('needs-tap');
-        playCard(i);
-        return;
-      }
+
       if (t.dataset.open != null) {
-        var c = _items[+t.dataset.open];
+        var i = +t.dataset.open;
+        var c = _items[i];
         if (!c) return;
+        /* THE SLEEVE IS THE PLAY CONTROL UNTIL AUDIO IS UNLOCKED, and the
+           album link after that. iOS grants an <audio> element permission
+           inside a real gesture and not before, so the first tap has to be the
+           one that starts the sound — sending it to the album page instead
+           would leave a feed that is silent until somebody guesses. */
+        if (!_unlocked && t.classList.contains('fy-art')) {
+          var card = host.querySelector('.fy-card[data-i="' + i + '"]');
+          if (card) card.classList.remove('needs-tap');
+          _unlocked = true;
+          playCard(i);
+          return;
+        }
+        if (t.classList.contains('fy-art') && _playing === i) { stopAll(); return; }
         stopAll();
-        // The same album page search reaches, with the same shape of meta.
-        if (window.openAlbum) openAlbum({ id: c.id, name: c.name, artist: c.artist,
+        if (window.openAlbum) openAlbum({
+          id: c.albumId, name: c.albumName, artist: c.artist,
           artistId: c.artistId || '', art: c.art, year: c.year || '' });
         return;
       }
-      if (t.dataset.save != null) {
-        var k = +t.dataset.save;
-        var rec = _items[k];
-        if (!rec) return;
-        var sl = host.querySelector('[data-rate="' + k + '"]');
-        var v = sl ? parseInt(sl.value, 10) : 70;
-        if (window.saveAlbum) saveAlbum({ id: rec.id, name: rec.name, artist: rec.artist,
-          artistId: rec.artistId || '', art: rec.art, year: rec.year || '', genre: rec.genre || '' }, v);
-        t.textContent = 'Rated ' + v;
-        t.disabled = true;
-        var card2 = host.querySelector('.fy-card[data-i="' + k + '"]');
-        if (card2) { card2.classList.add('is-rated'); if (window.burst) burst(card2); }
-        if (window.buzz) buzz('good');
+
+      var k = +t.dataset.save;
+      var rec = _items[k];
+      if (!rec) return;
+      var sl = host.querySelector('[data-rate="' + k + '"]');
+      var v = sl ? parseInt(sl.value, 10) : 7;
+      if (window.saveSong) {
+        saveSong(
+          { id: rec.key, name: rec.title, artists: [{ name: rec.artist, id: rec.artistId || '' }] },
+          v,
+          { id: rec.albumId, name: rec.albumName, art: rec.art });
       }
+      t.textContent = v > 0 ? ('Rated ' + v) : 'Skipped';
+      t.disabled = true;
+      var card2 = host.querySelector('.fy-card[data-i="' + k + '"]');
+      if (card2) { card2.classList.add('is-rated'); if (window.burst) burst(card2); }
+      if (window.buzz) buzz('good');
     });
+
     host.addEventListener('input', function (e) {
       var r = e.target.closest('[data-rate]');
       if (!r) return;
       var o = host.querySelector('[data-out="' + r.dataset.rate + '"]');
       if (o) o.value = r.value;
       var b = host.querySelector('[data-save="' + r.dataset.rate + '"]');
-      if (b && !b.disabled) b.textContent = 'Rate ' + r.value;
+      if (b && !b.disabled) b.textContent = r.value > 0 ? 'Rate' : 'Skip';
     });
   }
 
   async function build(force) {
     var host = el('fy-feed');
-    if (!host) return;
-    if (_busy) return;
+    if (!host || _busy) return;
     if (_built && !force) return;
     _busy = true;
     var mine = ++_tok;
-    host.innerHTML = '<div class="fy-loading">Finding records for you&hellip;</div>';
+    host.innerHTML = '<div class="fy-loading">Finding songs for you&hellip;</div>';
     try {
       var ctx = buildContext();
-      var cands = await gather(ctx);
+      _ctxRatedSong = ctx.ratedSong;
+      var albums = await gatherAlbums(ctx);
       if (mine !== _tok) return;
-      if (!cands.length) {
+
+      albums = albums.map(function (a) { a._score = rank(a, ctx); a._why = reasonFor(a, ctx); return a; })
+                     .sort(function (x, y) { return y._score - x._score; })
+                     .slice(0, ALBUMS);
+
+      if (!albums.length) {
         host.innerHTML = '<div class="empty"><span class="emoji">' + (window.ICONS ? ICONS.sparkle : '') + '</span>' +
-          '<h3>Nothing to play yet</h3><p>Rate a few records and this fills up with things worth hearing.</p></div>';
+          '<h3>Nothing to play yet</h3><p>Rate a few records and this fills up with songs worth hearing.</p></div>';
         _built = true; return;
       }
-      _items = cands
-        .map(function (c) { c._score = rank(c, ctx); return c; })
-        .sort(function (a, b) { return b._score - a._score; })
-        .slice(0, PAGE);
-      host.innerHTML = _items.map(function (c, i) { return cardHtml(c, i, ctx); }).join('');
-      markSeen(_items.map(function (c) { return c.id; }));
+
+      var songs = [];
+      for (var i = 0; i < albums.length; i++) {
+        var got = await songsFor(albums[i]);
+        if (mine !== _tok) return;
+        songs = songs.concat(got);
+        // Paint as soon as there is something to look at, rather than making
+        // somebody wait for ten round trips before the first card exists.
+        if (songs.length && songs.length <= PER_ALBUM) {
+          _items = songs;
+          host.innerHTML = songs.map(cardHtml).join('');
+          fitFeed(); observe(host);
+        }
+      }
+      if (mine !== _tok) return;
+
+      if (!songs.length) {
+        host.innerHTML = '<div class="reco-note">Couldn’t find any playable songs just now. Try again in a moment.</div>';
+        _built = true; return;
+      }
+
+      _items = songs;
+      host.innerHTML = songs.map(cardHtml).join('');
+      markSeen(albums.map(function (a) { return a.id; }));
       fitFeed();
       observe(host);
       _built = true;
-      window.ForYou._last = { ctx: ctx, items: _items };
-      // Warm the first card so the opening tap plays immediately.
-      if (_items[0]) { try { VinalAudio.prefetch(trackFor(_items[0])); } catch (e) {} }
+      window.ForYou._last = { ctx: ctx, albums: albums, songs: songs };
     } catch (e) {
       host.innerHTML = '<div class="reco-note">Couldn’t build your feed just now.</div>';
     } finally { _busy = false; }
@@ -28756,35 +28784,40 @@ window.track = function (name, props) {
     if (!host) return;
     if (!_built) { build(force); return; }
     // Re-measured on every entry: the header is a different height logged in
-    // and logged out, and the artist banner appears and disappears above it.
+    // and logged out, and the banner appears and disappears above it.
     fitFeed();
     if (force) build(true);
   }
 
-  // Leaving the tab must silence it. The feed is a view like any other and
-  // `setMode` only changes `display` — an <audio> element does not care that
-  // its card is hidden and would carry on playing over whatever you went to.
+  // Leaving the tab must silence it: setMode only changes `display`, and an
+  // <audio> element does not care that the card holding it is hidden.
   function leave() { stopAll(); if (_io) { _io.disconnect(); _io = null; } }
 
   document.addEventListener('DOMContentLoaded', function () {
     var host = el('fy-feed');
-    if (host) wire(host, null);
+    if (host) wire(host);
     document.addEventListener('visibilitychange', function () { if (document.hidden) stopAll(); });
+    // The clip runs out on its own and the card has to stop saying it is playing.
+    try { VinalAudio.on('end', function () { stopAll(); }); } catch (e) {}
   });
 
   window.ForYou = {
     render: render, build: build, leave: leave, stop: stopAll,
     SIGNALS: SIGNALS, rank: rank, explain: explain,
-    /* For tuning from the console: ForYou.why(0) prints why the first card is
-       where it is. A ranking you cannot read is a ranking you cannot fix. */
+    /* For tuning from the console. A ranking you cannot read is one you cannot
+       fix. */
     why: function (i) {
       var l = window.ForYou._last;
-      if (!l || !l.items[i]) return null;
-      return { album: l.items[i].name, total: l.items[i]._score, parts: explain(l.items[i], l.ctx) };
+      if (!l || !l.songs[i]) return null;
+      var song = l.songs[i];
+      var alb = l.albums.filter(function (a) { return a.id === song.albumId; })[0];
+      if (!alb) return null;
+      return { song: song.title, album: alb.name, total: alb._score, parts: explain(alb, l.ctx) };
     },
   };
   window.renderForYou = render;
 })();
+
 
 </script>
 </body>
