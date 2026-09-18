@@ -6707,6 +6707,40 @@ button.rw-day {
   color: var(--text-faint); white-space: nowrap; }
 .odds-note { margin-top: 14px; }
 
+/* ---- a preview button on a rated song row ----------------------------
+   Sized to Apple's 44pt floor at the tap target even though the circle reads
+   as 30 — the padding does the work, so the control can be small in a dense
+   list without being small to press. */
+.sr-play {
+  width: 30px; height: 30px; flex-shrink: 0;
+  border-radius: 50%; cursor: pointer;
+  background: var(--surface-3); border: 1px solid var(--border-strong);
+  color: var(--text-dim);
+  display: grid; place-items: center; padding: 0;
+  transition: background var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease),
+              border-color var(--dur-quick) var(--ease);
+}
+.sr-play::after {
+  content: ''; width: 0; height: 0; margin-left: 2px;
+  border-left: 8px solid currentColor;
+  border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+  transition: none;
+}
+.sr-play:hover { color: var(--text); border-color: var(--c-pink); }
+/* Playing is a SQUARE, not a second triangle. A play glyph on the row that is
+   already sounding says "press to play" over something that is playing — the
+   wrong-verb problem the player bar's own toggle exists to solve. */
+.sr-play.is-playing {
+  background: var(--c-pink-dim); border-color: var(--c-pink); color: var(--c-pink);
+}
+.sr-play.is-playing::after {
+  width: 9px; height: 9px; margin-left: 0; border: 0;
+  background: currentColor; border-radius: 1px;
+}
+.sr-play.is-loading { opacity: .55; }
+.sr-play.no-clip, .sr-play.needs-tap { border-color: var(--red); color: var(--red); }
+.sr-play.no-clip::after { border-left-color: currentColor; }
+
 /* ---- FOR YOU ---------------------------------------------------------
    One record a screen, scroll-snapped. The snap is what makes the
    IntersectionObserver honest: without it a card can sit half on screen
@@ -10530,6 +10564,8 @@ function setMode(mode, fromCode) {
      element does not care that the card holding it is hidden — without this,
      a record carries on playing over whatever you went to look at. */
   if (mode !== 'foryou' && window.ForYou) window.ForYou.leave();
+  // Same rule as the feed: `display:none` does not stop an <audio> element.
+  if (mode !== 'songs' && window.CratePreview) window.CratePreview.stop();
   if (mode === 'games' && window.renderGameBests) window.renderGameBests();
   // Repaint on entry so a gate passed while rating is announced the next time
   // you look at the grid, rather than silently being open.
@@ -10753,6 +10789,78 @@ function renderAlbums(){
   });
 }
 
+/* ---- a preview, from The Crate --------------------------------------
+   Every row here is a song you have already rated, which means you have an
+   opinion about it and no way to check it against the record. Thirty seconds
+   from Deezer, the same clip the player and Recall and For You use.
+
+   DELEGATED ON THE DOCUMENT, never wired per row. renderSongs() rebuilds the
+   whole list on every rating, every sort, every keystroke in the filter and
+   every cloud merge — a listener attached to a row is a listener thrown away
+   a moment later, and the row the audio belongs to is gone by the time it
+   ends. Same reasoning as the album page's track rows, which have had a
+   delegated handler since the player shipped.
+
+   The row is found by ID rather than held as a node, for the same reason:
+   the node is replaced constantly, the id is not. */
+(function () {
+  'use strict';
+  var _id = null, _tok = 0;
+
+  function paint() {
+    document.querySelectorAll('.sr-play').forEach(function (b) {
+      b.classList.toggle('is-playing', b.dataset.crateplay === _id);
+      b.classList.remove('is-loading');
+    });
+  }
+  function stop() {
+    _tok++;
+    try { if (window.VinalAudio) VinalAudio.stop(); } catch (e) {}
+    _id = null; paint();
+  }
+  window.CratePreview = { stop: stop, playing: function () { return _id; } };
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.sr-play');
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    var id = b.dataset.crateplay;
+    if (_id === id) { stop(); return; }
+    var rec = (window.loadSongs ? loadSongs() : {})[id];
+    if (!rec) return;
+    stop();
+    _id = id;
+    b.classList.add('is-loading');
+    var mine = ++_tok;
+    if (window.buzz) buzz('tap');
+    Promise.resolve()
+      .then(function () { VinalAudio.prime(); return VinalAudio.play({
+        artist: rec.artist || '', title: rec.name || '', album: rec.albumName || '' }, 30); })
+      .then(function (ok) {
+        if (mine !== _tok) return;
+        b.classList.remove('is-loading');
+        if (!ok || ok === 'blocked') {
+          /* A refused autoplay and a record with no clip are different
+             answers and neither is an error worth a banner. The button says
+             so on itself and the row is left alone. */
+          _id = null; paint();
+          b.classList.add(ok === 'blocked' ? 'needs-tap' : 'no-clip');
+          setTimeout(function () { b.classList.remove('no-clip', 'needs-tap'); }, 2600);
+          return;
+        }
+        paint();
+      })
+      .catch(function () { if (mine === _tok) { _id = null; paint(); } });
+  });
+
+  // The clip runs out on its own, and the button has to stop saying it is
+  // playing when it does.
+  document.addEventListener('DOMContentLoaded', function () {
+    try { VinalAudio.on('end', function () { _id = null; paint(); }); } catch (e) {}
+  });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); });
+})();
+
 function renderSongs(){
   const all=Object.values(loadSongs());
   const host=document.getElementById('songs-list');
@@ -10772,6 +10880,7 @@ function renderSongs(){
       '<div class="song-meta"><div class="song-name">'+esc(s.name)+'</div>'+
       '<div class="song-sub">'+esc(s.artist)+' \u00b7 '+esc(s.albumName)+'</div></div>'+
       '<div class="song-rate">'+
+        '<button class="sr-play" data-crateplay="'+esc(s.id)+'" aria-label="Play a preview of '+esc(s.name)+'"></button>'+
         '<input type="range" class="song-slider" min="0" max="10" step="1" value="'+s.score+'" data-song="'+s.id+'">'+
         '<div class="song-score">'+s.score+'</div>'+
         '<button class="del-btn" data-delsong="'+s.id+'" aria-label="Remove">'+ICONS.trash+'</button>'+
@@ -20806,6 +20915,44 @@ window.renderAdminStats = renderAdminStats;
     } catch (e) { return null; }
   }
 
+  /* ONE COPY PER RECORD, AND A RECORD IS NOT AN ID.
+
+     The server has always enforced one row per (user, album_id) — it is the
+     primary key, and both definer functions raise on it besides. So a
+     duplicate on the shelf was never the limit failing; it was two ids for
+     one record.
+
+     A record bought before the catalogue moved carries a Spotify base62 id
+     and the Market now offers the same record under Deezer's numeric one, so
+     `owned[a.album_id]` missed and the pick button appeared on something
+     already on the shelf. Exactly the shape of the Crate's "Your call"
+     bug — same record, two keys, no match — and the same answer: fall back
+     to the name.
+
+     Nothing is re-keyed and nothing is written. This is a read. */
+  function colKey(name, artist) {
+    function n(x) {
+      return String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().replace(/\([^)]*\)|\[[^\]]*\]/g, '')
+        .replace(/[^a-z0-9]+/g, '');
+    }
+    var a = n(name);
+    return a ? (a + '|' + n(artist)) : '';
+  }
+  function ownedIndex(rows) {
+    var byId = {}, byName = {}, row = {};
+    (rows || []).forEach(function (r) {
+      byId[r.album_id] = true; row[r.album_id] = r;
+      var k = colKey(r.name, r.artist);
+      if (k) { byName[k] = true; if (!row[k]) row[k] = r; }
+    });
+    return {
+      has: function (a) { return !!byId[a.album_id] || !!byName[colKey(a.name, a.artist)]; },
+      row: function (a) { return row[a.album_id] || row[colKey(a.name, a.artist)] || null; },
+      byId: byId,
+    };
+  }
+
   async function loadMine(force) {
     if (_mine && !force) return _mine;
     try {
@@ -21227,13 +21374,14 @@ window.renderAdminStats = renderAdminStats;
       if (!_results && !_market) body.innerHTML = '<p class="reco-note">Reading the crate…</p>';
       var items = _results || await loadMarket(!_market);
       if (stale()) return;
-      var owned = {};
-      // The row, not just a flag: the Sell button has to print 70% of what you
-      // paid, and only the collection row knows that number.
-      var mineRow = {};
       var mineNow = await loadMine();
       if (stale()) return;
-      mineNow.forEach(function (a) { owned[a.album_id] = true; mineRow[a.album_id] = a; });
+      /* Indexed by id AND by name, so a record bought under a legacy Spotify
+         id is recognised when the Market offers it under a Deezer one. The
+         row comes back too, because the Sell button has to print 70% of what
+         you PAID and only the collection row knows that number. */
+      var own = ownedIndex(mineNow);
+      var owned = own.byId;
       var discs = (window.Wallet && Wallet.get) ? (Wallet.get().discs || 0) : 0;
       var admin = (window.Wallet && Wallet.get) ? Wallet.get().is_admin : false;
       var picks = (window.Wallet && Wallet.get) ? (Wallet.get().album_picks || 0) : 0;
@@ -21241,6 +21389,12 @@ window.renderAdminStats = renderAdminStats;
         body.innerHTML = '<div class="reco-note">Nothing in the crate to buy yet — rate some albums first.</div>';
         return;
       }
+      /* Fold the name matches back into the id set, so everything downstream —
+         priceSweep, which decides whether to put a pick button on a card as
+         its price lands — keeps working on a plain id lookup. Without this the
+         card would render correctly and then GROW a pick button a second later
+         when the sweep answered, which is the worse version of the bug. */
+      items.forEach(function (a) { if (own.has(a)) owned[a.album_id] = true; });
       body.innerHTML =
         (picks > 0
           ? '<div class="col-picks-box"><b>' + picks + ' album pick' + (picks === 1 ? '' : 's') +
@@ -21252,13 +21406,14 @@ window.renderAdminStats = renderAdminStats;
         'You hold ' + (admin ? '∞' : n(discs)) + ' Discs. Selling a record returns 70%.' +
         (_results ? ' <a href="#" id="col-clear">Back to the crate</a>' : '') + '</p>' +
         '<div class="col-grid">' + items.map(function (a) {
+          var isOwned = own.has(a);
           return card(a, {
-            owned: !!owned[a.album_id],
-            paid: (mineRow[a.album_id] || {}).price,
+            owned: isOwned,
+            paid: (own.row(a) || {}).price,
             // A pick still has to go through pricing, so it is only offered on
             // a record that already has a price. The pricing sweep below puts
             // the button on as each price lands.
-            picks: picks > 0 && !owned[a.album_id] && a.price != null,
+            picks: picks > 0 && !isOwned && a.price != null,
             afford: admin || a.price == null || discs >= a.price
           });
         }).join('') + '</div>';
