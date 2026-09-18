@@ -352,8 +352,14 @@ body[data-section="crate"]        { --section: var(--c-cyan);    --section-dim: 
 body[data-section="albums"]       { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
 body[data-section="songs"]        { --section: var(--c-pink);    --section-dim: var(--c-pink-dim); }
 body[data-section="games"]        { --section: var(--c-lime);    --section-dim: var(--c-lime-dim); }
- body[data-section="collection"]   { --section: var(--c-lime);    --section-dim: var(--c-lime-dim); }
-body[data-section="rewards"]      { --section: var(--accent-2);  --section-dim: var(--accent-2-dim); }
+/* Violet, not lime. Minigames is lime, and these are two separate
+   destinations in the same five-item bar — the page temperature is supposed to
+   tell you where you are, and two places painted the same colour cannot. */
+body[data-section="collection"]   { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
+/* Pink, matching its nav button. --accent-2 is THEMED, so the Shop's identity
+   colour used to change with whatever skin was equipped — which is no identity
+   colour at all. */
+body[data-section="rewards"]      { --section: var(--c-pink);    --section-dim: var(--c-pink-dim); }
 body[data-section="achievements"] { --section: var(--c-blue);    --section-dim: var(--c-blue-dim); }
 body[data-section="wars"]         { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
 body[data-section="people"]       { --section: var(--c-blue);    --section-dim: var(--c-blue-dim); }
@@ -430,7 +436,31 @@ header {
        things that are about you rather than about where you are.
    The bell stays, because it is the one that lights up. */
 @media (max-width: 699px) {
-  #shop-open-btn, #activity-toggle { display: none; }
+  /* Recent activity goes; the Shop stays, because it now carries the balance.
+     The word "Shop" is dropped there and the trolley says it instead — the
+     icon is unambiguous and the four characters it frees are what let the
+     number fit beside the avatar.
+
+     THE HEADER IS A FIXED WIDTH AND THE WORDMARK IS WHAT GIVES WAY (`.brand`
+     is min-width:0 and `.head-actions` is flex-shrink:0, because a button
+     squeezed to nothing is a button nobody can press). So making the wordmark
+     bigger without taking something out of the controls does not make it
+     bigger — it makes it disappear, which is exactly what the first attempt
+     did: VINALL vanished entirely and left the disc on its own.
+
+     Two go, and neither is lost:
+       - the Shop chip, logged out, because with no balance to show it is a
+         duplicate of the Shop button in the bar one thumb below;
+       - the bell, logged out, because there is no account to notify. */
+  #activity-toggle { display: none; }
+  .shop-open-btn .sob-word { display: none; }
+  body.signed-out #shop-open-btn,
+  body.signed-out #notif-toggle { display: none; }
+}
+@media (min-width: 700px) {
+  /* Above the fold-out point the icon and the word both fit, and a bare
+     number beside a trolley is a price rather than a balance. */
+  #shop-open-discs::before { content: '\00b7'; margin-right: 5px; opacity: .5; }
 }
 
 @media (min-width: 700px) {
@@ -443,7 +473,12 @@ header {
 
 /* Spinning vinyl disc — the hero mark */
 .brand-mark {
-  width: 32px; height: 32px;
+  /* Bigger, and this is the anchor the whole top of the app hangs off — it is
+     also the object the splash record flies into, so it is the thing somebody
+     has just spent a second watching. 32px made it a bullet point next to the
+     word. The flight destination is MEASURED at runtime, so this number moves
+     freely without anything else having to be told. */
+  width: 44px; height: 44px;
   border-radius: 50%;
   position: relative;
   flex-shrink: 0;
@@ -493,7 +528,13 @@ header {
 .brand-text {}
 .brand-text h1 {
   font-family: var(--font-display);
-  font-size: var(--t-h1);
+  /* Its own clamp rather than --t-h1. The wordmark is not a page heading — it
+     is the app's name, it appears once, and it should be the largest thing in
+     the bar. Still a clamp and still mobile-first: the lower bound is what a
+     375px screen gets, and it grows into the upper one rather than a desktop
+     size being let loose on a phone, which is the mistake the type scale
+     exists to stop. Capped so it cannot crowd the controls opposite it. */
+  font-size: clamp(26px, 6.9vw, 40px);
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1;
@@ -510,7 +551,29 @@ header {
   margin-top: 3px;
   display: none;
 }
-@media (min-width: 700px) { .brand-text p { display: block; } .brand-mark { width: 52px; height: 52px; } }
+@media (min-width: 700px) { .brand-text p { display: block; } .brand-mark { width: 64px; height: 64px; } }
+
+/* THE HEADER'S PHONE BUDGET, and it is deliberately AFTER `.brand` above.
+
+   Measured at 375px, signed in: the bar is 343 wide, the controls take 200.8
+   of it and the header gap another 12, which leaves the brand 130.2 — a 44px
+   record, a 12px gap, and 74 left for a wordmark that wants 88. So VINALL
+   rendered as "VIN…".
+
+   The first attempt at this lived in the @media block two hundred lines up,
+   next to the other phone rules, where it was silently outranked by
+   `.brand { gap: var(--s3) }` further down the file. FOURTH time this app has
+   shipped a rule beaten by one later in the stylesheet — after the safe-area
+   insets, the 24x26 song-row oval and the checkbox. If a rule is meant to
+   win, put it where it can.
+
+   Sixteen pixels, taken from three places that can afford them, and the
+   wordmark then has 90 for its 88. */
+@media (max-width: 699px) {
+  .brand { gap: 8px; }
+  .head-actions { gap: 6px; }
+  .shop-open-btn { padding: 9px 10px; gap: 5px; }
+}
 
 /* Waveform — 5 animated bars next to the brand */
 .waveform {
@@ -651,7 +714,10 @@ nav.modes {
 .nav-indicator {
   position: absolute; top: 6px; bottom: 6px; left: 0;
   width: 0; border-radius: 999px;
-  background: var(--section-dim);
+  /* --nav-ind is written by positionNavIndicator off the active button's own
+     hue. Falls back to the section colour, so a build where that JS has not
+     run yet looks exactly like it used to rather than looking broken. */
+  background: var(--nav-ind, var(--section-dim));
   transition: transform var(--dur) var(--ease), width var(--dur) var(--ease),
               background-color var(--dur-slow) ease;
   z-index: 0; pointer-events: none;
@@ -689,9 +755,34 @@ nav.modes button .nl {
   letter-spacing: -0.015em;
   padding: 0 1px;
 }
-/* The label is the section's own colour, so the bar tells you where you are
-   in the same language the page heading and the background wash use. */
-nav.modes button.active { color: var(--section); }
+/* EVERY DESTINATION OWNS A HUE, and no two share one.
+
+   It used to read `color: var(--section)`, which is the CURRENT section's
+   colour — so the bar had exactly one colour at a time and it was whichever
+   page you were already on. That tells you nothing you did not know. Worse,
+   two destinations were genuinely the same colour: Minigames and Collection
+   were both lime, so the one piece of information the bar could have carried
+   was ambiguous between two of its five items.
+
+   Now each button carries its own, set by nth-child the way the stats strip
+   and the minigame grid already assign theirs, so the bar keeps working
+   whatever it holds that day. The indicator takes the same hue, so the pill
+   changes colour as it slides rather than staying one shade and arriving
+   somewhere that disagrees with it.
+
+   Fixed neons, never --accent-2 or --gold-dim: those are THEMED, and a
+   destination whose identity colour changes when somebody equips Neon Vault
+   has no identity colour. Same reason --c-cyan and the rest are not themed.
+   The inactive state stays --text-faint — five lit colours at once is a
+   fairground, and the point is to say which one you are on. */
+nav.modes button:nth-child(2) { --nav-c: var(--gold);     --nav-c-dim: var(--gold-dim); }      /* Home */
+nav.modes button:nth-child(3) { --nav-c: var(--c-cyan);   --nav-c-dim: var(--c-cyan-dim); }    /* Crate */
+nav.modes button:nth-child(4) { --nav-c: var(--c-lime);   --nav-c-dim: var(--c-lime-dim); }    /* Minigames */
+nav.modes button:nth-child(5) { --nav-c: var(--c-violet); --nav-c-dim: var(--c-violet-dim); }  /* Collection */
+nav.modes button:nth-child(6) { --nav-c: var(--c-pink);   --nav-c-dim: var(--c-pink-dim); }    /* Shop */
+nav.modes button:nth-child(7) { --nav-c: var(--c-blue);   --nav-c-dim: var(--c-blue-dim); }    /* spare */
+/* nth-child(1) is .nav-indicator, which is why the buttons start at 2. */
+nav.modes button.active { color: var(--nav-c, var(--section)); }
 nav.modes button.active .nav-icon { transform: translateY(-1px); }
 nav.modes button .nav-icon { transition: transform var(--dur) var(--ease); }
 nav.modes button:active { transform: scale(0.94); }
@@ -762,7 +853,12 @@ nav.modes .nav-icon { width: 21px; height: 21px; }
   display: inline-flex; align-items: center; gap: 7px;
   background: var(--gold-dim); border: 1px solid var(--gold);
   color: var(--gold); font-family: var(--font-mono); font-weight: 600; font-size: 13px;
-  padding: 9px 16px; border-radius: 999px; cursor: pointer;
+  padding: 9px 14px; border-radius: 999px; cursor: pointer;
+  /* The balance is a number that changes while you watch it, so it gets
+     tabular figures — without them the chip visibly breathes as the digits
+     swap width, which on a control that pulses already is one movement too
+     many. */
+  font-variant-numeric: tabular-nums;
   position: relative; overflow: visible;
   transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   box-shadow: 0 0 0 0 rgba(245,200,66,0.5);
@@ -7004,8 +7100,15 @@ window.ICONS = {
     <div class="head-actions">
       <button class="activity-toggle head-icon-btn" id="notif-toggle" title="Notifications" aria-label="Notifications"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 2.2c-1.8 0-3.1 1.4-3.1 3.4v2c0 .8-.3 1.6-.9 2.3l-.5.6h9l-.5-.6c-.6-.7-.9-1.5-.9-2.3v-2c0-2-1.3-3.4-3.1-3.4Z"/><path d="M6.3 11.8a1.8 1.8 0 0 0 3.4 0"/></svg><span class="dot" id="notif-dot" style="display:none;"></span></button>
       <button class="activity-toggle head-icon-btn" id="activity-toggle" title="Recent activity" aria-label="Recent activity"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.6 1.5"/></svg><span class="dot"></span></button>
-      <button id="shop-open-btn" class="shop-open-btn" title="Disc Shop">
-        <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>
+      <!-- Shop and the balance, next to the avatar. It used to be hidden under
+           700px because six controls did not fit a 402pt bar — the balance is
+           the reason to bring it back, since a currency you cannot see is a
+           currency you forget you have. It fits now because the count is
+           abbreviated to about four characters however large it gets, and
+           because recent activity left this bar for the account menu. -->
+      <button id="shop-open-btn" class="shop-open-btn" title="Shop">
+        <svg class="shop-trolley" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.6 2.2h1.7l1.5 7.1h6.6l1.4-4.9H4.5"/><circle cx="6.1" cy="12.4" r="1.15"/><circle cx="11.2" cy="12.4" r="1.15"/></svg>
+        <span class="sob-word">Shop</span>
         <span id="shop-open-discs">Shop</span>
       </button>
       <div id="auth-area"></div>
@@ -7035,7 +7138,12 @@ window.ICONS = {
     <button data-mode="albums"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.2 5.6h11.6v7.2a1 1 0 0 1-1 1H3.2a1 1 0 0 1-1-1Z"/><path d="m2.2 5.6 1.4-3h8.8l1.4 3"/><path d="M5.7 8.4v2.8M8 8.4v2.8M10.3 8.4v2.8"/></svg><span class="nl">Crate</span></button>
     <button data-mode="games"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.4" y="2.4" width="11.2" height="11.2" rx="2.8"/><circle cx="5.9" cy="5.9" r=".95" fill="currentColor" stroke="none"/><circle cx="10.1" cy="10.1" r=".95" fill="currentColor" stroke="none"/></svg><span class="nl">Minigames</span></button>
     <button data-mode="collection"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.7" y="2.6" width="8.9" height="8.9" rx="1.5"/><path d="M11.3 13.4H4a1.4 1.4 0 0 1-1.4-1.4V4.7"/></svg><span class="nl">Collection</span></button>
-    <button data-mode="rewards"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg><span class="nl">Discs</span></button>
+    <!-- The data-mode stays `rewards`, and must. It is what setMode's explicit
+         `views` map is keyed on, what positionNavIndicator measures and what
+         every `#modes button[data-mode="rewards"]` selector in the file finds.
+         This is a display rename, the same arrangement as Album Blitz becoming
+         Cover Fire with every id, RPC and award key left as `blitz`. -->
+    <button data-mode="rewards"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.7 2.3h1.8l1.5 7.2h6.7l1.5-5H4.6"/><circle cx="6.3" cy="12.5" r="1.2"/><circle cx="11.4" cy="12.5" r="1.2"/></svg><span class="nl">Shop</span></button>
   </nav>
 
   <!-- connect gate -->
@@ -7397,7 +7505,7 @@ window.ICONS = {
        Draw, then the Shop. The view id stays `rewards` — renaming it buys
        nothing and walks into the `views` map trap in setMode. -->
   <section id="view-rewards" class="view" style="display:none;">
-    <div class="section-head"><h2><span data-icon="disc"></span> Discs</h2><span class="muted" id="rw-streak"></span></div>
+    <div class="section-head"><h2><span data-icon="disc"></span> Shop</h2><span class="muted" id="rw-streak"></span></div>
     <div id="rewards-body"></div>
 
     <!-- The Draw. A sibling of #rewards-body rather than content inside it,
@@ -10344,6 +10452,12 @@ function positionNavIndicator() {
   // it instead, so restyling the bar cannot leave the pill a few px out.
   const pad = parseFloat(getComputedStyle(nav).paddingLeft) || 0;
   indicator.style.transform = 'translateX(' + (btnRect.left - navRect.left - pad) + 'px)';
+  /* The pill takes the destination's own hue, read off the button rather than
+     mapped here — the map lives in one place, in the CSS beside the buttons,
+     and a second copy of it in JS is a second copy to drift. Empty on a build
+     where those properties are gone, and the CSS fallback covers that. */
+  const hue = getComputedStyle(active).getPropertyValue('--nav-c-dim').trim();
+  indicator.style.setProperty('--nav-ind', hue || '');
 }
 window.positionNavIndicator = positionNavIndicator;
 window.addEventListener('resize', positionNavIndicator);
@@ -12125,8 +12239,15 @@ const Cloud=(function(){
 
   async function refreshUI(){
     const el=document.getElementById('auth-area');if(!el)return;
+    /* The header bar is laid out differently for the two states and CSS has no
+       way to ask whether somebody is signed in, so it is told. Logged out
+       there is no balance to show and no notification to receive, which is
+       what buys the wordmark its room on a 375px screen. */
+    document.body.classList.toggle('signed-out', !user);
     let acct=document.getElementById('acct-chip');if(acct)acct.remove();
-    acct=document.createElement('span');acct.id='acct-chip';acct.style.marginRight='10px';acct.style.position='relative';
+    acct=document.createElement('span');acct.id='acct-chip';acct.style.position='relative';/* No inline marginRight any more: .head-actions is a flex row with its
+       own gap, so this was spacing counted twice — and the ten pixels it
+       took were exactly what the wordmark was short of at 375px. */
     if(user){
       let avatarUrl='';try{const p=await fetchProfile(user.id);if(p&&p.avatar_url)avatarUrl=p.avatar_url;}catch(e){}
       const initial=esc((user.email||'?').charAt(0).toUpperCase());
@@ -15930,16 +16051,21 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   // Count the visible number up rather than snapping — small detail, feels
   // a lot more like a game currency ticking up than a static label swap.
-  function countUp(el, from, to, ms) {
-    if (from === to) { el.textContent = to; return; }
+  /* `fmt` so a counter can tick in whatever form the surface prints. The
+     header chip is abbreviated and the Shop's own balance is not, and a
+     counter that animates in one format and lands in another is a number that
+     visibly changes shape as it stops. */
+  function countUp(el, from, to, ms, fmt) {
+    fmt = fmt || function (n) { return String(n); };
+    if (from === to) { el.textContent = fmt(to); return; }
     const start = performance.now();
     let landed = false;
-    function land() { if (landed) return; landed = true; el.textContent = to; }
+    function land() { if (landed) return; landed = true; el.textContent = fmt(to); }
     function step(now) {
       if (landed) return;
       const t = Math.min(1, (now - start) / ms);
       const eased = 1 - Math.pow(1 - t, 3);
-      el.textContent = Math.round(from + (to - from) * eased);
+      el.textContent = fmt(Math.round(from + (to - from) * eased));
       if (t < 1) requestAnimationFrame(step);
       else land();
     }
@@ -15951,14 +16077,33 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     setTimeout(land, ms + 120);
   }
 
+  /* 26,432 -> "26.4k". The header chip sits beside the avatar in a bar that
+     already lost two controls for being too wide, so the balance has to cost
+     about four characters however large it gets.
+
+     A trailing ".0" is dropped, because "26k" and "26.4k" are both four
+     characters and "26.0k" says the zero is meaningful when it is rounding.
+     Under a thousand it is printed in full: at that size the exact number is
+     short AND is the one somebody is watching most closely. */
+  function abbrevDiscs(n) {
+    n = Math.max(0, Math.round(Number(n) || 0));
+    if (n < 1000) return String(n);
+    if (n < 1000000) {
+      const k = n / 1000;
+      return (k < 100 ? k.toFixed(1).replace(/\.0$/, '') : Math.round(k)) + 'k';
+    }
+    const m = n / 1000000;
+    return (m < 100 ? m.toFixed(1).replace(/\.0$/, '') : Math.round(m)) + 'M';
+  }
+
   function updateShopButton() {
     const label = document.getElementById('shop-open-discs');
     if (!label) return;
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { label.textContent = 'Shop'; return; }
     // Real balance alongside the ∞, not instead of it — see renderStats.
-    if (state.is_admin) { label.textContent = '∞ ' + (state.discs || 0); label.dataset.val = state.discs; return; }
+    if (state.is_admin) { label.textContent = '∞'; label.dataset.val = state.discs; return; }
     const prev = parseInt(label.dataset.val || '0', 10);
-    countUp(label, prev, state.discs, 500);
+    countUp(label, prev, state.discs, 500, abbrevDiscs);
     label.dataset.val = state.discs;
   }
 
@@ -16376,6 +16521,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     },
     load: load, get: get, recordRating: recordRating,
     awardGame: awardGame, syncAward: syncAward, awardDiscs: awardDiscs,
+    abbrevDiscs: abbrevDiscs,
     dailyLogin: dailyLogin, spin: spin,
     loadClaims: loadClaims, claimedMilestone: claimedMilestone, claimMilestone: claimMilestone,
     claims: function () { return _claims || {}; },
