@@ -6611,6 +6611,15 @@ button.rw-day {
   color: var(--text-faint); white-space: nowrap; }
 .odds-note { margin-top: 14px; }
 
+/* A four-track EP in a list headed "albums left" reads as a bug in the list
+   unless the list says what it is. */
+.kind-chip {
+  display: inline-block; margin-left: 6px; padding: 1px 6px;
+  border-radius: 5px; font-size: 10px; font-weight: 700;
+  letter-spacing: .08em; vertical-align: middle;
+  color: var(--c-violet); background: var(--c-violet-dim);
+}
+
 /* ---- Reach (referrals) ------------------------------------------------
    Its own block rather than reusing the Shop's rows: a code is a thing to be
    READ OFF A SCREEN and typed into another phone, so it gets monospace,
@@ -11117,7 +11126,14 @@ async function fetchStudioAlbums(artistId,urgent,artistName){
   let items=[];
   for(let page=0;page<3&&path;page++){let data;try{data=await spotifyFetch(path,urgent?{priority:true}:undefined);}catch(e){if(page===0)throw e;break;}items=items.concat(data.items||[]);path=data.next?data.next.replace(SPOTIFY_API,''):null;}
   const byBase={};
-  items.forEach(function(al){if(!al.id||!al.name)return;if(isNonStudio(al.name))return;const base=baseAlbumTitle(al.name);if(!base)return;const year=parseInt((al.release_date||'').slice(0,4),10)||9999;const edition=/(deluxe|edition|expanded|anniversary|remaster|reissue|bonus)/i.test(al.name);const cand={id:al.id,name:al.name,art:pickImage(al.images,500),year:(al.release_date||'').slice(0,4),_year:year,_edition:edition};const ex=byBase[base];if(!ex)byBase[base]=cand;else if((ex._edition&&!cand._edition)||(ex._edition===cand._edition&&cand._year<ex._year))byBase[base]=cand;});
+  items.forEach(function(al){if(!al.id||!al.name)return;if(isNonStudio(al.name))return;const base=baseAlbumTitle(al.name);if(!base)return;const year=parseInt((al.release_date||'').slice(0,4),10)||9999;const edition=/(deluxe|edition|expanded|anniversary|remaster|reissue|bonus)/i.test(al.name);const cand={id:al.id,name:al.name,art:pickImage(al.images,500),year:(al.release_date||'').slice(0,4),
+      /* kind comes off /api/catalogue, which classifies on the TRACK COUNT and
+         not on Deezer's record_type — see api/_artists.js. It is what the EP
+         chip is drawn from, so it is carried rather than re-derived: a second
+         copy of that rule in the browser is a second copy to drift. Null on
+         anything cached before this shipped, which renders as no chip. */
+      kind:al.kind||null,tracks:al.total_tracks||0,
+      _year:year,_edition:edition};const ex=byBase[base];if(!ex)byBase[base]=cand;else if((ex._edition&&!cand._edition)||(ex._edition===cand._edition&&cand._year<ex._year))byBase[base]=cand;});
   const list=Object.values(byBase).sort(function(a,b){return a._year-b._year;});
   _studioMem[artistId]=list;_spCacheWrite('studio:'+artistId,list);
   return list;
@@ -11607,6 +11623,17 @@ const _missingByArtist={};
 /* "See what's missing" — the albums by this artist you haven't rated yet.
    Reuses the studio list the Completionist card already fetched, so opening
    it costs nothing and works offline once the card has loaded. */
+/* EPs count toward completion and singles do not — decided rather than
+   assumed, and the one place that lives is COMPLETIONIST_KINDS in
+   api/_artists.js. This only LABELS: a four-track EP sitting in a list called
+   "albums left" reads as a mistake in the list unless the list says what it
+   is. Nothing is printed for a plain album, because a chip on every row is a
+   chip that says nothing. */
+function kindChip(s){
+  if(!s||s.kind!=='ep')return'';
+  return' <span class="kind-chip">EP</span>';
+}
+
 function openMissing(artistId){
   const rec=_missingByArtist[artistId];
   const modal=document.getElementById('missing-modal');
@@ -11617,8 +11644,8 @@ function openMissing(artistId){
   host.innerHTML=rec.list.length
     ? rec.list.map(function(s){return'<div class="ptop-row" data-miss="'+esc(s.id)+'">'+
         '<img src="'+esc(s.art||'')+'" alt="" loading="lazy">'+
-        '<div style="flex:1;"><div class="nm">'+esc(s.name)+'</div>'+
-        (s.year?'<div class="ar">'+esc(s.year)+'</div>':'')+'</div>'+
+        '<div style="flex:1;"><div class="nm">'+esc(s.name)+kindChip(s)+'</div>'+
+        (s.year?'<div class="ar">'+esc(s.year)+(s.tracks?' \u00b7 '+s.tracks+' tracks':'')+'</div>':'')+'</div>'+
         '<span class="suggest-send">Rate it</span></div>';}).join('')
     : '<div class="reco-note">Nothing left — you’ve rated the lot.</div>';
   host.querySelectorAll('[data-miss]').forEach(function(el){

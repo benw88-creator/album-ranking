@@ -95,8 +95,15 @@ function albumLite(a) {
   return {
     id: String(a.id),
     name: a.title,
+    // `_kind` when the discography path has classified it properly, and
+    // record_type otherwise. The client prints an "EP" chip off this, so it
+    // must never be a guess dressed as a fact — album_type stays the coarse
+    // Spotify-shaped field every existing caller reads, and `kind` is the new
+    // precise one.
     album_type: (a.record_type === 'single' ? 'single' : a.record_type === 'compilation' ? 'compilation' : 'album'),
-    total_tracks: a.nb_tracks || 0,
+    kind: a._kind || null,
+    kind_confident: a._confident === undefined ? null : !!a._confident,
+    total_tracks: a.nb_tracks || a._tracks || 0,
     release_date: a.release_date || '',
     images: images(a),
     artists: a.artist ? [{ id: String(a.artist.id), name: a.artist.name }] : [],
@@ -153,6 +160,9 @@ async function fullAlbum(id) {
 }
 
 import { cors } from './_cors.js';
+import {
+  pickArtist, classifyRelease, dedupeReleases, countsForCompletion,
+} from './_artists.js';
 
 export default async function handler(req, res) {
   // Answers the preflight and stops. Must be first: the method checks below
@@ -238,9 +248,15 @@ export default async function handler(req, res) {
       // lost its background to a 502 that named nothing useful.
       if (!/^\d+$/.test(aid)) {
         if (!q.name) { res.status(400).json({ error: { status: 400, message: 'name required to resolve a legacy artist id' } }); return; }
-        const wantA = loose(String(q.name));
-        const fa = await dz('/search/artist?limit=10&q=' + encodeURIComponent(String(q.name)));
-        const hitA = (fa.data || []).find(x => loose(x.name) === wantA) || null;
+        // RANKED, not `.find`. Deezer files two artists under the exact string
+        // "Steve Lacy" — 395 fans and 277,980 — and first-hit-wins took the
+        // wrong one, which put somebody else's photograph on the hero and
+        // somebody else's records in the completion list, with no error
+        // anywhere. See api/_artists.js.
+        const fa = await dz('/search/artist?limit=20&q=' + encodeURIComponent(String(q.name)));
+        const picked = pickArtist(fa.data || [], String(q.name));
+        picked.log.forEach(l => console.log('[catalogue:artist] ' + l));
+        const hitA = picked.artist;
         // No match is a real answer: an artist with no picture, which the
         // caller already handles. It is not an error and must not gate the page.
         if (!hitA) {
@@ -270,25 +286,73 @@ export default async function handler(req, res) {
       // the artist name too and it is resolved the same way a legacy album is.
       if (!/^\d+$/.test(id)) {
         if (!q.name) { res.status(400).json({ error: { status: 400, message: 'name required to resolve a legacy artist id' } }); return; }
-        const want = loose(String(q.name));
-        const f = await dz('/search/artist?limit=10&q=' + encodeURIComponent(String(q.name)));
-        const hit = (f.data || []).find(x => loose(x.name) === want) || null;
+        // Same ranking as the artist path — a discography resolved to the
+        // wrong one of two identically named artists is the worse half of
+        // that bug, because it silently reports records as unrated.
+        const f = await dz('/search/artist?limit=20&q=' + encodeURIComponent(String(q.name)));
+        const picked = pickArtist(f.data || [], String(q.name));
+        picked.log.forEach(l => console.log('[catalogue:artist-albums] ' + l));
+        const hit = picked.artist;
         if (!hit) { res.setHeader('Cache-Control', DAY); res.status(200).json({ items: [], total: 0 }); return; }
         id = String(hit.id);
       }
-      const j = await dz('/artist/' + encodeURIComponent(id) + '/albums?limit=' + Math.min(parseInt(q.limit, 10) || 50, 100));
+      const j = await dz('/artist/' + encodeURIComponent(id) + '/albums?limit=' + Math.min(parseInt(q.limit, 10) || 100, 100));
       let items = (j.data || []);
-      // include_groups=album is what the discography asks Spotify for: studio
-      // records only, or the Completion list fills up with singles and live sets.
-      // record_type alone is not enough — Deezer files plenty of live albums,
-      // anniversary editions and remaster reissues as `album`, and a Completion
-      // list telling somebody they have not rated "Hail to the Thief (Live
-      // Recordings 2003-2009)" is asking them to rank a record twice.
+
       if (String(q.include_groups || 'album') === 'album') {
-        items = items.filter(a => a.record_type === 'album' && !NOT_STUDIO.test(a.title || ''));
+        /* THE TRACK COUNT IS THE EVIDENCE AND record_type IS ONLY A HINT.
+           Measured on Travis Scott: `durag activity` is ONE TRACK AND THREE
+           MINUTES and Deezer types it `album`, so the old
+           `record_type === 'album'` filter put a single in the Completion
+           list and asked somebody to go and rate it.
+
+           /artist/{id}/albums does not carry nb_tracks — the field is simply
+           absent — which is why nothing downstream could ever tell. So the
+           cheap filters run first, and only the survivors are enriched.
+
+           The cost is bounded and small: after dropping the singles and the
+           live/remix/compilation titles by name, a big discography is a dozen
+           or two releases, they go in parallel batches, the whole response is
+           edge-cached for a week per artist, and a release whose lookup fails
+           keeps its unconfident classification rather than disappearing. */
+        const rough = items.filter((a) => {
+          const c = classifyRelease(a);
+          if (c.kind === 'single') return false;              // Deezer is right about these
+          return countsForCompletion(c.kind) || !c.confident; // keep anything still in doubt
+        }).filter(a => !NOT_STUDIO.test(a.title || ''));
+
+        const ENRICH_CAP = 40, BATCH = 8;
+        const heads = rough.slice(0, ENRICH_CAP);
+        const full = new Map();
+        for (let i = 0; i < heads.length; i += BATCH) {
+          const slice = heads.slice(i, i + BATCH);
+          const got = await Promise.all(slice.map(a =>
+            dz('/album/' + a.id).catch(() => null)));
+          got.forEach((d, k) => { if (d && d.id) full.set(String(slice[k].id), d); });
+        }
+
+        const dropped = [];
+        items = rough.filter((a) => {
+          const d = full.get(String(a.id));
+          const c = classifyRelease(d ? Object.assign({}, a, {
+            nb_tracks: d.nb_tracks, duration: d.duration,
+          }) : a);
+          a._kind = c.kind;
+          a._tracks = c.tracks;
+          a._confident = c.confident;
+          if (!countsForCompletion(c.kind)) { dropped.push(a.title + ' — ' + c.kind + ' [' + c.why.join('; ') + ']'); return false; }
+          return true;
+        });
+        if (dropped.length) console.log('[catalogue:artist-albums] dropped ' + dropped.length + ': ' + dropped.join(' | '));
+
+        // One entry per work: a deluxe and its plain pressing are one record
+        // somebody rates once.
+        const dd = dedupeReleases(items);
+        dd.merges.forEach(m => console.log('[catalogue:artist-albums] merged edition: kept ' + m.kept + ', dropped ' + m.dropped + ' (' + m.why + ')'));
+        items = dd.releases;
       }
       res.setHeader('Cache-Control', WEEK);
-      res.status(200).json({ items: items.map(albumLite), total: j.total || items.length });
+      res.status(200).json({ items: items.map(albumLite), total: items.length });
       return;
     }
 
