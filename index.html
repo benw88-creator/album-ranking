@@ -3703,7 +3703,34 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
 /* The header mark is hidden for the flight and comes back as the record
    arrives, so the swap happens under a moving object and is never seen. */
 .brand-mark.is-receiving { opacity: 0; }
-.brand-mark.is-landed { animation: markLand 520ms var(--ease); }
+/* The dissolve is a TRANSITION on opacity, never a second animation, and the
+   reason is mechanical: both of these elements are already running one.
+   `.brand-mark` has vinylSpin and `.splash-disc` has discFlight, and the
+   `animation` shorthand REPLACES the list — so adding a fade that way would
+   stop the header record turning, and would restart the flight from the
+   centre of the screen on its last frame. opacity is not touched by either
+   set of keyframes, so a transition on it runs alongside them and cannot
+   interfere.
+
+   The two halves cover the same 160ms and sum to 1 throughout, so the page
+   behind never shows through the handoff. */
+.brand-mark { transition: opacity 160ms linear; }
+.splash-disc { transition: opacity 160ms linear; }
+.splash-disc.is-handed { opacity: 0; }
+/* The landing ring is its OWN element, positioned over the mark and thrown
+   away afterwards, and that is not fussiness.
+
+   It used to be `.brand-mark.is-landed { animation: markLand }`, and the
+   `animation` shorthand replaces the list — so the header record's vinylSpin
+   stopped and its transform reverted to rotate(0) IN ONE FRAME, at the exact
+   moment the flight was trying to convince you the two objects were one. A
+   rotation snap at the handoff, from the rule meant to celebrate it. Same
+   shape as the crossfade above, and the second time this one element's single
+   `animation` slot has caused it. */
+.mark-ring {
+  position: fixed; border-radius: 50%; pointer-events: none; z-index: 200;
+  animation: markLand 520ms var(--ease) forwards;
+}
 @keyframes markLand {
   0%   { box-shadow: 0 0 0 0 rgba(245,200,66,0.55); }
   100% { box-shadow: 0 0 0 16px rgba(245,200,66,0); }
@@ -17998,11 +18025,32 @@ function playDismissAnimation(gateEl, callback) {
 
   var from = disc.getBoundingClientRect();
   var to = mark.getBoundingClientRect();
-  // Centre to centre, and the scale that makes the record exactly the mark's
-  // width. from.width is the rendered size, so this holds at any viewport.
+
+  /* THE DESTINATION SIZE CANNOT COME OFF getBoundingClientRect, AND THAT WAS
+     THE POP.
+
+     `.brand-mark` carries `animation: vinylSpin 8s linear infinite` — the
+     header record is always turning — and getBoundingClientRect returns the
+     AXIS-ALIGNED BOUNDING BOX OF A ROTATED ELEMENT. A 32px square rotated by
+     θ measures 32·(|cos θ| + |sin θ|), which is 32 at 0° and 90° and 45.25 at
+     45°. Measured live at a random moment: 44.47.
+
+     So the scale was computed against a number that depended on where the
+     header record happened to be in its eight-second cycle at the instant
+     somebody pressed GO. It averages about 27% too large, is never too small,
+     and is different on every single load — which is exactly what an
+     intermittent "the vinyl is slightly bigger" reads like, and exactly why
+     it could never be pinned down by looking at the numbers in the code.
+
+     The LAYOUT width is what we want, and getComputedStyle gives it
+     transform-free. The CENTRE still comes off the rect: a square rotating
+     about its own centre keeps the same centre, so that measurement was
+     always correct, and it is the one that has to account for the header's
+     real position. */
+  var toW = parseFloat(getComputedStyle(mark).width) || mark.offsetWidth || to.width;
   var fx = (to.left + to.width / 2) - (from.left + from.width / 2);
   var fy = (to.top + to.height / 2) - (from.top + from.height / 2);
-  var fs = to.width / (from.width || 1);
+  var fs = toW / (from.width || 1);
   disc.style.setProperty('--fx', fx.toFixed(1) + 'px');
   disc.style.setProperty('--fy', fy.toFixed(1) + 'px');
   disc.style.setProperty('--fs', fs.toFixed(4));
@@ -18018,14 +18066,45 @@ function playDismissAnimation(gateEl, callback) {
   //    read as being thrown rather than as a slide starting.
   setTimeout(function () { disc.classList.add('is-flying'); }, 300);
 
-  // 3. The real mark takes over just before the record arrives, under a moving
-  //    object, so the substitution is never seen.
+  /* 3. Wind DOWN before it arrives. The record is turning at 0.34s a
+        revolution during the throw and the header mark turns at 8s — landing
+        one straight into the other is a 23x speed discontinuity on the one
+        frame you are asked to believe they are the same object. Dropping
+        `is-winding` at 820ms returns it to the 6s idle for the last stretch,
+        so what arrives is a record at rest against a mark that is idling. */
+  setTimeout(function () { if (vinyl) vinyl.classList.remove('is-winding'); }, 820);
+
+  /* 4. The handoff is a CROSSFADE over the last 160ms of the flight, not a
+        swap 60ms before the end.
+
+        The swap was hidden under a moving object because the object did not
+        arrive where the mark was — it could not, with the size being measured
+        off a rotating bounding box. Now that it lands exactly on the mark, the
+        two are superimposed, and the honest move is to dissolve one into the
+        other: the splash record has a dark label with a gold rim and the mark
+        has a gold label, so a hard cut between them at 32px is a visible
+        flicker even when the geometry is perfect. */
   setTimeout(function () {
+    // Taking `is-receiving` off is the fade-IN — the mark carries a 160ms
+    // opacity transition, so it needs no second class to animate with.
     mark.classList.remove('is-receiving');
-    mark.classList.add('is-landed');
+    disc.classList.add('is-handed');
+  }, 1020);
+  setTimeout(function () {
+    // Measured again rather than reusing `to`: a second of choreography has
+    // passed and the header is where it actually is now.
+    var r = mark.getBoundingClientRect();
+    var w = parseFloat(getComputedStyle(mark).width) || mark.offsetWidth;
+    var ring = document.createElement('span');
+    ring.className = 'mark-ring';
+    ring.style.left = (r.left + r.width / 2 - w / 2) + 'px';
+    ring.style.top = (r.top + r.height / 2 - w / 2) + 'px';
+    ring.style.width = w + 'px';
+    ring.style.height = w + 'px';
+    document.body.appendChild(ring);
+    setTimeout(function () { if (ring.parentNode) ring.parentNode.removeChild(ring); }, 600);
     if (window.buzz) buzz('tap');
-    setTimeout(function () { mark.classList.remove('is-landed'); }, 560);
-  }, 1120);
+  }, 1180);
 
   disc.addEventListener('animationend', function (e) {
     if (e.animationName === 'discFlight') finish();
