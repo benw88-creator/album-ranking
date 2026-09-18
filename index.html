@@ -6571,6 +6571,50 @@ button.rw-day {
   color: var(--text-faint); white-space: nowrap; }
 .odds-note { margin-top: 14px; }
 
+/* ---- Reach (referrals) ------------------------------------------------
+   Its own block rather than reusing the Shop's rows: a code is a thing to be
+   READ OFF A SCREEN and typed into another phone, so it gets monospace,
+   letter-spacing and size, and none of those belong on a shop row. */
+.reach-code-box {
+  border: 1px solid var(--border-strong); border-radius: 14px;
+  background: var(--surface-2); padding: var(--s4); text-align: center;
+  margin-bottom: var(--s4);
+}
+.reach-code-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--text-faint); font-weight: 700;
+}
+.reach-code {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: clamp(26px, 8vw, 36px); font-weight: 700; color: var(--gold);
+  letter-spacing: .16em; margin: 6px 0 4px; word-break: break-all;
+}
+.reach-link { font-size: 12px; color: var(--text-faint); word-break: break-all; }
+.reach-share { display: flex; gap: var(--s2); flex-wrap: wrap; margin-bottom: var(--s4); }
+.reach-btn { flex: 1 1 auto; min-width: 116px; justify-content: center; }
+.reach-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+  background: var(--border); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; margin-bottom: var(--s4);
+}
+.reach-stats > div { background: var(--surface); padding: var(--s3); text-align: center; }
+.reach-stats b { display: block; font-size: var(--t-h3); color: var(--text); }
+.reach-stats span { font-size: 11px; color: var(--text-faint); }
+.reach-rules { font-size: 13px; color: var(--text-dim); }
+.reach-rules p + p { margin-top: 8px; }
+/* The progress half only exists for somebody who arrived on a code, so it
+   leads rather than sitting under the sharing furniture: what YOU are owed is
+   more interesting to you than what you could earn by inviting. */
+.reach-prog {
+  border: 1px solid var(--c-lime-dim); border-radius: 14px;
+  background: linear-gradient(180deg, rgba(160,255,120,.07), transparent);
+  padding: var(--s4); margin-bottom: var(--s4);
+}
+.reach-prog-top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); }
+.reach-prog-top span { font-size: 12px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.reach-bar { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; margin-top: 10px; }
+.reach-bar i { display: block; height: 100%; background: var(--c-lime); transition: width .4s var(--ease); }
+
 /* ================================================================
    SAFE AREAS — deliberately the LAST thing in this stylesheet.
 
@@ -7836,6 +7880,19 @@ window.ICONS = {
      whose page feels dead because of a system animation preference should not
      have to sign up to fix it. That was the one reason the Shop modal opened
      for guests at all; now it is this modal's job. -->
+<!-- ============================ REACH ============================ -->
+<!-- Referrals. Named Reach rather than "Invite friends" because what it is
+     actually measuring is how far your taste travels — and because a screen
+     called Invite Friends is a screen everybody has learned to close. -->
+<div class="modal" id="reach-modal">
+  <div class="modal-panel" style="max-width:520px;">
+    <button class="modal-close" id="reach-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="people"></span>
+      <div><h2>Reach</h2><p>Bring somebody in. You both get paid.</p></div></div>
+    <div id="reach-body"><p class="reco-note">Loading&hellip;</p></div>
+  </div>
+</div>
+
 <div class="modal" id="settings-modal">
   <div class="modal-panel" style="max-width:520px;">
     <button class="modal-close" id="settings-close" aria-label="Close">&times;</button>
@@ -9030,6 +9087,12 @@ function saveAlbum(meta, score) {
   if (window.Cloud) Cloud.syncRating('album', albKey, albums[albKey]);
   if (window.Cloud) Cloud.postToFeed(meta, score, albums[albKey].note);
   if (window.Wallet) Wallet.recordRating();
+  /* A referral pays on the tenth album, and the person who earned it is
+     not thinking about referrals by then — so it settles here rather than
+     waiting for the next cold load. noteRating() is a local count and a
+     boolean before it is anything else: it makes no round trip at all
+     for the overwhelming majority of people, who have no referral. */
+  if (window.Reach) Reach.noteRating(Object.keys(albums).length);
   _recsDirty = true;
   renderAlbums();
   // Rating it may have moved a mark, so the panel re-reads rather than sitting
@@ -12013,6 +12076,7 @@ const Cloud=(function(){
           '<button class="acct-menu-item" id="acct-activity">'+ICONS.stopwatch+' Recent activity</button>'+
           '<button class="acct-menu-item" data-go="people">'+ICONS.people+' People</button>'+
           '<button class="acct-menu-item" data-go="grooves">'+ICONS.groove+' Grooves</button>'+
+          '<button class="acct-menu-item" id="acct-reach">'+ICONS.share+' Reach</button>'+
           '<button class="acct-menu-item" id="acct-settings">\u2699 Settings</button>'+
           '<button class="acct-menu-item" id="acct-logout">\u21B3 Log out</button>'+
         '</div>';
@@ -12028,6 +12092,12 @@ const Cloud=(function(){
     if(avb)avb.addEventListener('click',function(e){e.stopPropagation();document.getElementById('acct-menu').classList.toggle('open');});
     acct.querySelectorAll('.acct-menu-item[data-go]').forEach(function(b){b.addEventListener('click',function(){document.getElementById('acct-menu').classList.remove('open');if(location.search.indexOf('u=')!==-1)history.replaceState(null,'',location.pathname);window.goToView(b.dataset.go);});});
     const lg=document.getElementById('acct-logout');if(lg)lg.addEventListener('click',logout);
+    const rch=document.getElementById('acct-reach');
+    if(rch)rch.addEventListener('click',function(e){
+      e.stopPropagation();
+      const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');
+      if(window.openReach)openReach();
+    });
     const stg=document.getElementById('acct-settings');
     if(stg)stg.addEventListener('click',function(e){
       e.stopPropagation();
@@ -12061,6 +12131,11 @@ const Cloud=(function(){
     }catch(e){}
     // Not awaited: a slow diff must never hold up the rest of the login.
     reconcileRatings();
+    /* Same rule: not awaited. A referral code claims itself and settles in
+       the background — nothing on screen is waiting on it, and a referral
+       server that is slow or a migration that is not applied yet must not be
+       able to hold up somebody's login. */
+    if(window.Reach)Reach.onAuthed();
     // The day's reward is NOT claimed automatically. Discs that arrive while
     // you are looking elsewhere are Discs you never saw arrive — the press is
     // the whole moment. Rewards shows the button; this only lights the nav.
@@ -26989,6 +27064,257 @@ window.track = function (name, props) {
   }
 
   window.Covers = { get: get, want: want, srcFor: srcFor, prefetch: prefetch, key: key };
+})();
+
+/* ================================================================
+   REACH — referrals
+   ================================================================
+
+   Every number here comes back from `referral_spec()` and is never typed in
+   this file. The rule is the one the whole economy keeps: the client names a
+   code and never an amount, so the worst a tampered browser can do is ask to
+   be paid — which the server then refuses on the gates.
+
+   THE ORDER OF OPERATIONS IS THE FEATURE. A code arrives in the URL of
+   somebody who has no account yet, which means it has to survive a sign-up,
+   an email confirmation and very often a different browser session before
+   there is anybody to attach it to. So `?ref=` is captured into localStorage
+   the moment the page loads, before auth exists, and claimed on the first
+   authed load after that. Reading it at sign-up time only would lose every
+   referral where the person confirmed their email in a new tab, which is most
+   of them.
+
+   `settle()` is called on every authed load and is deliberately cheap: it
+   returns 'nothing' for the overwhelming majority of people and touches no
+   row. The reward lands the moment the tenth album is rated, without anybody
+   having to come back to this screen — which matters, because the person who
+   earned it is not thinking about referrals by then.
+================================================================ */
+(function () {
+  'use strict';
+  var KEY = 'crate_reach_code';        // a code seen in the URL, awaiting an account
+  var SEEN = 'crate_reach_settled';    // so the "you were paid" toast fires once
+  var _state = null, _busy = false;
+
+  function sb() { return (window.Cloud && Cloud.client && Cloud.client()) || null; }
+  function signedIn() { return !!(window.Cloud && Cloud.isOn && Cloud.isOn()); }
+  function el(id) { return document.getElementById(id); }
+
+  /* Captured at load, before there is any account to attach it to. Also
+     stripped from the address bar: a referral code sitting in the URL gets
+     copied into the next thing that person shares, and then two people are
+     wearing one code. */
+  function capture() {
+    var m = /[?&]ref=([A-Za-z0-9]{4,16})\b/.exec(location.search || '');
+    if (!m) return;
+    try { localStorage.setItem(KEY, m[1].toUpperCase()); } catch (e) {}
+    try {
+      var q = new URLSearchParams(location.search);
+      q.delete('ref');
+      var rest = q.toString();
+      history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + (location.hash || ''));
+    } catch (e) {}
+  }
+
+  function link(code) {
+    // Native.site, never location.origin — inside the app that origin is
+    // capacitor://localhost, and a link nobody else's phone can open is worse
+    // than no share button at all.
+    var base = (window.Native && Native.site) || 'https://wildcrate.xyz/';
+    return base.replace(/\/+$/, '/') + '?ref=' + encodeURIComponent(code);
+  }
+
+  /* Called once per authed session. Claims a pending code, then settles —
+     in that order, because somebody who signs up, rates ten albums and only
+     then gets round to confirming their email should be paid on the load
+     after the confirmation, not made to do anything else. */
+  async function onAuthed() {
+    if (!signedIn()) return;
+    var pending = null;
+    try { pending = localStorage.getItem(KEY); } catch (e) {}
+    if (pending) {
+      try {
+        var r = await sb().rpc('referral_claim', { p_code: pending });
+        var out = r && r.data;
+        // Clear it on any settled answer — a code that cannot be used is a
+        // code that will never be used, and retrying it on every load is a
+        // round trip for nothing. A network error keeps it for next time.
+        if (!r || !r.error) { try { localStorage.removeItem(KEY); } catch (e) {} }
+        // Deliberately silent. `toast` is local to the Wallet module and
+        // there is no global one, and announcing a code at sign-up would be
+        // announcing a reward that has not been earned. The Reach screen
+        // shows the progress; the payout announces itself.
+        void out;
+      } catch (e) {}
+    }
+    settle();
+  }
+
+  async function settle() {
+    if (!signedIn() || _busy) return;
+    _busy = true;
+    try {
+      var r = await sb().rpc('referral_settle');
+      var out = r && r.data;
+      if (out && out.reason === 'not_yet') { _need = out.need || 0; _pending = true; }
+      if (out && out.ok && out.reason === 'paid') { _pending = false;
+        var once = false;
+        try { once = localStorage.getItem(SEEN) === '1'; localStorage.setItem(SEEN, '1'); } catch (e) {}
+        if (window.Wallet && Wallet.syncAward) { try { await Wallet.syncAward(); } catch (e) {} }
+        else if (window.Wallet && Wallet.load) { try { await Wallet.load(); } catch (e) {} }
+        if (!once && window.celebrate) {
+          celebrate('+' + fmt(out.award) + ' Discs',
+                    'Reach — you and the person who brought you in have both been paid.',
+                    { eyebrow: 'Reward' });
+        }
+      }
+    } catch (e) { /* the migration may not be applied yet; that is a quiet no-op */ }
+    _busy = false;
+  }
+
+  function fmt(n) { try { return Number(n || 0).toLocaleString(); } catch (e) { return String(n || 0); } }
+
+  function shareText(code) {
+    return "I'm ranking my records on VINALL. Use my code " + code +
+           " and we both get 20,000 Discs.";
+  }
+
+  /* Three channels, and what each one honestly is.
+
+     The iOS share sheet already lists Messages, Snapchat, WhatsApp and the
+     contacts you message most, so "Share" is not a lesser version of the named
+     buttons — it is the one that reaches all of them. The SMS button exists
+     beside it because iMessage is the one channel worth a single tap, and
+     `sms:` needs no plugin and no permission.
+
+     There is no Snapchat SDK here and no Contacts plugin, so neither gets a
+     button that pretends otherwise. A control that names one action and
+     performs another is the worst shape a button can have — see the Market's
+     "Price it", which priced a record AND bought it. */
+  function shareRow(code) {
+    var hand = (window.Native && Native.hand) || 'Copy';
+    return '<div class="reach-share">' +
+      '<button class="btn-primary reach-btn" id="reach-share">' + (window.ICONS ? ICONS.share : '') + ' ' + hand + ' link</button>' +
+      '<button class="btn-mini reach-btn" id="reach-sms">' + (window.ICONS ? ICONS.mailbox : '') + ' Messages</button>' +
+      '<button class="btn-mini reach-btn" id="reach-copy">Copy code</button>' +
+      '</div>';
+  }
+
+  async function render() {
+    var host = el('reach-body');
+    if (!host) return;
+    if (!signedIn()) {
+      host.innerHTML = '<div class="reco-note">Log in to get your Reach code.</div>';
+      return;
+    }
+    host.innerHTML = '<p class="reco-note">Loading…</p>';
+
+    var st = null, code = null;
+    try {
+      var a = await Promise.all([ sb().rpc('referral_state'), sb().rpc('referral_my_code') ]);
+      st = a[0] && a[0].data; code = (a[1] && a[1].data) || (st && st.code);
+      if (a[0] && a[0].error) throw a[0].error;
+    } catch (e) {
+      host.innerHTML = '<div class="reco-note">Reach isn’t available just now.</div>';
+      return;
+    }
+    if (!st) { host.innerHTML = '<div class="reco-note">Reach isn’t available just now.</div>'; return; }
+
+    var spec = st.spec || {};
+    var award = spec.award || 0, req = spec.req_albums || 0, max = spec.max_paid || 0;
+
+    var mine = st.mine;
+    // The half of this screen that is about you, and only when it applies.
+    var yours = '';
+    if (mine && !mine.settled) {
+      var have = Math.min(mine.albums || 0, req);
+      yours = '<div class="reach-prog">' +
+        '<div class="reach-prog-top"><b>Your ' + fmt(award) + ' Discs</b>' +
+        '<span>' + have + ' of ' + req + ' albums</span></div>' +
+        '<div class="reach-bar"><i style="width:' + Math.round(100 * have / (req || 1)) + '%"></i></div>' +
+        '<p class="reco-note" style="margin-top:8px;">' +
+        (!mine.confirmed
+          ? 'Confirm your email address, then rate ' + req + ' albums.'
+          : (have >= req ? 'That’s the lot — it lands on your next load.'
+                         : 'Rate ' + (req - have) + ' more and it pays, to both of you.')) +
+        '</p></div>';
+    }
+
+    host.innerHTML =
+      yours +
+      '<div class="reach-code-box">' +
+        '<div class="reach-code-label">Your code</div>' +
+        '<div class="reach-code" id="reach-code-val">' + esc(code || '—') + '</div>' +
+        '<div class="reach-link" id="reach-link-val">' + esc(link(code || '')) + '</div>' +
+      '</div>' +
+      shareRow(code || '') +
+      '<div class="reach-stats">' +
+        '<div><b>' + fmt(st.invited) + '</b><span>joined on your code</span></div>' +
+        '<div><b>' + fmt(st.paid) + '</b><span>paid out</span></div>' +
+        '<div><b>' + fmt(Math.max(0, max - (st.paid_count || 0))) + '</b><span>rewards left</span></div>' +
+      '</div>' +
+      '<div class="reach-rules">' +
+        '<p><b>' + fmt(award) + ' Discs each</b>, once they have confirmed their email and rated ' +
+        req + ' albums. You can be paid for ' + max + ' people in total' +
+        (st.capped ? ' — and you have had all ' + max + '.' : '.') + '</p>' +
+        '<p>A code only works on an account less than ' + (spec.new_days || 14) +
+        ' days old, so it is a reward for bringing somebody new rather than for knowing somebody.</p>' +
+      '</div>';
+
+    var txt = shareText(code || ''), url = link(code || '');
+    var sh = el('reach-share');
+    if (sh) sh.addEventListener('click', function () {
+      handOff(sh, { text: txt, url: url, title: 'VINALL', idle: ((window.Native && Native.hand) || 'Copy') + ' link' });
+    });
+    var sms = el('reach-sms');
+    if (sms) sms.addEventListener('click', function () {
+      // `&body=` on iOS, `?body=` everywhere else. Getting this wrong opens
+      // Messages with an empty draft, which looks like the button did nothing.
+      var ios = /iPad|iPhone|iPod/.test(navigator.userAgent || '');
+      try { location.href = 'sms:' + (ios ? '&' : '?') + 'body=' + encodeURIComponent(txt + ' ' + url); }
+      catch (e) {}
+    });
+    var cp = el('reach-copy');
+    if (cp) cp.addEventListener('click', function () {
+      if (!navigator.clipboard) { cp.textContent = 'Copy failed'; return; }
+      navigator.clipboard.writeText(code || '').then(
+        function () { cp.textContent = 'Copied ✓'; setTimeout(function () { cp.textContent = 'Copy code'; }, 1600); },
+        function () { cp.textContent = 'Copy failed'; }
+      );
+    });
+  }
+
+  function open() {
+    var m = el('reach-modal');
+    if (!m) return;
+    m.classList.add('open');
+    render();
+  }
+  function close() { var m = el('reach-modal'); if (m) m.classList.remove('open'); }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var c = el('reach-close'); if (c) c.addEventListener('click', close);
+    var m = el('reach-modal');
+    if (m) m.addEventListener('click', function (e) { if (e.target === m) close(); });
+  });
+
+  capture();
+
+  /* Called on every album rating. The gate is entirely local: unless this
+     account arrived on somebody's code AND has just crossed the bar, this does
+     nothing and costs nothing. `_need` is filled by the first referral_state
+     or referral_settle answer of the session, so a person with no referral
+     never even learns what the number is. */
+  var _need = 0, _pending = false;
+  function noteRating(count) {
+    if (!_pending || !_need) return;
+    if ((count || 0) < _need) return;
+    _pending = false;
+    settle();
+  }
+
+  window.Reach = { open: open, onAuthed: onAuthed, settle: settle, render: render, link: link, noteRating: noteRating };
+  window.openReach = open;
 })();
 
 </script>
