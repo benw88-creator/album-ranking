@@ -6707,6 +6707,105 @@ button.rw-day {
   color: var(--text-faint); white-space: nowrap; }
 .odds-note { margin-top: 14px; }
 
+/* ---- Today: a colour per kind, and one movement each ------------------
+
+   RESTRAINT IS THE SPEC HERE, so two rules bound all of it:
+
+   1. Only the cards that are genuinely an EVENT get a hue. `any` — the
+      ordinary ask, and by a distance the most common card — stays exactly as
+      it was. A stack where every card is coloured is a stack where the colour
+      says nothing, which is the same argument that keeps Common grey in The
+      Draw and keeps the nav's inactive items unlit.
+
+   2. Every animation here runs ONCE, on arrival, and stops. Nothing in this
+      stack loops: a card you are meant to read and answer is the wrong place
+      for something moving in the corner of your eye, and the auto-advance
+      already gives the screen all the motion it needs. */
+.td-slot[data-kind] .td-card { position: relative; overflow: hidden; }
+
+/* The rule down the left edge. It DRAWS in rather than appearing, which is
+   the one micro-animation every coloured card gets — 320ms, once, and then it
+   is simply a line. */
+.td-slot[data-kind]:not([data-kind="any"]):not([data-kind="quiet"]) .td-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+  background: var(--td-c, var(--gold));
+  transform-origin: top;
+  animation: tdRule 320ms var(--ease) both;
+}
+@keyframes tdRule { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+.td-slot[data-kind]:not([data-kind="any"]) .td-kicker { color: var(--td-c, var(--gold)); }
+.td-slot[data-kind]:not([data-kind="any"]) .td-opt:hover:not(:disabled) { border-color: var(--td-c, var(--gold-dim)); }
+
+/* Seven kinds, seven hues, and each one is the thing it is about.
+
+   receipt      — something you said, quoted back. The oldest thing here.
+   rethink      — six months on, do you still mean it.
+   contradiction— two of your own scores disagreeing.
+   rinsed       — played a lot, never rated.
+   abandoned    — played a lot, then nothing for eight months.
+   revisit      — a record coming back round.
+   game         — the one card that is not a question. */
+.td-slot[data-kind="receipt"]       { --td-c: var(--c-violet); }
+.td-slot[data-kind="rethink"]       { --td-c: var(--c-cyan); }
+.td-slot[data-kind="contradiction"] { --td-c: var(--c-pink); }
+.td-slot[data-kind="rinsed"]        { --td-c: var(--c-lime); }
+.td-slot[data-kind="abandoned"]     { --td-c: var(--c-blue); }
+.td-slot[data-kind="revisit"]       { --td-c: var(--c-cyan); }
+.td-slot[data-kind="nostalgia"]     { --td-c: var(--c-violet); }
+.td-slot[data-kind="game"]          { --td-c: var(--c-lime); }
+
+/* The sleeve settles rather than appearing. 380ms, once. It is the only
+   picture on the card and this is what makes the card read as having ARRIVED
+   — the same reason the option chips already stagger in. */
+.td-slot[data-kind] .td-item img { animation: tdArt 380ms var(--ease) both; }
+@keyframes tdArt {
+  from { opacity: 0; transform: scale(.92) translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The three kinds that are about TIME get one pass of light across the
+   kicker, once, 900ms. These are the cards that cannot exist on a first
+   visit — they are the payoff for an account that has been running a while —
+   and this is the only place in Today that says so. */
+.td-slot[data-kind="receipt"] .td-kicker,
+.td-slot[data-kind="rethink"] .td-kicker,
+.td-slot[data-kind="abandoned"] .td-kicker {
+  background: linear-gradient(90deg, var(--td-c) 0%, #fff 22%, var(--td-c) 44%, var(--td-c) 100%);
+  /* Pixels at 90deg with matching end stops — the rule this app has broken
+     four times. A percentage here aligns a point of the image to a point of
+     the box, which is a distance with no relation to the gradient's own
+     period, and the sweep visibly snaps back. */
+  background-size: 260px 100%;
+  background-repeat: repeat-x;
+  -webkit-background-clip: text; background-clip: text;
+  animation: tdShine 900ms var(--ease) 180ms both;
+}
+/* THE FILL COLOUR COMES BACK AT 100%, and it has to.
+
+   `-webkit-text-fill-color: transparent` belongs INSIDE the keyframes, not on
+   the rule. With it static and the animation holding its end state, the
+   gradient's white band stops wherever the last frame left it and sits there
+   for good — a permanent bright patch partway through the word, on the three
+   card kinds that were supposed to get the nicest treatment. Ending on
+   currentColor puts the kicker back to a flat colour the moment the light has
+   passed, which is what "one pass, once" is supposed to mean. */
+@keyframes tdShine {
+  0%   { background-position: -260px 0; -webkit-text-fill-color: transparent; }
+  99%  { background-position: 0 0;      -webkit-text-fill-color: transparent; }
+  100% { background-position: 0 0;      -webkit-text-fill-color: currentColor; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .td-slot[data-kind] .td-card::before,
+  .td-slot[data-kind] .td-item img,
+  .td-slot[data-kind] .td-kicker { animation: none; }
+  /* The clip has to come off with the animation or the text stays invisible. */
+  .td-slot[data-kind] .td-kicker {
+    -webkit-text-fill-color: currentColor; background: none;
+  }
+}
+
 /* ---- the minigames' Popular tab --------------------------------------
    Faces, not a list of names. The whole reason this tab exists is that
    picking is faster than typing, and a column of text is not faster to read
@@ -10417,14 +10516,90 @@ let _heroBuilt = false;
 let _heroArtistKey = null;
 /* Show/hide the artist hero by animating its height rather than toggling
    display, so the page below eases into place instead of jumping. */
+/* THE HERO MOVES THE SEARCH FIELD, AND THAT IS THE "SEARCH TELEPORTS" BUG.
+
+   #artist-hero is a sibling ABOVE <header>, so expanding it pushes the header,
+   the search field and everything else down. Measured at 375px: the search
+   input's top goes from 96 to 300 — a 204px jump, with the field sliding out
+   from under whatever was typing into it.
+
+   And it lands late by construction. renderArtistHero() awaits fetchProfile
+   and then fetchArtistImage, so on a cold load it resolves a second or two in
+   — which is exactly when somebody who opened the app to look something up is
+   halfway through a word. Nothing about it looked like a search bug, because
+   it is not one: the search field is innocent and is simply standing on
+   something that moves.
+
+   Two rules, and both are needed:
+
+   1. NOTHING RESIZES THE HERO WHILE THE SEARCH IS BEING USED. The change is
+      queued and applied when the field is done with, which is the only moment
+      at which moving it costs nobody anything.
+
+   2. WHEN IT DOES RESIZE, THE SCROLL IS COMPENSATED. If the page is scrolled
+      at all, growing a block above the viewport shifts everything you are
+      looking at downwards for no reason. Adding the delta back to scrollTop
+      means the content under your eyes does not move — only the space above
+      it, which you cannot see. At scrollY 0 there is nothing to compensate and
+      nothing needs it, because the hero is then the thing you are looking at.
+*/
+var _heroPending = null;
+
+function searchBusy() {
+  var inp = document.getElementById('search-input');
+  if (inp && document.activeElement === inp) return true;
+  var sg = document.getElementById('suggestions');
+  return !!(sg && sg.classList.contains('open'));
+}
+
+function heroResize(hero, fn) {
+  if (searchBusy()) { _heroPending = { hero: hero, fn: fn }; watchHeroPending(); return; }
+  var before = hero.getBoundingClientRect().height;
+  var y = window.scrollY || window.pageYOffset || 0;
+  fn();
+  // Measured after the class change but before the transition runs, so this is
+  // the height it is heading for rather than the one it has.
+  var after = hero.classList.contains('artist-hero-hidden') ? 0 : hero.offsetHeight;
+  var d = after - before;
+  if (y > 0 && d) { try { window.scrollTo(0, Math.max(0, y + d)); } catch (e) {} }
+}
+
+/* A PENDING RESIZE WATCHES FOR ITS OWN MOMENT rather than waiting to be told.
+
+   The first version hung this on `blur` plus a document click, and it did not
+   fire: `blur` does not happen at all if the person never leaves the field —
+   they type, the results come, they tap a result — and it does not fire for a
+   programmatic blur of an already-blurred input either, which is how this was
+   caught. The resize then sat pending forever and the hero never appeared.
+
+   A poll is the right shape here precisely because the pending state is rare
+   and transient: nothing is running in the overwhelming majority of sessions,
+   the timer exists for a second or two at most, and it stops itself. There is
+   no event that reliably means "the search is finished with", so waiting for
+   one is waiting for something that may never come. */
+var _heroWatch = null;
+function flushHeroPending() {
+  if (!_heroPending) { if (_heroWatch) { clearInterval(_heroWatch); _heroWatch = null; } return; }
+  if (searchBusy()) return;
+  var p = _heroPending; _heroPending = null;
+  if (_heroWatch) { clearInterval(_heroWatch); _heroWatch = null; }
+  heroResize(p.hero, p.fn);
+}
+function watchHeroPending() {
+  if (_heroWatch) return;
+  _heroWatch = setInterval(flushHeroPending, 350);
+}
+
 function showArtistHero(hero) {
-  hero.style.display = 'block';
-  hero.classList.add('artist-hero-hidden');
-  void hero.offsetWidth;               // commit the zero-height state first
-  hero.classList.remove('artist-hero-hidden');
+  heroResize(hero, function () {
+    hero.style.display = 'block';
+    hero.classList.add('artist-hero-hidden');
+    void hero.offsetWidth;               // commit the zero-height state first
+    hero.classList.remove('artist-hero-hidden');
+  });
 }
 function hideArtistHero(hero) {
-  hero.classList.add('artist-hero-hidden');
+  heroResize(hero, function () { hero.classList.add('artist-hero-hidden'); });
 }
 async function renderArtistHero() {
   var busy = window.__introBusyUntil || 0;
@@ -26385,6 +26560,31 @@ window.track = function (name, props) {
       '</div>';
   }
 
+  /* THE CARD'S KIND IS ITS COLOUR, and that is the whole of the theming.
+
+     A stack where every card is the same grey with a gold kicker reads as one
+     card shown repeatedly — which is exactly what it is not: a receipt quoting
+     something you said in November and a question about a record you have
+     played forty times are different things arriving, and the stack had no way
+     to say so.
+
+     So the kind is written onto the card and the CSS gives seven of them a
+     hue. Deliberately NOT all of them: `any` — the ordinary ask, and the most
+     common card by a long way — stays neutral, so the coloured ones read as
+     something turning up rather than as a rotation. That is the same rule the
+     Draw's rarities follow, where Common stays grey on purpose: a stack where
+     everything is coloured is a stack where nothing is.
+
+     Applied here rather than in each builder because there are five of them
+     and a sixth would forget. */
+  function kindOf(entry) {
+    if (!entry) return 'quiet';
+    if (entry.t === 'game') return 'game';
+    if (entry.t === 'revisit') return 'revisit';
+    if (entry.t === 'rethink') return 'rethink';
+    return (entry.d && entry.d.type) || 'any';
+  }
+
   function cardHTML(entry) {
     if (!entry) return quietCard();
     if (entry.t === 'game') return gameCard();
@@ -26407,6 +26607,7 @@ window.track = function (name, props) {
     var el = document.createElement('div');
     el.className = 'td-slot td-live' + (animate ? ' td-enter' : '');
     el.innerHTML = html;
+    if (mountCard._kind) el.dataset.kind = mountCard._kind;
     host.appendChild(el);
 
     // Height has to be measured after the card is in the document, or the
@@ -26501,6 +26702,7 @@ window.track = function (name, props) {
       _qi = 0;
     }
     if (window.track && _queue[_qi] && _queue[_qi].t === 'ask') track('question_shown', { q: _queue[_qi].d.q.id, why: _queue[_qi].d.type });
+    mountCard._kind = kindOf(_queue[_qi]);
     var el = mountCard(cardHTML(_queue[_qi]), true);
     if (el) wireCard(el);
   }
@@ -26764,6 +26966,7 @@ window.track = function (name, props) {
     _qi = 0;
     host.innerHTML = '';
     if (window.track && _queue[0] && _queue[0].t === 'ask') track('question_shown', { q: _queue[0].d.q.id, why: _queue[0].d.type });
+    mountCard._kind = kindOf(_queue[0]);
     var el = mountCard(cardHTML(_queue[0]), false);
     if (el) wireCard(el);
     host.dataset.built = stamp;
