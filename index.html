@@ -4025,15 +4025,25 @@ body.entering-done #artist-hero {
      a mistake, and where nothing is cropped off. That combination is
      indifferent to what Deezer hands over, which is the property this needs. */
   object-fit: cover;
-  object-position: center 30%;
-  /* Dark enough that a photo shot against a WHITE background — which Drake's
-     is, and a great many press shots are — still produces a dark wash rather
-     than a pale grey slab at the top of the page. The wash has to belong to
-     VINALL's ground whatever it is made of, so the brightness is set for the
-     brightest plausible source and the saturation put back up to keep the
-     artist's colour in it. */
-  filter: blur(30px) saturate(1.35) brightness(0.42);
-  transform: scale(1.2);   /* covers the blur's soft edges */
+  /* 28%, not centre. A square press shot cropped to a wide band puts the face
+     in the top third; centring it frames somebody's chest. */
+  object-position: center 28%;
+  /* Sharp now, and darkened only as far as the name needs to stay readable.
+     The brightness is still set for the BRIGHTEST plausible source — a great
+     many press shots are on white, Drake's among them — because a banner that
+     goes pale at the top puts a light band behind the status bar and the
+     app's own header. */
+  filter: contrast(1.05) saturate(1.06) brightness(0.72);
+}
+/* The bed: the same photo, blurred past recognition and scaled beyond the
+   frame, so the sharp one is never sitting on a void. Scale rather than a
+   larger element, because blur() samples nothing outside the box and the
+   edges would otherwise go transparent. */
+.artist-hero-bed {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center 28%;
+  filter: blur(34px) saturate(1.4) brightness(0.5);
+  transform: scale(1.25);
 }
 /* The canvas shares the layout but NOT the photo treatment: the grayscale
    filter above was silently draining the colour the dither picks out of
@@ -4100,9 +4110,19 @@ body.entering-done #artist-hero {
    Masking the media instead means there is nothing to match: the image runs
    out of opacity and whatever is behind it — theme, washes and all — is what
    shows through. */
-.artist-hero-bg, .artist-hero-canvas {
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 46%, rgba(0,0,0,0.72) 68%, rgba(0,0,0,0.28) 86%, transparent 99%);
-          mask-image: linear-gradient(to bottom, #000 0%, #000 46%, rgba(0,0,0,0.72) 68%, rgba(0,0,0,0.28) 86%, transparent 99%);
+/* THE BOTTOM EDGE IS MASKED, NOT SCRIMMED, and that distinction is the whole
+   of it. The page below is not flat --bg — it carries four radial washes — so
+   a band of flat colour faded over the photo meets a slightly different colour
+   underneath, and a seam between two almost-identical colours is exactly the
+   edge an eye finds. Masking has nothing to match: the image runs out of
+   opacity and whatever is behind it shows through, theme and washes included.
+
+   Held over a long run (from 40% down) rather than a short one. The banner is
+   now the subject rather than a wash, so it is taller and brighter, and a fade
+   over the last tenth of a tall bright image still reads as an edge. */
+.artist-hero-bed, .artist-hero-bg, .artist-hero-canvas {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
 }
 .artist-hero-fade {
   position: absolute;
@@ -4114,7 +4134,14 @@ body.entering-done #artist-hero {
        sit against this edge, and a bright source photo was pushing a light
        band up behind both of them. */
     linear-gradient(to bottom, rgba(10,9,8,0.72) 0%, rgba(10,9,8,0.28) 34%, transparent 62%),
-    linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.34) 26%, transparent 62%),
+    /* THE BOTTOM-UP SCRIM MUST RETURN TO TRANSPARENT AT THE BOTTOM, and this
+       is the hard edge people were seeing. It used to peak at 0.55 black at
+       0% — the hero's own bottom boundary — and then simply stop, so while
+       the photo dissolved correctly the DARKENING did not, and a 55% black
+       band ended in a straight line across the page. It peaks a little way
+       up now and comes back to nothing at the edge, so there is nothing left
+       at the boundary to draw a line with. */
+    linear-gradient(to top, transparent 0%, rgba(0,0,0,0.46) 15%, rgba(0,0,0,0.34) 32%, transparent 64%),
     linear-gradient(to right, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.34) 34%, transparent 66%);
 }
 .artist-hero-content {
@@ -4126,28 +4153,7 @@ body.entering-done #artist-hero {
   padding-bottom: 76px;
 }
 .artist-hero-words { min-width: 0; flex: 1; }
-/* The portrait. Round, because a circle is the one crop that cannot cut a
-   head off badly — it takes the middle of the square, which is where a press
-   shot puts the face, and it has no corners for a bad edge to live in. */
-.artist-hero-portrait {
-  width: 96px; height: 96px; flex-shrink: 0; border-radius: 50%;
-  overflow: hidden; position: relative;
-  background: var(--surface-2);
-  box-shadow:
-    0 0 0 1.5px rgba(245,200,66,0.55),
-    0 10px 30px rgba(0,0,0,0.55);
-}
-.artist-hero-portrait img {
-  width: 100%; height: 100%; object-fit: cover; object-position: center 22%;
-  display: block;
-  /* A touch of contrast, and nothing else. At 96px an ordinary photo is
-     flattering and a soft one reads as shallow depth of field. */
-  filter: contrast(1.06) saturate(1.02);
-}
-@media (max-width: 420px) {
-  .artist-hero-portrait { width: 78px; height: 78px; }
-  .artist-hero-content { gap: var(--s3); }
-}
+@media (max-width: 420px) { .artist-hero-content { gap: var(--s3); } }
 .artist-hero-eyebrow {
   font-size: 12px;
   font-weight: 700;
@@ -4192,9 +4198,16 @@ body.entering-done #artist-hero {
 @media (max-width: 640px) {
   /* The portrait sits above the name here rather than beside it, so the
      scrim's job changes: carry the bottom half, not the left edge. */
+  /* var(--bg) is GONE from here, and it was the hard edge. The first 8% of
+     this gradient was an opaque band of flat background painted over the
+     photo — but the page behind carries four radial washes, so that band met
+     a different colour a pixel below itself and drew a line across the bottom
+     of every hero. The mask on the image is what ends the photo now; this is
+     only darkening, and every stop lands on transparent. */
   .artist-hero-fade {
     background:
-      linear-gradient(to top, var(--bg) 0%, var(--bg) 8%, rgba(10,9,8,0.84) 26%, rgba(10,9,8,0.38) 52%, transparent 84%);
+      linear-gradient(to bottom, rgba(10,9,8,0.72) 0%, rgba(10,9,8,0.24) 30%, transparent 56%),
+      linear-gradient(to top, transparent 0%, rgba(0,0,0,0.62) 16%, rgba(0,0,0,0.44) 34%, transparent 70%);
   }
   /* 360px was over 40% of a phone screen for a band that introduces the page
      rather than being it, and the -48px pull left the search field sitting on
@@ -6917,17 +6930,19 @@ window.ICONS = {
   <div class="activity-list" id="notif-list"></div>
 </aside>
 <div id="artist-hero" class="artist-hero artist-hero-expanded" style="display:none;">
+  <!-- Two copies of one photo, and the bed is the whole reason the banner
+       survives the source. Deezer's artist pictures are square, whatever the
+       label supplied, and the resolution swings from 1000px to an upscaled
+       thumbnail — so a sharp image stretched across a wide band is sometimes
+       going to be soft. The bed is that same photo blurred and scaled past the
+       edges, so a short or low-res source lands ON something in its own colours
+       instead of on a letterbox. -->
+  <img class="artist-hero-bed" id="artist-hero-bed" alt="" aria-hidden="true" referrerpolicy="no-referrer">
   <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer" crossorigin="anonymous">
   <div class="artist-hero-duotone" aria-hidden="true"></div>
   <canvas class="artist-hero-canvas" id="artist-hero-canvas" aria-hidden="true" style="display:none;"></canvas>
   <div class="artist-hero-fade"></div>
   <div class="artist-hero-content wrap">
-    <!-- The same photo twice: once as an ambient wash behind everything
-         (#artist-hero-bg, blurred) and once here at portrait size. See the CSS
-         for why that is the only presentation that survives the source. -->
-    <div class="artist-hero-portrait">
-      <img id="artist-hero-face" alt="" referrerpolicy="no-referrer">
-    </div>
     <div class="artist-hero-words">
       <div class="artist-hero-eyebrow">Favourite artist</div>
       <div class="artist-hero-name" id="artist-hero-name"></div>
@@ -10086,10 +10101,10 @@ async function renderArtistHero() {
   if (!img) { hideArtistHero(hero); return; }
 
   document.getElementById('artist-hero-bg').src = img;
-  // Same file, second use: the wash above and the portrait in the content row.
+  // Same file, second use: the sharp banner and the blurred bed behind it.
   // One request — the browser serves the second from cache.
-  var face = document.getElementById('artist-hero-face');
-  if (face) { face.src = img; face.alt = fav.name || ''; }
+  var bed = document.getElementById('artist-hero-bed');
+  if (bed) bed.src = img;
   document.getElementById('artist-hero-name').textContent = fav.name;
   document.getElementById('artist-hero-meta').innerHTML = '';
   hero.dataset.artistId = fav.id;
@@ -14400,10 +14415,11 @@ window.handleGrooveLink=handleGrooveLink;
     if(!img)return;
     const hero=document.getElementById('artist-hero');
     document.getElementById('artist-hero-bg').src=img;
-    // The portrait takes the same file. Missing this is what made the debug
-    // view a wash with an empty circle in it.
-    const _face=document.getElementById('artist-hero-face');
-    if(_face)_face.src=img;
+    // The bed takes the same file. This path has its own code and has to be
+    // told about every layer separately — missing it is what made the debug
+    // view a wash with an empty hole in it last time.
+    const _bed=document.getElementById('artist-hero-bed');
+    if(_bed)_bed.src=img;
     document.getElementById('artist-hero-name').textContent=qp.get('debugArtistName')||'Test Artist';
     document.getElementById('artist-hero-meta').innerHTML='';
     showArtistHero(hero);
