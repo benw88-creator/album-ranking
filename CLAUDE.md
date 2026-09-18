@@ -17,6 +17,9 @@ Zero-config Vercel deployment — there is no build step and no `package.json`.
   - `preview.js` — 30-second preview clips for one album, from Deezer (which sends
     no CORS headers, hence a route), edge-cached a week. This is what VINALL's own
     player plays — see **Playing a track**
+  - `catalogue.js`, `_artists.js` — the Deezer catalogue, wearing Spotify's response
+    shape. `_artists.js` is the reusable identity/classification utility every
+    discography goes through — see **The artist utility**
   - `delete-account.js` — in-app account deletion
 
 **There is no Spotify user login.** Accounts are Supabase email/password. `api/login.js` and
@@ -27,6 +30,11 @@ every single page load, which 404'd. Both routes and that code are gone. A usefu
 ever authenticates against Spotify. Only the app owner's credentials are involved.
 - `assets/`, `dither-frames/` — static media
 - `supabase-migration-discs.sql` — loose schema SQL (see Database below)
+
+**`index.html` is ~1.5MB now, not 540KB.** The number above was stale for a long time
+and is worth keeping honest, because it is the argument for every decision about
+what goes in it: the stylesheet alone is ~286KB, and the three static game tables
+everybody assumes are the problem are 65KB between them.
 
 Data comes from the Spotify Web API; user data is stored in Supabase.
 
@@ -413,6 +421,86 @@ arrangement as `LADDER` against `v_ladder`: change one and you must change the o
 - The shortlist is a local list, not a `lists` row. It syncs, it is private, and it costs
   no round trip per tap.
 
+## The traps that keep recurring
+
+Each of these has now been shipped **more than once**, in different parts of the file, by
+somebody who had already read the warning about the previous instance. They are listed
+together because that is the only form in which they are actually useful: scattered through
+thirty sections they read as anecdotes, and the thing they have in common is that every one
+of them **fails silently and plausibly**.
+
+### 1. A rule further down the stylesheet wins — four times
+
+The safe-area insets (beaten by `header`'s padding shorthand), the song-row `.idx` oval
+(beaten by a bare `button.idx`), a checkbox, and the header's phone budget (beaten by
+`.brand { gap }`).
+
+Every one looked correct in the diff and every one was outranked by something two hundred
+lines below it at equal specificity. **If a rule is meant to win, put it where it can** —
+and check with `getComputedStyle`, not by reading.
+
+### 2. The `animation` shorthand REPLACES the list — three times
+
+`.brand-mark.is-landed` stopped `vinylSpin` and snapped the header record to 0°. A crossfade
+added the same way would have restarted `discFlight` from the centre of the screen. The
+pattern is always an element that is *already* animating quietly, so nobody thinks of it as
+animated.
+
+**Animate a property the existing keyframes do not touch, with a transition.** opacity is
+almost always that property.
+
+### 3. Measuring a transformed element — twice, and expensively
+
+`getBoundingClientRect()` returns the **axis-aligned bounding box after transforms**. On the
+spinning `.brand-mark` that is 32→45.25px depending on the moment, which is how the splash
+handoff landed 26% too big with a different error on every load. A throttled tab also lies
+about a running transition — measure that with a screenshot, not a rect.
+
+**Layout size comes from `getComputedStyle().width` or `offsetWidth`. Only the CENTRE
+survives rotation.** In an app whose motif is a spinning record, assume anything you are
+about to measure might be turning.
+
+### 4. Two keys for one record — three times and counting
+
+The Crate's "Your call" button on records people had rated. The Collection's duplicate
+Mythic pick. And, in the other direction, a fabricated `spotify:track:` URI nearly written
+to `listening_plays` for good.
+
+All the same cause: **the catalogue switch left legacy Spotify ids in the database and new
+Deezer ids coming in, for the same record.** Any lookup keyed on an id alone will miss.
+Fall back to a normalised name+artist, and never re-key.
+
+### 5. Accents stripped instead of folded — twice, in two languages
+
+`beyonc` instead of `beyonce`, `jaz` instead of `jayz`. Cost five covers in the artwork pass
+(JavaScript) and would have made `album_match_key` disagree with the browser about every
+accented title (SQL). **Fold first, strip second** — NFD + drop combining marks in JS,
+`translate()` in SQL.
+
+### 6. Scrolling gradients in percentages — four times
+
+`background-position: 260%` aligns a point of the image to a point of the box; the travel has
+no relation to the gradient's own period, so frame 0 and frame 1 are different images and it
+visibly snaps. **Size the gradient in pixels, translate by exactly that, 90deg, first and
+last stops identical.**
+
+### 7. A field read in several places and written in none
+
+`login_last_date` was read in three and written in zero, so `claimedToday` was permanently
+false and every press after the first was theatre over a no-op. `notePlay('blitz')` was a
+silent no-op for the life of Cover Fire because `blitz` was never added to `GAME_LABELS`.
+`ew-card-status` and three sibling status lines were wiped on the way *into* the only view
+they appear in.
+
+**The symptom is never "nothing happens" — it is something that looks like a correct second
+press.**
+
+### 8. A guard that reads correctly in English and is wrong for NULL
+
+`v_self boolean := (p_user = auth.uid())` is NULL for an anonymous caller, so `not v_self` is
+NULL, the early return never fires, and every logged-out visitor got the private breakdown.
+**Anywhere a boolean gates a privacy branch, decide what NULL means and say so.**
+
 ## Deploying
 
 GitHub → Vercel is connected. **Push to `main` and the site is live** in roughly half a minute:
@@ -632,11 +720,341 @@ because an equipped one with no renderer is a blank header.
 `profiles.banner_picks` still exists, zeroed and still pinned. Dropping a column on a live
 table to save nothing is the worse trade.
 
+## Reach — referrals
+
+`..._20260918100000_reach_referrals.sql`, the `Reach` module at the bottom of
+`index.html`, and `#reach-modal`. Reached from the account menu. **Apply the
+migration by hand in the SQL editor**, like the others.
+
+Named Reach rather than "Invite friends" because what it measures is how far your
+taste travels — and because a screen called Invite Friends is one everybody has
+learned to close.
+
+### The gates are the feature, not the cap
+
+A referral bonus is **the one faucet in this economy that anybody can open as many
+times as they have email addresses**, and accounts here are free email+password.
+At 20,000 a side with no gate, ten burners print 400,000 Discs — four times what a
+realistic week pays, against a whole shop of ~4.95M.
+
+So the defence is not a cap. It is that a referral only pays once the referred
+account has done something a farm will not bother doing:
+
+| | |
+|---|---|
+| email CONFIRMED | `auth.users.email_confirmed_at` |
+| 10 rated albums | real work, and the exact work the app exists for |
+| referrer capped | 5 paid referrals, ever |
+| referred once, ever | the primary key on `referred_id`, not a check somebody has to remember |
+
+Five referrals at 20,000 is **100,000 lifetime** against ~70,000 for one realistic
+week. It is a real reward and it runs out. Same test as the Bid War collusion sum:
+manufacturing has to pay less than honest play.
+
+**If email confirmation is ever switched off in the Supabase dashboard**, that gate
+passes for free — Supabase stamps `email_confirmed_at` at sign-up when
+confirmations are disabled — and only the album gate is left doing work. Raise the
+album requirement if that happens.
+
+### "New" is a window, because there is no onboarding event
+
+The brief asked that only a genuinely new user counts, and this app has no
+onboarding step to hang that on. So the honest test is the account's own age: a
+code may only be claimed **within 14 days of sign-up**. That stops an established
+account taking a friend's code for a free 20,000 without inventing a completion
+event that does not exist.
+
+### The order of operations is the feature
+
+A code arrives in the URL of somebody who **has no account yet**, which means it
+has to survive a sign-up, an email confirmation and very often a different browser
+session before there is anybody to attach it to.
+
+- `?ref=` is captured into localStorage **at page load, before auth exists**, and
+  **stripped from the address bar** — a referral code left in the URL gets copied
+  into the next thing that person shares, and then two people wear one code.
+- It is claimed on the first authed load after that. Reading it at sign-up time
+  only would lose every referral where somebody confirmed their email in a new
+  tab, which is most of them.
+- `referral_settle()` is called on every authed load **and** the moment the tenth
+  album is rated (`Reach.noteRating`, a local count and a boolean before it is
+  anything else). The person who earned it is not thinking about referrals by
+  then.
+- A claim answer is a **named reason** — `already_claimed`, `unknown_code`,
+  `self`, `not_new` — never a silent no-op, because those are four completely
+  different things to say to somebody.
+
+`referral_settle` takes a row lock and stamps `paid_at` in the same transaction
+that pays, the same shape as the free spin. Without it two tabs finishing the
+tenth rating at once could both pass the gate.
+
+**The referred side is paid even when the referrer is capped out.** They did the
+ten albums; the cap is a rule about how many times one person may be paid for
+inviting, not a reason to punish the person who turned up.
+
+### The channels are what actually exists
+
+@capacitor/share and nothing else. There is no Contacts plugin and no Snap
+Creative Kit here, so neither gets a button that pretends otherwise — **a control
+that names one action and performs another is the worst shape a button can have**,
+which this file already says about the Market's "Price it".
+
+The iOS share sheet already lists Messages, Snapchat, WhatsApp and the people you
+message most, so **Share is not a lesser version of the named buttons — it is the
+one that reaches all of them.** Beside it: an `sms:` button (no plugin, no
+permission) and Copy code. `sms:` wants `&body=` on iOS and `?body=` everywhere
+else; getting that wrong opens Messages with an empty draft, which looks like the
+button did nothing.
+
+The link is built from **`Native.site`, never `location.origin`** — in the app that
+origin is `capacitor://localhost` and a link nobody else's phone can open is worse
+than no share button.
+
+### The code
+
+Eight characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789` — no O/0, no I/1/L. This
+gets read off one phone screen and typed into another, and a code that cannot be
+transcribed is a code nobody uses. Created **on demand** rather than by a trigger,
+so existing accounts get one the first time they open Reach and nothing needed
+backfilling.
+
+### Guards in the migration
+
+`referral_claim`/`referral_settle` must never take more than a code (the server
+owns the amount — same rule as `wallet_buy`), and `referrals` must never gain a
+write policy. Both raise rather than reporting.
+
+## The OG badge, and the column that was never pinned
+
+Every account gets `og` on insert, granted by `pin_profile_economy` rather than by
+the client, and every account that already existed was back-awarded — the badge is
+for being here early and the people here now are the earliest there will ever be.
+
+**`profiles.badges` was not pinned at all**, which means any signed-in client could
+have written itself `verified` — the one marker a verification badge can never be
+allowed to be. It is pinned now, on the same line as `discs` and `owned_tags`.
+
+**`profiles.badges` is `jsonb`, not `text[]`.** The first draft of that migration
+assumed an array type and its guard refused to install the trigger, which is
+exactly what the guard is for: it runs **before** `pin_profile_economy` is
+replaced, because a trigger that raises on every profile write is far worse than a
+migration that will not apply. The column is left alone — PostgREST hands a jsonb
+array and a `text[]` to the browser identically, so `computeBadges` reading
+`profile.badges` does not know or care, and converting would be a data migration
+on a live column carrying CEO and Verified for no behaviour change.
+
+`jsonb_typeof` is checked before `jsonb_array_elements_text` in both the trigger
+and the backfill: that function **raises on a non-array**, and the trigger fires on
+every insert into `profiles`. A badge list is not worth failing a sign-up over. The
+backfill skips non-array rows rather than reshaping them — it is a back-award, not
+a repair, and silently reshaping a column it did not understand is how a migration
+destroys something.
+
+## For You
+
+A vertical feed, one record a screen, scroll-snapped, playing. Its own nav
+destination (`view-foryou`) and the `ForYou` module at the bottom of `index.html`.
+
+**Discover left Home to become this.** It was a `<details>`, closed by default,
+under the Today stack — a recommendation behind a disclosure is one nobody reads,
+and a grid of twelve small covers asks somebody to evaluate twelve records at once,
+which is a chore rather than a feed. The two blocks that were inside that fold
+(Recommended for you, upcoming releases) moved with it and sit **below** the feed:
+they answer a different question and they were not the problem.
+
+**This was the first new nav destination since the bar was built**, so it is the
+first time the `views` trap was live: that map in `setMode` is explicit and is not
+derived from the DOM, and a button added without the matching entry hides every
+section and shows a blank page.
+
+### Ranking is a list of signals, not a formula
+
+`SIGNALS` is an array of `{key, weight, score()}`. Each scores **0..1 on its own
+terms** and knows nothing about the others; `rank()` sums `weight × score`. Tuning
+is editing one column of numbers; adding a signal is appending an object.
+
+| signal | weight | what it reads |
+|---|---|---|
+| `shortlist` | 5.0 | the only explicit request in the set — somebody said they had not heard it |
+| `artist` | 3.0 | your mean score for them, with 50 worth nothing rather than half |
+| `listening` | 2.2 | `listening_plays`, log-scaled |
+| `genre` | 1.6 | genres you rate highly |
+| `collection` | 1.4 | you own it and have never rated it |
+| `community` | 1.2 | how the Crate is scoring it |
+| `fresh` | 0.7 | recency |
+| `repeat` | **−2.5** | shown lately |
+
+**`repeat` is negative rather than a filter**, deliberately: a hard exclusion
+empties the feed for anybody with a small crate, and a record seen a month ago and
+never rated is worth offering again.
+
+**`ForYou.why(i)` prints the breakdown**, because an ordering nobody can read is an
+ordering nobody can tune. Verified with Blonde 94, channel ORANGE 91 and IGOR 88
+rated: Tyler's CALL ME IF YOU GET LOST leads on **3.27**, of which 2.28 is artist
+affinity, over a community-only UTOPIA.
+
+The context every signal reads is built **once per feed**, not per candidate —
+these are all O(crate) scans and doing them inside a scorer makes ranking O(n·m)
+over a crate that can run to hundreds of records.
+
+The line under the title names the strongest **positive** signal, so the feed can
+say *why* a record is in front of you. That is the difference between a
+recommendation and a shuffle.
+
+### Candidates come from things the app already fetches
+
+The community (`fetchTrending`, no catalogue call at all), the artists you rate
+highest, the shortlist, and your own unrated shelf. No new table and no new
+dependency.
+
+### The audio is thirty seconds and the card says so
+
+The same Deezer preview the player, Recall and the Crate use. **VINALL has no
+full-track playback and cannot have any while the catalogue is Deezer's**, so
+nothing here says "song" when it means "preview". The Deezer mark is on the card,
+which their guidelines ask for and which is the honest label besides.
+
+**The first card does not autoplay.** iOS grants an `<audio>` element permission
+inside a real gesture and not before, so a feed that started on load would be
+silent on every iPhone, with no error and no way to tell. The first card carries a
+play button and everything after it autoplays on scroll — one tap buys the rest of
+the session. That is not a degraded mode, it is the only shape that works.
+
+A refused autoplay (`NotAllowedError`) and a record with no clip are **different
+answers** and neither is an error worth a banner.
+
+### Two things that are measured, not guessed
+
+- **The feed's height.** `calc(100dvh - 210px)` put its bottom **45px under the
+  floating nav**, with the rating slider behind it — every term in that guess
+  moves, since the header grew when the wordmark did, the search field is not on
+  every viewport, and the bar's height is a token. `fitFeed()` reads the two things
+  that actually bound it. Measured after: feed ends at 729, bar starts at 741.
+- **`scroll-snap-stop: always`** is what makes the IntersectionObserver honest.
+  Without the snap a card can sit half on screen indefinitely and the 60% threshold
+  either never fires or fires for two cards at once, which is how a feed ends up
+  playing two records.
+
+**Leaving the tab stops it.** `setMode` only changes `display`, and an `<audio>`
+element does not care that the card holding it is hidden.
+
+`VinalListening.byArtist()` was added for the one behavioural signal here. It reads
+`listening_plays` through **that module's own key rule** — its `norm()` strips
+"(feat. …)" and remaster tails and a local reimplementation would bucket the same
+artist two ways and quietly score them zero.
+
+## The artist utility — `api/_artists.js`
+
+A reusable module rather than a patch in the route, because new artist data keeps
+flowing through: the Completion list, the artist hero, the recommendation seeds and
+the minigame pools all ask Deezer "who is this" and "what did they release", and
+every one of them was answering differently or not at all.
+
+Exports `normName`, `baseTitle`, `classifyRelease`, `dedupeArtists`, `rankArtists`,
+`pickArtist`, `dedupeReleases`, `COMPLETIONIST_KINDS`.
+
+### Two artists, one name, and whoever came back first won
+
+Measured, live:
+
+```
+/search/artist?q=Steve Lacy
+  13158489  "Steve Lacy"            395 fans
+     65574  "Steve Lacy"        277,980 fans
+   1202284  "Steve Lacy Quartet"     16 fans
+```
+
+Both of the first two are an **exact** match on the name. The route resolved names
+with `.find(x => loose(x.name) === want)` — first hit wins — so it took the 395-fan
+entry, and every discography, hero image and completion list built from it belonged
+to a different musician. **The client never saw an error**: it got a perfectly valid
+artist with perfectly valid albums, none of which were the ones somebody had rated.
+
+The fix is to **rank rather than find**: exact normalised name beats prefix beats
+substring, and among equals `nb_fan` decides — the only field on a search result
+that separates a canonical entry from a duplicate, and it does so by three orders
+of magnitude.
+
+**Ids are matched first and names only as a fallback**, because an id is an identity
+and a name is a guess. "Steve Lacy Quartet" is a different artist and is never
+merged in — which is why the comparison is the whole normalised string and not a
+prefix.
+
+Every merge is logged. `pickArtist`'s log deliberately carries the merges
+`dedupeArtists` made: the first version deduped correctly, recorded why, and then
+returned an empty log because there was no longer a contest to report — the merge
+happened and nothing anywhere said so, which is the exact property this module
+exists to remove.
+
+### `record_type` is a hint; the track count is the evidence
+
+Measured from Travis Scott's real discography:
+
+| record_type | tracks | duration | title |
+|---|---|---|---|
+| album | 19 | 73m | UTOPIA |
+| album | 17 | 58m | ASTROWORLD |
+| **album** | **1** | **3m** | **durag activity** |
+| ep | 4 | 13m | K-POP (Chopped & Screwed) |
+
+`durag activity` is one track and three minutes and Deezer calls it an album, so a
+completion list built on `record_type === 'album'` told people to go and rate a
+single. That is the reported bug, reproduced exactly.
+
+Thresholds are the **Official Charts Company's**, because this is a UK app and
+there is no reason to invent a definition when the one the charts use is public:
+single ≤3 tracks and ≤25 min, EP 4–6, album 7+ or over 25 min.
+
+**`/artist/{id}/albums` returns NO `nb_tracks` at all** — the field is simply absent
+from that endpoint, which is why nothing downstream could ever have told. So
+`classifyRelease` returns **`confident: false`** when it had only the type to go on,
+and the route spends a bounded number of `/album/{id}` lookups settling exactly
+those. It is never told a guess is a fact.
+
+**EPs count toward completion and singles do not.** Decided with the owner rather
+than assumed, and `COMPLETIONIST_KINDS` is the single place that decision lives. An
+EP gets a chip in the missing-albums list, because a four-track entry in a list
+headed "albums left" reads as a bug in the list unless the list says what it is.
+
+`dedupeReleases` collapses editions, and has a second pass for editions that
+**rename** rather than annotate — "eternal sunshine deluxe: brighter days ahead"
+does not reduce to the same key however the words are stripped. That pass is gated
+on the edition flag, without which "Rodeo" would swallow a record genuinely called
+"Rodeo 2".
+
+Result: Travis Scott's 11 typed releases become **8 albums**, no single, no
+duplicate JACKBOYS 2. Ariana Grande's "Dangerous Woman (Edited)" and "eternal
+sunshine deluxe: …" both fold into their originals.
+
+### Accents fold, they never strip
+
+`normName` normalises NFD and drops the combining marks **before** stripping to
+`[a-z0-9]`. Doing it the other way turns Beyoncé into `beyonc` and JAŸ-Z into
+`jaz`, which match nothing — the same bug that cost five covers in the artwork
+pass, and the same bug that had to be fixed a second time in SQL (see
+`album_match_key`).
+
 ## Discs (`view-rewards`)
 
-Called **Discs** in the nav and the heading. The view id, the `views` entry in `setMode`,
-`renderRewards` and every `rw-` class are all still `rewards` — renaming those buys nothing
-and walks straight into the `setMode` trap below.
+Called **Shop** in the nav and the heading as of the rebrand. The view id, the `views`
+entry in `setMode`, `renderRewards`, `data-mode="rewards"` and every `rw-` class are all
+still `rewards` — renaming those buys nothing and walks straight into the `setMode` trap
+below. **This is a display rename**, the same arrangement as Album Blitz becoming Cover
+Fire with `blitz` left in every id, RPC and award key.
+
+**Note that two things are now called Shop**: this page, and the cosmetics modal it opens.
+Flagged rather than resolved — renaming the modal is a decision, not a fix.
+
+**The header chip carries the balance**, abbreviated: 26,432 → `26.4k`, with a trailing
+`.0` dropped because "26k" and "26.4k" are both four characters and "26.0k" claims a zero
+that is rounding. `abbrevDiscs` is on the Wallet module. It was hidden under 700px because
+six controls did not fit a 402pt bar; it is back because a currency you cannot see is one
+you forget you have, and it fits because the count is now about four characters however
+large it gets.
+
+`countUp` takes a **formatter** for that reason — the header is abbreviated and the Shop's
+own balance is not, and a counter that animates in one format and lands in another is a
+number that visibly changes shape as it stops.
 
 The seven-day login ladder, **The Draw itself**, and a door to The Shop. That is the whole page.
 
@@ -803,6 +1221,36 @@ valuation, so knowing what a record is worth pays off in two different games.
   - A record kworb genuinely cannot match says "cannot be priced" and loses its Buy button —
     that is a real and permanent answer, not a retry. A failed batch says "price unavailable
     just now" instead, and the sweep carries on: one bad chunk is not a dead market.
+- **One owned copy per record, and a record is not an id**
+  (`..._20260918110000_one_copy_per_record.sql`). Reported as "you can buy an album you
+  already own as a Mythic pick".
+
+  **The limit was never what failed.** `collection` is `primary key (user_id, album_id)` and
+  both definer functions already raise on it. What happened is that ONE RECORD HAD TWO IDS:
+  bought before the catalogue moved, it carries a Spotify base62 id, and the Market now
+  offers the same record under Deezer's numeric one. Different ids, primary key satisfied,
+  second Blonde on the shelf. Exactly the shape of the Crate's "Your call" bug — same
+  record, two keys, no match — and the same answer: fall back to the name.
+
+  Both halves. The client indexes ownership by id **and** by normalised name (`colKey`), and
+  **folds the name matches back into the id set** — without that the card renders correctly
+  and then GROWS a pick button a second later, because `priceSweep` decides on a plain id
+  lookup as each price lands. The limit itself is in SQL, under all the purchase paths
+  rather than on the button, for the same reason `wallet_buy` takes a key and never a price.
+
+  **On the pick path the check runs BEFORE the pick is spent.** A pick decremented and then
+  refused would cost somebody a Mythic prize for a record they already have.
+
+  `album_match_key` **folds accents rather than stripping them**, and the first draft
+  stripped: JavaScript's NFD turns Beyoncé into `beyonce` and a bare `[^a-z0-9]` in SQL
+  turns it into `beyonc`, so the two languages would have disagreed about every accented
+  title. `translate` rather than the `unaccent` extension — an extension that is not
+  installed is a migration that fails. There is a guard for it.
+
+  **Nothing is re-keyed and nothing existing is deleted.** Anybody already holding two
+  copies keeps both: merging rows means choosing which price and which `bought_at` are real,
+  which is a decision with no right answer and not one to make on somebody's behalf inside a
+  bug fix.
 - **Collections are publicly readable**, like ratings — other people seeing what you built is
   the point. There is **no INSERT or UPDATE policy at all**, so the only way in is the definer
   functions.
@@ -1449,6 +1897,9 @@ rows and not the duplicates, and the Shop offered Sundown at 150 while `wallet_b
   - **These are deliberately not `profiles.badges`.** That column holds status markers — CEO,
     OG, Beta Tester, Verified — which are *awarded*. Putting bought items in the same array
     would make Verified purchasable, which is the one thing a verification marker can never be.
+    **That was an argument about intent and not an enforced rule until recently**: `badges`
+    was not pinned by `pin_profile_economy` at all, so any signed-in client could simply have
+    written itself Verified. It is pinned now — see **The OG badge**.
   - **No `desc`.** A tag is three words on a chip; a line explaining it underneath is
     explaining the joke. `shopItemRow` drops the element entirely when desc is empty rather
     than rendering a blank one.
@@ -2539,6 +2990,43 @@ so every match played counted for nothing on the favourite-minigame tile. Both `
 and `recall` are in it now. Second time this exact defect has been found in that
 module, after the `.gc-best` selector that wiped four cards' status lines.
 
+## The five-round game modal — one input, and a Popular tab
+
+`#game`, the shared start screen for the round-based minigames.
+
+**Genre and Era are DELETED, not parked**, and that is the right call because there was
+nothing working to bring back. Both built their pool with **Spotify query syntax** —
+`genre:"rock"`, `year:1990-1999` — which `/api/catalogue` has not understood since the
+catalogue moved to Deezer. They did not error. Every genre game since then was a plain text
+search for the word "rock" and every era game a search for "1990". This file already listed
+those operators under **Known regressions** on the catalogue switch; what it did not say is
+that two whole game modes were riding on them.
+
+An artist is also the only pool where "how well do you know this" means anything — a 90s
+pool is a pool of records you have no particular relationship with.
+
+**Popular replaces them and is an INPUT METHOD, not a third mode.** A chart tile sets
+`selectedArtistId` and `artistName` and calls `start()`, so it goes down the artist path and
+there is one place a pool can be wrong. One tap on a face is the whole point; a tap that
+only fills in a field you then have to confirm is the typing path with an extra step.
+
+**The leaderboard key is always `artist:` now.** Typing "Drake" and tapping Drake in the
+Popular list are the same pool and have to land on the same board, or a leaderboard splits in
+two for a reason nobody can see.
+
+The list comes from Deezer's own chart through `/api/catalogue?path=chart-artists`, edge
+cached a **day** (a chart that is a week stale is not a chart), and through the same
+`dedupeArtists` as everything else so it cannot show one artist twice under two ids.
+
+**Deliberately not baked.** A hand-maintained list of who is popular is wrong within a season
+and wrong in a way nobody would ever notice — unlike the static game pools, where being fixed
+is the whole point because two people have to be asked the same question. A dead chart says so
+and points at the field that still works, rather than leaving an empty panel that reads as
+broken.
+
+Faces, not names: picking is only faster than typing if recognising is faster than reading,
+and a column of text is not.
+
 ## Album Tournament — parked
 
 Its card in the Minigames grid was its only way in, so removing that card retires it. The
@@ -2779,6 +3267,9 @@ Pieces:
   up to nine items. `setMode('home')` calls both `renderToday()` and `renderDiary()`;
   `renderToday()` no-ops when the stack is already built for the day, so re-entering Home is
   cheap.
+  **Home is now Today and nothing else** — the Discover fold left to become the For You tab,
+  and `renderRecommendations()` / `renderNewReleases()` moved with it, so `setMode('home')`
+  no longer calls either. See **For You**.
 - **Liner Notes is TEMPORARILY OFF.** Three switches, flip them together: `display:none` on
   `.ln-card` and on `#fold-year` in the Home markup, and `DIARY_ON` in the Liner Notes module.
   Nothing was deleted — the module, the entry modal, the schema and every `renderDiary()` call
@@ -3225,15 +3716,50 @@ A floating bar at the bottom under 700px, and the same inline strip it always wa
 a bar hovering over a 1400px desktop would be silly. Mobile is the primary layout and the
 desktop is what it grows into.
 
-Five destinations, on one rule: **the bar holds places.** Home, Crate, Minigames, Collection
-and Discs are places you go. Achievements, notifications and recent activity are things that
-*happened*, so they went to the account menu and the top bar. That rule is what to apply when
-somebody wants a sixth item.
+**Six destinations now**, on one rule: **the bar holds places.** Home, Crate, For You,
+Games, Records and Shop are places you go. Achievements, notifications and recent
+activity are things that *happened*, so they went to the account menu and the top bar.
+That rule is what to apply when somebody wants a seventh item.
 
 `#modes` keeps its `button[data-mode]` structure exactly, because `setMode` finds its buttons
 that way and `positionNavIndicator` measures them. The one JS change is that the indicator
 reads the nav's padding instead of a hardcoded `5` — that 5 *was* the padding, typed a second
 time with nothing keeping the two in step, and the bar's padding changed.
+
+#### Two labels are the short name, and that is a measurement not a taste
+
+Measured at 375px with six items: every button is **55.2px**, which leaves about **45 for
+the text**, and "Minigames" needs 56 and "Collection" 54. Both ellipsised to `Minigam…`.
+Trimming the padding and the size recovers four or five pixels, which is not ten — at six
+items the bar simply cannot carry a nine-letter word. So the chip says **Games** and
+**Records** while the page headings are still Minigames and The Collection. Reversing it is
+two words in the markup and a fifth destination.
+
+#### Every destination owns a hue, and the map is POSITIONAL
+
+It used to read `color: var(--section)`, which is the colour of the page you are already on
+— so the bar had one colour at a time and it was the one you did not need telling. Worse,
+**Minigames and Collection were both lime**, so the single thing the bar could have said was
+ambiguous between two of its five items.
+
+Each button now carries its own `--nav-c`, assigned by `nth-child` the way the stats strip
+and the minigame grid already do it. `positionNavIndicator` reads that off the active button
+rather than keeping a second copy of the map in JS.
+
+**Fixed neons, never `--accent-2` or `--gold-dim`.** Those are themed, and a destination
+whose identity colour changes when somebody equips Neon Vault has no identity colour. Same
+reason `--c-cyan` and the rest are not themed.
+
+**`nth-child` is positional, so `body[data-section]` has to be kept in step BY HAND.**
+Inserting For You at position three shifted every hue after it by one: the bar stayed unique
+and correct, and the page temperature silently stopped agreeing with the button that got you
+there. The rule in the CSS names the destination beside each line for exactly that reason.
+Verified by walking the bar and comparing `--nav-c` against `--section` on each.
+
+**The Crate's three sub-tabs all take the Crate's cyan.** Albums was violet and Songs pink,
+which was a nice touch while nothing else wore those colours — but Games is violet and
+Records is pink now, so opening Albums painted the page the colour of a destination you are
+not in while the button you pressed stayed cyan. Under one nav button, one colour.
 
 **The player bar moved above the nav and took its shape** — same width, same radius, same
 float. Two things at the bottom of one screen should look like they belong to each other, and
@@ -3931,6 +4457,58 @@ It degrades to the old fade under reduced motion, and to the old fade if either
 the record or the header mark is missing — a splash that will not go away is
 the one failure that matters here.
 
+#### The record landed 26% too big, and the number was different every time
+
+Reported as "the incoming vinyl is slightly larger than the homepage vinyl". It
+was, and it was a different amount on every single load, which is why it could
+never be pinned down by reading the code — the arithmetic there is correct.
+
+**`.brand-mark` carries `animation: vinylSpin 8s linear infinite`.** The header
+record is always turning, and `getBoundingClientRect()` returns the
+**AXIS-ALIGNED BOUNDING BOX OF A ROTATED ELEMENT**. A 32px square at angle θ
+measures `32·(|cos θ| + |sin θ|)`: 32 at 0° and 90°, **45.25 at 45°**. Measured
+live on two runs: 40.46 and 44.47.
+
+So `fs = to.width / from.width` was computed against whatever the header record
+happened to be doing at the instant somebody pressed GO. It averages about 27%
+too large and is **never too small**, which is exactly what an intermittent "a
+bit too big" reads like.
+
+**The layout width is what a scale wants, and `getComputedStyle(mark).width`
+gives it transform-free.** The CENTRE still comes off the rect, because a square
+rotating about its own centre keeps the same centre — that half was always
+right. Measured after: the disc lands **32.03px at (32.02, 51.04)** against a
+mark of **32px at (32.00, 51.00)**.
+
+**THE RULE WORTH KEEPING: never measure a spinning thing with
+`getBoundingClientRect()`.** If an element has any rotation on it — and in this
+app a great many do, because the record is the motif — that call answers a
+different question from the one being asked. Layout size comes from
+`getComputedStyle` or `offsetWidth`; only the centre survives rotation.
+
+#### Two more at the same seam, both the `animation` shorthand replacing a list
+
+Found while fixing the above, and they are the same defect twice:
+
+- **`.brand-mark.is-landed { animation: markLand }` stopped `vinylSpin`.** The
+  shorthand replaces the whole list, so the transform reverted to `rotate(0)` in
+  one frame — a rotation SNAP at the exact moment the flight is trying to
+  convince you the two objects are one, caused by the rule meant to celebrate
+  the landing. The ring is its own element now, positioned over the mark and
+  thrown away afterwards.
+- **A crossfade added as a second animation would have restarted `discFlight`
+  from the centre of the screen on its last frame.** opacity is the one property
+  neither keyframe set touches, so the dissolve is a **transition**, which runs
+  alongside an animation instead of replacing it.
+
+The record also **winds down at 820ms** rather than arriving at 0.34s/rev into a
+mark idling at 8s — a 23x speed discontinuity on the one frame you are asked to
+believe they are the same object.
+
+**`is-entering` is never added by anything.** The comment above about forcing the
+resting state describes a state that no longer exists; the class swap is a
+harmless no-op kept for safety. Worth knowing before trusting that paragraph.
+
 ### The Draw shows the prize and stops talking
 
 Two things were in the way of the thing you just won.
@@ -4001,6 +4579,136 @@ reason.
 The debug hook (`?debugArtist=`) has its own code path and had to be taught
 about the portrait separately — missing that is a wash with an empty circle in
 it, which is exactly what it looked like.
+
+#### Superseded: it is a full-width banner again
+
+Reverted at the owner's request. Everything above is still the honest account of
+*why* the portrait existed, and the mitigation survives: **the same photo sits
+behind the sharp one, blurred and scaled past the frame**, so a low-res or badly
+cropped source lands on something in its own colours rather than on a letterbox.
+The debug hook had to be taught about the bed separately, exactly as it once had
+to be taught about the portrait.
+
+**The hard edge at the bottom was never the photo.** That was already
+gradient-masked, and masking is the right tool here because the page carries four
+radial washes — a band of flat `--bg` meets a slightly different colour a pixel
+below itself, and a seam between two almost-identical colours is exactly the edge
+an eye finds. The line was `.artist-hero-fade`, which peaked at **55–78% black at
+the hero's own bottom boundary** and then simply stopped. The photo dissolved; the
+darkening drew a line. The scrim peaks a little way up now and returns to
+transparent at the edge, so there is nothing left at the boundary to draw with.
+
+**`object-position: center 28%`, not centre.** A square press shot cropped to a
+wide band puts the face in the top third; centring it frames somebody's chest.
+
+### Today: the kind of card is its colour
+
+A stack where every card was the same grey with a gold kicker read as **one card shown
+repeatedly**, which is exactly what it is not — a receipt quoting something you said in
+November and a question about a record you have played forty times are different things
+arriving, and the stack had no way to say so.
+
+`mountCard` writes `data-kind` onto the slot (`kindOf(entry)`, applied there rather than in
+each of the five card builders because a sixth would forget), and the CSS gives seven kinds a
+hue: receipt violet, rethink cyan, contradiction pink, rinsed lime, abandoned blue, revisit
+cyan, game lime.
+
+**`any` — the ordinary ask, and by a distance the most common card — deliberately gets
+nothing.** A stack where everything is coloured is one where the colour says nothing. Same
+argument that keeps Common grey in The Draw and the inactive nav items unlit.
+
+**Every animation runs once, on arrival, and stops.** A card you are meant to read and answer
+is the wrong place for something moving in the corner of your eye, and the auto-advance
+already gives the screen all the motion it needs. The rule down the left edge draws in over
+320ms; the sleeve settles over 380; the three kinds that are about TIME — receipt, rethink,
+abandoned, the ones that cannot exist on a first visit — get one pass of light across the
+kicker.
+
+**`-webkit-text-fill-color: transparent` belongs INSIDE those keyframes, not on the rule.**
+With it static and the animation holding its end state, the gradient's white band stops
+wherever the last frame left it and sits there for good — a permanent bright patch partway
+through the word, on the three kinds that were supposed to get the nicest treatment. Ending
+on `currentColor` is what makes "one pass, once" mean what it says. Its gradient travels in
+**pixels at 90deg with matching end stops**, the rule this app has now broken four times
+elsewhere.
+
+### The search field was innocent
+
+Reported as "the UI teleports while typing and the input shifts position mid-interaction".
+
+**`#artist-hero` is a sibling ABOVE `<header>`**, so expanding it pushes the header, the
+search field and everything else down. Measured at 375px: the input's top goes from **96 to
+300** — a 204px jump, with the field sliding out from under whatever was typing into it.
+
+And it lands late **by construction**: `renderArtistHero()` awaits `fetchProfile` and then
+`fetchArtistImage`, so on a cold load it resolves a second or two in, which is exactly when
+somebody who opened the app to look something up is halfway through a word. Nothing about it
+looked like a search bug because it is not one — the field was standing on something that
+moves.
+
+Two rules, both needed:
+
+1. **Nothing resizes the hero while the search is being used** (`searchBusy()` — the input
+   focused, or the suggestions open). The change is queued.
+2. **When it does resize, the scroll is compensated.** Growing a block above the viewport
+   shifts everything you are looking at downwards for no reason; adding the delta back to
+   `scrollTop` means only the space above your eyes moves. At scrollY 0 there is nothing to
+   compensate and nothing needs it, because the hero is then the thing you are looking at.
+
+**The pending resize WATCHES FOR ITS OWN MOMENT rather than waiting to be told.** The first
+version hung this on `blur` plus a document click and simply never fired — `blur` does not
+happen if the person never leaves the field, which is the normal case (they type, the results
+come, they tap a result), and it does not fire for a programmatic blur of an already-blurred
+input either, which is how it was caught. A poll is the right shape when the state is rare,
+transient and stops itself, and when **no event reliably means "the search is finished
+with"**. Measured after: 0px of movement while focused, and the hero applies in full on
+release.
+
+### The wordmark could not be made bigger on its own
+
+`.brand` is `min-width: 0` and `.head-actions` is `flex-shrink: 0` — the brand is the thing
+that gives way, because a button squeezed to nothing is a button nobody can press. So making
+the wordmark bigger without taking something out of the controls **does not make it bigger,
+it makes it disappear**: VINALL rendered as `VIN…` on the first attempt.
+
+Measured at 375px, signed in: the bar is 343 wide, the controls take 200.8 and the header gap
+another 12, leaving the brand 130.2 — a 44px record, a 12px gap, and 74 left for a wordmark
+that wants 88. Sixteen pixels came out of three places that could afford them, and the account
+chip's inline `margin-right: 10px` went with them: it was spacing counted twice against a flex
+gap, and it was exactly what the wordmark was short of.
+
+**Those phone overrides sit AFTER `.brand` in the stylesheet on purpose.** The first attempt
+put them in the media block two hundred lines up and was silently outranked by
+`.brand { gap: var(--s3) }` further down — **the fourth time this app has shipped a rule
+beaten by one later in the file**, after the safe-area insets, the 24×26 song-row oval and the
+checkbox.
+
+### The legal pages sat under the notch
+
+`.doc-top` had the LEFT and RIGHT safe-area insets and **not the top one**, so on a notched
+phone — and inside the app, which sets `viewport-fit=cover` — the masthead sat under the
+status bar and the Dynamic Island. Back-to-the-app and the Privacy/Terms switch were both up
+there, covered and hard to hit. `max(14px, calc(env(safe-area-inset-top) + 10px))`, not a bare
+`env()`, so a phone with no inset keeps its 14. Both controls also gained a **44px** target;
+they were text links at their line height, about 30.
+
+### A preview button on a rated song row
+
+Every row in the Crate's songs tab is a record you already have an opinion about and no way to
+check it against. Thirty seconds from Deezer, the same clip everything else plays.
+
+**Delegated on the document, never wired per row.** `renderSongs()` rebuilds the whole list on
+every rating, every sort, every keystroke in the filter and every cloud merge — a listener
+attached to a row is one thrown away a moment later, and the row the audio belongs to is gone
+by the time it ends. Same reasoning as the album page's track rows. The row is found by id
+rather than held as a node, for the same reason.
+
+**Playing draws a SQUARE, not a second triangle.** A play glyph on the row that is already
+sounding says "press to play" over something that is playing — the wrong-verb problem the
+player bar's own toggle exists to solve.
+
+Stopped on tab change and on `visibilitychange`: `display:none` does not stop an `<audio>`
+element.
 
 ### The icon, third time
 
