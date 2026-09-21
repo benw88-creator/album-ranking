@@ -2854,6 +2854,29 @@ html[data-motion="none"] .modal-panel { animation: none; }
 }
 .ach.done { border-color: rgba(79,180,119,0.4); }
 .ach.claimable { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-dim), 0 0 20px var(--gold-dim); }
+/* ---- TWO CATEGORIES THAT LOOK LIKE TWO CATEGORIES -----------------------
+   They were the same card twice, so the page read as one long list of
+   achievements rather than as two different KINDS of thing. A milestone is
+   about how much you have rated; a Completionist is about one artist. Scoped
+   by their containers rather than by a class on each card, so neither
+   renderer has to know about this.
+
+   Milestones keep gold and stay the loud one — they are rare and they are the
+   headline. Completionist goes violet and quieter: smaller type, a thinner
+   bar, no glow on a claimable one. There can be dozens of them. */
+#ach-completionist .ach { --ach-c: var(--c-violet); padding: 15px; }
+#ach-completionist .ach.claimable {
+  border-color: color-mix(in srgb, var(--c-violet) 55%, transparent);
+  box-shadow: 0 0 0 1px var(--c-violet-dim);
+}
+#ach-completionist .ach-medal { color: var(--c-violet); }
+#ach-completionist .ach-bar-fill { background: var(--c-violet); }
+#ach-completionist .ach-name { font-size: 14px; }
+#ach-completionist .ach-claim {
+  background: var(--c-violet-dim); color: var(--c-violet);
+  border: 1px solid color-mix(in srgb, var(--c-violet) 40%, transparent);
+}
+#ach-milestones .ach-medal { color: var(--gold); }
 .ach-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .ach-medal { width: 40px; height: 40px; border-radius: 10px; background: var(--surface-3); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
 .ach.done .ach-medal { background: rgba(79,180,119,0.15); }
@@ -2863,6 +2886,39 @@ html[data-motion="none"] .modal-panel { animation: none; }
 .ach-bar-fill { height: 100%; border-radius: 3px; background: var(--green); transition: width 0.5s ease; }
 .ach-prog { font-size: 12px; color: var(--text-dim); display: flex; justify-content: space-between; }
 .ach-check { position: absolute; top: 14px; right: 14px; color: var(--green); font-size: 16px; }
+/* ---- THE SMALL ONE ------------------------------------------------------
+   A claimed discography stamps its own card instead of taking the screen.
+   There can be one Completionist per artist in a crate — dozens on a mature
+   account — and a full-screen trophy for each is the app congratulating
+   itself. It reuses .buy-stamp's language deliberately: a line being DRAWN,
+   not particles being thrown, because the Shop's stamp and this are the same
+   kind of event (a thing recorded) and the confetti means a thing won.
+
+   Green rather than the Shop's gold, so the two are not mistaken for each
+   other on a glance. Dash lengths are the measured path lengths — 2*pi*r for
+   r=15 is ~94.2 and the tick measures ~22; guessing them leaves a stub. */
+.ach-stamp {
+  position: absolute; inset: 0; z-index: 3; border-radius: inherit;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: linear-gradient(110deg, rgba(79,180,119,.2), var(--surface) 78%);
+  animation: stampIn .2s var(--ease);
+}
+.ach-stamp svg { width: 30px; height: 30px; flex-shrink: 0; overflow: visible; }
+.ach-stamp circle, .ach-stamp path {
+  fill: none; stroke: var(--green, #4fb477); stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.ach-stamp circle { stroke-dasharray: 94.2; stroke-dashoffset: 94.2; animation: stampRing .4s var(--ease) forwards; }
+.ach-stamp path   { stroke-dasharray: 22;   stroke-dashoffset: 22;   animation: stampTick .24s var(--ease) .32s forwards; }
+.ach-stamp b {
+  font: 700 11.5px/1 var(--font-mono); letter-spacing: .18em; text-transform: uppercase;
+  color: var(--green, #4fb477); opacity: 0; animation: stampWord .3s var(--ease) .46s forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ach-stamp, .ach-stamp circle, .ach-stamp path, .ach-stamp b { animation: none !important; }
+  .ach-stamp circle, .ach-stamp path { stroke-dashoffset: 0; }
+  .ach-stamp b { opacity: 1; }
+}
 .ach-claim {
   width: 100%; margin-top: 14px; padding: 10px;
   background: var(--gold); color: #0a0908;
@@ -12326,10 +12382,28 @@ window.handOff = handOff;
 
    Defaulted rather than required, so every existing call site keeps the
    wording it already had. */
+/* THE EYEBROW IS THE ACHIEVEMENT, NOT THE WORD "ACHIEVEMENT".
+
+   It was hardcoded to "Achievement Unlocked" over everything this overlay has
+   ever shown — a tournament win, a seven-day streak, a Bid War, a solved
+   Earworm. "Achievement Unlocked / Earworm solved" says the same nothing
+   twice and tells you less than the card on the grid behind it already does.
+   Solving it in one and solving it in five are completely different results
+   and the screen called both the same thing.
+
+   So every caller names what actually happened — "Earworm in 3", "Daily Drop
+   in 4", "Cover Fire · 2,450" — and the title underneath carries the record
+   or the number. `accent` tints the eyebrow and biases the confetti so the
+   CATEGORY is recognisable before the words are read: gold for a milestone
+   you claimed, the section colours for a game. Both are optional and default
+   to exactly what this did before. */
 function celebrate(title,sub,opts){
   const ov=document.getElementById('celebrate');
   const eb=document.getElementById('celebrate-eyebrow');
-  if(eb)eb.textContent=(opts&&opts.eyebrow)||'Achievement Unlocked';
+  if(eb){
+    eb.textContent=(opts&&opts.eyebrow)||'Achievement Unlocked';
+    eb.style.color=(opts&&opts.accent)||'';
+  }
   document.getElementById('celebrate-title').textContent=title;
   // Hidden rather than emptied when there is no subtitle: an empty element
   // still carries its margin, so the button would sit a line lower than the
@@ -12339,8 +12413,13 @@ function celebrate(title,sub,opts){
   subEl.style.display=sub?'':'none';
   ov.querySelectorAll('.cf').forEach(function(n){n.remove();});
   ov.classList.add('show');
-  const cols=['#4fb477','#F5C842','#85b7eb','#f0ede8','#e24b4a','#6bbf68','#d98cff'];
-  for(let i=0;i<80;i++){const s=document.createElement('span');s.className='cf';s.style.background=cols[i%cols.length];s.style.setProperty('--cx',(Math.random()*760-380).toFixed(0)+'px');s.style.setProperty('--cy',(Math.random()*520+120).toFixed(0)+'px');s.style.setProperty('--cr',(Math.random()*720-360).toFixed(0)+'deg');s.style.animationDelay=(Math.random()*0.25).toFixed(2)+'s';ov.appendChild(s);setTimeout(function(){if(s.parentNode)s.parentNode.removeChild(s);},2000);}
+  /* The accent leads its own confetti rather than replacing it: a single
+     colour reads as a loading state, and a palette with the category's colour
+     at the front of it reads as that category. */
+  const base=['#4fb477','#F5C842','#85b7eb','#f0ede8','#e24b4a','#6bbf68','#d98cff'];
+  const cols=(opts&&opts.accent)?[opts.accent,opts.accent,'#f0ede8'].concat(base):base;
+  const n=(opts&&opts.confetti!=null)?opts.confetti:80;
+  for(let i=0;i<n;i++){const s=document.createElement('span');s.className='cf';s.style.background=cols[i%cols.length];s.style.setProperty('--cx',(Math.random()*760-380).toFixed(0)+'px');s.style.setProperty('--cy',(Math.random()*520+120).toFixed(0)+'px');s.style.setProperty('--cr',(Math.random()*720-360).toFixed(0)+'deg');s.style.animationDelay=(Math.random()*0.25).toFixed(2)+'s';ov.appendChild(s);setTimeout(function(){if(s.parentNode)s.parentNode.removeChild(s);},2000);}
 }
 document.getElementById('celebrate-btn').addEventListener('click',function(){document.getElementById('celebrate').classList.remove('show');});
 document.getElementById('celebrate').addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
@@ -12373,7 +12452,7 @@ async function renderAchievements(){
       '<div class="ach-prog"><span>'+Math.min(count,m)+' / '+m+'</span><span>'+pct+'%</span></div>'+
       // The amount is on the button. "Claim achievement" gave no reason to
       // press it over any other one, and these are now wildly different sizes.
-      (reached&&!done?'<button class="ach-claim" data-claim="'+key+'" data-pay="'+MILESTONE_PAY[m]+'" data-label="'+milestoneLabel(m)+'">Claim '+MILESTONE_PAY[m].toLocaleString('en-GB')+' Discs</button>':'')+
+      (reached&&!done?'<button class="ach-claim" data-kind="milestone" data-claim="'+key+'" data-pay="'+MILESTONE_PAY[m]+'" data-label="'+milestoneLabel(m)+'">Claim '+MILESTONE_PAY[m].toLocaleString('en-GB')+' Discs</button>':'')+
       (done?'<div class="ach-paid">Claimed \u00b7 '+MILESTONE_PAY[m].toLocaleString('en-GB')+' Discs</div>':'')+
       '</div>';
   }).join('');
@@ -12425,8 +12504,49 @@ async function claimAch(btn){
     return;
   }
   logActivity(ICONS.trophy,'Unlocked',btn.dataset.label);
-  if(res.earned>0)celebrate('\u{1F3C6} '+btn.dataset.label,'+'+res.earned.toLocaleString('en-GB')+' Discs');
+  /* TWO CATEGORIES, TWO WEIGHTS.
+
+     An album milestone is rare and deliberate — 500 records is the work of a
+     year — so it keeps the full screen, with its own gold eyebrow naming the
+     milestone rather than the word "achievement".
+
+     A DISCOGRAPHY DOES NOT. There can be one per artist in somebody's crate,
+     which on a mature account is dozens, and a full-screen trophy for each is
+     the app congratulating itself. It gets a stamp drawn onto the card
+     instead: the discs still fly from the button (payoutFrom, inside
+     claimMilestone), the card marks itself, and the page you were reading
+     stays where it was. Small is the point, not a compromise.
+
+     Either way this runs ONLY on a claim. Nothing celebrates because a reward
+     has merely become available — see paintUnlocks, which used to. */
+  if(btn.dataset.kind==='comp'){
+    stampAchievement(btn.closest('.ach'),res.earned);
+  } else if(res.earned>0){
+    celebrate(btn.dataset.label,'+'+res.earned.toLocaleString('en-GB')+' Discs',
+      {eyebrow:'Milestone claimed',accent:'#F5C842'});
+  }
   renderAchievements();
+}
+/* The small one. A ring and a tick drawn onto the card that was claimed,
+   the same visual language as the Shop's purchase stamp — a line being drawn
+   rather than particles being thrown, because this is a thing being recorded
+   and not a thing being won. The dash lengths in the CSS are the measured
+   path lengths (2*pi*r is about 94.2, the tick about 22); guessing them
+   leaves a visible stub where the draw stops. */
+function stampAchievement(card,earned){
+  if(!card)return;
+  const el=document.createElement('div');
+  el.className='ach-stamp';
+  el.innerHTML='<svg viewBox="0 0 40 40" aria-hidden="true">'+
+      '<circle cx="20" cy="20" r="15"/>'+
+      '<path d="M13 20.5 l5 5 l10 -11"/>'+
+    '</svg><b>Complete'+(earned>0?' · +'+Number(earned).toLocaleString('en-GB'):'')+'</b>';
+  card.appendChild(el);
+  if(window.buzz)buzz('good');
+  // renderAchievements() redraws the card underneath this a moment later, so
+  // the node goes with it either way — this is only for the case where it
+  // does not, and removing it twice is harmless.
+  setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},1500);
 }
 window.renderAchievements=renderAchievements;
 
@@ -12540,7 +12660,7 @@ function drawCompCard(a,claimed){
         .join('')+
       (have>14?'<span class="comp-more">+'+(have-14)+'</span>':'')+
     '</div>':'')+
-    (complete&&!done?'<button class="ach-claim" data-claim="'+key+'" data-pay="'+pay+'" data-label="'+esc(a.name)+' Completionist">Claim '+pay.toLocaleString('en-GB')+' Discs</button>':'')+
+    (complete&&!done?'<button class="ach-claim" data-kind="comp" data-claim="'+key+'" data-pay="'+pay+'" data-label="'+esc(a.name)+' Completionist">Claim '+pay.toLocaleString('en-GB')+' Discs</button>':'')+
     (done?'<div class="ach-paid">Claimed</div>':'')+
     (!complete?'<button class="ach-claim" style="background:var(--surface-3);color:var(--text);" data-missing="'+esc(a.id)+'">See what’s missing</button>':'');
   // Stash the actual album objects so the modal can show covers and open them,
@@ -12654,7 +12774,16 @@ async function renderCompletion(meta){
      answers "have I already shown you this confetti", which is the only thing
      localStorage should ever have been deciding here. */
   const celebKey='compseen:'+meta.artistId;
-  if(complete&&!isClaimed(celebKey)){setClaimed(celebKey);logActivity(ICONS.trophy,'Unlocked',meta.artist+' Completionist');celebrate('\u{1F3C6} '+meta.artist+' Completionist','Claim it on the Achievements page.');}
+  /* AVAILABLE IS NOT CLAIMED. This threw the full-screen trophy the moment a
+     discography completed, over a reward nobody had asked for yet and while
+     somebody was in the middle of rating — and then the actual claim threw it
+     again. The activity line records it; the Achievements page is where it is
+     collected, and the claim is what celebrates. */
+  if(complete&&!isClaimed(celebKey)){
+    setClaimed(celebKey);
+    logActivity(ICONS.trophy,'Completed',meta.artist+' — claim it on Achievements');
+    if(window.buzz)buzz('good');
+  }
   drawCompletion();
 }
 
@@ -19047,7 +19176,15 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       if (window.noteEarworm) {
         noteEarworm(ewState.rows.length, ewState.rec.title, ewState.rec.artist, ewState.rec.kind);
       }
-      if (typeof celebrate === 'function') celebrate('Earworm solved', ewState.rec.title + ' — in ' + ewState.rows.length);
+      /* "Earworm in 1" and "Earworm in 5" are different results and deserve
+         to be named differently; "Achievement Unlocked / Earworm solved" was
+         the same sentence for both and for everything else in the app. */
+      if (typeof celebrate === 'function') {
+        celebrate(ewState.rec.title, ewState.rec.artist || '', {
+          eyebrow: 'Earworm in ' + ewState.rows.length + (ewState.hinted ? ' (hint)' : ''),
+          accent: '#d98cff'
+        });
+      }
       // The payout used to be computed here and thrown away — the client
       // cannot be trusted with an amount, so wallet_award_game decides it.
       if (ewState.mode === 'daily' && window.Wallet) Wallet.awardGame('earworm', { reason: 'Earworm' });
@@ -19976,7 +20113,12 @@ function playDismissAnimation(gateEl, callback) {
       elInput.disabled = true;
       showResult(won);
       if (won) {
-        if (typeof celebrate === 'function') celebrate('Daily Drop solved', guess.name + ' — in ' + st.g.length);
+        if (typeof celebrate === 'function') {
+          celebrate(guess.name, guess.artist || '', {
+            eyebrow: 'Daily Drop in ' + st.g.length,
+            accent: '#85b7eb'
+          });
+        }
         if (window.Wallet) Wallet.awardGame('drop', { reason: 'Daily Drop' });
         if (window.notePlay) notePlay('drop');
         if (typeof logActivity === 'function' && window.ICONS) logActivity(ICONS.trophy, 'Solved the Daily Drop', guess.name);
@@ -20848,9 +20990,9 @@ function playDismissAnimation(gateEl, callback) {
       verdict.classList.add('in');
       if (window.Wallet && Wallet.refresh) Wallet.refresh();
       if (oc === 'won' && typeof window.celebrate === 'function') {
-        window.celebrate('You won the war',
-          'Took ' + fmtVal(mineTotal, w) + ' against ' + fmtVal(theirsTotal, w) +
-          (Number(paid) > 0 ? '. Plus ' + Number(paid).toLocaleString('en-GB') + ' Discs.' : '.'));
+        window.celebrate(fmtVal(mineTotal, w) + ' against ' + fmtVal(theirsTotal, w),
+          (Number(paid) > 0 ? '+' + Number(paid).toLocaleString('en-GB') + ' Discs' : ''),
+          { eyebrow: 'Bid War — won', accent: '#e24b4a' });
       }
     }, 320 + rows.length * 460 + 260);
   }
@@ -21565,16 +21707,27 @@ window.renderAdminStats = renderAdminStats;
 
     // One at a time, spaced out — three unlocks firing together is three
     // celebrations nobody reads.
+    /* ON THE CARD, NOT OVER THE SCREEN.
+
+       This used to throw the full-screen trophy per unlock, and the seen-map
+       bug above meant it did that for every gate on every load. Even working
+       correctly it is the wrong weight: passing a gate is a door opening, not
+       a prize — nothing was claimed and nothing was paid. The card lights up
+       and says so where the card is, which is the place somebody would go
+       anyway, and the grid is still usable while it happens.
+
+       Spacing drops from 2.6s to 500ms now that nothing is queueing behind a
+       full-screen overlay. */
     fresh.forEach(function (f, i) {
       setTimeout(function () {
         f.card.classList.add('just-unlocked');
-        setTimeout(function () { f.card.classList.remove('just-unlocked'); }, 2400);
-        if (window.burst) burst(f.card, { count: 30, spread: 180 });
-        if (window.buzz) buzz('big');
-        if (typeof window.celebrate === 'function') {
-          window.celebrate('Unlocked — ' + f.label, 'Rated ' + n + ' albums. Go and play it.');
+        setTimeout(function () { f.card.classList.remove('just-unlocked'); }, 2600);
+        if (window.burst) burst(f.card, { count: 22, spread: 140 });
+        if (window.buzz) buzz(i ? 'tap' : 'good');
+        if (typeof window.logActivity === 'function') {
+          logActivity(ICONS.trophy, 'Unlocked', f.label);
         }
-      }, i * 2600);
+      }, i * 500);
     });
 
     var head = document.querySelector('#view-games .section-head .muted');
@@ -23780,7 +23933,9 @@ window.renderAdminStats = renderAdminStats;
     again.disabled = runsLeft === 0;
     again.textContent = runsLeft === 0 ? 'Back tomorrow' : 'Go again';
     if (wasBest && score >= 3 && typeof celebrate === 'function') {
-      celebrate('New best run', points + ' points, ' + score + ' in a row');
+      celebrate(score + ' in a row', points + ' points', {
+        eyebrow: 'Higher or Lower — new best', accent: '#4fb477'
+      });
     }
     // Five in a row is the bar. Below that it is a warm-up, and paying for a
     // warm-up makes the payout mean nothing.
@@ -24656,7 +24811,11 @@ window.renderAdminStats = renderAdminStats;
           rb.disabled = false; rb.textContent = 'Rematch';
         });
       }
-      if (won && typeof celebrate === 'function') celebrate('You took it', n(score) + ' to ' + n(theirs));
+      if (won && typeof celebrate === 'function') {
+        celebrate(n(score) + ' to ' + n(theirs), '', {
+          eyebrow: 'Cover Fire — won', accent: '#F5C842'
+        });
+      }
     } catch (e) { note(String((e && e.message) || e)); }
   }
 
