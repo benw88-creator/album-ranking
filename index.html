@@ -2179,31 +2179,81 @@ button.idx.loading { opacity: 0.6; }
 .song-name { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .song-sub { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .song-rate { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+/* ---- THE SONG SLIDER ----------------------------------------------------
+   It was a 4px line with a 16px thumb, 140px wide and dropping to 80 on a
+   phone. Eleven steps across 80 pixels is 8px a step, which is not a control
+   you drag, it is one you aim at and miss — reported as fiddly, and it was.
+
+   Three things fix that and none of them make it bigger on the page:
+
+     * 44px of HEIGHT, which is Apple's floor. The padding does the work, so
+       the track still reads as a thin line while the target is a thumb-sized
+       band. Same trick .sr-play uses to be a 30px circle you cannot miss.
+     * A 22px thumb instead of 16.
+     * More width, and no shrinking on a phone. It was competing with the
+       title for room; the title can ellipsise and a slider cannot.
+
+   The track runs RED THROUGH GREEN like the For You one, so the control says
+   what a 2 is and what a 9 is before the numeral beside it is read. A single
+   grey line with a gold dot on it said nothing about the scale at all.
+
+   Both vendor blocks are written out separately and MUST STAY THAT WAY: an
+   unknown pseudo-element invalidates the entire rule in both engines, so
+   `::-webkit-slider-thumb, ::-moz-range-thumb` in one selector list styles
+   neither of them. */
 .song-slider {
   -webkit-appearance: none; appearance: none;
-  width: 140px; height: 4px;
-  border-radius: 2px;
-  background: var(--surface-4);
-  outline: none;
+  width: 150px; height: 44px;
+  flex: 0 1 150px; min-width: 96px;
+  background: none; outline: none; cursor: pointer;
+  padding: 0; margin: 0;
+}
+.song-slider::-webkit-slider-runnable-track {
+  height: 7px; border-radius: 999px;
+  background: linear-gradient(90deg, #e24b4a 0%, #e08a3c 28%, #efb927 50%, #a8c24a 72%, #4fb477 100%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);
+}
+.song-slider::-moz-range-track {
+  height: 7px; border-radius: 999px;
+  background: linear-gradient(90deg, #e24b4a 0%, #e08a3c 28%, #efb927 50%, #a8c24a 72%, #4fb477 100%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);
 }
 .song-slider::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
-  width: 16px; height: 16px; border-radius: 50%;
+  width: 22px; height: 22px; border-radius: 50%;
   background: var(--score, var(--gold));
-  border: 2px solid var(--bg); cursor: pointer;
-  box-shadow: 0 0 8px rgba(245,200,66,0.3);
+  border: 3px solid var(--bg); cursor: pointer;
+  /* Centres a 22px thumb on a 7px track: (7 - 22) / 2. */
+  margin-top: -7.5px;
+  box-shadow: 0 0 10px rgba(0,0,0,.5);
+  transition: transform .12s var(--ease);
 }
 .song-slider::-moz-range-thumb {
-  width: 16px; height: 16px; border-radius: 50%;
+  width: 22px; height: 22px; border-radius: 50%;
   background: var(--score, var(--gold));
-  border: 2px solid var(--bg); cursor: pointer;
+  border: 3px solid var(--bg); cursor: pointer;
+  box-shadow: 0 0 10px rgba(0,0,0,.5);
+  transition: transform .12s var(--ease);
+}
+.song-slider:active::-webkit-slider-thumb { transform: scale(1.2); }
+.song-slider:active::-moz-range-thumb { transform: scale(1.2); }
+/* The row has to give the slider its room rather than the other way round:
+   a title can ellipsise, a slider cannot. */
+.song-rate { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.song-meta { min-width: 0; }
+@media (max-width: 560px) {
+  .song-slider { width: 118px; flex-basis: 118px; }
+  .song-row { gap: 10px; padding: 8px 12px; }
 }
 .song-score {
   font-family: var(--font-display); font-weight: 700;
   font-size: 20px; width: 28px; text-align: center;
   color: var(--score, var(--text));
 }
-@media (max-width: 560px) { .song-slider { width: 80px; } }
+/* The old 80px phone width lived here, AFTER the block above, and would
+   have silently beaten it at equal specificity — the fifth time this file has
+   shipped a rule outranked by one further down. The phone width is in that
+   block now, where it can be seen next to the rule it modifies. */
 
 /* ---- ALBUM DETAIL ---- */
 #view-album-detail { display: none; }
@@ -7105,6 +7155,77 @@ button.rw-day {
 .sr-play.no-clip, .sr-play.needs-tap { border-color: var(--red); color: var(--red); }
 .sr-play.no-clip::after { border-left-color: currentColor; }
 
+/* ---- SUGGESTIONS ---------------------------------------------------------
+   One list, two modes. The COUNT LEADS each row rather than trailing it: the
+   question a person is answering when they look at this is "how many other
+   people want that", so the number is the first thing on the line and the
+   label is what it applies to. */
+.sugg-compose { display: flex; gap: var(--s2); align-items: center; margin-bottom: var(--s3); }
+.sugg-compose input {
+  flex: 1 1 auto; min-width: 0; height: 46px;
+  background: var(--surface-2); border: 1px solid var(--border-strong);
+  border-radius: 12px; color: var(--text);
+  /* 16px EXACTLY. Anything smaller and iOS zooms the page on focus, which on
+     a bottom sheet throws the panel off the top of the screen. */
+  font: 600 16px var(--font-body); padding: 0 14px;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.sugg-compose input:focus { outline: none; border-color: var(--gold); }
+.sugg-compose input.shake { animation: gcShake .32s var(--ease); }
+@keyframes gcShake {
+  0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); }
+  60% { transform: translateX(4px); }
+}
+.sugg-note { font-size: 12px; color: var(--text-faint); min-height: 16px; margin-bottom: var(--s2); }
+.sugg-note.bad { color: var(--red); }
+.sugg-list { display: flex; flex-direction: column; gap: var(--s2); max-height: 54vh; overflow-y: auto; }
+.sugg-empty { padding: 28px 8px; text-align: center; color: var(--text-faint); font-size: 13px; }
+.sugg-row {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface-2);
+}
+.sugg-n {
+  font: 700 15px/1 var(--font-mono); color: var(--gold);
+  min-width: 30px; text-align: center; flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.sugg-art {
+  width: 40px; height: 40px; border-radius: 8px; object-fit: cover;
+  background: var(--surface-3); flex-shrink: 0; display: block;
+}
+.sugg-meta { flex: 1 1 auto; min-width: 0; }
+.sugg-nm {
+  font-weight: 700; font-size: 14px; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sugg-link { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; width: 100%; font-family: inherit; }
+.sugg-link:hover { color: var(--gold); }
+.sugg-ar { font-size: 12px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sugg-note-row { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+.sugg-back { flex-shrink: 0; }
+.sugg-back.is-mine { color: var(--c-lime); border-color: color-mix(in srgb, var(--c-lime) 40%, transparent); }
+
+/* The door into the tag suggestions, at the top of the Shop's Tags drawer.
+   Deliberately not a .shop-item: it buys nothing, and a row that looks like a
+   purchase and is not is the shape this file keeps warning about. */
+.shop-suggest {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 12px 14px; margin-bottom: 10px;
+  background: none; border: 1px dashed var(--border-strong); border-radius: 12px;
+  color: var(--text-dim); text-align: left; cursor: pointer; font-family: inherit;
+  transition: border-color var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease);
+}
+.shop-suggest:hover { border-color: var(--gold); color: var(--text); }
+.shop-suggest .ss-plus {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center;
+  background: var(--gold-dim); color: var(--gold);
+  font: 700 17px/1 var(--font-mono);
+}
+.shop-suggest b { display: block; font-size: 14px; color: var(--text); }
+.shop-suggest small { display: block; font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
+
 /* ---- FOR YOU — one song a screen, edge to edge -----------------------
    THE SLEEVE IS THE SCREEN NOW. It used to be a square card floating in the
    middle of a bounded feed with the page's gutters either side and 210px of
@@ -7288,6 +7409,46 @@ button.rw-day {
 .fy-sub { font-size: 13px; color: rgba(255,245,235,.82); max-width: 100%; text-shadow: 0 1px 12px rgba(0,0,0,.8); }
 .fy-alb { cursor: pointer; text-decoration: underline; text-decoration-color: rgba(255,245,235,.35); }
 .fy-alb:hover { color: #fff; }
+
+/* ---- the two pills at the top of a card ----
+   Small, translucent and sitting on the art rather than in a bar of their own:
+   this feed is one record a screen and a chrome strip would take a tenth of
+   it. */
+.fy-top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s2);
+  padding: var(--s3) var(--gutter);
+}
+.fy-pill {
+  border: 1px solid rgba(255,245,235,.22);
+  background: rgba(10,9,8,.45);
+  backdrop-filter: blur(10px);
+  color: rgba(255,245,235,.92);
+  font: 600 11.5px/1 var(--font-body);
+  /* 34px of box, but the padding makes the target the full 44 — the same
+     arrangement .sr-play uses to be a 30px circle nobody misses. */
+  padding: 11px 13px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 6px;
+  cursor: pointer; white-space: nowrap;
+  transition: background var(--dur-quick) var(--ease), border-color var(--dur-quick) var(--ease),
+              transform var(--dur-quick) var(--ease);
+}
+.fy-pill:active { transform: scale(.94); }
+.fy-pill:disabled { opacity: .6; cursor: default; }
+.fy-push-arrow {
+  width: 0; height: 0;
+  border-bottom: 8px solid currentColor;
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+}
+.fy-pill.pushed {
+  background: color-mix(in srgb, var(--c-lime) 28%, rgba(10,9,8,.45));
+  border-color: var(--c-lime); color: var(--c-lime);
+}
+/* A tap on a phone leaves :hover on the last thing touched, so the lift is
+   desktop-only — the rule this app learned on the album card. */
+@media (hover: hover) {
+  .fy-pill:hover { background: rgba(10,9,8,.72); border-color: rgba(255,245,235,.4); }
+}
 
 /* ---- the rating bar ----
    RED THROUGH TO GREEN, because the number means something and a single-hue
@@ -8557,6 +8718,25 @@ window.ICONS = {
 
      Three states in one modal because a match is sixty seconds: a lobby that
      is one tap from playing, the run, and the result with the rematch on it. -->
+<!-- ================================================================
+     SUGGESTIONS — what people push to the feed, and what people want made
+     ================================================================
+     ONE MODAL, TWO MODES, because they are the same shape: a short thing put
+     forward, visible to everybody, counted by PEOPLE rather than by taps. The
+     `songs` mode is reached from the For You feed and the `tags` mode from the
+     Shop, and the only things that differ are the heading, the composer at the
+     top and what a row draws.
+     ================================================================ -->
+<div class="modal sugg-modal" id="sugg-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="sugg-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="sparkle"></span>
+      <div><h2 id="sugg-title">What users suggested</h2><p id="sugg-blurb"></p></div></div>
+    <div id="sugg-compose"></div>
+    <div id="sugg-list" class="sugg-list"></div>
+  </div>
+</div>
+
 <div class="modal blitz-modal" id="blitz-modal">
   <div class="modal-panel">
     <button class="modal-close" id="blitz-close" aria-label="Close">&times;</button>
@@ -13774,6 +13954,40 @@ const Cloud=(function(){
     if(!isOn())return null;
     try{const r=await sb.rpc('recall_state');return r.error?null:r.data;}catch(e){return null;}
   }
+
+  /* ---- suggestions ------------------------------------------------------
+     Songs pushed to For You and producer tags people want made. One table,
+     one `kind`, because they are the same shape: a short thing put forward,
+     visible to everybody, counted by PEOPLE rather than by taps.
+
+     Reading needs no session — the list is public, and a feed of what other
+     people have put forward is worth seeing logged out, the same line the
+     Crate's score spread draws. Writing does. */
+  async function suggestionList(kind,q,limit){
+    if(!sb)return[];
+    try{
+      const r=await sb.rpc('suggestion_list',{p_kind:kind,p_q:q||null,p_limit:limit||40});
+      return r.error?[]:(r.data||[]);
+    }catch(e){return[];}
+  }
+  async function suggestionAdd(kind,label,extra){
+    if(!isOn())return{error:'not logged in'};
+    extra=extra||{};
+    try{
+      const r=await sb.rpc('suggestion_add',{
+        p_kind:kind,p_label:label,
+        p_artist:extra.artist||null,p_album:extra.album||null,
+        p_album_id:extra.albumId||null,p_art:extra.art||null,p_note:extra.note||null});
+      return r.error?{error:r.error.message}:{data:r.data};
+    }catch(e){return{error:String(e&&e.message||e)};}
+  }
+  async function suggestionRemove(kind,key){
+    if(!isOn())return{error:'not logged in'};
+    try{
+      const r=await sb.rpc('suggestion_remove',{p_kind:kind,p_key:key});
+      return r.error?{error:r.error.message}:{ok:true};
+    }catch(e){return{error:String(e&&e.message||e)};}
+  }
   async function blitzRecord(otherId){if(!isOn())return null;try{const r=await sb.rpc('blitz_record',{p_other:otherId});return r.error?null:r.data;}catch(e){return null;}}
   /* Matches plus both usernames. Two queries rather than a join, because the
      FK is to auth.users and PostgREST cannot follow that to profiles. */
@@ -14000,6 +14214,7 @@ const Cloud=(function(){
          blitzCreate:blitzCreate,blitzStart:blitzStart,blitzSubmit:blitzSubmit,
          blitzRecord:blitzRecord,blitzList:blitzList,
          recallSubmit:recallSubmit,recallSession:recallSession,recallState:recallState,
+         suggestionList:suggestionList,suggestionAdd:suggestionAdd,suggestionRemove:suggestionRemove,
          setGrooveRole:setGrooveRole,removeGrooveMember:removeGrooveMember,
          acceptGrooveInvite:acceptGrooveInvite,leaveGroove:leaveGroove,fetchGroove:fetchGroove,
          submitLeaderboardTime:submitLeaderboardTime,fetchLeaderboard:fetchLeaderboard,fetchMyBestTime:fetchMyBestTime,
@@ -17018,6 +17233,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     clearTimeout(toast._tm);
     toast._tm = setTimeout(function () { t.classList.remove('show'); }, 1600);
   }
+  /* GLOBAL, because five modules want it and it is a UI primitive rather than
+     a wallet one — the same argument that puts burst/ripple/buzz on window.
+     It was local here, and this file already carries a note saying so, because
+     the Today module hit exactly this: `if (window.toast)` guards written
+     against a function that was never exported are a line that reads correctly
+     and does nothing, which is this codebase's most repeated defect shape. */
+  window.toast = toast;
 
   function spawnDiscParticle(amount) {
     const anchor = document.getElementById('shop-open-btn');
@@ -17821,13 +18043,34 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         '<summary><span class="shop-section-title">' + title + '</span>' +
         '<span class="ss-n">' + count + '</span></summary>' + rows + '</details>';
     }
+    /* SUGGEST A TAG sits at the TOP of the Tags section, above the thirty
+       rows rather than under them. The point of it is the record that is NOT
+       in the list, and a control for "the one you cannot find" underneath
+       thirty you can find is a control nobody reaches.
+
+       It opens the shared suggestions sheet in tag mode, where typing filters
+       the list so "see what other users are suggesting under TRAVIS" works
+       before anything is pressed. Nothing here pays Discs and nothing about
+       the Shop's own economy is touched. */
+    const suggestRow =
+      '<button class="shop-suggest" id="shop-suggest-tag" type="button">' +
+        '<span class="ss-plus" aria-hidden="true">+</span>' +
+        '<span><b>Suggest a tag</b><small>Not here? Put one forward and see who else wants it.</small></span>' +
+      '</button>';
+
     list.innerHTML =
-      sec('Tags', tagRows, Object.keys(TAGS).length) +
+      sec('Tags', suggestRow + tagRows, Object.keys(TAGS).length) +
       sec('Name flair', flairRows, Object.keys(FLAIRS).length) +
       sec('Avatar frames', frameRows, Object.keys(FRAMES).length) +
       sec('Boosts', boostRows, Object.keys(BOOSTS).length) +
       sec('Themes', themeRows, Object.keys(THEMES).length) +
       sec('Profile banners', bannerRows, Object.keys(BANNERS).length);
+
+    const sg = document.getElementById('shop-suggest-tag');
+    if (sg) sg.addEventListener('click', function () {
+      if (window.Suggestions) Suggestions.open('tag');
+      else if (window.toast) toast('Suggestions are not switched on yet.');
+    });
 
     /* One buy path for all four kinds. `doBuy` owns the whole sequence — arm
        the row, run the purchase, stamp it, re-render — so the animation cannot
@@ -26645,6 +26888,272 @@ window.track = function (name, props) {
      options are question-specific -- generic ones read like a survey.
      ================================================================ -->
 <script>
+/* ================================================================
+   SUGGESTIONS — what people push to the feed, and what people want made
+   ================================================================
+
+   TWO FEATURES, ONE MODULE, because they are the same object seen twice:
+
+     * push a song to For You, so other people see it
+     * suggest a producer tag, and see what other people are suggesting
+
+   Both are "one person puts a short thing forward, everybody can see it, and
+   the number worth printing is how many PEOPLE put the same thing forward".
+   The table is shared (see ..._20260921120000_suggestions.sql) and so is this;
+   what differs is the heading, the composer at the top, and what a row draws.
+
+   THE COUNT IS PEOPLE, NOT TAPS, and that is enforced by the primary key
+   (kind, user_id, key) rather than by anything here. Pressing Back again is an
+   upsert. There is nothing this module could do to inflate a number, which is
+   why there is no cap, no cooldown and no rate limit in it.
+
+   NOTHING HERE PAYS DISCS. A suggestion is worth making because other people
+   see it; the moment it is worth currency it becomes a thing to farm from
+   burner accounts and it needs the whole apparatus Reach needed.
+
+   READING NEEDS NO SESSION. The list is public and a feed of what other people
+   have put forward is worth seeing logged out — the same line the Crate's
+   score spread draws. Only pushing needs an account.
+   ================================================================ */
+(function () {
+  'use strict';
+  var modal = document.getElementById('sugg-modal');
+  if (!modal) return;
+
+  var mode = 'song';        // 'song' | 'tag'
+  var rows = [], tok = 0, q = '', qTimer = null, busy = false;
+
+  function el(id) { return document.getElementById(id); }
+  function on() { return !!(window.Cloud && Cloud.isOn && Cloud.isOn()); }
+  function n(v) { return (Number(v) || 0).toLocaleString('en-GB'); }
+
+  var COPY = {
+    song: { title: 'What users suggested',
+            blurb: 'Records other people pushed to For You. Back one and it climbs.' },
+    tag:  { title: 'Suggest a tag',
+            blurb: 'Type one and see who else wants it. The most-backed get made.' }
+  };
+
+  /* ---------- open / close ---------- */
+  function open(which, seed) {
+    mode = which === 'tag' ? 'tag' : 'song';
+    q = seed || '';
+    el('sugg-title').textContent = COPY[mode].title;
+    el('sugg-blurb').textContent = COPY[mode].blurb;
+    modal.classList.add('open');
+    drawCompose();
+    load();
+  }
+  function close() { modal.classList.remove('open'); }
+
+  el('sugg-close').addEventListener('click', close);
+  modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+
+  /* ---------- the composer ----------
+     Only the tag mode has one. A song is pushed from the card it is playing
+     on, where the record is already in front of you — a text box asking you to
+     type a song title into a feed that is showing you songs would be the
+     worst version of this. */
+  function drawCompose() {
+    var host = el('sugg-compose');
+    if (mode !== 'tag') { host.innerHTML = ''; return; }
+    host.innerHTML =
+      '<div class="sugg-compose">' +
+        '<input id="sugg-input" type="text" maxlength="40" autocomplete="off" ' +
+          'placeholder="A tag you want made\u2026" value="' + esc(q) + '">' +
+        '<button class="btn-primary" id="sugg-send">Suggest</button>' +
+      '</div>' +
+      '<div class="sugg-note" id="sugg-note"></div>';
+    var input = el('sugg-input'), send = el('sugg-send');
+    /* THE LIST FILTERS AS YOU TYPE, and that is the feature rather than a
+       convenience: "see what other users are suggesting under TRAVIS" only
+       works if typing TRAVIS shows you them BEFORE you press anything. */
+    input.addEventListener('input', function () {
+      q = input.value;
+      clearTimeout(qTimer);
+      qTimer = setTimeout(load, 220);
+    });
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+    send.addEventListener('click', submit);
+    setTimeout(function () { try { input.focus(); } catch (e) {} }, 80);
+  }
+
+  function note(msg, bad) {
+    var el2 = el('sugg-note');
+    if (!el2) return;
+    el2.textContent = msg || '';
+    el2.className = 'sugg-note' + (bad ? ' bad' : '');
+  }
+
+  async function submit() {
+    if (busy) return;
+    var input = el('sugg-input');
+    var label = input ? input.value.trim() : '';
+    if (!label) { if (input) shake(input); return; }
+    if (!on()) { note('Log in to suggest one.', true); return; }
+    busy = true;
+    var send = el('sugg-send');
+    if (send) { send.disabled = true; send.textContent = '\u2026'; }
+    var res = await Cloud.suggestionAdd('tag', label);
+    busy = false;
+    if (send) { send.disabled = false; send.textContent = 'Suggest'; }
+    if (res.error) { note(readable(res.error), true); return; }
+    var d = res.data || {};
+    // The backer count is the answer: "you and four others" is a completely
+    // different thing to hear than "suggested".
+    note(d.backers > 1
+      ? 'Suggested \u2014 you and ' + n(d.backers - 1) + ' other' + (d.backers === 2 ? '' : 's')
+      : 'Suggested. First one.');
+    if (window.buzz) buzz('good');
+    if (input) input.value = '';
+    q = '';
+    load();
+  }
+
+  /* Raw Postgres text has no business on a card. PGRST202 means the migration
+     has not been run — true, useless to a player, and the single most likely
+     cause on this project, where migrations are applied by hand. */
+  function readable(raw) {
+    raw = String(raw || '');
+    if (/schema cache|PGRST202|Could not find/i.test(raw)) return 'Suggestions are not switched on yet.';
+    if (/empty once punctuation/i.test(raw)) return 'That is empty once the punctuation comes off.';
+    if (/Not signed in/i.test(raw)) return 'Log in to suggest one.';
+    return 'That did not go through. Try again in a moment.';
+  }
+
+  function shake(node) {
+    node.classList.remove('shake'); void node.offsetWidth; node.classList.add('shake');
+    if (window.buzz) buzz('bad');
+  }
+
+  /* ---------- the list ---------- */
+  async function load() {
+    // A token, not a flag. Typing fires one of these every 220ms and the
+    // slower reply would otherwise land last and win — the same shape as the
+    // price sweep's _sweep and the player's loadTok.
+    var mine = ++tok;
+    var host = el('sugg-list');
+    if (!rows.length) host.innerHTML = '<div class="sugg-empty">Loading\u2026</div>';
+    var got = await Cloud.suggestionList(mode, q, 40);
+    if (mine !== tok) return;
+    rows = got;
+    draw();
+  }
+
+  function draw() {
+    var host = el('sugg-list');
+    if (!rows.length) {
+      host.innerHTML = '<div class="sugg-empty">' +
+        (mode === 'tag'
+          ? (q ? 'Nobody has suggested that one yet. Be the first.'
+               : 'No tags suggested yet.')
+          : 'Nothing pushed yet. Push a record from the For You feed and it lands here.') +
+        '</div>';
+      return;
+    }
+    host.innerHTML = rows.map(rowHtml).join('');
+    host.querySelectorAll('[data-back]').forEach(function (b) {
+      b.addEventListener('click', function () { back(b); });
+    });
+    host.querySelectorAll('[data-open-alb]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        close();
+        if (window.openAlbum) openAlbum({
+          id: b.dataset.openAlb, name: b.dataset.album || '', artist: b.dataset.artist || '',
+          artistId: '', art: b.dataset.art || '', year: '' });
+      });
+    });
+  }
+
+  function rowHtml(r) {
+    var backers = Number(r.backers) || 0;
+    /* The button says what pressing it would DO, and says "Backed" when there
+       is nothing left to do. A control that names one action and performs
+       another is the worst shape a button can have. */
+    var btn = '<button class="btn-mini sugg-back' + (r.mine ? ' is-mine' : '') + '" ' +
+      'data-back="' + esc(r.key) + '" data-label="' + esc(r.label) + '">' +
+      (r.mine ? 'Backed \u2713' : 'Back it') + '</button>';
+    var count = '<span class="sugg-n" title="' + backers + ' ' +
+      (backers === 1 ? 'person' : 'people') + '">' + n(backers) + '</span>';
+
+    if (mode === 'tag') {
+      return '<div class="sugg-row" data-key="' + esc(r.key) + '">' +
+        count +
+        '<div class="sugg-meta"><div class="sugg-nm">' + esc(r.label) + '</div></div>' +
+        btn + '</div>';
+    }
+    return '<div class="sugg-row" data-key="' + esc(r.key) + '">' +
+      count +
+      (r.art
+        ? '<img class="sugg-art" src="' + esc(r.art) + '" alt="" loading="lazy" ' +
+          'onerror="this.style.visibility=\'hidden\'">'
+        : '<span class="sugg-art"></span>') +
+      '<div class="sugg-meta">' +
+        (r.album_id
+          ? '<button class="sugg-nm sugg-link" data-open-alb="' + esc(r.album_id) + '" ' +
+            'data-album="' + esc(r.album || '') + '" data-artist="' + esc(r.artist || '') + '" ' +
+            'data-art="' + esc(r.art || '') + '">' + esc(r.label) + '</button>'
+          : '<div class="sugg-nm">' + esc(r.label) + '</div>') +
+        '<div class="sugg-ar">' + esc(r.artist || '') +
+          (r.album ? ' \u00b7 ' + esc(r.album) : '') + '</div>' +
+        (r.note ? '<div class="sugg-note-row">\u201c' + esc(r.note) + '\u201d</div>' : '') +
+      '</div>' + btn + '</div>';
+  }
+
+  /* Backing something you have already backed WITHDRAWS it, which is the only
+     honest thing a "Backed ✓" button can do when pressed. The alternative is a
+     button that does nothing, which reads as broken. */
+  async function back(btn) {
+    if (btn.disabled) return;
+    if (!on()) { if (window.toast) toast('Log in to back a suggestion'); return; }
+    var key = btn.dataset.back;
+    var row = rows.filter(function (r) { return r.key === key; })[0];
+    if (!row) return;
+    btn.disabled = true;
+    var was = btn.textContent;
+    btn.textContent = '\u2026';
+    var res = row.mine
+      ? await Cloud.suggestionRemove(mode, key)
+      : await Cloud.suggestionAdd(mode, row.label, {
+          artist: row.artist, album: row.album, albumId: row.album_id, art: row.art });
+    btn.disabled = false;
+    if (res.error) {
+      btn.textContent = was;
+      if (window.toast) toast(readable(res.error));
+      return;
+    }
+    if (window.buzz) buzz(row.mine ? 'tap' : 'good');
+    load();
+  }
+
+  /* ---------- pushing the song you are listening to ----------
+     Exported so the For You feed can call it with whatever card is in front of
+     somebody, rather than this module having to know how that feed works. */
+  async function pushSong(card, fromEl) {
+    if (!card) return { error: 'nothing to push' };
+    if (!on()) { if (window.toast) toast('Log in to push a record'); return { error: 'not logged in' }; }
+    var res = await Cloud.suggestionAdd('song', card.title, {
+      artist: card.artist, album: card.albumName, albumId: card.albumId, art: card.art });
+    if (res.error) {
+      if (window.toast) toast(readable(res.error));
+      return res;
+    }
+    var d = res.data || {};
+    if (window.buzz) buzz('good');
+    if (window.burst && fromEl) burst(fromEl, { count: 16, spread: 110 });
+    if (window.toast) {
+      toast(d.backers > 1
+        ? 'Pushed \u2014 ' + n(d.backers) + ' people have now'
+        : 'Pushed to the feed');
+    }
+    return res;
+  }
+
+  window.Suggestions = { open: open, close: close, pushSong: pushSong };
+})();
+</script>
+
+<script>
 (function () {
   function sb() { return (window.Cloud && Cloud.client) ? Cloud.client() : null; }
   function me() { return (window.Cloud && Cloud.getUser) ? Cloud.getUser() : null; }
@@ -29487,6 +29996,20 @@ window.track = function (name, props) {
   function cardHtml(c, i) {
     var art = esc(c.art || '');
     return '<article class="fy-card" data-i="' + i + '" data-pool="' + esc(c.pool) + '" style="--fy-tint:' + tintFor(7) + '">' +
+      /* THE TWO PILLS. Outside .fy-over and above the art, because the
+         overlay is bottom-anchored and these belong at the top — and because
+         `pointer-events: none` on the overlay would otherwise have to be
+         unpicked for a row that is nowhere near it.
+
+         Push is on the CARD rather than in a menu: the record you would push
+         is the one playing, and any other arrangement means choosing it
+         again from a list you have just scrolled past. */
+      '<div class="fy-top">' +
+        '<button class="fy-pill" data-suggest="" type="button">What users suggested</button>' +
+        '<button class="fy-pill fy-push" data-push="' + i + '" type="button" aria-label="Push this to the feed">' +
+          '<span class="fy-push-arrow" aria-hidden="true"></span>Push' +
+        '</button>' +
+      '</div>' +
       '<button class="fy-art" data-play="' + i + '" aria-label="Play ' + esc(c.title || '') + '">' +
         (art ? '<img class="fy-bed" src="' + art + '" alt="" aria-hidden="true" onerror="this.style.display=\'none\'">' : '') +
         (art ? '<img class="fy-main" src="' + art + '" alt="" onerror="this.style.display=\'none\'">' : '') +
@@ -29678,8 +30201,27 @@ window.track = function (name, props) {
 
   function wire(host) {
     host.addEventListener('click', function (e) {
-      var t = e.target.closest('[data-play],[data-open],[data-save]');
+      var t = e.target.closest('[data-play],[data-open],[data-save],[data-push],[data-suggest]');
       if (!t) return;
+
+      if (t.dataset.suggest != null) {
+        // The feed keeps playing underneath — the modal is a sheet over it,
+        // not a place you go instead.
+        if (window.Suggestions) Suggestions.open('song');
+        return;
+      }
+
+      if (t.dataset.push != null) {
+        var si = +t.dataset.push, sc = _items[si];
+        if (!sc || t.disabled) return;
+        t.disabled = true;
+        Promise.resolve(window.Suggestions ? Suggestions.pushSong(sc, t) : { error: 'off' })
+          .then(function (r) {
+            t.disabled = false;
+            if (r && !r.error) { t.classList.add('pushed'); t.lastChild.textContent = 'Pushed'; }
+          });
+        return;
+      }
 
       /* THE SLEEVE ALWAYS PLAYS. IT NEVER OPENS THE ALBUM.
 
