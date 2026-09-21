@@ -190,7 +190,6 @@
   --gold-dim:      rgba(255,138,61,0.14);
   --accent-2:      #ff3d7f;
   --accent-2-dim:  rgba(255,61,127,0.16);
-  --font-display:  'Instrument Serif', serif;
 }
 /* Two more to spend Discs on. Inflating what you earn without adding
    anything to buy just brings forward the day Discs stop mattering. */
@@ -227,7 +226,6 @@
   --gold-dim:      rgba(230,220,196,0.12);
   --accent-2:      #b8705a;
   --accent-2-dim:  rgba(184,112,90,0.18);
-  --font-display:  'Instrument Serif', serif;
 }
 [data-theme="neon"] {
   --bg:            #0a0616;
@@ -279,7 +277,6 @@
   --gold-dim:      rgba(18,224,200,0.14);
   --accent-2:      #5eb8ff;
   --accent-2-dim:  rgba(94,184,255,0.16);
-  --font-display:  'IBM Plex Mono', monospace;
   --radius:        8px;
   --radius-sm:     5px;
   --radius-xs:     3px;
@@ -2463,10 +2460,68 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   gap: var(--s4); margin-bottom: var(--s6);
 }
 /* Ten cards in one column was 2,888px of scrolling to see a grid of games.
-   Two-up halves it and lets you take the whole thing in. */
+   THREE-UP on a phone is the whole grid on one screen with no scrolling at
+   all, which is what makes it read as a games console rather than a list.
+
+   At 375px that is 343 of usable width minus two gaps, so ~105px a tile —
+   which the description cannot survive, so it goes. A two-line sentence in a
+   105px box is four lines of three words and nobody reads it twice; the title
+   and the icon are what people navigate by. The description stays from 700px
+   up, where there is room for it. */
 @media (max-width: 699px) {
-  .games-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); }
+  .games-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
+  .games-grid .game-card p { display: none; }
+  .games-grid .game-card h3 { font-size: 12.5px; line-height: 1.2; margin-top: var(--s2); }
+  .games-grid .game-card .gc-go { font-size: 10px; margin-top: var(--s2); }
+  .games-grid .gc-emoji { width: 34px; height: 34px; border-radius: 10px; }
+  .games-grid .gc-emoji .ui-icon, .games-grid .gc-emoji svg { width: 18px; height: 18px; }
+  /* The status line is a corner badge on a 166px card and a whole extra row on
+     a 105px one. It keeps its slot and simply gets smaller. */
+  .games-grid .gc-best { font-size: 9px; top: 6px; right: 7px; max-width: 58%; }
+  /* The lock pill replaces the "Play" line rather than floating over it, so it
+     has to fit the same box. */
+  .games-grid .gc-lock { font-size: 9.5px; padding: 3px 5px; }
 }
+/* ---- THE TWO THAT LEAD ---------------------------------------------------
+   Recall and Bid Wars sit first and are marked rather than merely moved. A
+   grid where every tile is the same shape has no way to say "start here", and
+   position alone does not carry it — the eye reads a grid as a set, not as a
+   ranking.
+
+   A lit border and one slow pass of light, in the card's OWN hue (--g), so
+   these are the same eleven cards with two of them turned up rather than two
+   cards from a different design. The sweep travels in PIXELS at 90deg with
+   matching first and last stops, which is the rule this app has broken four
+   times: a percentage background-position aligns a point of the image to a
+   point of the box, so frame 0 and frame 1 are different images and it snaps
+   visibly at the loop. */
+.game-card.gc-lead {
+  border-color: color-mix(in srgb, var(--g) 46%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--g) 16%, transparent),
+              0 10px 34px -14px var(--g-dim);
+}
+.game-card.gc-lead::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+    transparent 0px,
+    color-mix(in srgb, var(--g) 22%, transparent) 90px,
+    transparent 180px);
+  background-size: 180px 100%;
+  background-repeat: repeat-x;
+  opacity: .8;
+  animation: gcLead 5.5s linear infinite;
+}
+@keyframes gcLead { from { background-position: 0 0; } to { background-position: 180px 0; } }
+.game-card.gc-lead::before { opacity: 1.25; }
+/* A locked card must not advertise itself as the place to start. */
+.game-card.gc-lead.locked::after { animation: none; opacity: .25; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .game-card.gc-lead::after { animation: none; }
+}
+html[data-motion="none"] .game-card.gc-lead::after { animation: none; }
 .game-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -2562,7 +2617,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   border-radius: 22px;
   width: 100%; max-width: 460px;
   padding: 28px; position: relative;
-  max-height: 92vh; overflow-y: auto;
+  max-height: calc(92vh - var(--kb, 0px)); overflow-y: auto;
   box-shadow: 0 48px 96px rgba(0,0,0,0.8);
 }
 /* #auth-modal only — a dithered vinyl backdrop behind the login card.
@@ -2586,10 +2641,18 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
     max-width: none;
     border-radius: 24px 24px 0 0;
     border-bottom: 0;
-    max-height: 88vh;
+    /* `88vh` on its own is what put the input under the keyboard: vh is the
+       LARGE viewport and never shrinks for one. --kb is published by the
+       visualViewport handler and is 0 whenever no keyboard is up, so this is
+       exactly the old rule until there is one. */
+    max-height: calc(88vh - var(--kb, 0px));
     padding: var(--s6) var(--s4) calc(var(--s5) + env(safe-area-inset-bottom, 0px));
     animation: sheetUp var(--dur) var(--ease) both;
   }
+  /* The home-indicator inset belongs to the home indicator, and while a
+     keyboard is up the home indicator is not there — paying for both leaves a
+     band of dead space between the sheet and the keys. */
+  body.kb-up .modal-panel { padding-bottom: var(--s5); }
   /* The handle. Drawn rather than added to the markup, because there are a
      dozen panels and none of them should have to know about it. */
   .modal-panel::before {
@@ -3940,6 +4003,11 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   box-shadow: 0 0 64px var(--gold-glow), 0 0 120px var(--accent-2-dim);
   transform: translateY(-2px) scale(1.02);
 }
+/* The press is answered while the session finishes restoring. A button that
+   looks identical for two seconds after a tap reads as a tap that missed. */
+.splash-cta.waiting { opacity: .72; cursor: default; animation: ctaWait 1.05s ease-in-out infinite; }
+@keyframes ctaWait { 0%, 100% { opacity: .72; } 50% { opacity: 1; } }
+html[data-motion="none"] .splash-cta.waiting { animation: none; }
 .splash-cta .arrow { display: inline-block; transition: transform 0.2s var(--ease); }
 .splash-cta:hover .arrow { transform: translateX(4px); }
 @media (prefers-reduced-motion: reduce) {
@@ -4856,6 +4924,32 @@ body.entering-done #artist-hero {
 .cb-n { font: 700 14px var(--font-mono); color: var(--section); }
 .cb-o { font-size: 11px; color: var(--text-faint); min-width: 52px; text-align: right; }
 @media (prefers-reduced-motion: reduce) { .col-rec.just-bought { animation: none; } }
+/* ---- PURCHASED ----------------------------------------------------------
+   The confirmation replaces the button that did it, in place, instead of the
+   page reloading underneath it. A tick that DRAWS rather than appears, the
+   same language the Shop's stamp uses: a purchase is a transaction clearing,
+   not a win, and reusing the win animation would flatten both. */
+.col-bought {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--green, #4fb477);
+  border-color: color-mix(in srgb, var(--green, #4fb477) 40%, transparent);
+  background: color-mix(in srgb, var(--green, #4fb477) 12%, transparent);
+  opacity: 1;
+}
+.col-bought:disabled { opacity: 1; cursor: default; }
+.colb-tick {
+  width: 13px; height: 13px; flex-shrink: 0;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(42deg) scale(0);
+  transform-origin: 70% 70%;
+  animation: colbTick .34s var(--ease) .06s forwards;
+}
+@keyframes colbTick { to { transform: rotate(42deg) scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .colb-tick { animation: none; transform: rotate(42deg) scale(1); }
+}
+html[data-motion="none"] .colb-tick { animation: none; transform: rotate(42deg) scale(1); }
 
 /* ================================================================
    CERTIFICATION — Silver, Gold, Platinum, Diamond on a record you own.
@@ -5173,6 +5267,33 @@ body.entering-done #artist-hero {
 /* A game's name is words. At 26px mono "Higher or Lower" wraps to three lines
    and pushes the row out of alignment. */
 .dt-v-word { font: 700 15px/1.2 var(--font-display); }
+/* ---- A NUMBER WORTH LOOKING AT SAYS SO ----------------------------------
+   Only on tiles whose value has actually got somewhere (see the `hot` flags
+   where the tiles are built) — a glow on every figure is a glow on none, the
+   same argument that keeps Common grey in The Draw and the inactive nav items
+   unlit.
+
+   It breathes rather than flashes: `text-shadow` and `opacity` only, on a
+   four-second cycle, so it reads as something quietly alive at the edge of
+   vision rather than as an alert demanding to be dealt with. The colour is
+   --gold, which is themed, so the glow is whatever the equipped skin's accent
+   is and never a fixed pink sitting on somebody's green theme.
+
+   Nothing here touches layout: a stat tile that changed size on a loop would
+   make the whole grid twitch. */
+.dt-v.dt-hot {
+  animation: dtHot 4s ease-in-out infinite;
+  text-shadow: 0 0 14px var(--gold-glow);
+}
+@keyframes dtHot {
+  0%, 100% { text-shadow: 0 0 10px var(--gold-glow); opacity: .92; }
+  50%      { text-shadow: 0 0 22px var(--gold-glow), 0 0 40px var(--gold-dim); opacity: 1; }
+}
+/* Same rule the rest of the app follows: this is decoration, so it goes. */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .dt-v.dt-hot { animation: none; }
+}
+html[data-motion="none"] .dt-v.dt-hot { animation: none; }
 .dt-k { font-size: 12px; font-weight: 600; margin-top: 6px; }
 /* The Earworm tile puts a record title here, which is longer than a caption. */
 .dt-s {
@@ -5677,6 +5798,12 @@ html[data-motion="none"] .games-grid > .game-card .gc-emoji { animation: none; }
   background: rgba(255,255,255,0.05); border: 1px solid var(--border-strong);
 }
 .draw-result .dr-sub { font-size: 13px; color: var(--text-dim); margin-top: 5px; }
+/* Said where the number is, not only on the button above it. A quarter you
+   have to work out by subtracting two figures is a bug report. */
+.draw-result .dr-free {
+  font-size: 11.5px; color: var(--text-faint); margin-top: 7px;
+  text-transform: uppercase; letter-spacing: .06em; font-weight: 600;
+}
 .draw-result.in { animation: drawIn .5s var(--ease); }
 @keyframes drawIn { 0% { opacity: 0; transform: translateY(10px) scale(.94); } 100% { opacity: 1; transform: none; } }
 
@@ -6046,6 +6173,24 @@ button.rw-day {
    were wrong teaches nothing and is the reason people stop playing. */
 .bl-pick.right { border-color: var(--green, #4fb477); }
 .bl-pick.wrong { border-color: var(--red); opacity: .55; }
+/* ---- THE CAPTION IS THE ANSWER, SO IT IS NOT ON SCREEN WHILE THE ROUND IS.
+   `.hide-names` is dropped from the grid the instant an answer lands, which is
+   why the names are in the markup from the start rather than injected on
+   reveal: `round()` rebuilds this grid every round, and a node the reveal
+   added would be thrown away by the next one.
+
+   Collapsed to nothing rather than hidden, so the sleeves sit flush and the
+   grid does not reserve two lines of empty space under every cover.
+
+   A sleeve that failed to load shows ITS OWN caption and nobody else's — an
+   unlabelled blank button is not a harder question, it is an unanswerable
+   one, and `onerror` marks only the card it fired on. */
+.bl-grid.hide-names .bl-pick:not(.no-art) .bl-pick-nm,
+.bl-grid.hide-names .bl-pick:not(.no-art) .bl-pick-ar {
+  display: none;
+}
+.bl-pick.no-art img { visibility: hidden; height: 0; aspect-ratio: auto; }
+.bl-pick.no-art { min-height: 96px; display: flex; flex-direction: column; justify-content: center; }
 
 .bl-float {
   position: absolute; left: 50%; top: 42%; transform: translateX(-50%);
@@ -7341,6 +7486,72 @@ button.rw-day {
 </script>
 
 <!-- ================================================================
+     THE KEYBOARD, AND THE VIEWPORT UNIT THAT DOES NOT KNOW ABOUT IT
+     ================================================================
+     Reported as: the on-screen keyboard covers the field being typed into.
+     Seen on Guess the Cover and Guess the Year, but it was never about those
+     two — every sheet in the app had it.
+
+     `.modal-panel` is sized `max-height: 88vh`, and **`vh` is the LARGE
+     viewport**: by specification it is the height with any retractable UI
+     RETRACTED, and a software keyboard never shrinks it. So a sheet stays 88%
+     of the whole screen tall while the bottom half of it is behind the
+     keyboard, and the input — which on a form is near the bottom — is under
+     there with it. `dvh` is no better here: it tracks browser chrome, not the
+     keyboard.
+
+     The thing that DOES know is `window.visualViewport`. The occluded strip is
+     `layout height - (visual height + visual offsetTop)`, which is the
+     keyboard plus any accessory bar, and it is the only number in the browser
+     that reports it. It is published once, as `--kb`, and every sheet in the
+     app reads it — one handler rather than a fix per modal, because the next
+     modal somebody adds should not have to know this.
+
+     Then the focused field is scrolled into view, because a shorter sheet
+     still opens scrolled to wherever it was. `scrollIntoView` is deferred to
+     the resize rather than fired on focus: on iOS the keyboard animates in
+     AFTER focus, so scrolling on focus scrolls against the old height and
+     lands in the wrong place.
+
+     The native side is left exactly as it is (`Keyboard.resize: "native"`).
+     That resizes the webview frame, which handles `position: fixed` correctly
+     but does nothing about a `vh`-sized box inside it — which is why this was
+     still broken in the app. The two are complementary, not alternatives.
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+  var vv = window.visualViewport;
+  if (!vv) return;                     // every browser this app targets has it
+  var root = document.documentElement;
+  var last = 0;
+
+  function apply() {
+    // Rounded and floored at zero: sub-pixel noise on every scroll would
+    // otherwise churn a custom property that half the sheets are sized from.
+    var kb = Math.max(0, Math.round(root.clientHeight - (vv.height + vv.offsetTop)));
+    if (kb < 80) kb = 0;               // an accessory bar alone is not a keyboard
+    if (kb === last) return;
+    last = kb;
+    root.style.setProperty('--kb', kb + 'px');
+    document.body.classList.toggle('kb-up', kb > 0);
+    if (!kb) return;
+    var a = document.activeElement;
+    if (!a || !/^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
+    // The sheet has only just been told its new height; let it take it before
+    // measuring where the field ended up.
+    requestAnimationFrame(function () {
+      try { a.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+    });
+  }
+
+  vv.addEventListener('resize', apply);
+  vv.addEventListener('scroll', apply);
+  apply();
+})();
+</script>
+
+<!-- ================================================================
      ICON SET — defined first, before anything else, because some
      top-level code later in this document (BADGES) reads ICONS.xxx
      immediately rather than inside a function, so it must already exist.
@@ -7727,19 +7938,38 @@ window.ICONS = {
   <section id="view-games" class="view" style="display:none;">
     <div class="section-head"><h2>Minigames</h2><span class="muted">Test yourself on any artist, genre or era</span></div>
     <div class="games-grid" id="games-grid">
+      <!-- RECALL AND BID WARS LEAD, and they are marked `.gc-lead` rather than
+           just moved: two cards at the top of a grid of eleven identical
+           shapes are still eleven identical shapes. The class is what gives
+           them the lit border and the slow sweep — see .gc-lead in the
+           stylesheet.
+
+           NOTE THE HUES ARE POSITIONAL. `.games-grid > .game-card:nth-child()`
+           assigns --g and --tile by position, so reordering this list
+           reassigns every colour after the cards that moved. That is fine —
+           the hues exist to make the grid read as a set of different things,
+           not to identify any particular game — but it is the same trap the
+           nav bar has, and worth knowing before assuming a card "changed
+           colour" is a bug. -->
+      <div class="game-card gc-lead" id="recall-card">
+        <div class="gc-emoji" data-icon="wave"></div>
+        <h3>Recall</h3>
+        <p>One second of a record. Name it.</p>
+        <div class="gc-go">Play &rarr;</div>
+        <div class="gc-best" id="recall-card-status"></div>
+      </div>
+      <div class="game-card gc-lead" id="war-card">
+        <div class="gc-emoji" data-icon="trophy"></div>
+        <h3>Bid Wars</h3>
+        <p>Outbid a mate on five records, blind.</p>
+        <div class="gc-go">Challenge someone &rarr;</div>
+      </div>
       <div class="game-card" id="drop-card">
         <div class="gc-emoji" data-icon="disc"></div>
         <h3>Daily Drop</h3>
         <p>One album, one song, six guesses.</p>
         <div class="gc-go">Play today &rarr;</div>
         <div class="gc-best" id="drop-card-status"></div>
-      </div>
-      <div class="game-card" id="recall-card">
-        <div class="gc-emoji" data-icon="wave"></div>
-        <h3>Recall</h3>
-        <p>One second of a record. Name it.</p>
-        <div class="gc-go">Play &rarr;</div>
-        <div class="gc-best" id="recall-card-status"></div>
       </div>
       <div class="game-card" id="ew-card">
         <div class="gc-emoji" data-icon="mic"></div>
@@ -7797,12 +8027,6 @@ window.ICONS = {
            wallet_award_game('tournament') case are all left in place — parked
            the same way market-mode Bid Wars is, so bringing it back is putting
            a card back rather than rebuilding it. -->
-      <div class="game-card" id="war-card">
-        <div class="gc-emoji" data-icon="trophy"></div>
-        <h3>Bid Wars</h3>
-        <p>Outbid a mate on five records, blind.</p>
-        <div class="gc-go">Challenge someone &rarr;</div>
-      </div>
       <div class="game-card" id="leaderboard-card">
         <div class="gc-emoji" data-icon="stopwatch"></div>
         <h3>Speed Leaderboard</h3>
@@ -12614,6 +12838,69 @@ const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const Cloud=(function(){
   let sb=null,user=null,ready=false;
+  /* ---- LOCAL STATE IS ACCOUNT STATE, AND IT WAS NEVER SCOPED TO ONE -------
+
+     Reported as: make a new account and it still has the old account's ranked
+     albums, while the theme and the Discs reset.
+
+     Both halves of that are one cause. Themes and Discs live on `profiles`,
+     which is per-account and server-owned, so they change with the account by
+     construction. Everything else — every rating, the shortlist, the Liner
+     Notes, every game best and every daily — lives in localStorage, which is
+     keyed to the ORIGIN and not to the person. `logout()` cleared none of it.
+
+     And it is worse than a display bleed. The next sign-in runs pullAndMerge,
+     which MERGES whatever is in localStorage with the new account's (empty)
+     app_state and then pushes the result up. So the previous person's crate
+     was not merely visible to the new account — it was uploaded into it, and
+     from that point the two accounts genuinely shared a library.
+
+     The stamp is what fixes it, and the three cases it has to tell apart:
+
+       no stamp                a guest rated things before signing up. ADOPT
+                               them — that path is deliberate and is how
+                               somebody's first session survives making an
+                               account.
+       stamp === this user     their own device. Merge exactly as before.
+       stamp !== this user     somebody else's data. WIPE before the merge,
+                               so nothing of theirs can be pushed up.
+
+     Cleared on logout too, so the next person on a shared device starts clean
+     rather than inheriting a crate. Pending writes are flushed first: the
+     cloud copy is what a re-login restores from, and logging out is not a
+     reason to lose the last thing somebody rated.
+
+     The keep-list is device PREFERENCES, not account data — Motion, the
+     auto-advance toggle and which Home folds are open are properties of the
+     phone, and resetting them on every account switch would be a second bug.
+     The catalogue caches (`dzc:`, `ap2:alb:`, `spc2:`, `vig:`) are not
+     touched at all: they are public facts about records, expensive to refetch,
+     and identical for everybody. */
+  const OWNER_KEY = 'vinall_local_owner';
+  const OWNED_PREFIX = /^(crate_|vinal_drop2_|vinal_earworm2_)/;
+  const OWNED_KEEP = { 'crate_today_auto': 1, 'crate_home_folds': 1 };
+
+  function wipeLocalAccountState(){
+    let keys=[];
+    try{ for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k)keys.push(k);} }catch(e){return;}
+    keys.forEach(function(k){
+      if(!OWNED_PREFIX.test(k)||OWNED_KEEP[k])return;
+      try{localStorage.removeItem(k);}catch(e){}
+    });
+  }
+
+  /* Returns true when the local copy was somebody else's and has been dropped.
+     Called before the merge, never after — after is too late, the upload has
+     already been queued. */
+  function claimLocalState(uid){
+    let prev=null;
+    try{prev=localStorage.getItem(OWNER_KEY);}catch(e){}
+    const foreign = !!prev && prev !== uid;
+    if(foreign) wipeLocalAccountState();
+    try{localStorage.setItem(OWNER_KEY,uid);}catch(e){}
+    return foreign;
+  }
+
   const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best'];
   const pending={};
   function isOn(){return!!(sb&&user);}
@@ -12822,7 +13109,20 @@ const Cloud=(function(){
   document.addEventListener('click',function(){const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');});
 
   async function onAuthed(u){
-    user=u;refreshUI();
+    user=u;
+    /* BEFORE refreshUI and before the merge. refreshUI paints the crate, and
+       pullAndMerge would upload it — both of those have to happen against the
+       right person's data or not at all. */
+    const foreign=claimLocalState(u.id);
+    if(foreign){
+      try{
+        if(window.Wallet&&Wallet.reset)Wallet.reset();
+        ['renderStats','renderAlbums','renderSongs','renderActivity'].forEach(function(fn){
+          if(typeof window[fn]==='function')window[fn]();
+        });
+      }catch(e){}
+    }
+    refreshUI();
     /* The merge and the wallet are independent — one reads app_state and the
        other reads profiles — so they go together rather than one after the
        other. This is the second half of why pressing GO used to sit there:
@@ -12924,7 +13224,26 @@ const Cloud=(function(){
       reportIssue('ratings reconcile incomplete',{missing:missing.length,failed:failed});
     }
   }
-  async function logout(){try{await sb.auth.signOut();}catch(e){}user=null;refreshUI();}
+  /* Flush, sign out, then wipe. The order is the whole thing: wiping first
+     would throw away writes that had not reached app_state yet, and signing
+     out first would make pushAll a no-op (isOn() is false once `user` is
+     null), so the flush has to sit in front of both. A failed push is not a
+     reason to keep somebody signed in, hence the catch. */
+  async function logout(){
+    try{ if(isOn()) await pushAll(); }catch(e){}
+    try{await sb.auth.signOut();}catch(e){}
+    user=null;
+    wipeLocalAccountState();
+    try{localStorage.removeItem(OWNER_KEY);}catch(e){}
+    if(window.Wallet&&Wallet.reset)Wallet.reset();
+    refreshUI();
+    try{
+      ['renderStats','renderAlbums','renderSongs','renderActivity'].forEach(function(fn){
+        if(typeof window[fn]==='function')window[fn]();
+      });
+      if(window.paintUnlocks)paintUnlocks(false);
+    }catch(e){}
+  }
 
   let mode='login';
   function showAuthView(v){
@@ -12976,8 +13295,24 @@ const Cloud=(function(){
     btn.disabled=false;btn.textContent=(mode==='login'?'Log in':'Sign up');
   }
 
+  /* WHEN IS THE APP ACTUALLY LOGGED IN.
+
+     init() is async and onAuthed() awaits the merge and the wallet, so for a
+     second or two after load the app is running signed-OUT with a signed-in
+     session in the post. Tapping GO during that window revealed a logged-out
+     dashboard — no Discs, no crate, the Log in button — which then silently
+     became somebody's account a few seconds later.
+
+     This settles once the initial auth check is finished, INCLUDING the first
+     onAuthed if there was a session to restore. It never rejects: a caller
+     waiting on it is waiting to show the app, and a network failure is a
+     reason to show the app logged out, not a reason to hold the splash. */
+  let _settleReady;
+  const readyPromise = new Promise(function(res){_settleReady=res;});
+  function settleReady(){ if(_settleReady){ const f=_settleReady; _settleReady=null; f(); } }
+
   async function init(){
-    if(!window.supabase||!window.supabase.createClient){console.warn('Supabase library not loaded \u2014 accounts disabled.');return;}
+    if(!window.supabase||!window.supabase.createClient){console.warn('Supabase library not loaded \u2014 accounts disabled.');settleReady();return;}
     sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON);ready=true;
     document.getElementById('auth-close').addEventListener('click',closeAuth);
     document.getElementById('auth-modal').addEventListener('click',function(e){if(e.target===this)closeAuth();});
@@ -13072,8 +13407,12 @@ const Cloud=(function(){
         }
       }, 500);
     }
-    try{const{data}=await sb.auth.getSession();if(data&&data.session&&data.session.user){await onAuthed(data.session.user);return;}}catch(e){}
+    try{
+      const{data}=await sb.auth.getSession();
+      if(data&&data.session&&data.session.user){await onAuthed(data.session.user);settleReady();return;}
+    }catch(e){}
     refreshUI();
+    settleReady();
   }
 
   function getUser(){return user;}
@@ -13425,7 +13764,7 @@ const Cloud=(function(){
     }catch(e){return null;}
   }
 
-  return{init:init,push:push,isOn:isOn,openAuth:openAuth,syncUI:refreshUI,logout:logout,
+  return{init:init,ready:readyPromise,push:push,isOn:isOn,openAuth:openAuth,syncUI:refreshUI,logout:logout,
          getUser:getUser,client:client,fetchProfile:fetchProfile,saveProfile:saveProfile,uploadAvatar:uploadAvatar,
          findByUsername:findByUsername,follow:follow,unfollow:unfollow,isFollowing:isFollowing,
          followCounts:followCounts,followingList:followingList,followersList:followersList,fetchUserRatings:fetchUserRatings,
@@ -13696,13 +14035,30 @@ async function drawProfile(host,prof,isOwner){
     /* Lifetime Discs is `lifetime_xp`: the pin trigger adds every rise in the
        balance to it and never subtracts, so it is already the running total of
        everything ever earned. Spending does not touch it. */
+    /* NO SUBTEXT. Every tile carried a line explaining it — "earned, all
+       time", "discographies finished" — and a label under a label is the
+       caption explaining the caption. "Lifetime Discs" already says what it
+       is, and eleven tiles with three lines each is a page of prose where a
+       scoreboard should be.
+
+       `sub` survives on exactly the two tiles where it is not a description
+       but DATA that has nowhere else to go: which record the best Earworm was
+       on, and how many rounds the favourite minigame has had. Those are the
+       answer, not a gloss on it.
+
+       `hot` lights the numeral when the figure is genuinely a big one. The
+       thresholds are against a real account rather than a percentile: a
+       seven-day streak is the full login cycle, level 50 is a quarter of the
+       200 ceiling, 100k Discs is about a week and a half of everything. They
+       are deliberately reachable — a glow nobody ever sees is decoration in
+       the source, and one that is always on is wallpaper. */
     const tiles=[
-      {v:nf(prof.lifetime_xp||0), k:'Lifetime Discs', sub:'earned, all time'},
-      {v:nf(netWorth),            k:'Net worth',      sub:'what the shelf is worth'},
-      {v:prof.streak_best||0,     k:'Best streak',    sub:'rating days in a row'},
+      {v:nf(prof.lifetime_xp||0), k:'Lifetime Discs', hot:(prof.lifetime_xp||0)>=100000},
+      {v:nf(netWorth),            k:'Net worth',      hot:netWorth>=100000},
+      {v:prof.streak_best||0,     k:'Best streak',    hot:(prof.streak_best||0)>=7},
       // Level is lifetime Discs. It belongs in a list of things that only go
       // up, not at the top of a page about somebody's taste.
-      {v:prof.level||1,           k:'Level',          sub:'from Discs earned'}
+      {v:prof.level||1,           k:'Level',          hot:(prof.level||1)>=50}
     ];
     if(isOwner){
       let nLore=0,log={};
@@ -13713,12 +14069,13 @@ async function drawProfile(host,prof,isOwner){
                     sub:log.favourite.n+' round'+(log.favourite.n===1?'':'s')+' played',small:true});
       }
       if(log.earworm){
+        // Kept: which record it was is the interesting half of "3/6".
         tiles.push({v:log.earworm.rows+'/6',k:'Best Earworm',
                     sub:log.earworm.title+(log.earworm.artist?' — '+log.earworm.artist:'')});
       }
-      tiles.push({v:nLore,k:'Lore answers',sub:'things you have said'});
-      tiles.push({v:compDone,k:'Completionist',sub:'discographies finished'});
-      tiles.push({v:lists.length,k:'Lists',sub:'made'});
+      tiles.push({v:nLore,k:'Lore answers',hot:nLore>=50});
+      tiles.push({v:compDone,k:'Completionist',hot:compDone>=3});
+      tiles.push({v:lists.length,k:'Lists',hot:lists.length>=5});
     }
     /* Standing sits above Statistics because it is the one thing on this page
        that is an argument rather than a count: it says what the app thinks is
@@ -13749,8 +14106,11 @@ async function drawProfile(host,prof,isOwner){
       '<div class="done-grid">'+tiles.map(function(t){
         // A game's name is words, not a numeral, so it gets its own size —
         // "Higher or Lower" at 34px wraps to three lines and breaks the grid.
-        return '<div class="done-tile"><div class="dt-v'+(t.small?' dt-v-word':'')+'">'+esc(String(t.v))+'</div>'+
-          '<div class="dt-k">'+esc(t.k)+'</div><div class="dt-s">'+esc(t.sub)+'</div></div>';
+        // The sub element is dropped entirely when there is nothing in it,
+        // rather than rendered empty — an empty div still takes its margin.
+        return '<div class="done-tile"><div class="dt-v'+(t.small?' dt-v-word':'')+(t.hot?' dt-hot':'')+'">'+esc(String(t.v))+'</div>'+
+          '<div class="dt-k">'+esc(t.k)+'</div>'+
+          (t.sub?'<div class="dt-s">'+esc(t.sub)+'</div>':'')+'</div>';
       }).join('')+'</div>';
   }
 
@@ -17033,6 +17393,34 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       if (typeof window.renderStats === 'function') window.renderStats();
       return state;
     },
+    /* Back to a logged-out wallet, without a round trip and without waiting
+       for one. Called on logout and on an account switch: the Discs, the
+       owned cosmetics and the equipped theme all belong to the person who
+       just left, and leaving them painted while the next person's profile
+       loads is the same bleed the local crate had — somebody else's account
+       on screen, briefly indistinguishable from their own.
+
+       applyTheme() is what actually repaints the app back to `classic`; a
+       reset that left a bought theme equipped would advertise a cosmetic the
+       next account does not own. */
+    reset: function () {
+      state = {
+        discs: 0, streak_current: 0, streak_best: 0, streak_last_date: null,
+        streak_freezes: 1, owned_themes: ['classic'], active_theme: 'classic',
+        owned_banners: [], active_banner: null, is_admin: false,
+        owned_tags: [], active_tag: null,
+        owned_flairs: [], active_flair: null,
+        owned_frames: [], active_frame: null,
+        login_streak: 0, login_best: 0, login_last_date: null, album_picks: 0,
+        lifetime_xp: 0, level: 1,
+      };
+      loaded = false;
+      _claims = null;
+      applyTheme();
+      updateShopButton();
+      if (typeof window.renderStats === 'function') window.renderStats();
+      return state;
+    },
     load: load, get: get, recordRating: recordRating,
     awardGame: awardGame, syncAward: syncAward, awardDiscs: awardDiscs,
     abbrevDiscs: abbrevDiscs,
@@ -18472,7 +18860,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       '</div>';
     var copy = document.getElementById('ew-copy');
     if (copy) copy.addEventListener('click', function () {
-      handOff(copy, { text: ewShareGrid() });
+      handOff(copy, { text: ewShareText() });
     });
     var again = document.getElementById('ew-again');
     if (again) again.addEventListener('click', function () { ewLoadAnswer(); });
@@ -18487,8 +18875,18 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         return m === 'exact' ? '🟩' : (m === 'present' ? '🟨' : '⬛');
       }).join('');
     }).join('\n');
-    return head + body + '\nwildcrate.xyz';
+    return head + body;
   }
+  /* THE URL IS PART OF THE SHARE, NOT PART OF THE RESULT.
+
+     ewShareGrid() built the whole message including its footer, and
+     ewRenderResult() printed that string verbatim into `.drop-share` as a
+     preview — so "wildcrate.xyz" appeared on screen under the record you had
+     just been shown, reading as a stray caption on the artwork rather than as
+     the last line of something you were about to paste. Splitting it means
+     the screen shows the grid and the clipboard gets the link, with one
+     definition of each and no way for them to drift. */
+  function ewShareText() { return ewShareGrid() + '\nwildcrate.xyz'; }
 
   /* Today's result on the Minigames card, the same as the Daily Drop's.
      The element was already in the markup and nothing ever wrote to it. */
@@ -18840,9 +19238,46 @@ function playDismissAnimation(gateEl, callback) {
   /* Nothing to restart on a bfcache restore any more — the record is CSS and
      is already turning. */
 
+  /* THE SESSION LANDS BEFORE THE ANIMATION RUNS, NOT FIVE SECONDS AFTER IT.
+
+     Pressing GO used to start the flight immediately, so an account that was
+     already signed in got a dashboard with no Discs, no crate and a Log in
+     button, which turned into their actual account a few seconds later when
+     onAuthed finished. The data was never wrong — it was just being revealed
+     before it existed.
+
+     Cloud.ready settles when the initial auth check (and the first merge, if
+     there was a session) is done, so waiting on it means the app behind the
+     splash is finished before it is uncovered. The wait is dead time nobody
+     sees: the record is still spinning and the button says so.
+
+     THE CEILING IS NOT OPTIONAL. A splash that will not go away is the one
+     failure here that actually matters, and it is worse than any amount of
+     flicker — so a slow or dead network gets 2.5 seconds and then the app,
+     logged-out-for-now, exactly as before. */
+  var WAIT_MS = 2500;
   function dismiss() {
     if (gate.dataset.dismissing) return; // double-click shouldn't restart the choreography
     gate.dataset.dismissing = '1';
+
+    var ready = (window.Cloud && Cloud.ready) ? Cloud.ready : null;
+    if (!ready) return run();
+
+    var done = false;
+    var cta = document.getElementById('splash-cta');
+    // Answer the press instantly even though the flight has not started.
+    if (cta) { cta.classList.add('waiting'); cta.disabled = true; }
+    function go() {
+      if (done) return;
+      done = true;
+      if (cta) { cta.classList.remove('waiting'); cta.disabled = false; }
+      run();
+    }
+    ready.then(go, go);
+    setTimeout(go, WAIT_MS);
+  }
+
+  function run() {
     playDismissAnimation(gate, function () {
       gate.remove();
       // The entrance classes put .wrap at opacity:0 — always clear them once
@@ -19472,8 +19907,11 @@ function playDismissAnimation(gateEl, callback) {
         return c.state === 'hit' ? '🟩' : (c.state === 'near' ? '🟨' : (c.state === 'none' ? '⬜' : '⬛'));
       }).join('');
     }).join('\n');
-    return head + body + '\nwildcrate.xyz';
+    return head + body;
   }
+  // Same split as Earworm: the grid is what goes on screen, the link is what
+  // goes on the clipboard. One definition of each.
+  function shareText() { return shareGrid() + '\nwildcrate.xyz'; }
 
   function showResult(won) {
     var sub = answer.artist + ' · ' + (answer.year || '') + (answer.genre ? ' · ' + answer.genre : '');
@@ -19489,7 +19927,7 @@ function playDismissAnimation(gateEl, callback) {
       '</div>';
     var btn = document.getElementById('drop-share-btn');
     if (btn) btn.addEventListener('click', function () {
-      handOff(btn, { text: shareGrid() });
+      handOff(btn, { text: shareText() });
     });
   }
   /* Finishing one half of the day should point at the other half rather
@@ -20945,7 +21383,37 @@ window.renderAdminStats = renderAdminStats;
   }
 
   function seen() { try { return JSON.parse(localStorage.getItem(SEEN_KEY)) || {}; } catch (e) { return {}; } }
-  function markSeen(map) { try { localStorage.setItem(SEEN_KEY, JSON.stringify(map)); } catch (e) {} }
+  /* THE SEEN MAP MAY ONLY EVER GROW, AND NOT DOING THAT IS WHY THE UNLOCKS
+     KEPT FIRING.
+
+     This used to REPLACE the stored map with `now`, and `now` holds only the
+     gates that are open AND whose card is currently in the DOM. Two ordinary
+     situations empty it:
+
+       - paintUnlocks() runs at DOMContentLoaded, which is before login and
+         therefore before pullAndMerge has put the crate in localStorage. The
+         rated count is 0, every gate reads as shut, and the map was
+         overwritten with (almost) nothing.
+       - cardFor() returns null for a card that is not rendered, and those
+         keys were dropped from the map on the way past.
+
+     Either way the next paint found no record of anything and announced every
+     gate as freshly passed — so opening the app celebrated nine unlocks you
+     had had for weeks, every single time. The symptom looked like an award
+     being granted repeatedly; the cause is that the app kept FORGETTING, not
+     that it kept granting. (Nothing was ever paid for an unlock, so no Discs
+     were duplicated — it was the celebration that repeated.)
+
+     Merging rather than replacing fixes both at once and needs no migration:
+     a gate that has been seen stays seen, whatever the crate or the DOM looks
+     like at the moment of a given paint. */
+  function markSeen(map) {
+    try {
+      var merged = seen();
+      Object.keys(map).forEach(function (k) { merged[k] = 1; });
+      localStorage.setItem(SEEN_KEY, JSON.stringify(merged));
+    } catch (e) {}
+  }
 
   function cardFor(key) {
     return document.getElementById(key) || document.querySelector('.game-card[data-game="' + key + '"]');
@@ -20960,6 +21428,11 @@ window.renderAdminStats = renderAdminStats;
   function paintUnlocks(announce) {
     var n = ratedCount();
     var was = seen(), now = {}, fresh = [];
+    /* Belt and braces on top of the merge: a paint against an empty crate is
+       a paint against data that has not arrived, and a gate needing 0 albums
+       would otherwise "unlock" on every cold load before the merge lands.
+       Painting still happens — only the announcement is held back. */
+    if (!n) announce = false;
 
     Object.keys(GATES).forEach(function (key) {
       var g = GATES[key], card = cardFor(key);
@@ -21835,22 +22308,55 @@ window.renderAdminStats = renderAdminStats;
     }
 
     busy = false;
-    // The purchase is the moment — mark it on the card that was bought, not
-    // with a toast somewhere else on the page.
+    /* THE PURCHASE DOES NOT REDRAW THE PAGE.
+
+       This used to null every cache and call render() 900ms later, which on
+       the Market is the worst possible moment to do it: render() refetches
+       the shelf, rebuilds the grid, throws away the scroll position and
+       restarts priceSweep, so buying one record made the whole page blink,
+       jump to the top and start counting streams again — on a page this file
+       already describes as slow to load. The confirmation was thrown away
+       along with the card it was drawn on.
+
+       The card is patched where it stands instead, exactly as priceSweep
+       patches prices in place and for the same reason: a grid that redraws
+       under somebody who is reading it is worse than a stale one.
+
+       The caches are updated rather than dropped. The bought row is pushed
+       into `_mine` so the shelf already knows about it when you switch tabs,
+       and `_board` alone is invalidated because standings genuinely changed
+       and are cheap. Nothing is refetched to learn something the response
+       already told us. */
     var rec = btn.closest('.col-rec');
     if (rec) {
-      rec.classList.add('just-bought');
+      rec.classList.add('just-bought', 'owned');
       if (window.burst) burst(rec, { count: 26, spread: 150 });
+      // Purchased, on the control that did it — not a toast elsewhere on the
+      // page, and not a button that still says Buy.
+      btn.className = 'btn-mini col-bought';
+      btn.disabled = true;
+      btn.innerHTML = '<span class="colb-tick" aria-hidden="true"></span>Purchased';
+      // A record bought with a pick can never be sold, so it must not grow a
+      // Sell button a moment later.
+      var pickBtn = rec.querySelector('[data-pick]');
+      if (pickBtn) pickBtn.remove();
     }
     if (window.buzz) buzz('big');
     if (window.Wallet && Wallet.refresh) Wallet.refresh();
     else if (window.Wallet && Wallet.load) Wallet.load();
-    _mine = null; _market = null; _board = null;
+
+    if (_mine && !_mine.some(function (x) { return x.album_id === albumId; })) {
+      _mine.push({
+        album_id: albumId, name: item.name, artist: item.artist, art: item.art,
+        price: j.price, via_pick: !!usePick,
+        bought_at: new Date().toISOString()
+      });
+    }
+    _board = null;
     // Both buy paths return the new net worth, so the Home tile updates from
     // this response rather than a second round trip.
     if (window.CollectionWorth) CollectionWorth.set(j.net_worth);
     if (window.track) track('collection_buy', { price: j.price });
-    setTimeout(function () { render(); }, 900);
   }
 
   async function sell(btn, albumId) {
@@ -22309,13 +22815,34 @@ window.renderAdminStats = renderAdminStats;
          A Disc amount is not a description — it is the prize itself, and
          "already yours, 1,600 instead" is the only case where the sentence is
          carrying information rather than direction. */
-      var value = won.kind === 'discs' ? '+' + (Number(won.gained) || 0).toLocaleString('en-GB')
-        : won.duplicate ? 'Already yours · +' + (Number(won.gained) || 0).toLocaleString('en-GB')
+      /* A DISC PRIZE PRINTS WHAT LANDED, NEVER THE POOL ROW'S LABEL.
+
+         wallet_spin pays Discs at a quarter on the daily free spin (`v_share`),
+         so the row labelled "10,000 Discs" pays 2,500 — and this printed the
+         LABEL as the headline with the real figure underneath it. The screen
+         said you had won 10,000 and the balance went up 2,500, which reads as
+         a reward that went missing rather than as a free spin doing what the
+         note above the button already said it would. The discs were always
+         written, always persisted and always spendable; the panel was lying
+         about the amount.
+
+         The row's name is what a PAID spin pays. The balance is the truth, so
+         the truth is what goes at the top. */
+      var gained = Number(won.gained) || 0;
+      var paysDiscs = won.kind === 'discs' || won.duplicate;
+      var head = paysDiscs ? ('+' + gained.toLocaleString('en-GB') + ' Discs')
+                           : (won.granted || won.label);
+      var value = won.duplicate ? 'Already yours — ' + esc(won.granted || won.label) + ', paid out instead'
         : won.kind === 'picks' ? (won.picks === 1 ? '1 free record' : won.picks + ' free records')
         : '';
+      /* Named at the moment it costs you something, not only before the spin.
+         A quarter that is explained where the number is is a rule; a quarter
+         discovered by subtracting two numbers is a bug report. */
+      var freeNote = (won.free && paysDiscs) ? 'Free spin — Discs pay a quarter' : '';
       r.innerHTML = '<div class="dr-tier">' + esc(tierName(won.tier)) + '</div>' +
-        '<div class="dr-label">' + esc(won.granted || won.label) + '</div>' +
-        (value ? '<div class="dr-val">' + esc(value) + '</div>' : '');
+        '<div class="dr-label">' + esc(head) + '</div>' +
+        (value ? '<div class="dr-val">' + value + '</div>' : '') +
+        (freeNote ? '<div class="dr-free">' + esc(freeNote) + '</div>' : '');
 
       applyFeedback(won);
       // The free spin has just been taken, so the button has to stop offering
@@ -23825,10 +24352,19 @@ window.renderAdminStats = renderAdminStats;
     paintHud();
 
     var grid = el('blitz-grid');
-    grid.className = 'bl-grid n' + q.choices.length;
+    /* TEN SLEEVES. The captions used to sit under every cover while the round
+       was live, which on "Which album is Zombie off?" printed the answer
+       directly beneath the artwork — the game was a reading test. They are in
+       the markup from the start (so nothing has to be injected into a grid the
+       next round rebuilds) and hidden by `.hide-names` until an answer lands.
+
+       A sleeve that fails to load reveals its OWN caption and nobody else's:
+       a blank button with no text is not a harder question, it is an
+       unanswerable one. */
+    grid.className = 'bl-grid n' + q.choices.length + ' hide-names';
     grid.innerHTML = q.choices.map(function (c, k) {
       return '<button class="bl-pick" data-k="' + k + '">' +
-        '<img src="' + esc(c.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+        '<img src="' + esc(c.art || '') + '" alt="" onerror="this.closest(\'.bl-pick\').classList.add(\'no-art\')">' +
         '<span class="bl-pick-nm">' + esc(c.name) + '</span>' +
         '<span class="bl-pick-ar">' + esc(c.artist || '') + '</span></button>';
     }).join('');
@@ -23908,6 +24444,9 @@ window.renderAdminStats = renderAdminStats;
     var right = k === q.correct;
     var gained = 0;
 
+    // The reveal: names come back the instant the round is decided, so the
+    // result screen and the between-rounds beat both name the record.
+    el('blitz-grid').classList.remove('hide-names');
     var btns = el('blitz-grid').querySelectorAll('.bl-pick');
     btns.forEach(function (b, idx) {
       b.disabled = true;
