@@ -2480,7 +2480,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
   .games-grid .gc-best { font-size: 9px; top: 6px; right: 7px; max-width: 58%; }
   /* The lock pill replaces the "Play" line rather than floating over it, so it
      has to fit the same box. */
-  .games-grid .gc-lock { font-size: 9.5px; padding: 3px 5px; }
+  .games-grid .gc-lock { font-size: 9px; padding: 3px 4px; letter-spacing: .02em; line-height: 1.25; }
 }
 /* ---- THE TWO THAT LEAD ---------------------------------------------------
    Recall and Bid Wars sit first and are marked rather than merely moved. A
@@ -7049,124 +7049,168 @@ button.rw-day {
 .sr-play.no-clip, .sr-play.needs-tap { border-color: var(--red); color: var(--red); }
 .sr-play.no-clip::after { border-left-color: currentColor; }
 
-/* ---- FOR YOU — one song a screen -------------------------------------
-   The sleeve is SQUARE and is sized off the card, never stretched to fill it.
-   The first version gave it `flex: 1 1 auto` inside a full-height card, so a
-   square cover was cropped to whatever was left over after the text — and a
-   record sleeve is square in every viewport there has ever been.
+/* ---- FOR YOU — one song a screen, edge to edge -----------------------
+   THE SLEEVE IS THE SCREEN NOW. It used to be a square card floating in the
+   middle of a bounded feed with the page's gutters either side and 210px of
+   nothing under it, which is a website's idea of a feed. The art fills the
+   card, the card fills the viewport, and everything else sits ON the art.
 
-   `min()` against both the width and the remaining height, so it is as large
-   as it can be on a wide phone and still shrinks rather than pushing the
-   rating control off the bottom on a short one. */
+   `object-fit: cover` is what keeps that honest: it fills both axes and crops
+   the overflow, so a square sleeve in a 9:19.5 window loses its sides and
+   NEVER stretches. `fill` would have been the one-word version of this and it
+   distorts every cover in the app. A blurred, scaled copy of the same sleeve
+   sits behind it so the crop has somewhere to blend out to rather than a hard
+   edge against the page — the same trick the artist hero bed uses.
+
+   The feed runs UNDER the floating nav rather than stopping above it: the bar
+   is translucent and sits over the art, which is the only way the card gets
+   the whole screen. The overlay reserves room for it so nothing readable is
+   ever behind it. */
 .fy-feed {
   scroll-snap-type: y mandatory;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  /* A fallback only: fitFeed() measures the real bound against the floating
-     nav as soon as the feed is built. Deliberately on the short side, because
-     being short shows a gap for one frame and being long puts the rating
-     slider underneath the bar. */
-  height: calc(100vh - 260px);
+  /* Edge to edge: the page's gutter is given back so the art meets the sides
+     of the screen. The same token twice, never the same number twice — this
+     shipped as `-28px` once and overhung the viewport when the gutter became
+     16, which scrolls the whole page sideways. */
+  margin-left: calc(var(--gutter) * -1);
+  margin-right: calc(var(--gutter) * -1);
+  /* A fallback only: fitFeed() measures the real bound as soon as the feed is
+     built. Deliberately on the SHORT side — short shows a gap for one frame,
+     long puts a snap point below the fold and the feed will not advance. */
+  height: calc(100vh - 150px);
   min-height: 360px;
   scrollbar-width: none;
+  background: #000;
 }
 .fy-feed::-webkit-scrollbar { display: none; }
 @supports (height: 100dvh) {
   /* dvh, because 100vh on iOS Safari is the height WITH the address bar
      retracted — the card is then taller than the window and the next snap
-     point sits below the fold, so the feed will not advance. */
-  .fy-feed { height: calc(100dvh - 260px); }
+     point sits below the fold. */
+  .fy-feed { height: calc(100dvh - 150px); }
 }
+/* The view's own top margin goes, so the feed starts directly under the
+   header instead of a section gap below it. */
+#view-foryou { margin-top: 0 !important; }
+/* On a desktop, full-bleed means a 1600px-wide window cropping a square
+   sleeve down to a letterbox strip of its middle. The feed is capped to
+   something phone-shaped and centred, which is the shape the design is for;
+   the crop then takes the same slice it does on a phone. */
+@media (min-width: 700px) {
+  .fy-feed {
+    max-width: 460px; margin-left: auto; margin-right: auto;
+    border-radius: var(--radius); overflow: hidden; overflow-y: auto;
+  }
+}
+
 .fy-card {
   scroll-snap-align: center;
   scroll-snap-stop: always;      /* one song per flick, never two */
-  height: 100%;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: var(--s3);
-  padding: var(--s3) 0;
-  text-align: center;
-}
-.fy-why {
-  font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
-  color: var(--c-lime); flex: 0 0 auto;
-}
-.fy-art {
   position: relative;
-  /* SQUARE, AND SIZED OFF THE SPACE ACTUALLY LEFT — not off the viewport.
-     `width: min(100%, 58vh)` looked right and was not: the card also holds a
-     reason line, a title, a subtitle and the rating row, so on a short screen
-     the sleeve's own height had nowhere to go and it came out 445x265. A
-     sleeve is square in every viewport there has ever been.
+  height: 100%;
+  display: block;
+  padding: 0;
+  text-align: left;
+  overflow: hidden;
+  background: #000;
+}
 
-     Flexible in height with `min-height: 0` so it can give way to the text
-     rather than the other way round, `aspect-ratio: 1` to derive the width
-     from whatever height it ends up with, and `max-width: 100%` for the wide
-     case — where the clamp applies to the width and the aspect ratio pulls
-     the height back down with it. Square both ways. */
-  /* The side is set by fitFeed(), for the same reason the feed's height is:
-     CSS could not be made to do it reliably. `aspect-ratio: 1` loses to flex
-     sizing — with `flex: 1 1 auto` the height grew to fill the card and
-     `max-width: 100%` clamped only the width, so it came out 343x360. Every
-     combination of max-width/max-height/aspect-ratio has an axis where one
-     constraint wins and the ratio is dropped.
-
-     One number, measured against the two things that actually bound it: the
-     card's width, and the height left after the text. */
-  flex: 0 0 auto;
-  width: var(--fy-art, 300px);
-  height: var(--fy-art, 300px);
-  margin: 0 auto;
-  border: 0; padding: 0; cursor: pointer;
-  border-radius: 16px; overflow: hidden;
-  background: var(--surface-2);
-  box-shadow: 0 24px 60px rgba(0,0,0,.55);
+/* ---- the art layer ---- */
+.fy-art {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  margin: 0; border: 0; padding: 0;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+  display: block;
+  box-shadow: none;
   transition: transform var(--dur) var(--ease);
 }
-.fy-art:active { transform: scale(.985); }
-.fy-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.fy-shade {
-  position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(to top, rgba(0,0,0,.35) 0%, transparent 38%);
+.fy-art:active { transform: scale(.995); }
+/* The bed: the same sleeve, blurred and overscaled, so the crop has something
+   in its own colours to sit against instead of a black letterbox. `scale` and
+   not `width` — a blur samples past its own edges and a 1:1 bed shows a pale
+   rim all the way round. */
+.fy-art .fy-bed {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transform: scale(1.35);
+  filter: blur(34px) saturate(1.25) brightness(.55);
+  z-index: 0;
 }
-/* The cue is only there until audio is unlocked. iOS will not let an <audio>
-   element play outside a real gesture, so the first card genuinely needs a
-   tap — and a feed that looks like it should be playing and is not is worse
-   than one that asks. It goes the moment the first clip starts and never
-   comes back for the session. */
+.fy-art .fy-main {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  /* THE ONE LINE THAT MATTERS: fills the card, keeps the aspect ratio, crops
+     the difference. Never `fill`, never `100% 100%`. */
+  object-fit: cover;
+  object-position: center;
+  z-index: 1;
+  display: block;
+}
+/* Legible text over an unknown photograph: a scrim top and bottom rather than
+   a flat wash, so the middle of the sleeve — which is the bit worth looking
+   at — is left alone. */
+.fy-shade {
+  position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background:
+    linear-gradient(to top, rgba(6,5,5,.92) 0%, rgba(6,5,5,.72) 22%, rgba(6,5,5,0) 52%),
+    linear-gradient(to bottom, rgba(6,5,5,.55) 0%, rgba(6,5,5,0) 22%);
+}
+/* The cue is only there when the browser has REFUSED to autoplay. Every card
+   tries to play itself on arrival now; this is what a refusal looks like. */
 .fy-cue {
-  position: absolute; left: 50%; top: 50%; width: 68px; height: 68px;
-  margin: -34px 0 0 -34px; border-radius: 50%; pointer-events: none;
+  position: absolute; left: 50%; top: 50%; width: 76px; height: 76px;
+  margin: -38px 0 0 -38px; border-radius: 50%; pointer-events: none; z-index: 3;
   background: rgba(10,9,8,.55); backdrop-filter: blur(8px);
   border: 1.5px solid rgba(255,245,235,.4);
   display: grid; place-items: center;
+  opacity: 0; transform: scale(.8);
   transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 .fy-cue::after {
   content: ''; margin-left: 5px;
-  border-left: 19px solid var(--text);
-  border-top: 12px solid transparent; border-bottom: 12px solid transparent;
+  border-left: 21px solid #fff;
+  border-top: 13px solid transparent; border-bottom: 13px solid transparent;
 }
-.fy-card.is-playing .fy-cue,
-.fy-card.is-rated .fy-cue { opacity: 0; transform: scale(.8); }
-.fy-card.is-loading .fy-cue { opacity: .45; }
-.fy-card.needs-tap .fy-cue { animation: fyTap 1.6s ease-in-out infinite; }
+.fy-card.needs-tap .fy-cue { opacity: 1; transform: none; animation: fyTap 1.6s ease-in-out infinite; }
 @keyframes fyTap { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 .fy-card.no-clip .fy-art::after {
   content: 'No preview for this one';
-  position: absolute; left: 0; right: 0; bottom: 14px;
-  font-size: 12px; color: var(--text-faint);
+  position: absolute; left: 0; right: 0; top: 50%; z-index: 3;
+  text-align: center; font-size: 12px; color: rgba(255,245,235,.7);
 }
 
+/* ---- the overlay ---- */
+.fy-over {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s4) var(--gutter);
+  /* Clears the floating nav, which the feed now runs underneath. Set by
+     fitFeed() off the bar's real box — its height is a token, it moves with
+     the safe-area inset, and it is not there at all above 700px. */
+  padding-bottom: var(--fy-floor, 96px);
+  color: #fff;
+  pointer-events: none;   /* the art behind it stays tappable... */
+}
+.fy-over > * { pointer-events: auto; }   /* ...except the controls themselves */
+
+.fy-why {
+  font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--c-lime); text-shadow: 0 1px 12px rgba(0,0,0,.8);
+}
 .fy-head {
-  display: flex; align-items: center; justify-content: center; gap: 9px;
-  max-width: 100%; flex: 0 0 auto;
+  display: flex; align-items: center; gap: 9px; max-width: 100%;
 }
 /* The equaliser, beside the title. The spans are in the markup on EVERY card
    and hidden until it is sounding, rather than injected into whichever one is
-   playing — the feed rebuilds itself and a node added to a card would be wiped
-   by the next build. Same reasoning as the album page's track rows. */
+   playing — the feed rebuilds itself and a node added to a card would be
+   wiped by the next build. Same reasoning as the album page's track rows. */
 .fy-eq { display: none; align-items: flex-end; gap: 3px; height: 16px; flex: 0 0 auto; }
 .fy-card.is-playing .fy-eq { display: flex; }
 .fy-eq i { width: 3px; border-radius: 2px; background: var(--c-lime); animation: fyBar 1s ease-in-out infinite; }
@@ -7179,33 +7223,85 @@ button.rw-day {
 @keyframes fyBar { 0%,100% { height: 5px; } 50% { height: 16px; } }
 
 .fy-title {
-  background: none; border: 0; padding: 0; cursor: pointer; color: var(--text);
+  background: none; border: 0; padding: 0; cursor: pointer; color: #fff;
   font-family: var(--font-display); font-size: var(--t-h2); font-weight: 800;
-  letter-spacing: -0.03em; line-height: 1.1; text-align: center;
-  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  letter-spacing: -0.03em; line-height: 1.1; text-align: left;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-shadow: 0 2px 18px rgba(0,0,0,.75);
 }
-.fy-sub { font-size: 13px; color: var(--text-dim); flex: 0 0 auto; max-width: 100%; }
-.fy-alb { cursor: pointer; text-decoration: underline; text-decoration-color: var(--border-strong); }
-.fy-alb:hover { color: var(--text); }
+.fy-sub { font-size: 13px; color: rgba(255,245,235,.82); max-width: 100%; text-shadow: 0 1px 12px rgba(0,0,0,.8); }
+.fy-alb { cursor: pointer; text-decoration: underline; text-decoration-color: rgba(255,245,235,.35); }
+.fy-alb:hover { color: #fff; }
 
+/* ---- the rating bar ----
+   RED THROUGH TO GREEN, because the number means something and a single-hue
+   track does not. The gradient is painted on the track and the thumb carries
+   the colour of wherever it is standing, so the control says what a 2 is and
+   what a 9 is before you read the numeral.
+
+   `accent-color` cannot do this — it takes one colour — so the track and the
+   thumb are drawn per-engine. Both vendor blocks are needed and they CANNOT
+   BE COMBINED into one selector list: an unknown pseudo-element invalidates
+   the whole rule in both engines, so `::-webkit-slider-thumb, ::-moz-range-thumb`
+   in one rule styles neither. */
 .fy-rate {
-  display: flex; align-items: center; gap: var(--s2);
-  width: 100%; flex: 0 0 auto;
+  display: flex; align-items: center; gap: var(--s3);
+  width: 100%; margin-top: var(--s2);
 }
-.fy-rate input[type="range"] { flex: 1 1 auto; min-width: 0; accent-color: var(--c-lime); }
+.fy-rate input[type="range"] {
+  flex: 1 1 auto; min-width: 0;
+  -webkit-appearance: none; appearance: none;
+  background: none; cursor: pointer;
+  /* Bigger, because it was fiddly: a 4px track with a 12px thumb is a target
+     you aim at rather than one you grab. 44px of height is Apple's floor and
+     the padding does the work, so the track still reads as a thin line. */
+  height: 44px;
+  padding: 0; margin: 0;
+}
+.fy-rate input[type="range"]::-webkit-slider-runnable-track {
+  height: 10px; border-radius: 999px;
+  background: linear-gradient(90deg, #e24b4a 0%, #e08a3c 28%, #efb927 50%, #a8c24a 72%, #4fb477 100%);
+  box-shadow: 0 0 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.14);
+}
+.fy-rate input[type="range"]::-moz-range-track {
+  height: 10px; border-radius: 999px;
+  background: linear-gradient(90deg, #e24b4a 0%, #e08a3c 28%, #efb927 50%, #a8c24a 72%, #4fb477 100%);
+  box-shadow: 0 0 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.14);
+}
+.fy-rate input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--fy-tint, #efb927);
+  /* Centres the thumb on a 10px track: (10 - 26) / 2. */
+  margin-top: -8px;
+  box-shadow: 0 0 0 4px rgba(0,0,0,.28), 0 0 22px var(--fy-tint, #efb927);
+  transition: transform .12s var(--ease), box-shadow .12s var(--ease);
+}
+.fy-rate input[type="range"]::-moz-range-thumb {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--fy-tint, #efb927);
+  box-shadow: 0 0 0 4px rgba(0,0,0,.28), 0 0 22px var(--fy-tint, #efb927);
+  transition: transform .12s var(--ease), box-shadow .12s var(--ease);
+}
+.fy-rate input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.18); }
+.fy-rate input[type="range"]:active::-moz-range-thumb { transform: scale(1.18); }
 .fy-rate output {
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: 16px; font-weight: 700; min-width: 22px; text-align: right;
+  font-size: 22px; font-weight: 700; min-width: 30px; text-align: center;
+  color: var(--fy-tint, #fff);
+  text-shadow: 0 0 16px rgba(0,0,0,.8);
 }
-.fy-save { padding: 9px 16px; white-space: nowrap; }
-.fy-card.is-rated .fy-art { outline: 2px solid var(--c-lime); outline-offset: -2px; }
+.fy-save { padding: 11px 18px; white-space: nowrap; }
+.fy-card.is-rated .fy-shade { box-shadow: inset 0 0 0 3px var(--c-lime); }
 
 .fy-loading { padding: 40px 0; text-align: center; color: var(--text-faint); }
 
 /* The end of the library. A card rather than a banner, so it takes its turn
    in the snap like everything else instead of appearing under the feed. */
-.fy-end { justify-content: center; }
-.fy-end-body { padding: 0 var(--gutter); }
+/* The card is a block now, so the end card centres itself rather than
+   inheriting a flex column that no longer exists. */
+.fy-end { display: grid; place-items: center; text-align: center; }
+.fy-end-body { padding: 0 var(--gutter) var(--fy-floor, 96px); }
 .fy-end-body h3 { font-family: var(--font-display); font-size: var(--t-h2); font-weight: 800; letter-spacing: -.03em; }
 .fy-end-body p { color: var(--text-dim); font-size: 14px; margin: 8px 0 18px; }
 
@@ -21447,7 +21543,14 @@ window.renderAdminStats = renderAdminStats;
           tag.className = 'gc-lock';
           card.appendChild(tag);
         }
-        tag.textContent = 'Rate ' + (g.need - n) + ' more album' + (g.need - n === 1 ? '' : 's');
+        /* "Rate 25 more albums" is four words in a 105px tile at three-up,
+           which wraps to three lines and drags the whole grid row down with
+           it. The short form says the same thing: the noun is obvious from a
+           grid of games about albums. */
+        var left = g.need - n;
+        tag.textContent = (window.innerWidth < 700)
+          ? ('Rate ' + left + ' more')
+          : ('Rate ' + left + ' more album' + (left === 1 ? '' : 's'));
       } else if (tag) {
         tag.remove();
       }
@@ -29206,25 +29309,45 @@ window.track = function (name, props) {
   }
 
   /* ---- the card -------------------------------------------------------- */
+  /* 0-10 mapped onto the rating ladder's own colours, so the thumb and the
+     numeral agree with the track underneath them and with what a 7 means
+     everywhere else in the app. Not albumTier()'s exact bands — that is a
+     0-100 scale and these are ten steps — but the same journey. */
+  var RATE_TINT = ['#e24b4a','#e24b4a','#e0603c','#e08a3c','#efb927','#efb927','#c8c344','#a8c24a','#6bbf68','#4fb477','#4fb477'];
+  function tintFor(v) { return RATE_TINT[Math.max(0, Math.min(10, v | 0))]; }
+
+  /* THE ART IS THE CARD. Two copies of the same sleeve: a blurred, overscaled
+     bed so the crop has somewhere to blend out to, and the real one over it
+     with object-fit:cover — which fills both axes and crops the difference
+     rather than stretching a square cover into a phone-shaped hole.
+
+     `data-play` and `data-open` are DIFFERENT ATTRIBUTES on purpose. They used
+     to be the same one, and the sleeve fell through to the album page whenever
+     it was tapped on a card that was not already the playing one — which is
+     most taps. The sleeve plays; the title and the album name open. */
   function cardHtml(c, i) {
-    return '<article class="fy-card" data-i="' + i + '" data-pool="' + esc(c.pool) + '">' +
-      '<div class="fy-why">' + esc(c.why || '') + '</div>' +
-      '<button class="fy-art" data-open="' + i + '" aria-label="Open ' + esc(c.albumName || '') + '">' +
-        '<img src="' + esc(c.art || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
+    var art = esc(c.art || '');
+    return '<article class="fy-card" data-i="' + i + '" data-pool="' + esc(c.pool) + '" style="--fy-tint:' + tintFor(7) + '">' +
+      '<button class="fy-art" data-play="' + i + '" aria-label="Play ' + esc(c.title || '') + '">' +
+        (art ? '<img class="fy-bed" src="' + art + '" alt="" aria-hidden="true" onerror="this.style.display=\'none\'">' : '') +
+        (art ? '<img class="fy-main" src="' + art + '" alt="" onerror="this.style.display=\'none\'">' : '') +
         '<span class="fy-shade"></span>' +
         '<span class="fy-cue"></span>' +
       '</button>' +
-      '<div class="fy-head">' +
-        '<span class="fy-eq" aria-hidden="true"><i></i><i></i><i></i></span>' +
-        '<button class="fy-title" data-open="' + i + '">' + esc(c.title || '') + '</button>' +
-      '</div>' +
-      '<div class="fy-sub">' + esc(c.artist || '') +
-        (c.albumName ? ' &middot; <span class="fy-alb" data-open="' + i + '">' + esc(c.albumName) + '</span>' : '') +
-      '</div>' +
-      '<div class="fy-rate">' +
-        '<input type="range" min="0" max="10" step="1" value="7" data-rate="' + i + '" aria-label="Your score out of 10">' +
-        '<output data-out="' + i + '">7</output>' +
-        '<button class="btn-primary fy-save" data-save="' + i + '">Rate</button>' +
+      '<div class="fy-over">' +
+        '<div class="fy-why">' + esc(c.why || '') + '</div>' +
+        '<div class="fy-head">' +
+          '<span class="fy-eq" aria-hidden="true"><i></i><i></i><i></i></span>' +
+          '<button class="fy-title" data-open="' + i + '">' + esc(c.title || '') + '</button>' +
+        '</div>' +
+        '<div class="fy-sub">' + esc(c.artist || '') +
+          (c.albumName ? ' &middot; <span class="fy-alb" data-open="' + i + '">' + esc(c.albumName) + '</span>' : '') +
+        '</div>' +
+        '<div class="fy-rate">' +
+          '<input type="range" min="0" max="10" step="1" value="7" data-rate="' + i + '" aria-label="Your score out of 10">' +
+          '<output data-out="' + i + '">7</output>' +
+          '<button class="btn-primary fy-save" data-save="' + i + '">Rate</button>' +
+        '</div>' +
       '</div>' +
     '</article>';
   }
@@ -29249,7 +29372,9 @@ window.track = function (name, props) {
     if (card) card.classList.remove('is-loading');
     if (ok === 'blocked') {
       /* Autoplay refused. Not an error and not a dead clip — the browser wants
-         a gesture, so the card asks for one. */
+         a gesture, so the card asks for one. One refusal turns the cue on for
+         the WHOLE feed until a real tap lands, rather than every card silently
+         trying and failing on the way past. */
       _unlocked = false; _playing = null;
       if (card) card.classList.add('needs-tap');
       return;
@@ -29339,7 +29464,17 @@ window.track = function (name, props) {
         var i = parseInt(en.target.dataset.i, 10);
         if (isNaN(i)) return;
         if (i >= _items.length - LOOKAHEAD) topUp();
-        if (!_unlocked) return;          // the first card waits for a gesture
+        /* IT TRIES. This used to be `if (!_unlocked) return;`, so nothing in
+           the feed played until somebody had guessed that the sleeve was a
+           play button — which is the reported "playback sometimes requires
+           manually pressing play", and on any browser that would have allowed
+           autoplay it was a silent feed for no reason at all.
+
+           The browser is the only thing that knows whether a gesture is
+           required, so it is asked rather than guessed at: play(), and a
+           NotAllowedError comes back as 'blocked' and lights the cue. Once one
+           card has played, `_unlocked` is true and the rest of the session
+           needs nothing. The cost of being wrong is a rejected promise. */
         playCard(i);
       });
     }, { threshold: 0.6 });
@@ -29352,55 +29487,68 @@ window.track = function (name, props) {
      search field is not on every viewport, and the bar's height is a token. */
   function fitFeed() {
     var host = el('fy-feed'), nav = document.querySelector('nav.modes');
-    if (!host || !nav) return;
+    if (!host) return;
+    /* THE FEED RUNS TO THE BOTTOM OF THE WINDOW AND UNDER THE NAV.
+
+       It used to stop ABOVE the floating bar, which cost the card ~90px of
+       screen and left a strip of page showing under a feed that is supposed
+       to be the whole view. The bar is translucent and sits over the art now;
+       what has to clear it is the OVERLAY, not the feed.
+
+       Both numbers are measured rather than typed, for the reason this file
+       keeps relearning: the header's height moved when the wordmark grew, the
+       search field is not on every viewport, the bar's height is a token and
+       it is not there at all above 700px. A calc() of guesses put the rating
+       slider 45px behind the nav last time. */
     var top = host.getBoundingClientRect().top;
-    var navR = nav.getBoundingClientRect();
-    var floor = (navR.top > top) ? navR.top : window.innerHeight;
-    var h = Math.round(floor - top - 12);
+    var vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+    var h = Math.round(vh - top);
     if (h > 320) host.style.height = h + 'px';
 
-    /* And the sleeve's side, which CSS could not be trusted with:
-       `aspect-ratio: 1` loses to flex sizing, and every combination of
-       max-width/max-height/aspect-ratio has an axis where one constraint wins
-       and the ratio is dropped — it came out 343x360. The largest square that
-       fits BOTH the card's width and the height left once the text has taken
-       its share, with the chrome MEASURED off the live card rather than typed,
-       so changing that copy cannot leave this wrong. */
-    var card = host.querySelector('.fy-card');
-    if (!card) return;
-    var w = card.clientWidth, avail = card.clientHeight;
-    ['.fy-why', '.fy-head', '.fy-sub', '.fy-rate'].forEach(function (sel) {
-      var n = card.querySelector(sel);
-      if (n) avail -= n.getBoundingClientRect().height;
-    });
-    var cs = window.getComputedStyle(card);
-    avail -= (parseFloat(cs.rowGap) || 0) * 4;
-    avail -= (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
-    host.style.setProperty('--fy-art', Math.max(140, Math.floor(Math.min(w, avail))) + 'px');
+    // What the overlay has to clear: the bar's own height plus whatever gap
+    // it floats above the bottom edge, plus a little air. No bar (desktop) is
+    // just the gutter.
+    var floor = 24;
+    if (nav) {
+      var r = nav.getBoundingClientRect();
+      if (r.height && r.bottom > top) floor = Math.round((vh - r.top) + 14);
+    }
+    host.style.setProperty('--fy-floor', floor + 'px');
   }
   window.addEventListener('resize', function () { if (_built) fitFeed(); });
 
   function wire(host) {
     host.addEventListener('click', function (e) {
-      var t = e.target.closest('[data-open],[data-save]');
+      var t = e.target.closest('[data-play],[data-open],[data-save]');
       if (!t) return;
+
+      /* THE SLEEVE ALWAYS PLAYS. IT NEVER OPENS THE ALBUM.
+
+         It used to share `data-open` with the title, and the handler sent a
+         tap to the album page unless the card was ALREADY the one playing —
+         so tapping the artwork of a card whose audio had not started yet
+         (autoplay refused, clip still loading, observer not fired) threw you
+         out of the feed onto an album page. That is the "bugs out and
+         redirects to the album page" in the report, and it was most taps.
+
+         One control, one verb. The title and the album name open the record;
+         the sleeve starts and stops the song. */
+      if (t.dataset.play != null) {
+        var pi = +t.dataset.play;
+        if (!_items[pi]) return;
+        var pcard = host.querySelector('.fy-card[data-i="' + pi + '"]');
+        if (pcard) pcard.classList.remove('needs-tap', 'no-clip');
+        // A real gesture. Whatever the browser refused before, it will not
+        // refuse inside this.
+        _unlocked = true;
+        if (_playing === pi) { stopAll(); return; }
+        playCard(pi);
+        return;
+      }
 
       if (t.dataset.open != null) {
         var i = +t.dataset.open, c = _items[i];
         if (!c) return;
-        /* THE SLEEVE IS THE PLAY CONTROL UNTIL AUDIO IS UNLOCKED, and the
-           album after that. iOS grants an <audio> element permission inside a
-           real gesture and not before, so the first tap has to be the one that
-           starts the sound — sending it to the album page instead would leave
-           a feed that is silent until somebody guesses. */
-        if (!_unlocked && t.classList.contains('fy-art')) {
-          var card = host.querySelector('.fy-card[data-i="' + i + '"]');
-          if (card) card.classList.remove('needs-tap');
-          _unlocked = true;
-          playCard(i);
-          return;
-        }
-        if (t.classList.contains('fy-art') && _playing === i) { stopAll(); return; }
         stopAll();
         if (window.openAlbum) openAlbum({
           id: c.albumId, name: c.albumName, artist: c.artist,
@@ -29434,6 +29582,12 @@ window.track = function (name, props) {
       if (o) o.value = r.value;
       var b = host.querySelector('[data-save="' + r.dataset.rate + '"]');
       if (b && !b.disabled) b.textContent = r.value > 0 ? 'Rate' : 'Skip';
+      /* The thumb and the numeral take the colour of the point on the track
+         they are standing on. Set on the CARD rather than on the input, so
+         the numeral beside it picks it up from the same variable — one
+         assignment, two elements, no second lookup to keep in step. */
+      var cd = r.closest('.fy-card');
+      if (cd) cd.style.setProperty('--fy-tint', tintFor(parseInt(r.value, 10)));
     });
   }
 
