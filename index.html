@@ -14498,7 +14498,14 @@ async function drawProfile(host,prof,isOwner){
       {v:prof.streak_best||0,     k:'Best streak',    hot:(prof.streak_best||0)>=7},
       // Level is lifetime Discs. It belongs in a list of things that only go
       // up, not at the top of a page about somebody's taste.
-      {v:prof.level||1,           k:'Level',          hot:(prof.level||1)>=50}
+      /* Level stopped being a rendering of the wallet in
+         ..._20260921140000: it is every Disc earned PLUS 1,200 an album, 300
+         a song, 400 a completed game and 2,000 an active day. A number that
+         measures something non-obvious has to say what, the same reason the
+         Standing block prints its rule — a ladder whose steps you cannot see
+         is one people climb by accident. */
+      {v:prof.level||1,           k:'Level',          hot:(prof.level||1)>=50,
+       tip:'Albums and songs ranked, games finished, days active, and every Disc earned.'}
     ];
     if(isOwner){
       let nLore=0,log={};
@@ -14548,7 +14555,7 @@ async function drawProfile(host,prof,isOwner){
         // "Higher or Lower" at 34px wraps to three lines and breaks the grid.
         // The sub element is dropped entirely when there is nothing in it,
         // rather than rendered empty — an empty div still takes its margin.
-        return '<div class="done-tile"><div class="dt-v'+(t.small?' dt-v-word':'')+(t.hot?' dt-hot':'')+'">'+esc(String(t.v))+'</div>'+
+        return '<div class="done-tile"'+(t.tip?' title="'+esc(t.tip)+'"':'')+'><div class="dt-v'+(t.small?' dt-v-word':'')+(t.hot?' dt-hot':'')+'">'+esc(String(t.v))+'</div>'+
           '<div class="dt-k">'+esc(t.k)+'</div>'+
           (t.sub?'<div class="dt-s">'+esc(t.sub)+'</div>':'')+'</div>';
       }).join('')+'</div>';
@@ -17152,7 +17159,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     owned_flairs: [], active_flair: null,
     owned_frames: [], active_frame: null,
     login_streak: 0, login_best: 0, login_last_date: null, album_picks: 0,
-    lifetime_xp: 0, level: 1,
+    lifetime_xp: 0, xp_bonus: 0, level: 1,
   };
 
   /* The level curve, mirrored from xp_step() in
@@ -17186,10 +17193,20 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      you must change the other** — same arrangement as LADDER and payFor. */
   var MAX_LEVEL = 200;
 
+  /* What the level is made of, mirrored from xp_weights() in
+     ..._20260921140000_xp_from_everything.sql. Display only — the server
+     decides the level — but the same arrangement as LADDER against v_ladder:
+     CHANGE ONE AND YOU MUST CHANGE THE OTHER. */
+  var XP_W = { album: 1200, song: 300, game: 400, day: 2000 };
+
   function levelInfo() {
     var lv = state.level || 1;
     var floor = xpFloor(lv), step = xpStep(lv);
-    var into = Math.max(0, (state.lifetime_xp || 0) - floor);
+    /* The sum, not the wallet. The level comes from lifetime_xp + xp_bonus, so
+       the bar has to measure the same thing the level was decided by — one
+       filling against a different number reads as stuck and then jumps. */
+    var total = (state.lifetime_xp || 0) + (state.xp_bonus || 0);
+    var into = Math.max(0, total - floor);
     /* At the cap there is no next level, so `into / step` stops meaning
        anything: XP keeps accruing past a floor nothing sits above, and the
        tile reads as "11,397,658 / 102,287" — a fraction over eleven thousand
@@ -17197,7 +17214,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        "progress towards" has to know when there is nothing left to progress
        towards. */
     var max = lv >= MAX_LEVEL;
-    return { level: lv, into: into, step: step, max: max,
+    return { level: lv, into: into, step: step, max: max, total: total, weights: XP_W,
              pct: max ? 100 : Math.max(0, Math.min(100, Math.round(into / step * 100))) };
   }
   let loaded = false;
@@ -17486,6 +17503,17 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
           login_last_date: prof.login_last_date || null,
           album_picks: prof.album_picks || 0,
           lifetime_xp: prof.lifetime_xp || 0,
+          /* XP IS NO LONGER THE WALLET. `lifetime_xp` keeps its exact old
+             meaning — every Disc ever earned, which is what the Statistics
+             tile prints under that name — and `xp_bonus` carries the albums,
+             songs, games and active days. The LEVEL is derived from the sum
+             (..._20260921140000), so the bar has to fill against the sum too:
+             a bar measuring one number while the level comes from another is
+             a bar that lies.
+
+             Absent on a database without that migration, which reads as 0 and
+             leaves the bar behaving exactly as it did before. */
+          xp_bonus: prof.xp_bonus || 0,
           level: prof.level || 1,
           is_admin: !!prof.is_admin,
         };
@@ -17518,6 +17546,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (w.login_last_date !== undefined) state.login_last_date = w.login_last_date;
     if (w.album_picks != null) state.album_picks = w.album_picks;
     if (w.lifetime_xp != null) state.lifetime_xp = w.lifetime_xp;
+    if (w.xp_bonus != null) state.xp_bonus = w.xp_bonus;
     /* Every award path funnels through here, so this is the one place a level
        change can be noticed — rather than each of the eight things that grant
        Discs having to remember to check. */
@@ -17859,7 +17888,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         owned_flairs: [], active_flair: null,
         owned_frames: [], active_frame: null,
         login_streak: 0, login_best: 0, login_last_date: null, album_picks: 0,
-        lifetime_xp: 0, level: 1,
+        lifetime_xp: 0, xp_bonus: 0, level: 1,
       };
       loaded = false;
       _claims = null;
