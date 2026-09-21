@@ -31,6 +31,14 @@ ever authenticates against Spotify. Only the app owner's credentials are involve
 - `assets/`, `dither-frames/` — static media
 - `supabase-migration-discs.sql` — loose schema SQL (see Database below)
 
+**Four migrations are waiting to be applied by hand** at the time of writing:
+`..._20260921100000_spin_tier_payouts.sql`, `..._20260921120000_suggestions.sql`,
+`..._20260921140000_xp_from_everything.sql`, and whatever has landed since. Every
+client-side feature that depends on them degrades rather than breaking — the
+suggestions sheet says it is not switched on, `xp_bonus` reads as 0 and the level
+behaves exactly as it did, and the Draw keeps its old payouts — so the app is
+shippable before they land and better after.
+
 **`index.html` is ~1.5MB now, not 540KB.** The number above was stale for a long time
 and is worth keeping honest, because it is the argument for every decision about
 what goes in it: the stylesheet alone is ~286KB, and the three static game tables
@@ -501,6 +509,41 @@ press.**
 NULL, the early return never fires, and every logged-out visitor got the private breakdown.
 **Anywhere a boolean gates a privacy branch, decide what NULL means and say so.**
 
+### 9. A state map REPLACED when it should only ever grow
+
+`markSeen(now)` in `paintUnlocks` overwrote the stored map with the gates open at that
+instant — and the DOMContentLoaded paint runs **before login and before the crate merge**, so
+`now` was (almost) empty and the record of everything you had already unlocked was wiped. The
+next paint then announced every gate as freshly passed. Opening the app celebrated nine
+unlocks you had had for weeks, every single time.
+
+**The symptom read as a reward being granted repeatedly. The cause was the app FORGETTING.**
+That inversion is what made it hard: every instinct says to go and look at the granting code,
+and the granting code was fine. Anything that records "I have already shown you this" must
+merge, never replace — and must not be written at all from a paint that ran before the data
+it is derived from had loaded.
+
+### 10. Local state that belongs to an account and is keyed to an origin
+
+`logout()` cleared no localStorage, so a new account inherited the previous one's crate — and
+`pullAndMerge` then **uploaded it into that account**. Themes and Discs reset (they live on
+`profiles`) and the ratings did not, which is what made it read as a half-working wipe rather
+than as no wipe at all.
+
+**localStorage is keyed to the ORIGIN, never to the person.** Anything account-shaped kept
+there needs an owner stamp checked *before* the merge — after is too late, the upload has
+already been queued.
+
+## The traps, continued: a fifth source-order loss and a fifth silent no-op
+
+`.song-slider { width: 80px }` in a `max-width: 560px` block sat **after** the new slider
+rules and silently beat them at equal specificity. Fifth time. See trap 1.
+
+`toast` was local to the Wallet module — this file has said so for months — and five call
+sites wrote `if (window.toast) toast(...)` against a function that was never exported. A
+guard against a name that does not exist reads correctly and does nothing. It is on `window`
+now. See trap 7; that is the same defect as `login_last_date` and `notePlay('blitz')`.
+
 ## Deploying
 
 GitHub → Vercel is connected. **Push to `main` and the site is live** in roughly half a minute:
@@ -572,14 +615,91 @@ pasted into the SQL editor by hand, and JS changes cannot be executed before the
 structural checks and a post-deploy console read on the live site are the available
 substitutes.
 
+## Local state is account state
+
+Reported as: make a new account and it still has the old account's ranked albums,
+while the theme and the Discs reset.
+
+Both halves are one cause. Themes and Discs live on `profiles`, which is
+per-account and server-owned, so they change with the account by construction.
+Everything else — every rating, the shortlist, the Liner Notes, every game best
+and every daily — lives in localStorage, which is **keyed to the ORIGIN and not
+to the person**, and `logout()` cleared none of it.
+
+**And it was worse than a display bleed.** The next sign-in runs `pullAndMerge`,
+which merges localStorage with the new account's empty `app_state` and pushes the
+result up — so the previous person's crate was not merely visible to the new
+account, it was **uploaded into it**, and from that point the two genuinely
+shared a library.
+
+`vinall_local_owner` is the stamp, and the three cases it tells apart:
+
+| | |
+|---|---|
+| no stamp | a guest rated things before signing up. **Adopt** — that path is deliberate |
+| stamp === this user | their own device. Merge exactly as before |
+| stamp !== this user | somebody else's data. **Wipe before the merge** |
+
+Claimed in `onAuthed` **before `refreshUI` and before the merge** — after is too
+late, the upload has already been queued. Cleared on logout too, with pending
+writes flushed first (`pushAll` before `signOut`, because `isOn()` is false once
+`user` is null). `Wallet.reset()` goes with it, so somebody else's Discs and
+equipped theme are not left painted while the next person's profile loads.
+
+The keep-list is device **preferences**, not account data: Motion, the
+auto-advance toggle and which Home folds are open belong to the phone. The
+catalogue caches (`dzc:`, `ap2:alb:`, `spc2:`, `vig:`) are untouched — public
+facts about records, expensive to refetch, identical for everybody.
+
+## The keyboard, and the viewport unit that does not know about it
+
+Reported on two game modals; it was every sheet in the app.
+
+`.modal-panel` is sized `max-height: 88vh`, and **`vh` is the LARGE viewport** —
+by specification the height with retractable UI retracted, and a software
+keyboard never shrinks it. So a sheet stays 88% of the screen tall while its
+bottom half is behind the keyboard, and the input is under there with it. `dvh`
+is no better: it tracks browser chrome, not the keyboard.
+
+`window.visualViewport` is the only thing that knows. The occluded strip is
+`layout height - (visual height + visual offsetTop)`, published once as `--kb`,
+and every sheet reads it — **one handler rather than a fix per modal**, because
+the next modal somebody adds should not have to know this. The focused field is
+scrolled into view on the *resize* and not on focus: iOS animates the keyboard
+in after focus, so scrolling on focus scrolls against the old height.
+
+The native side is unchanged (`Keyboard.resize: "native"`). That resizes the
+webview frame, which handles `position: fixed` and does nothing about a
+`vh`-sized box inside it — which is why this was still broken in the app. The two
+are complementary, not alternatives.
+
+## GO waits for the session
+
+`Cloud.init()` is async and `onAuthed` awaits the merge and the wallet, so for a
+second or two after load the app runs signed-**out** with a signed-in session in
+the post. Pressing GO in that window revealed a logged-out dashboard — no Discs,
+no crate, a Log in button — which silently became somebody's account a few
+seconds later.
+
+`Cloud.ready` settles when the initial auth check is finished, **including the
+first `onAuthed` if there was a session to restore**, and the splash dismiss
+waits on it. The wait is dead time nobody sees: the record is still spinning and
+the button says so.
+
+**The ceiling is not optional.** A splash that will not go away is the one
+failure here that actually matters and is worse than any amount of flicker, so a
+slow or dead network gets 2.5 seconds and then the app, logged-out-for-now,
+exactly as before. `Cloud.ready` never rejects, for the same reason.
+
 ## Security notes
 
 Write policies on every table are scoped by `auth.uid()` — users cannot modify each other's
 rows.
 
 **The economy is server-side** as of `..._190000_server_economy.sql`. `discs`, the streak
-columns, the cosmetic arrays and the daily award counters are all pinned by the
-`pin_profile_economy` trigger, which replaced the narrower `pin_profile_is_admin`. The only
+columns, the cosmetic arrays, the daily award counters, `spin_free_date`, `badges` and — as
+of `..._20260921140000` — `xp_bonus`, `games_completed` and `active_days` are all pinned by
+the `pin_profile_economy` trigger, which replaced the narrower `pin_profile_is_admin`. The only
 ways to move them are `wallet_record_rating()`, `wallet_buy()` and the `award_lore_disc`
 trigger, all `security definer`. Prices live in `shop_items`, never in the request. Equipping
 a theme or banner is still a client write, because the trigger reverts anything not owned.
@@ -923,13 +1043,58 @@ the session. That is not a degraded mode, it is the only shape that works.
 A refused autoplay (`NotAllowedError`) and a record with no clip are **different
 answers** and neither is an error worth a banner.
 
+### The art is the card, and the card is the screen
+
+It was a square sleeve floating in a bounded feed with the page's gutters either
+side and 210px of nothing under it, which is a website's idea of a feed. The art
+fills the card, the card fills the viewport and runs **under** the translucent
+nav, and the title and the rating sit on top of it.
+
+- **`object-fit: cover`, never `fill`.** It fills both axes and crops the
+  difference, so a square sleeve in a 9:19.5 window loses its sides and is never
+  stretched. `fill` is the one-word version of this and it distorts every cover.
+- **A blurred, overscaled copy of the same sleeve sits behind it**, so the crop
+  blends out into the record's own colours rather than meeting a black
+  letterbox. `scale`, not `width`: a blur samples past its own edges and a 1:1
+  bed shows a pale rim all the way round.
+- **Capped to 460px on desktop.** Full-bleed on a 1,600px window crops a square
+  sleeve to a letterbox strip of its middle.
+
+### IT AUTOPLAYS, and the sleeve no longer opens the album
+
+Two separate faults, reported as one.
+
+The observer had `if (!_unlocked) return;` in front of `playCard`, so **nothing
+played until somebody guessed that the sleeve was a play button** — and on any
+browser that would have allowed autoplay it was silent for no reason at all. The
+browser is the only thing that knows whether a gesture is required, so it is
+asked rather than guessed at: `play()`, and a `NotAllowedError` comes back as
+`'blocked'` and lights the cue. The cost of being wrong is a rejected promise.
+
+The sleeve shared `data-open` with the title, and the handler fell through to
+`openAlbum` unless the card was **already** the one playing — so tapping the
+artwork of a card whose audio had not started yet (autoplay refused, clip still
+loading, observer not fired) threw you out of the feed onto an album page. That
+is most taps. `data-play` plays, `data-open` opens: **one control, one verb.**
+
+### The rating bar says what a 2 is
+
+Red through green, with the thumb and the numeral carrying the colour of
+wherever the thumb is standing, and 44px of target instead of a 4px line.
+`accent-color` takes one colour, so the track and thumb are drawn per-engine —
+and **the two vendor blocks cannot be merged**: an unknown pseudo-element
+invalidates the whole rule in both, so `::-webkit-slider-thumb,
+::-moz-range-thumb` in one selector list styles neither.
+
 ### Two things that are measured, not guessed
 
 - **The feed's height.** `calc(100dvh - 210px)` put its bottom **45px under the
   floating nav**, with the rating slider behind it — every term in that guess
   moves, since the header grew when the wordmark did, the search field is not on
-  every viewport, and the bar's height is a token. `fitFeed()` reads the two things
-  that actually bound it. Measured after: feed ends at 729, bar starts at 741.
+  every viewport, and the bar's height is a token. `fitFeed()` reads what
+  actually bounds it: the feed runs to the bottom of the window now, and what
+  has to clear the bar is the OVERLAY (`--fy-floor`), measured off the bar's own
+  box rather than typed.
 - **`scroll-snap-stop: always`** is what makes the IntersectionObserver honest.
   Without the snap a card can sit half on screen indefinitely and the 60% threshold
   either never fires or fires for two cards at once, which is how a feed ends up
@@ -942,6 +1107,145 @@ element does not care that the card holding it is hidden.
 `listening_plays` through **that module's own key rule** — its `norm()` strips
 "(feat. …)" and remaster tails and a local reimplementation would bucket the same
 artist two ways and quietly score them zero.
+
+## Suggestions — pushing a record, putting a tag forward
+
+`..._20260921120000_suggestions.sql`, the `Suggestions` module and `#sugg-modal`.
+**Apply the migration by hand in the SQL editor**, like the others.
+
+**Two features that are one object seen twice.** Pushing a song to For You and
+suggesting a producer tag are both "one person puts a short thing forward,
+everybody can see it, and the number worth printing is how many PEOPLE put the
+same thing forward". One table with a `kind`, one module, one sheet with two
+modes. Two tables would be two sets of RLS to keep in step for no difference in
+behaviour, and a third suggestion type later would be a third.
+
+- **The count is people, not taps**, and that is the primary key `(kind,
+  user_id, key)` rather than anything in the client. Pressing Back again is an
+  upsert; pressing it on something you already backed **withdraws** it, because
+  a button that does nothing reads as broken.
+- **It is not a vote.** No down-vote and no score: the useful question is "who
+  else wants this", and a score invites brigading a table with no moderation
+  behind it.
+- **Keys are normalised in `suggestion_add`, never in the browser.** Two copies
+  of a fold rule is how `album_match_key` and the client disagreed about every
+  accented title. There is no insert policy at all, and a guard that fails if
+  one is ever added — a direct insert could file "Travis" and "TRAVIS " as two
+  suggestions and split the count, which is the one thing this table exists to
+  prevent.
+- **It folds accents, it does not strip them.** `translate()` rather than the
+  `unaccent` extension, because an extension that is not installed is a
+  migration that fails, and the guard asserts Beyoncé → `beyonce` and JAŸ-Z →
+  `jayz`. Third time this project has had to get that right.
+- **`suggestion_list` coalesces `mine` to false.** `auth.uid()` is NULL for a
+  logged-out reader and `bool_or` over no matching rows is NULL, which is the
+  same three-valued-logic trap that published every visitor's certification
+  breakdown. Reading needs no session — what other people have put forward is
+  worth seeing logged out, the same line the Crate's score spread draws.
+- **Nothing pays Discs.** No counter on `profiles`, no pin-trigger change. That
+  is what keeps it cheap: the moment a suggestion is worth currency it is a
+  thing to farm from burner accounts and it needs everything Reach needed.
+- The tag composer sits at the **top** of the Shop's Tags drawer, above thirty
+  rows rather than under them, because the point of it is the tag that is *not*
+  in the list. Typing filters as you go, so "what are people suggesting under
+  TRAVIS" works before anything is pressed.
+
+## The avatar crop
+
+The photo went from the file picker straight to storage, and every surface that
+draws it uses `border-radius: 50%` with `object-fit: cover` — so the browser
+cropped it, centred, at whatever zoom the shortest side gave. A group photo
+became somebody's shoulder.
+
+**The mask is a CIRCLE and not a square**, and that matters more than it looks:
+a square tool over a round frame makes people centre a face in the square and
+then lose its corners. What is in the hole is what the avatar becomes. The mask
+is drawn **over** the canvas rather than clipping it, so you can see what you
+are cutting off — a hole with blackness round it tells you nothing about
+whether you have chopped somebody's head.
+
+No library. A canvas, one `drawImage` and a pointer handler; the alternative is
+a dependency in an app with no build step that loads every byte of itself on
+first paint. **The output is a 512px JPEG whatever went in** — four times the
+largest size it is ever drawn at, and a 2MB phone photograph reaches storage as
+about 60KB, which matters because the avatar is on every row of every feed.
+`apply()` derives its transform from the same two numbers `draw()` uses, which
+is what guarantees the file matches what was in the hole.
+
+Verified in the browser rather than assumed: a red/green test image dragged left
+comes out green and dragged right comes out red.
+
+## Lists are an order
+
+**Reordering.** A Top 5 whose fourth entry cannot be moved to first is five
+records. **Press and hold, not drag-anywhere**: on a phone the list scrolls, and
+a row that lifts the moment a finger touches it cannot be scrolled past — every
+attempt to reach the bottom would pick something up. 260ms, cancelled by 8px of
+movement, because that was a scroll. **The drop target is worked out against
+each row's MIDPOINT**, not from what is under the pointer: the row being dragged
+is under the pointer the whole time. Desktop keeps native HTML5 drag alongside,
+because a mouse expects to pick a row up immediately and waiting 260ms for it
+feels broken.
+
+**Fill from an artist.** "All Drake albums" as one tap. It reads the same
+discography the Completionist track is built from, so a filled list and a
+completion badge **agree about what an artist's discography is** — two answers
+to that question in one app would be worse than neither. Features are already
+excluded at the album level (`include_groups=album` is the artist's own
+releases, and `isNonStudio` takes out the live records and greatest hits); for
+songs only the primary artist counts, which is what was asked for by name.
+
+**Songs cost a request per album**, so they are fetched sequentially and capped
+at fourteen albums. Twenty parallel catalogue calls is how you get rate-limited
+off a token every other surface shares, and the progress line is there because a
+button that goes quiet for fifteen seconds reads as broken.
+
+## Long lists skip the work for what is off screen
+
+Measured on a synthetic 600-album / 1,200-song crate, desktop browser. A phone
+is four to six times slower than these.
+
+| | before | after |
+|---|---|---|
+| switch to Albums | 394ms | **48.5ms** |
+| switch to Songs | 426ms | **61.4ms** |
+| forcing a full layout | 150ms | 77.4ms |
+| `renderStats()` | 3.6ms | 0.6ms |
+| 31 × `loadAlbums()` | 21.4ms | **1.3ms** |
+
+**Neither cause was the render.** Building the HTML for 600 cards takes 20ms.
+
+1. **Laying them out takes 141ms**, and `setMode` forces that synchronously
+   twice per switch — `void _v.offsetWidth` for the entrance animation and
+   `positionNavIndicator`'s `getBoundingClientRect`. Both are correct; the fault
+   is asking the browser to lay out six hundred cards nobody can see.
+   `content-visibility: auto` with `contain-intrinsic-size: auto <n>` lets it
+   skip them and **remember** their real size once measured, so the scrollbar
+   settles rather than jumping.
+
+   **Not paging, deliberately.** The profile's `.slice(0, 12)` was removed
+   because a hard cap with nothing admitting it existed made forty rated albums
+   read as twelve, and the Crate has never paged. Every record stays in the DOM.
+   Every selector was checked against the markup — the Collection's grid is a
+   class and the profile's is `#prof-rankings`, and **a rule for an element that
+   does not exist is a performance fix that silently does nothing**, which is
+   the hardest kind to notice because the page still works.
+
+2. **`loadAlbums()` was a bare `JSON.parse` of the whole crate**, and there are
+   31 calls to it, several inside loops — so one interaction re-parsed the same
+   124KB dozens of times. It is cached on the **raw string**, which is what
+   makes it safe: `getItem` is free (0.1ms for those 31 calls) and is the only
+   thing that can tell us the crate moved, so there is no version counter to
+   bump and no writer anywhere — `persist`, `pullAndMerge`'s `lsSetRaw`, another
+   tab, the account wipe — that can leave a stale object behind. Cache
+   invalidation is the classic place to put a ghost and this arrangement has
+   nowhere to put one.
+
+   **The object is shared, not cloned** — cloning 124KB costs what parsing it
+   did. The contract is **mutate then persist**, which is what `saveAlbum` and
+   `removeAlbum` already do. Mutating and abandoning would leave the cache
+   holding a change nothing else knows about; nothing does that, and anything
+   new must not start.
 
 ## The artist utility — `api/_artists.js`
 
@@ -1910,12 +2214,42 @@ rows and not the duplicates, and the Shop offered Sundown at 150 while `wallet_b
     16,000 Discs on.
   - The section is called **Tags** in the Shop, not "Producer tags".
 
-### Levels are Discs, and level 200 is the ceiling
+### Levels are no longer just Discs
 
-`profiles.lifetime_xp` is commented "every Disc ever earned" and means it literally:
-`pin_profile_economy` adds every *rise* in the balance to it and never subtracts. **XP is not a
-second currency, it is the running total of the first one.** Spending cannot lower it, and
-there is no separate lifetime column because this is it.
+`..._20260921140000_xp_from_everything.sql`. Level was a second rendering of the wallet, so it
+rose fastest for somebody grinding minigames and barely moved for somebody quietly building a
+serious crate — the exact criticism that produced Standing.
+
+| | |
+|---|---|
+| a Disc ever earned | 1 |
+| an album ranked | 1,200 |
+| a song ranked | 300 |
+| a game completed | 400 |
+| a day active | 2,000 |
+
+Thirty albums is 36,000 and a game is 400, so a game is worth a ninetieth of thirty albums —
+which was the brief's one hard constraint. Sized **against a real week, not against each
+other**: 30 albums, 60 songs, 21 games and 7 days is 76,400, against ~70,000 Discs for the
+same week, so the two halves are about equal.
+
+**It is ADDITIVE over `lifetime_xp`, not a replacement, and that is load-bearing.** Dropping
+Discs from the formula would have re-levelled every account downwards on deploy, and a
+progression bar that goes backwards because the rules changed is the worst thing a progression
+bar can do. `lifetime_xp` also keeps its exact old value and meaning, because the Statistics
+tile prints it as "Lifetime Discs"; `xp_bonus` sits beside it and the level reads the sum.
+
+**Albums and songs are COUNTED LIVE from `ratings`, never accumulated** — a counter means
+deleting a rating and adding it back is free XP. Games and active days have no table to count,
+so they are counters, incremented off `game_awards` rising and `login_last_date` changing, both
+of which `pin_profile_economy` already sees go past. That is why **no existing wallet function
+was re-declared**: they are long, several were edited by hand, and a re-typed copy loses a line.
+Both counters inherit the daily caps as their anti-farm bound, and **both are pinned** —
+without those lines a client writes itself 10,000 active days and level 200.
+
+`profiles.lifetime_xp` is still "every Disc ever earned" exactly as before:
+`pin_profile_economy` adds every *rise* in the balance to it and never subtracts. Spending
+cannot lower it.
 
 Two consequences worth knowing:
 
@@ -1924,7 +2258,8 @@ Two consequences worth knowing:
   top-up that should not count as progress has to restore `lifetime_xp` in the same
   transaction — lowering it is not a rise, so the trigger does not fight the restore.
 - **`level_for_xp` caps at 200**, mirrored by `MAX_LEVEL` in the Wallet module. Change one and
-  you must change the other, same arrangement as `LADDER` and `payFor`.
+  you must change the other, same arrangement as `LADDER` and `payFor`. `xp_weights()` and
+  `XP_W` in the Wallet module are a third pair on the same terms.
 
 At the cap `into / step` stops meaning anything: XP keeps accruing past a floor with nothing
 above it, so the Home tile rendered `11,397,658 / 102,287` — a fraction over eleven thousand
@@ -1935,6 +2270,14 @@ reporting it.
 
 Level gates nothing anywhere — it is display-only in three places (the Home tile, the
 Collection standings row, and the `levelUp()` pop).
+
+### No theme may change the typeface
+
+Three themes overrode `--font-display` — VHS and one other to Instrument Serif,
+Neon Vault to Plex Mono. A cosmetic that reskins the app is one thing; a cosmetic
+that re-sets every heading in it is a different app. `--font-display` is defined
+in exactly one place now, on `:root`, and a grep for a second definition is the
+check.
 
 ### Scrolling gradients must travel in pixels, not percentages
 
@@ -2072,6 +2415,49 @@ Discs cannot be bought, which is the sentence keeping this out of UK gambling re
 
 **It is behind login**, because the whole Discs page is. App Review therefore needs the demo
 account to see it, which `STORE-SUBMISSION.md` says in the notes.
+
+### One Disc value per tier
+
+`..._20260921100000_spin_tier_payouts.sql`. **Common 1,000 · Rare 1,750 · Epic 3,500 ·
+Legendary 10,000**, and every row in a tier pays that — so a duplicate Mono Fade and a
+duplicate Card Sleeve both pay 1,750, where they used to pay 1,600 and 3,500. "Rare pays
+1,750" is a sentence somebody can hold in their head; "Mono Fade pays 1,600 and Card Sleeve
+pays 3,500 and they are both Rare" is a table.
+
+**These are half the figures that were asked for, and the ratios are identical.** The brief
+was 2,000 / 3,500 / 7,000 / 20,000, which is 1 : 1.75 : 3.5 : 10 — and so is this. At full
+value the expected return is **5,735 against a 5,000 spin**, which is not a sink, it is a
+printer, and `..._20260915100000` would have refused to apply it. At half it is **3,047
+(0.61)**, against 2,993 (0.60) before. Materially unchanged, which is the point: this
+re-shapes what the tiers pay and not what the machine returns.
+
+Mythic is untouched — 360 of the 3,047 lives there and the jackpot at any larger multiple
+undoes the pass on its own. The migration's guard **exempts Mythic from the one-value rule**
+deliberately: a 1,000 tag consolation beside a 100,000 jackpot is not two prices for one
+tier, it is the tier's two completely different outcomes, and folding them gives either a
+jackpot that is not a jackpot or a consolation that is the whole expected return.
+
+**Shop prices were NOT re-priced with it**, and that is a decision. The brief said Mono Fade
+and Card Sleeve should be "valued at 3,500 in the store"; they cost 8,000 and 17,500, a
+cosmetic priced below one spin is not a sink, and a duplicate paying 100% of an item's price
+makes winning the duplicate worth as much as winning the item. If the shop is re-priced it
+wants its own pass with the tags and the Collection divisor in the same file.
+
+### A Disc prize prints what landed, never the row's label
+
+Reported as: *win 10,000 Discs from a spin, the balance does not update, and the 10,000
+cannot be spent.*
+
+Nothing was wrong with the money. `wallet_spin` pays Discs at **a quarter** on the daily free
+spin (`v_share`), so the row labelled "10,000 Discs" pays 2,500 — and the result panel
+printed the LABEL as its headline with the real figure underneath. The screen said you had
+won 10,000 and the balance went up 2,500. The discs were written, persisted and spendable
+throughout; **the panel was lying about the amount.**
+
+The row's name is what a *paid* spin pays. The balance is the truth, so the truth is the
+headline now, and the quarter is named where the number is rather than only on the button
+above it. **A rule explained where it costs you something is a rule; a rule you have to work
+out by subtracting two numbers is a bug report.**
 
 ### Mythic, and why the spin costs 5,000
 
@@ -2350,6 +2736,27 @@ titles. No token, works offline, scores instantly.
 **It is not Higher or Lower.** That asks which of *your* records has more streams and it
 keeps that. Blitz asks about records everybody knows, from a shared list, so two people can
 be asked the same question — which a game drawn from a personal crate can never do.
+
+### The sleeve is the question, so the caption is not the answer
+
+Every choice printed the album name and the artist under its cover while the
+round was live — so "Which album is *Zombie* off?" had the answer captioned
+directly beneath the artwork, and the game was a reading test. A game called
+Cover Fire whose premise is ten sleeves.
+
+The names are **in the markup from the start** and hidden by `.hide-names` on
+the grid until an answer lands, rather than injected on reveal: `round()`
+rebuilds that grid every round and a node the reveal added would be thrown away
+by the next one. Same reasoning as the album page's track rows and the For You
+equaliser.
+
+**A sleeve that fails to load reveals its own caption and nobody else's.** A
+blank unlabelled button is not a harder question, it is an unanswerable one, so
+`onerror` marks only the card it fired on.
+
+The `note` line under the prompt is untouched — it is question context (the
+artist of the song being asked about), not the answer, and with the captions
+gone it is a fair clue that still requires recognising a sleeve.
 
 ### Ten fixed rounds, no lives
 
@@ -3824,6 +4231,30 @@ beside it at hero size**, then one obvious action with the two quiet ones under 
 `'Your score: 94/100'` became `'<i>Your score: </i>94<span>/100</span>'` purely so a phone can
 drop the label. Beside the title at that size the number is the sentence.
 
+### Three across, and two that lead
+
+The grid is **three columns on a phone**, which is the whole thing on one screen
+with no scrolling — what makes it read as a games console rather than a list. At
+375px that is ~105px a tile, which the description cannot survive, so it is
+hidden below 700px: a two-line sentence in a 105px box is four lines of three
+words and nobody reads it twice. The lock pill drops to "Rate 25 more" for the
+same reason; four words wrapped to three lines and dragged the whole grid row
+down with it.
+
+**Recall and Bid Wars lead, and they are marked rather than merely moved.** A
+grid where every tile is the same shape has no way to say "start here", and
+position alone does not carry it — the eye reads a grid as a set, not as a
+ranking. `.gc-lead` gives them a lit border and one slow sweep in the card's
+**own** hue, so they are the same eleven cards with two turned up rather than
+two cards from a different design. A locked lead card stops sweeping, because it
+must not advertise itself as the place to start.
+
+**The hues are POSITIONAL** (`.games-grid > .game-card:nth-child()`), so
+reordering that list reassigns every colour after the cards that moved. That is
+fine — the hues exist to make the grid read as a set of different things, not to
+identify any particular game — but it is the same trap the nav bar has, and worth
+knowing before assuming a card "changed colour" is a bug.
+
 ### The minigame grid, and locked cards that still look worth having
 
 Ten cards that were the same card ten times — one surface, one border, one small grey glyph,
@@ -3919,6 +4350,19 @@ but a lack of difference.**
   what you have left rather than what you have done, and Level was a rendering of lifetime
   Discs sitting beside lifetime Discs. Same reasoning removed `avg` and `level` from the
   profile header.
+  - **No subtext.** Every tile carried a line explaining it — "earned, all time",
+    "discographies finished" — and a label under a label is the caption explaining
+    the caption. `sub` survives on exactly the two tiles where it is not a
+    description but DATA with nowhere else to go: which record the best Earworm
+    was on, and how many rounds the favourite minigame has had.
+  - **A figure that got somewhere glows.** `dt-hot`, on a four-second breathe of
+    `text-shadow` and opacity only — nothing that touches layout, because a stat
+    tile changing size on a loop would make the whole grid twitch. Thresholds are
+    against a real account rather than a percentile (a seven-day streak is the
+    full login cycle, level 50 is a quarter of the 200 ceiling): **a glow nobody
+    ever sees is decoration in the source, and one that is always on is
+    wallpaper.** It uses `--gold`, which is themed, so it is never a fixed pink on
+    somebody's green skin.
   - **Lifetime Discs is `profiles.lifetime_xp`.** The pin trigger adds every *rise* in the
     balance to it and never subtracts, so it is already the running total of everything ever
     earned and spending cannot touch it. There is no separate lifetime column and there does
@@ -3958,6 +4402,35 @@ The lesson worth keeping: the wins already had eighty pieces of confetti. **What
 was the five guesses before them**, which were completely silent — and those are what a
 session actually consists of. Put feedback on the frequent small moments before the rare big
 one.
+
+## Achievements say what you achieved
+
+`celebrate()`'s eyebrow was hardcoded to "Achievement Unlocked" over everything
+the overlay has ever shown — a tournament, a streak, a Bid War, a solved
+Earworm. **"Achievement Unlocked / Earworm solved" says the same nothing twice**,
+and solving it in one and solving it in five were called the same thing. Every
+caller names the actual result now — *Earworm in 3*, *Daily Drop in 4*, *Cover
+Fire — won*, *Bid War — won*, *Higher or Lower — new best* — with the record or
+the number as the title. `opts.accent` tints the eyebrow and leads the confetti,
+so the category is recognisable before the words are read.
+
+**Two categories, two weights.** An album milestone keeps the full screen; 500
+records is a year's work. A **discography does not**: there is one per artist in
+a crate, which is dozens on a mature account, and a full-screen trophy for each
+is the app congratulating itself. It stamps a ring and a tick onto its own card
+— the Shop's purchase language, a line being *drawn* rather than particles
+thrown, in green rather than gold so the two are not confused. The discs still
+fly from the button. Completionist cards are violet and quieter throughout.
+
+**AVAILABLE IS NOT CLAIMED**, which is the rule that was actually broken:
+
+- Completing a discography threw the full-screen trophy the moment it completed,
+  over a reward nobody had asked for and while somebody was mid-rating — and
+  then the claim threw it again. It logs an activity line and waits.
+- Passing a minigame gate threw it too. **Nothing is claimed and nothing is paid
+  when a door opens.** The card lights up where the card is and the grid stays
+  usable. With the seen-map fix (trap 9) that stops being nine of them on every
+  load.
 
 ## Analytics and safety
 
