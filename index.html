@@ -7155,6 +7155,84 @@ button.rw-day {
 .sr-play.no-clip, .sr-play.needs-tap { border-color: var(--red); color: var(--red); }
 .sr-play.no-clip::after { border-left-color: currentColor; }
 
+/* ---- LIST REORDER --------------------------------------------------------
+   A list is an ORDER, and it was the order you happened to add things in. */
+.song-edit-row { position: relative; touch-action: pan-y; }
+.drag-grip {
+  width: 16px; height: 16px; flex-shrink: 0; cursor: grab;
+  /* Three lines, drawn rather than added to the markup. */
+  background:
+    linear-gradient(currentColor, currentColor) center 3px / 12px 1.5px no-repeat,
+    linear-gradient(currentColor, currentColor) center 7.5px / 12px 1.5px no-repeat,
+    linear-gradient(currentColor, currentColor) center 12px / 12px 1.5px no-repeat;
+  color: var(--text-faint);
+  opacity: .7;
+}
+.song-edit-row.dragging {
+  position: relative; z-index: 5;
+  background: var(--surface-3);
+  box-shadow: 0 14px 34px rgba(0,0,0,.55);
+  border-color: var(--gold);
+  /* No transition on transform: the row follows a finger, and a 180ms ease on
+     that is a row that lags behind where it is being dragged. */
+  opacity: .96;
+  pointer-events: none;
+}
+.song-edit-row.drop-over { border-color: var(--gold); }
+.drop-ph {
+  border: 1px dashed var(--border-strong); border-radius: 10px;
+  margin-bottom: 8px; background: var(--gold-dim);
+}
+.list-add-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.list-fill-note { font-size: 12px; color: var(--text-faint); margin-top: 8px; min-height: 16px; }
+
+/* ---- AVATAR CROP ---------------------------------------------------------
+   The mask is drawn OVER the canvas rather than clipping it, so the parts
+   being cropped away stay faintly visible. Seeing what you are cutting off is
+   most of what makes a crop tool usable — a hole with blackness round it tells
+   you nothing about whether you have chopped somebody's head. */
+.crop-stage {
+  position: relative; display: grid; place-items: center;
+  margin: var(--s3) 0; overflow: hidden; border-radius: 14px;
+  background: #000;
+}
+#crop-canvas { display: block; touch-action: none; cursor: grab; }
+#crop-canvas:active { cursor: grabbing; }
+.crop-mask {
+  position: absolute; inset: 0; pointer-events: none;
+  /* A hole cut out of a dim sheet: the ring is fully transparent inside its
+     radius and 62% black outside it. One gradient, no clip-path, no SVG. */
+  background: radial-gradient(circle at 50% 50%,
+    rgba(0,0,0,0) 0 calc(50% - 1px),
+    rgba(0,0,0,.62) calc(50% - 1px) 100%);
+  box-shadow: inset 0 0 0 2px rgba(255,245,235,.55);
+  border-radius: 14px;
+}
+.crop-mask::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255,245,235,.85);
+}
+#crop-zoom {
+  width: 100%; height: 44px; -webkit-appearance: none; appearance: none;
+  background: none; cursor: pointer; margin: 0;
+}
+#crop-zoom::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 999px; background: var(--surface-4);
+}
+#crop-zoom::-moz-range-track {
+  height: 6px; border-radius: 999px; background: var(--surface-4);
+}
+#crop-zoom::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 22px; height: 22px; border-radius: 50%; margin-top: -8px;
+  background: var(--gold); border: 3px solid var(--bg); cursor: pointer;
+}
+#crop-zoom::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--gold); border: 3px solid var(--bg); cursor: pointer;
+}
+.crop-actions { display: flex; gap: var(--s2); justify-content: flex-end; margin-top: var(--s3); }
+
 /* ---- SUGGESTIONS ---------------------------------------------------------
    One list, two modes. The COUNT LEADS each row rather than trailing it: the
    question a person is answering when they look at this is "how many other
@@ -8727,6 +8805,31 @@ window.ICONS = {
      Shop, and the only things that differ are the heading, the composer at the
      top and what a row draws.
      ================================================================ -->
+<!-- ================================================================
+     AVATAR CROP
+     ================================================================
+     The mask is a CIRCLE, not a square. Every surface that draws an avatar
+     uses border-radius:50%, so a square crop tool would make people centre
+     their face in a square and then lose its corners. What is visible through
+     the hole is exactly what the avatar becomes.
+     ================================================================ -->
+<div class="modal crop-modal" id="crop-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="crop-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="camera"></span>
+      <div><h2>Position your photo</h2><p>Drag to move, pinch or use the slider to zoom.</p></div></div>
+    <div class="crop-stage">
+      <canvas id="crop-canvas"></canvas>
+      <div class="crop-mask" aria-hidden="true"></div>
+    </div>
+    <input type="range" id="crop-zoom" min="1" max="4" step="0.01" value="1" aria-label="Zoom">
+    <div class="crop-actions">
+      <button class="btn-mini" id="crop-cancel" type="button">Cancel</button>
+      <button class="btn-primary" id="crop-apply" type="button">Use this</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal sugg-modal" id="sugg-modal">
   <div class="modal-panel">
     <button class="modal-close" id="sugg-close" aria-label="Close">&times;</button>
@@ -14967,22 +15070,467 @@ async function saveProfileEdits(){
   closeProfileEdit();renderProfile();
 }
 
+/* ============================================================
+   AVATAR CROP — a circular mask, because that is the frame it lands in
+   ============================================================
+   The photo went straight from the file picker to storage, and every surface
+   that draws it uses `border-radius: 50%` with `object-fit: cover`. So the
+   browser cropped it: centred, at whatever zoom the shortest side happened to
+   give, with no say in the matter. A group photo became somebody's shoulder
+   and a full-length shot became a torso.
+
+   CROPPING IS A DECISION AND IT BELONGS TO THE PERSON IN THE PHOTOGRAPH.
+
+   The mask is a CIRCLE and not a square, and that matters more than it looks:
+   a square crop tool over a round frame makes people centre their face in the
+   square and then lose its corners. What you see through the hole is exactly
+   what the avatar will be.
+
+   No library. A canvas, one drawImage, and a pointer handler — this is
+   ninety lines, and the alternative is a dependency in an app that has no
+   build step and loads every byte of itself on first paint.
+
+   THE OUTPUT IS A SQUARE JPEG, not the original. It is capped at 512px, which
+   is four times the largest size it is ever drawn at, and it means a 2MB phone
+   photograph reaches storage as about 60KB — the avatar is on every row of
+   every feed, so its weight is paid on every screen in the app. */
+const AvatarCrop = (function () {
+  var OUT = 512;                 // 4x the largest size it is ever drawn at
+  var img = null, natural = { w: 0, h: 0 };
+  var scale = 1, minScale = 1, ox = 0, oy = 0;   // ox/oy are the image centre
+  var box = 0, cv = null, ctx = null, done = null;
+  var drag = null, pinch = null;
+
+  function el(id) { return document.getElementById(id); }
+
+  function open(file, cb) {
+    done = cb;
+    var url = URL.createObjectURL(file);
+    img = new Image();
+    img.onload = function () {
+      natural = { w: img.naturalWidth, h: img.naturalHeight };
+      URL.revokeObjectURL(url);
+      show();
+    };
+    img.onerror = function () {
+      URL.revokeObjectURL(url);
+      if (done) done({ error: 'That image could not be read.' });
+    };
+    img.src = url;
+  }
+
+  function show() {
+    var modal = el('crop-modal');
+    modal.classList.add('on-top');
+    modal.classList.add('open');
+    cv = el('crop-canvas');
+    // Measured after the modal is visible: a canvas sized while its parent is
+    // display:none measures zero, and the crop then renders into nothing.
+    box = Math.min(cv.parentNode.clientWidth, Math.round(window.innerHeight * 0.42));
+    box = Math.max(200, box);
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = box * dpr; cv.height = box * dpr;
+    cv.style.width = box + 'px'; cv.style.height = box + 'px';
+    ctx = cv.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Start at "cover": the smallest zoom that leaves no gap inside the hole.
+    // Anything smaller shows background through the mask, which is not a crop
+    // anybody wants, so it is also the floor.
+    minScale = Math.max(box / natural.w, box / natural.h);
+    scale = minScale;
+    ox = natural.w / 2; oy = natural.h / 2;
+    el('crop-zoom').min = '1';
+    el('crop-zoom').max = '4';
+    el('crop-zoom').value = '1';
+    draw();
+  }
+
+  function close() {
+    var m = el('crop-modal');
+    m.classList.remove('open'); m.classList.remove('on-top');
+    img = null; done = null;
+  }
+
+  /* The image centre is clamped so the hole can never see past an edge. Done
+     on every draw rather than only on release, because a drag that is allowed
+     to go out of bounds and then springs back reads as the control fighting
+     you. */
+  function clamp() {
+    var half = box / 2 / scale;
+    ox = Math.min(natural.w - half, Math.max(half, ox));
+    oy = Math.min(natural.h - half, Math.max(half, oy));
+    if (natural.w * scale <= box) ox = natural.w / 2;
+    if (natural.h * scale <= box) oy = natural.h / 2;
+  }
+
+  function draw() {
+    if (!ctx || !img) return;
+    clamp();
+    ctx.clearRect(0, 0, box, box);
+    var w = natural.w * scale, h = natural.h * scale;
+    ctx.drawImage(img, box / 2 - ox * scale, box / 2 - oy * scale, w, h);
+  }
+
+  function setZoom(v) {
+    scale = minScale * Math.max(1, Math.min(4, v));
+    draw();
+  }
+
+  function pointAt(e) {
+    var t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX, y: t.clientY };
+  }
+
+  function wire() {
+    var c = el('crop-canvas');
+
+    function start(e) {
+      if (e.touches && e.touches.length === 2) {
+        pinch = { d: dist(e.touches), s: scale };
+        drag = null;
+        return;
+      }
+      var p = pointAt(e);
+      drag = { x: p.x, y: p.y, ox: ox, oy: oy };
+    }
+    function move(e) {
+      if (pinch && e.touches && e.touches.length === 2) {
+        e.preventDefault();
+        setZoom((scale / minScale) * (dist(e.touches) / pinch.d));
+        pinch.d = dist(e.touches);
+        return;
+      }
+      if (!drag) return;
+      e.preventDefault();
+      var p = pointAt(e);
+      // Divided by the scale, so a drag of one screen pixel always moves the
+      // picture by one screen pixel however far it is zoomed in.
+      ox = drag.ox - (p.x - drag.x) / scale;
+      oy = drag.oy - (p.y - drag.y) / scale;
+      draw();
+    }
+    function end() { drag = null; pinch = null; }
+    function dist(t) {
+      var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy) || 1;
+    }
+
+    c.addEventListener('mousedown', start);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    // NOT passive: move() calls preventDefault, and without that a drag on the
+    // canvas scrolls the sheet behind it instead of moving the photograph.
+    c.addEventListener('touchstart', start, { passive: false });
+    c.addEventListener('touchmove', move, { passive: false });
+    c.addEventListener('touchend', end);
+
+    el('crop-zoom').addEventListener('input', function () { setZoom(parseFloat(this.value)); });
+    el('crop-cancel').addEventListener('click', function () { var d = done; close(); if (d) d({ cancelled: true }); });
+    el('crop-close').addEventListener('click', function () { var d = done; close(); if (d) d({ cancelled: true }); });
+    el('crop-apply').addEventListener('click', apply);
+  }
+
+  function apply() {
+    var out = document.createElement('canvas');
+    out.width = OUT; out.height = OUT;
+    var o = out.getContext('2d');
+    // Only the transform differs from draw() — the same crop, rendered at
+    // output size. Deriving it from the same two numbers is what guarantees
+    // the file matches what was in the hole.
+    var k = OUT / box;
+    o.drawImage(img,
+      OUT / 2 - ox * scale * k, OUT / 2 - oy * scale * k,
+      natural.w * scale * k, natural.h * scale * k);
+    var d = done;
+    out.toBlob(function (blob) {
+      close();
+      if (!d) return;
+      if (!blob) { d({ error: 'That image could not be cropped.' }); return; }
+      // Named .jpg because uploadAvatar takes the extension off the name to
+      // build the storage path — a blob called "blob" would be stored without
+      // one and served with the wrong content type.
+      d({ file: new File([blob], 'avatar.jpg', { type: 'image/jpeg' }) });
+    }, 'image/jpeg', 0.9);
+  }
+
+  if (document.getElementById('crop-canvas')) wire();
+  return { open: open };
+})();
+
 async function handleAvatarFile(file){
   const errEl=document.getElementById('pedit-error');
   if(!file)return;
   if(!/^image\/(png|jpe?g|webp|gif)$/.test(file.type)){errEl.textContent='Please choose a JPG, PNG, WebP or GIF.';return;}
-  if(file.size>2*1024*1024){errEl.textContent='Image must be under 2MB.';return;}
-  errEl.textContent='Uploading photo\u2026';
-  const res=await Cloud.uploadAvatar(file);
-  if(res.error){errEl.textContent=res.error;return;}
-  document.getElementById('pedit-avatar').src=res.url;
-  const sv=await Cloud.saveProfile({avatar_url:res.url});errEl.textContent=sv.error?sv.error:'';
+  // The cap is on what comes IN. What goes out is a 512px JPEG whatever this
+  // was, so the limit is about how much a phone has to decode, not about
+  // storage.
+  if(file.size>12*1024*1024){errEl.textContent='Image must be under 12MB.';return;}
+  errEl.textContent='';
+  AvatarCrop.open(file, async function(res){
+    if(!res||res.cancelled)return;
+    if(res.error){errEl.textContent=res.error;return;}
+    errEl.textContent='Uploading photo\u2026';
+    const up=await Cloud.uploadAvatar(res.file);
+    if(up.error){errEl.textContent=up.error;return;}
+    document.getElementById('pedit-avatar').src=up.url;
+    const sv=await Cloud.saveProfile({avatar_url:up.url});
+    errEl.textContent=sv.error?sv.error:'';
+    // Every surface that draws an avatar reads it off the profile, so the
+    // header chip and any open profile page are stale until something
+    // repaints them.
+    try{ if(window.renderProfile)renderProfile(); if(window.Cloud&&Cloud.syncUI)Cloud.syncUI(); }catch(e){}
+  });
 }
 
 let _listEditing=null;
 function openListEditor(existing){_listEditing=existing?{id:existing.id,title:existing.title,kind:existing.kind,items:(existing.items||[]).slice()}:{title:'',kind:'album',items:[]};document.getElementById('list-title-input').value=_listEditing.title;document.querySelectorAll('#list-kind-seg button').forEach(function(b){b.classList.toggle('active',b.dataset.kind===_listEditing.kind);});document.getElementById('list-kind-seg').style.pointerEvents=existing?'none':'auto';document.getElementById('list-kind-seg').style.opacity=existing?'0.6':'1';document.getElementById('list-del-btn').style.display=existing?'inline-block':'none';document.getElementById('list-error').textContent='';drawListItems();document.getElementById('list-modal').classList.add('open');}
 function closeListEditor(){document.getElementById('list-modal').classList.remove('open');_listEditing=null;}
-function drawListItems(){const host=document.getElementById('list-items');const arr=_listEditing.items;let html=arr.map(function(it,i){return'<div class="song-edit-row"><span class="song-mini-rank">'+(i+1)+'</span><img src="'+esc(it.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div style="flex:1;"><div class="song-mini-name">'+esc(it.name)+'</div><div class="song-mini-artist">'+esc(it.artist||'')+'</div></div><button class="rm-row" data-rm="'+i+'">&times;</button></div>';}).join('');html+='<button class="btn-mini" data-add="1" style="margin-top:6px;">+ Add '+(_listEditing.kind==='song'?'song':'album')+'</button>';host.innerHTML=html;host.querySelectorAll('[data-rm]').forEach(function(b){b.addEventListener('click',function(){arr.splice(+b.dataset.rm,1);drawListItems();});});host.querySelector('[data-add]').addEventListener('click',function(){openPicker(_listEditing.kind,function(item){arr.push(item);drawListItems();});});}
+/* A LIST IS AN ORDER, and until now it was the order you happened to add
+   things in. A Top 5 whose fourth entry cannot be moved to first is not a Top
+   5, it is five records.
+
+   PRESS AND HOLD, not drag-anywhere. On a phone the list scrolls, and a row
+   that starts dragging the moment a finger touches it cannot be scrolled past
+   — every attempt to reach the bottom would pick something up. 260ms of hold
+   is long enough not to fire on a flick and short enough not to feel like a
+   wait; a movement of more than 8px before it elapses cancels it, because that
+   was a scroll.
+
+   The drop target is worked out from the POINTER against each row's midpoint,
+   not from what is under the finger: the row being dragged is under the finger
+   the whole time. */
+function drawListItems(){
+  const host=document.getElementById('list-items');
+  const arr=_listEditing.items;
+  let html=arr.map(function(it,i){
+    return'<div class="song-edit-row" draggable="true" data-i="'+i+'">'+
+      '<span class="drag-grip" aria-hidden="true"></span>'+
+      '<span class="song-mini-rank">'+(i+1)+'</span>'+
+      '<img src="'+esc(it.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+      '<div style="flex:1;min-width:0;"><div class="song-mini-name">'+esc(it.name)+'</div>'+
+      '<div class="song-mini-artist">'+esc(it.artist||'')+'</div></div>'+
+      '<button class="rm-row" data-rm="'+i+'">&times;</button></div>';
+  }).join('');
+  html+='<div class="list-add-row">'+
+    '<button class="btn-mini" data-add="1">+ Add '+(_listEditing.kind==='song'?'song':'album')+'</button>'+
+    '<button class="btn-mini" data-fill="1">Fill from an artist</button></div>'+
+    '<div class="list-fill-note" id="list-fill-note"></div>';
+  host.innerHTML=html;
+  host.querySelectorAll('[data-rm]').forEach(function(b){
+    b.addEventListener('click',function(e){e.stopPropagation();arr.splice(+b.dataset.rm,1);drawListItems();});
+  });
+  host.querySelector('[data-add]').addEventListener('click',function(){
+    openPicker(_listEditing.kind,function(item){arr.push(item);drawListItems();});
+  });
+  host.querySelector('[data-fill]').addEventListener('click',fillListFromArtist);
+  wireListReorder(host,arr);
+}
+
+function wireListReorder(host,arr){
+  let held=null, timer=null, startY=0, from=-1, ph=null;
+
+  function rows(){return Array.prototype.slice.call(host.querySelectorAll('.song-edit-row'));}
+
+  function begin(row,y){
+    from=+row.dataset.i;
+    held=row;
+    startY=y;
+    row.classList.add('dragging');
+    // A placeholder of the row's own height, so nothing below it jumps when
+    // the row leaves the flow.
+    ph=document.createElement('div');
+    ph.className='drop-ph';
+    ph.style.height=row.getBoundingClientRect().height+'px';
+    row.parentNode.insertBefore(ph,row);
+    row.style.width=row.getBoundingClientRect().width+'px';
+    if(window.buzz)buzz('tap');
+  }
+
+  function moveTo(y){
+    if(!held)return;
+    held.style.transform='translateY('+(y-startY)+'px)';
+    // Against each row's MIDPOINT rather than against what is under the
+    // pointer: the row being dragged is under the pointer the whole time.
+    const others=rows().filter(function(r){return r!==held;});
+    let target=null;
+    for(let i=0;i<others.length;i++){
+      const b=others[i].getBoundingClientRect();
+      if(y<b.top+b.height/2){target=others[i];break;}
+    }
+    if(target)host.insertBefore(ph,target);
+    else host.insertBefore(ph,host.querySelector('.list-add-row'));
+  }
+
+  function finish(){
+    clearTimeout(timer);timer=null;
+    if(!held){return;}
+    const order=rows().filter(function(r){return r!==held;});
+    // Where the placeholder ended up among the rows that did not move is the
+    // new index. Computed from the DOM rather than tracked in a variable,
+    // because the DOM is what the person was looking at.
+    let to=0;
+    const kids=Array.prototype.slice.call(host.children);
+    to=kids.filter(function(n){return n.classList.contains('song-edit-row')&&n!==held;})
+           .findIndex(function(n){return n.compareDocumentPosition(ph)&Node.DOCUMENT_POSITION_PRECEDING;});
+    if(to<0)to=order.length;
+    held.classList.remove('dragging');
+    held.style.transform='';held.style.width='';
+    if(ph&&ph.parentNode)ph.parentNode.removeChild(ph);
+    held=null;ph=null;
+    if(from>=0&&to>=0&&to!==from){
+      const it=arr.splice(from,1)[0];
+      arr.splice(to,0,it);
+      if(window.buzz)buzz('good');
+    }
+    from=-1;
+    drawListItems();
+  }
+
+  host.addEventListener('pointerdown',function(e){
+    const row=e.target.closest&&e.target.closest('.song-edit-row');
+    if(!row||e.target.closest('.rm-row'))return;
+    const y=e.clientY;
+    startY=y;
+    clearTimeout(timer);
+    timer=setTimeout(function(){begin(row,y);},260);
+    function cancelOnScroll(ev){
+      if(!held&&Math.abs(ev.clientY-y)>8){clearTimeout(timer);timer=null;
+        window.removeEventListener('pointermove',cancelOnScroll);}
+    }
+    window.addEventListener('pointermove',cancelOnScroll);
+    function up(){
+      clearTimeout(timer);timer=null;
+      window.removeEventListener('pointermove',cancelOnScroll);
+      window.removeEventListener('pointerup',up);
+    }
+    window.addEventListener('pointerup',up);
+  });
+  host.addEventListener('pointermove',function(e){
+    if(!held)return;
+    e.preventDefault();
+    moveTo(e.clientY);
+  });
+  window.addEventListener('pointerup',function(){if(held)finish();});
+  window.addEventListener('pointercancel',function(){if(held)finish();});
+
+  /* Desktop keeps native HTML5 drag as well as the hold: a mouse expects to
+     pick a row up immediately and waiting 260ms for it feels broken. */
+  host.addEventListener('dragstart',function(e){
+    const row=e.target.closest&&e.target.closest('.song-edit-row');
+    if(!row)return;
+    from=+row.dataset.i;
+    row.classList.add('dragging');
+    try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(from));}catch(err){}
+  });
+  host.addEventListener('dragover',function(e){
+    if(from<0)return;
+    e.preventDefault();
+    const row=e.target.closest&&e.target.closest('.song-edit-row');
+    host.querySelectorAll('.drop-over').forEach(function(n){n.classList.remove('drop-over');});
+    if(row&&+row.dataset.i!==from)row.classList.add('drop-over');
+  });
+  host.addEventListener('drop',function(e){
+    if(from<0)return;
+    e.preventDefault();
+    const row=e.target.closest&&e.target.closest('.song-edit-row');
+    host.querySelectorAll('.drop-over').forEach(function(n){n.classList.remove('drop-over');});
+    if(row){
+      const to=+row.dataset.i;
+      if(to!==from){const it=arr.splice(from,1)[0];arr.splice(to,0,it);if(window.buzz)buzz('good');}
+    }
+    from=-1;
+    drawListItems();
+  });
+  host.addEventListener('dragend',function(){
+    host.querySelectorAll('.dragging,.drop-over').forEach(function(n){n.classList.remove('dragging','drop-over');});
+    from=-1;
+  });
+}
+
+/* ---- FILL FROM AN ARTIST -------------------------------------------------
+   "All Drake albums" as one tap, because typing a discography in one at a time
+   through a search box is the reason nobody finishes a list.
+
+   FEATURES ARE ALREADY EXCLUDED at the album level: fetchStudioAlbums reads
+   /artists/{id}/albums with include_groups=album, which is the artist's OWN
+   releases, and isNonStudio() takes out the live records, remix packages and
+   greatest hits on top. That is the same list the Completionist track is built
+   from, so a list filled this way and a completion badge agree about what an
+   artist's discography IS — two different answers to that question in one app
+   would be worse than neither.
+
+   SONGS COST A REQUEST PER ALBUM, so they are fetched SEQUENTIALLY and capped.
+   Twenty parallel catalogue calls is how you get rate-limited off a token
+   every other surface in the app shares, and the progress line is there
+   because a button that goes quiet for fifteen seconds reads as broken.
+
+   Nothing is added twice: a deluxe and its original are different album ids
+   but the same record, so songs dedupe on normalised title and albums on the
+   id fetchStudioAlbums has already collapsed editions down to. */
+async function fillListFromArtist(){
+  const note=document.getElementById('list-fill-note');
+  openPicker('artist',async function(artist){
+    const arr=_listEditing.items;
+    const kind=_listEditing.kind;
+    const say=function(t){const n=document.getElementById('list-fill-note');if(n)n.textContent=t;};
+    say('Reading ' + artist.name + '\u2019s discography\u2026');
+    let albums=[];
+    try{albums=await fetchStudioAlbums(artist.id,true,artist.name);}catch(e){albums=[];}
+    if(!albums||!albums.length){say('Could not read that discography just now.');return;}
+
+    if(kind==='album'){
+      const have={};
+      arr.forEach(function(x){have[String(x.id)]=1;have[baseAlbumTitle(x.name)]=1;});
+      let added=0;
+      albums.forEach(function(al){
+        if(have[String(al.id)]||have[baseAlbumTitle(al.name)])return;
+        have[String(al.id)]=1;have[baseAlbumTitle(al.name)]=1;
+        arr.push({id:al.id,name:al.name,artist:artist.name,art:al.art||''});
+        added++;
+      });
+      drawListItems();
+      say(added?('Added '+added+' album'+(added===1?'':'s')+' by '+artist.name+'.')
+               :('Every '+artist.name+' album is already on this list.'));
+      if(window.buzz)buzz('good');
+      return;
+    }
+
+    /* Songs. One request per album, one after another. The cap is on ALBUMS
+       rather than on songs, because the cost is the request and a 20-track
+       record is no dearer to read than a 6-track one. */
+    const MAX_ALBUMS=14;
+    const list=albums.slice(0,MAX_ALBUMS);
+    const seen={};
+    arr.forEach(function(x){seen[String(x.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'')]=1;});
+    let added=0;
+    for(let i=0;i<list.length;i++){
+      say('Reading '+artist.name+' \u2014 '+(i+1)+' of '+list.length+' records\u2026');
+      let data=null;
+      try{data=await spotifyFetch('/albums/'+encodeURIComponent(list[i].id)+
+        '?name='+encodeURIComponent(list[i].name)+'&artist='+encodeURIComponent(artist.name));}catch(e){}
+      const tracks=(data&&data.tracks&&data.tracks.items)||[];
+      tracks.forEach(function(t){
+        if(!t||!t.name)return;
+        // Primary artist only. A track where somebody else leads is a feature
+        // and is not part of this artist's discography — which is the one
+        // thing the brief asked for by name.
+        const lead=(t.artists&&t.artists[0]&&t.artists[0].name)||'';
+        if(_artistKey(lead)&&_artistKey(lead)!==_artistKey(artist.name))return;
+        const k=String(t.name).toLowerCase().replace(/[^a-z0-9]+/g,'');
+        if(!k||seen[k])return;
+        seen[k]=1;
+        arr.push({id:t.id,name:t.name,artist:artist.name,art:list[i].art||''});
+        added++;
+      });
+    }
+    drawListItems();
+    say(added?('Added '+added+' song'+(added===1?'':'s')+' by '+artist.name+
+               (albums.length>MAX_ALBUMS?' from their first '+MAX_ALBUMS+' records.':'.'))
+             :'Nothing new to add.');
+    if(window.buzz)buzz('good');
+  });
+}
 async function saveListEdits(){const errEl=document.getElementById('list-error');const title=sanitizeText(document.getElementById('list-title-input').value,60);if(!title){errEl.textContent='Give your list a title.';return;}if(hasSlur(title)){errEl.textContent='Please keep the title respectful.';return;}_listEditing.title=title;const btn=document.getElementById('list-save-btn');btn.disabled=true;btn.textContent='Saving\u2026';const res=await Cloud.saveList(_listEditing);btn.disabled=false;btn.textContent='Save list';if(res.error){errEl.textContent=res.error;return;}closeListEditor();renderProfile();}
 function openListView(list,isOwner){document.getElementById('listview-title').textContent=list.title;document.getElementById('listview-meta').textContent=(list.items||[]).length+' '+(list.kind==='song'?'songs':'albums');const host=document.getElementById('listview-items');if(!(list.items||[]).length)host.innerHTML='<p class="reco-note">This list is empty.</p>';else host.innerHTML=list.items.map(function(it,i){return'<div class="ptop-row" data-open="'+esc(it.id)+'"><span class="song-mini-rank">'+(i+1)+'</span><img src="'+esc(it.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div><div class="nm">'+esc(it.name)+'</div><div class="ar">'+esc(it.artist||'')+'</div></div></div>';}).join('');if(list.kind==='album')host.querySelectorAll('[data-open]').forEach(function(el){el.addEventListener('click',function(){const it=list.items.find(function(x){return x.id===el.dataset.open;});if(it){document.getElementById('listview-modal').classList.remove('open');openAlbum(it);}});});document.getElementById('listview-edit-btn').style.display=isOwner?'inline-block':'none';document.getElementById('listview-edit-btn').onclick=function(){document.getElementById('listview-modal').classList.remove('open');openListEditor(list);};document.getElementById('listview-suggest-btn').onclick=function(){if(window.openSuggest){document.getElementById('listview-modal').classList.remove('open');openSuggest(list,'list');}};document.getElementById('list-del-btn').onclick=async function(){if(!_listEditing||!_listEditing.id)return;await Cloud.deleteList(_listEditing.id);closeListEditor();renderProfile();};document.getElementById('listview-modal').classList.add('open');}
 
