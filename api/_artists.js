@@ -152,7 +152,13 @@ export function isEdition(s) {
 const RE_LIVE = /\b(live|unplugged|in concert|mtv unplugged|at the (o2|apollo|bbc|royal|fillmore)|concert)\b/i;
 const RE_REMIX = /\b(remix(es|ed)?|chopped\s*(&|and)\s*screwed|slowed|sped up|instrumental(s)?|acapella|a cappella|karaoke|tribute|covers?\s+of)\b/i;
 const RE_COMP = /\b(greatest hits|best of|the collection|anthology|box ?set|compilation|b-?sides|rarities|essentials?|singles collection|hits)\b/i;
-const RE_OTHER = /\b(commentary|interview|soundtrack score|demos?|sessions?)\b/i;
+/* `demos` and `sessions` are REAL WORDS IN REAL ALBUM TITLES, and matching
+   them anywhere cost Malcolm Todd's "Demos Before Prom" its place in his
+   Completionist — the record simply was not in the list and nothing said why.
+   Same shape as the note on EDITION_WORD: a word that describes a pressing
+   when it is bracketed or trailing is a word like any other at the front of a
+   title. So they only count at the END, or inside brackets. */
+const RE_OTHER = /\b(commentary|interview|soundtrack score)\b|\((demos?|sessions?)\)|\b(demos?|sessions?)\s*$/i;
 
 // Official Charts Company boundaries. See the header for why these and not
 // something invented.
@@ -267,6 +273,32 @@ export function dedupeReleases(list) {
      starts with another entry's whole base key is folded into that one. The
      edition flag is what makes this safe — without it "Rodeo" would swallow a
      record genuinely called "Rodeo 2", which is a different album. */
+  /* MULTI-PART RELEASES. "Sweet Boy Pt. 1" and "Sweet Boy Pt. 2" are two
+     halves of "Sweet Boy" and the Completionist listed all three, so somebody
+     who had rated the album was told they were two records short of finishing
+     it.
+
+     The fold only happens when a SIBLING EXISTS — another entry whose base key
+     is the part's key without the part marker. A record genuinely called
+     "Utopia Pt. 2" with no "Utopia" beside it keeps its own entry, which is
+     the same discipline that stops "Rodeo" swallowing "Rodeo 2" below. The
+     WHOLE always wins over a part, whatever the years say: the album is the
+     record and the parts are how it was rolled out. */
+  const PART_TAIL = /[,:\-–—\s]*\(?\s*(pt\.?|part)\s*(\d{1,2}|one|two|three|four|i{1,3}|iv|v)\s*\)?\s*$/i;
+  Object.keys(byWork).forEach((key) => {
+    const raw = String(byWork[key].row.title || byWork[key].row.name || '');
+    if (!PART_TAIL.test(raw)) return;
+    const whole = baseTitle(raw.replace(PART_TAIL, ''));
+    if (!whole || whole === key || !byWork[whole]) return;
+    merges.push({
+      work: whole,
+      kept: byWork[whole].row.title,
+      dropped: raw,
+      why: 'part of the same record',
+    });
+    delete byWork[key];
+  });
+
   const keys = Object.keys(byWork).sort((a, b) => a.length - b.length);
   const gone = {};
   keys.forEach((long) => {
@@ -361,17 +393,19 @@ export function dedupeArtists(list) {
  * (277,980) from the duplicate (395). Without that tiebreak the list is in
  * whatever order Deezer returned, which is how this went wrong.
  */
-export function rankArtists(list, wantedName) {
+export function rankArtists(list, wantedName, opts) {
+  const keepAll = !!(opts && opts.keepAll);
   const want = normName(wantedName);
   if (!want) return [];
   const { artists } = dedupeArtists(list);
   return artists.map((a) => {
     const n = normName(a.name);
-    let score = 0, how = '';
+    let score = 0, how = 'none';
     if (n === want) { score = 100; how = 'exact'; }
-    else if (n.startsWith(want) || want.startsWith(n)) { score = 45; how = 'prefix'; }
+    else if (n.startsWith(want)) { score = 60; how = 'prefix'; }
+    else if (want.startsWith(n)) { score = 45; how = 'prefix'; }
     else if (n.indexOf(want) !== -1 || want.indexOf(n) !== -1) { score = 18; how = 'contains'; }
-    else return null;
+    else if (!keepAll) return null;
     return { artist: a, score, how, fans: a.nb_fan || 0 };
   }).filter(Boolean)
     .sort((x, y) => (y.score - x.score) || (y.fans - x.fans));

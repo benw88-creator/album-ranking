@@ -138,12 +138,19 @@ record by the same artist in your crate now — free, offline, right nearly alwa
 absent id costs that record a place among the recommendation seeds and nothing else,
 since `artistStats` skips a blank id rather than lumping them together.
 
-### Standing replaces Level as the headline
+### Depth replaces Level as the headline
+
+**It was called Standing and the rename is real, not display-only** — `window.Depth`,
+`#stat-depth`, and the profile heading. A *standing* is a position in a league: it
+implies other people and a table to be above them in, and this number is private,
+local and shown on nobody else's profile. What it measures is how deep your
+relationship with a record goes, and its unit has always been the **deep cut**.
+The tier ladder is untouched.
 
 Level is `lifetime_xp`, which is every Disc ever earned. It rises fastest for somebody
 grinding minigames and barely moves for somebody quietly building a serious crate, which
 is the opposite of what this app is for. It is **still there**, unchanged, on the profile
-as a statistic. What leads is Standing.
+as a statistic. What leads is Depth.
 
 A record earns depth by having more of *you* attached to it:
 
@@ -171,7 +178,7 @@ profile. Publishing it would need a `profiles` column and a `pin_profile_economy
 — and a number people can compare is a number people optimise, which is the failure mode
 this replaced. If it is ever published, publish the tier name and not the count.
 
-`Standing.get()` reads `CollectionWorth.mine()` and `VinallLore.items()`, two small
+`Depth.get()` reads `CollectionWorth.mine()` and `VinallLore.items()`, two small
 synchronous accessors added for it; both return empty until their owners have loaded,
 which degrades the number rather than breaking it.
 
@@ -361,7 +368,7 @@ dozens of cards and a round trip each would be a round trip each.
 
 The workings are private and the award is not: somebody else's shelf shows what a record is
 certified at, but how close they are to the next rung comes back only for yourself — same
-line Standing and Taste Match draw.
+line Depth and Taste Match draw.
 
 **That line did not hold on the first attempt, and the failure is worth copying the fix
 from** (`..._20260915234500_cert_detail_privacy.sql`). The guard was
@@ -406,7 +413,7 @@ purchase visible.
 
 **Masters** are at most three Diamond records, and the cap *is* the feature: a showcase of
 everything is a shelf, and the question this answers is which records **are** you. They
-lead the profile, above Standing and above the top 3, and unlike Standing they render on
+lead the profile, above Depth and above the top 3, and unlike Depth they render on
 somebody else's profile — `collection` is publicly readable, and a plated record nobody
 else can see is a screensaver.
 
@@ -424,10 +431,139 @@ arrangement as `LADDER` against `v_ladder`: change one and you must change the o
 - **No "how many still fit" counter in the Crate**, and no second currency. The Disc
   economy is untouched: no migration, no RLS change, no new table, nothing added to a pin
   trigger. Every change above is client-side and reversible.
-- **Standing does not gate anything.** Progression that locks features turns a statement
+- **Depth does not gate anything.** Progression that locks features turns a statement
   of values into a toll gate.
 - The shortlist is a local list, not a `lists` row. It syncs, it is private, and it costs
   no round trip per tap.
+
+## The reorder pass, the classification pass, and For You's load time
+
+### One sortable, and three mechanisms that were fighting each other
+
+`makeSortable(host, opts)` replaces `wireListReorder` and is used by the list
+editor, both song editors in Edit profile, and — new — the **Top 5 and Top 10
+lists on the profile itself**, where the order is the whole content and making
+somebody open a settings sheet to move their number four to number one is why
+nobody ever did.
+
+The old one was a hold timer on pointer events, `draggable="true"` HTML5 drag on
+every row, and `touch-action: pan-y`, and on a phone none of the three won:
+
+- **No pointer capture.** `pointermove` was bound to the host and the dragged
+  row is `pointer-events: none`, so the moment the finger left the host's box
+  the events stopped and the row froze.
+- **The browser took the gesture.** `pan-y` tells the compositor a vertical drag
+  is a scroll, so it claimed the gesture, fired `pointercancel`, and the drag
+  died **leaving the placeholder behind**. A column of empty dashed boxes under
+  one real row is several dead drags stacked up, and it is what the bug report
+  was a photograph of.
+- **HTML5 drag on top**, which on touch is a long-press selection.
+
+So: `setPointerCapture`, one non-passive `touchmove` that calls
+`preventDefault()` only while a drag is live (safe, because a drag only begins
+from a finger that held still and the browser has therefore not started
+scrolling), `touch-action: none` on the **grip** so pressing it picks the row up
+on the first pixel, and `body.is-sorting` killing text selection and the iOS
+callout for the duration. Two ways in on purpose: the grip is instant, a 300ms
+hold anywhere on the row also works, and 8px of movement before it elapses
+cancels — that was a scroll. There is autoscroll at the edges, without which a
+ten-item list genuinely cannot be reordered on a phone.
+
+**`position: fixed` DOES NOT MEAN THE VIEWPORT when an ancestor is
+transformed**, and the list editor is a bottom sheet. The lifted row sat ~180px
+below the finger while the placeholder tracked it correctly. Rather than hunting
+for the ancestor, the row is placed, **asked where it actually landed**, and
+corrected by the difference — right whatever the ancestor turns out to be. Same
+family as the `getBoundingClientRect` on a spinning record: measure, do not
+assume.
+
+`.claude/sortable-check.html` drives it with synthetic pointer events — grip
+drag, long-press drag, scroll-cancel, drop at both ends.
+
+### "Demos" is a word, and Pt. 1 and Pt. 2 are one record
+
+Two Completionist faults with one shape.
+
+- **`\bdemos?\b` matched "Demos Before Prom"** and dropped the record out of
+  Malcolm Todd's discography with nothing anywhere saying it had. `demos` and
+  `sessions` now only count **at the end of a title or inside brackets**, the
+  same discipline `EDITION_WORD` already keeps `gold` and `platinum` to. Three
+  copies of that rule: `RE_OTHER` in `api/_artists.js`, `NOT_STUDIO` in
+  `api/catalogue.js`, `isNonStudio` in `index.html`. Change one, change all three.
+- **`dedupeReleases` folds a `Pt. N` / `Part N` tail into the whole record**, and
+  only when a sibling with that base actually exists — so "Sweet Boy Pt. 1" and
+  "Sweet Boy Pt. 2" collapse into "Sweet Boy" while a lone "Utopia Pt. 2" keeps
+  its own entry, the same discipline that stops "Rodeo" swallowing "Rodeo 2".
+
+`node api/_artists.selfcheck.mjs` asserts all of it plus the artist ranking.
+
+### Artist search ranks; it used to print whatever Deezer said first
+
+`/api/catalogue?path=search&type=artist` returned Deezer's own order, and Deezer
+files several artists under one name — searching "Drake" put four other Drakes
+above the one everybody meant. It goes through the **same `dedupeArtists` and
+`rankArtists` as `pickArtist`** now: exact normalised name, then prefix, then
+substring, `nb_fan` deciding among equals. `keepAll` is the one difference — a
+resolver may refuse everything, a search box may not, so a result that matched
+nothing sorts to the bottom on fans rather than disappearing.
+
+### For You: the first card, the ratings, and the floor that never existed
+
+- **`buildPools` is split in two.** It was one async function the first card
+  waited on: trending, then SIX discographies **one after another**, then the
+  suggestions table — seven-plus serial round trips before anything was drawn.
+  Yours, Partial and Shortlist need **no network at all**, so they are built
+  synchronously and drawn from at once; `remotePools` runs the three remote
+  sources concurrently behind the feed, and is only awaited where there is
+  genuinely nothing without it (an empty crate, or the Suggestions tab).
+  `warmHeads()` then fetches the next few albums' previews in one parallel round
+  instead of one at a time inside the draw loop.
+- **`MAX_ALBUMS` was a session total, not a memory ceiling.** A spent album
+  stayed in `_tracks` holding an empty list forever, so after forty records the
+  feed could not expand a forty-first and simply stopped however many were
+  queued. Spent boxes are deleted now.
+- **`spotifyFetch('/chart-artists')` threw `unsupported-endpoint` on every
+  call.** The catch swallowed it, `expand()` reported it had added nothing, and
+  step 3 — the thing this file calls "the floor under the feed, effectively
+  bottomless" — **has never once returned a record**. Measured logged out: five
+  widenings, zero candidates, "You have heard the lot" over a chart one fetch
+  away. It is not a Spotify-shaped path, so it goes straight to
+  `/api/catalogue?path=chart-artists` like the Popular tab does. `WIDEN_STEPS` is
+  gone with it: step 3 now takes eight chart artists at a time and the feed stops
+  only when `expand()` genuinely adds nothing. After the fix, logged out with no
+  crate: 22 cards, 120 records still queued, 329 songs held.
+- **A rating is no longer locked.** The save button disabled itself on the first
+  press, on the one screen whose whole subject is what you think of a song.
+  `saveSong` already did the right thing underneath — it writes to the key the
+  song already has, so a re-rate updates the one record and appends to the score
+  history — the card just had to stop getting in the way. The button now says
+  what pressing it would do: *Rate*, then *Rated 7*, then *Change to 9*.
+  **`Wallet.recordRating()` only fires for a NEW song rating**; paying each time
+  would make dragging one slider a Disc faucet, and the daily cap is the
+  anti-forgery defence rather than the rule.
+- **`offsetParent` is null for a `position: fixed` element**, so the guard meant
+  to skip a hidden player bar skipped the nav as well and left the rating tray
+  34px behind it. Measured. The floor now clears whichever of the nav and the
+  player bar starts highest, and the player bar tells the feed to re-measure when
+  it appears or leaves.
+- The loading and empty states were 40px from the top of the feed, which is
+  where the tab bar floats. Centred.
+
+### Recall said 2 of 4 and 100% accurate on the same card
+
+`accuracy` was `correct / guesses typed`. A skipped round records no attempt, so
+a run where two songs were skipped and two named on the first try printed **2 of
+4** and **100%** side by side — two numbers about one run that could not both be
+true. It is `correct / played` now, straight off the round list, so 7 of 10 is
+exactly 70 rather than a rounding of a ratio of two other numbers. `Average
+reveal` is still taken from the correct rounds only and the label now says so
+when they are not all of them.
+
+The rest were audited against their own game state and are right: Cover Fire's
+`correct of ROUNDS` and `bestStreak`, Higher or Lower's `multFor(score - 1)` (the
+multiplier is applied before the streak increments, so the peak really is one
+below the final count), and Earworm and the Daily Drop, which print no derived
+numbers at all.
 
 ## The traps that keep recurring
 
@@ -753,7 +889,7 @@ somebody owns everything.** It is safe only alongside a sink.
   rather than a maximal one it was worse: the old ladder averaged 9,000 a day and a normal
   day's play is 7,000–12,000, so **logging in paid about the same as playing**.
   - The reason that mattered here specifically: **it put the two progression systems in
-    opposition.** Standing measures depth and prints its own rule on the profile to say
+    opposition.** Depth measures depth and prints its own rule on the profile to say
     depth is what the app values; the wallet paid best for opening the app and closing it.
     Someone optimising for Discs was doing nothing VINALL is for.
   - Flattened rather than cut, so consistency still pays — a full week is 18,000 against the
@@ -842,9 +978,14 @@ table to save nothing is the worse trade.
 
 ## Reach — referrals
 
-`..._20260918100000_reach_referrals.sql`, the `Reach` module at the bottom of
-`index.html`, and `#reach-modal`. Reached from the account menu. **Apply the
-migration by hand in the SQL editor**, like the others.
+`..._20260918100000_reach_referrals.sql` and the `Reach` module at the bottom of
+`index.html`. **Apply the migration by hand in the SQL editor**, like the others.
+
+**It is a section of the People page, not a modal.** It was `#reach-modal`, off
+the account menu — two clicks behind a menu nobody opens, on the one screen in
+the app that is already about people. The modal and the menu item are gone;
+`renderPeople()` paints `#reach-body`, and `Reach.open()` survives as
+`goToView('people')` so anything else asking for it still lands somewhere.
 
 Named Reach rather than "Invite friends" because what it measures is how far your
 taste travels — and because a screen called Invite Friends is one everybody has
@@ -2218,7 +2359,7 @@ rows and not the duplicates, and the Shop offered Sundown at 150 while `wallet_b
 
 `..._20260921140000_xp_from_everything.sql`. Level was a second rendering of the wallet, so it
 rose fastest for somebody grinding minigames and barely moved for somebody quietly building a
-serious crate — the exact criticism that produced Standing.
+serious crate — the exact criticism that produced Depth.
 
 | | |
 |---|---|
@@ -4284,7 +4425,7 @@ Two things about the locked state, which on a fresh account is **eight of the te
 ### The profile page had no mobile rules at all
 
 A 96px avatar beside a 30px name on a 343px row, and eight section titles with 30px of air
-above each. It is also the longest page in the app — header, Standing, top three, lists,
+above each. It is also the longest page in the app — header, Depth, top three, lists,
 statistics, every rated album and every Lore answer — so the air between sections *is* the
 scrolling. Smaller identity block, tighter rhythm, nothing removed.
 

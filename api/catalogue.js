@@ -74,7 +74,10 @@ async function dz(path) {
 }
 
 // Titles that are not a studio record however Deezer types them.
-const NOT_STUDIO = /\b(live|unplugged|in concert|at the|karaoke|tribute|instrumental|remix(es|ed)?|commentary|demos?|sessions?|b-?sides|rarities|greatest hits|best of|the collection|anthology|box ?set)\b/i;
+// `demos` and `sessions` only count at the END or in brackets — see the note
+// on RE_OTHER in _artists.js. Matching them anywhere dropped "Demos Before
+// Prom" out of a discography with nothing anywhere saying it had.
+const NOT_STUDIO = /\b(live|unplugged|in concert|at the|karaoke|tribute|instrumental|remix(es|ed)?|commentary|b-?sides|rarities|greatest hits|best of|the collection|anthology|box ?set)\b|\((demos?|sessions?)\)|\b(demos?|sessions?)\s*$/i;
 
 const loose = s => String(s || '')
   .normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -161,7 +164,7 @@ async function fullAlbum(id) {
 
 import { cors } from './_cors.js';
 import {
-  pickArtist, classifyRelease, dedupeReleases, countsForCompletion, dedupeArtists,
+  pickArtist, classifyRelease, dedupeReleases, countsForCompletion, dedupeArtists, rankArtists,
 } from './_artists.js';
 
 export default async function handler(req, res) {
@@ -224,11 +227,24 @@ export default async function handler(req, res) {
         out.albums = { items, total: j.total || 0 };
       }
       if (/artist/.test(type)) {
-        const j = await dz('/search/artist?limit=' + limit + '&q=' + encodeURIComponent(term));
+        /* DEEZER RETURNS THESE IN ITS OWN ORDER AND FILES SEVERAL ARTISTS UNDER
+           ONE NAME. Searching "Drake" put four different Drakes above the one
+           everybody meant — the same defect pickArtist exists to stop, on the
+           surface where a person is the one choosing. So the search results go
+           through the SAME dedupe and the SAME ranking: exact normalised name
+           first, then prefix, then substring, and `nb_fan` decides among
+           equals (277,980 against 395 for the two Steve Lacys).
+
+           `keepAll` is the one difference from pickArtist: a resolver may
+           refuse everything, a search box may not. A result that matched
+           nothing sorts to the bottom on fans rather than disappearing. */
+        const j = await dz('/search/artist?limit=' + Math.max(limit, 20) + '&q=' + encodeURIComponent(term));
+        const ranked = rankArtists(j.data || [], term, { keepAll: true });
         out.artists = {
-          items: (j.data || []).map(a => ({
-            id: String(a.id), name: a.name, source: 'deezer',
-            images: [a.picture_xl && { url: a.picture_xl, width: 1000, height: 1000 }].filter(Boolean)
+          items: ranked.slice(0, limit).map(r => ({
+            id: String(r.artist.id), name: r.artist.name, source: 'deezer',
+            fans: r.artist.nb_fan || 0, match: r.how,
+            images: [r.artist.picture_xl && { url: r.artist.picture_xl, width: 1000, height: 1000 }].filter(Boolean)
           })),
           total: j.total || 0
         };

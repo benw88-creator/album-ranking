@@ -3412,7 +3412,7 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
 /* ---- THE PROFILE ON A PHONE ---------------------------------------------
    This page had no mobile rules at all: a 96px avatar next to a 30px name on
    a 343px row, then eight section titles with 30px of air above each. It is
-   also the longest page in the app — header, Standing, top three, lists,
+   also the longest page in the app — header, Depth, top three, lists,
    statistics, every album you have rated and every Lore answer — so the air
    between sections is not a detail, it is most of the scrolling.
 
@@ -3488,6 +3488,8 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
 .song-mini img { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
 .song-mini-name { font-size: 14px; font-weight: 600; }
 .song-mini-artist { font-size: 12px; color: var(--text-dim); }
+.song-mini-name, .song-mini-artist { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reorder-hint { margin-top: 8px; font-size: 11.5px; }
 
 /* Song edit rows */
 .song-edit-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
@@ -5218,7 +5220,7 @@ html[data-motion="none"] .colb-tick { animation: none; transform: rotate(42deg) 
 
 /* The marks are printed, every one of them, earned or not. A ladder whose
    steps you cannot see is a ladder people climb by accident — the same reason
-   Standing prints its rule. */
+   Depth prints its rule. */
 .cert-marklist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; margin-top: 14px;
   border-top: 1px solid var(--border); padding-top: 13px; }
 .cert-mark { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--text-faint); }
@@ -5293,7 +5295,7 @@ html[data-motion="none"] .colb-tick { animation: none; transform: rotate(42deg) 
    Every tile is a number that only goes up, or a personal best. Wider columns
    than before because lifetime Discs runs to seven figures and the favourite
    minigame is a name rather than a numeral. */
-/* Standing — the one block on a profile that argues rather than counts. */
+/* Depth — the one block on a profile that argues rather than counts. */
 .stg-card {
   border: 1px solid var(--border-strong); border-radius: 16px;
   background: linear-gradient(150deg, var(--gold-dim), var(--surface) 62%);
@@ -5331,9 +5333,9 @@ html[data-motion="none"] .colb-tick { animation: none; transform: rotate(42deg) 
   .stg-tier { font-size: 23px; }
   .stg-deep { margin-left: 0; }
 }
-/* Taste match — the same card shape as Standing because they are the same
+/* Taste match — the same card shape as Depth because they are the same
    kind of thing, an argument rather than a count. Cyan rather than gold:
-   Standing is about you and this one is about a pair, and two gold cards
+   Depth is about you and this one is about a pair, and two gold cards
    stacked would read as one block. */
 .tm-card {
   border: 1px solid var(--border-strong); border-radius: 16px;
@@ -5683,7 +5685,7 @@ html[data-motion="none"] .games-grid > .game-card .gc-emoji { animation: none; }
 .stat-level { min-width: 132px; }
 /* A tier name plus "12 deep cuts · 13 to Collector" needs more room than a
    two-digit level did. */
-#stat-standing { min-width: 184px; }
+#stat-depth { min-width: 184px; }
 .lvl-bar {
   height: 4px; border-radius: 3px; background: var(--surface-4);
   overflow: hidden; margin-top: 7px;
@@ -7186,31 +7188,43 @@ button.rw-day {
 
 /* ---- LIST REORDER --------------------------------------------------------
    A list is an ORDER, and it was the order you happened to add things in. */
-.song-edit-row { position: relative; touch-action: pan-y; }
+/* `pan-y` keeps the list scrollable under a finger; the grip is the one place
+   that must not scroll, and `touch-action: none` there is what lets pressing
+   it pick a row up on the first pixel. The user-select rules are on the BODY
+   during a drag rather than on the row, because a long press that highlights
+   the title underneath it reads as the app having done nothing. */
+.song-edit-row, .sort-row { position: relative; touch-action: pan-y; }
+body.is-sorting, body.is-sorting * {
+  -webkit-user-select: none !important; user-select: none !important;
+  -webkit-touch-callout: none;
+}
+.sort-row.dragging, .song-edit-row.dragging {
+  /* Fixed, so it follows the finger past the end of its own container. */
+  z-index: 999; pointer-events: none; opacity: .97;
+  background: var(--surface-3); border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(0,0,0,.6);
+  border: 1px solid var(--gold);
+  padding-left: 10px; padding-right: 10px;
+  transform: scale(1.02);
+}
 .drag-grip {
-  width: 16px; height: 16px; flex-shrink: 0; cursor: grab;
+  /* 22px so it clears the 44px-ish touch floor once the row's padding is
+     counted, and `touch-action: none` so pressing it is a drag and not a
+     scroll. */
+  width: 22px; height: 22px; flex-shrink: 0; cursor: grab;
+  touch-action: none;
   /* Three lines, drawn rather than added to the markup. */
   background:
-    linear-gradient(currentColor, currentColor) center 3px / 12px 1.5px no-repeat,
-    linear-gradient(currentColor, currentColor) center 7.5px / 12px 1.5px no-repeat,
-    linear-gradient(currentColor, currentColor) center 12px / 12px 1.5px no-repeat;
+    linear-gradient(currentColor, currentColor) center 6px / 14px 1.5px no-repeat,
+    linear-gradient(currentColor, currentColor) center 10.5px / 14px 1.5px no-repeat,
+    linear-gradient(currentColor, currentColor) center 15px / 14px 1.5px no-repeat;
   color: var(--text-faint);
-  opacity: .7;
+  opacity: .8;
 }
-.song-edit-row.dragging {
-  position: relative; z-index: 5;
-  background: var(--surface-3);
-  box-shadow: 0 14px 34px rgba(0,0,0,.55);
-  border-color: var(--gold);
-  /* No transition on transform: the row follows a finger, and a 180ms ease on
-     that is a row that lags behind where it is being dragged. */
-  opacity: .96;
-  pointer-events: none;
-}
-.song-edit-row.drop-over { border-color: var(--gold); }
+.drag-grip:active { cursor: grabbing; }
 .drop-ph {
   border: 1px dashed var(--border-strong); border-radius: 10px;
-  margin-bottom: 8px; background: var(--gold-dim);
+  background: var(--gold-dim);
 }
 .list-add-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .list-fill-note { font-size: 12px; color: var(--text-faint); margin-top: 8px; min-height: 16px; }
@@ -7582,7 +7596,15 @@ button.rw-day {
   padding-bottom: var(--fy-floor, 96px);
 }
 
-.fy-loading { padding: 40px 0; text-align: center; color: var(--text-faint); }
+/* Centred in the feed rather than 40px from its top — the tab bar floats over
+   that 40px, so "Finding songs for you…" was printed underneath the
+   segmented control. Same for the empty state, which is the first thing a new
+   account sees. */
+.fy-loading, .fy-feed > .empty {
+  min-height: 100%; display: grid; place-items: center;
+  padding: calc(var(--s5) + 56px) var(--gutter) var(--fy-floor, 96px);
+  text-align: center; color: var(--text-faint);
+}
 
 /* The end of the library. A card rather than a banner, so it takes its turn
    in the snap like everything else instead of appearing under the feed. */
@@ -8662,6 +8684,15 @@ window.ICONS = {
     <div id="people-result" style="margin-bottom:8px;"></div>
     <h3 class="prof-section-title" style="margin-top:24px;">Following</h3>
     <div id="people-following"></div>
+    <!-- REACH lives here rather than in a modal off the account menu. It is
+         about people, this page is about people, and a referral screen behind
+         a menu is a referral screen nobody opens. Named Reach rather than
+         "Invite friends" because what it measures is how far your taste
+         travels — and because a screen called Invite Friends is one everybody
+         has learned to close. -->
+    <h3 class="prof-section-title" style="margin-top:30px;">Reach</h3>
+    <p class="reco-note" style="margin-top:-6px;">Bring somebody in. You both get paid.</p>
+    <div id="reach-body"></div>
   </section>
 
   <!-- ============================ GROOVES ============================ -->
@@ -9153,19 +9184,6 @@ window.ICONS = {
      whose page feels dead because of a system animation preference should not
      have to sign up to fix it. That was the one reason the Shop modal opened
      for guests at all; now it is this modal's job. -->
-<!-- ============================ REACH ============================ -->
-<!-- Referrals. Named Reach rather than "Invite friends" because what it is
-     actually measuring is how far your taste travels — and because a screen
-     called Invite Friends is a screen everybody has learned to close. -->
-<div class="modal" id="reach-modal">
-  <div class="modal-panel" style="max-width:520px;">
-    <button class="modal-close" id="reach-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji" data-icon="people"></span>
-      <div><h2>Reach</h2><p>Bring somebody in. You both get paid.</p></div></div>
-    <div id="reach-body"><p class="reco-note">Loading&hellip;</p></div>
-  </div>
-</div>
-
 <div class="modal" id="settings-modal">
   <div class="modal-panel" style="max-width:520px;">
     <button class="modal-close" id="settings-close" aria-label="Close">&times;</button>
@@ -10260,7 +10278,7 @@ window.findAlbumRec = findAlbumRec; window.findSongRec = findSongRec;
 
    These two were a bare JSON.parse of the whole crate, and there are 31 calls
    to loadAlbums() and 13 to loadSongs() in this file — inside renderStats,
-   Standing, paintUnlocks, the For You context, the Crate's score lookup, the
+   Depth, paintUnlocks, the For You context, the Crate's score lookup, the
    Taste Match, and several of them inside loops. So a single interaction
    re-parsed the same 124KB of JSON dozens of times.
 
@@ -10308,7 +10326,7 @@ function persist(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)
    what you played and every rating site knows what you think today; only this
    one can know that you gave Blonde an 82 in March and a 94 in September. That
    is a fact about *you*, it can only be earned by time, and it is what the
-   Second Thoughts card, the movement line on a record and the Standing ladder
+   Second Thoughts card, the movement line on a record and the Depth ladder
    are all reading from.
 
    One entry per distinct score, oldest first, current score last — so [0] is
@@ -10442,7 +10460,13 @@ function saveSong(track, score, albumMeta) {
       date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     };
     if (window.Cloud) Cloud.syncRating('song', key, songs[key]);
-    if (window.Wallet) Wallet.recordRating();
+    /* Paid for a NEW rating, never for changing one. For You lets a score be
+       moved as often as you like — which is the point of it — and paying each
+       time would make dragging one slider back and forth a Disc faucet. The
+       server's 10-a-day cap bounded it, but a cap is the anti-forgery defence
+       and not the rule; the rule is that the reward is for having an opinion
+       about a record, and you only have a first one once. */
+    if (window.Wallet && !found) Wallet.recordRating();
   }
   persist(SONGS_KEY, songs);
   _recsDirty = true;
@@ -10455,7 +10479,7 @@ window.removeAlbum = removeAlbum;
 window.removeSong = removeSong;
 
 /* ================================================================
-   STANDING — progression that measures depth instead of activity.
+   DEPTH — progression that measures depth instead of activity.
 
    Level is lifetime Discs, which means it measures how much of the app you
    have used. That is a fair thing to count and a poor thing to lead with: it
@@ -10563,7 +10587,13 @@ window.removeSong = removeSong;
     };
   }
 
-  window.Standing = { get: compute, tiers: TIERS };
+  /* Named DEPTH, and it was called Standing. A standing is a position in a
+     league — it implies other people and a table to be above them in, and
+     this number is private, local and shown on nobody else's profile. What it
+     actually measures is how deep your relationship with a record goes, and
+     its unit has always been the DEEP CUT. Depth is the same word as the unit
+     and it is the honest one. */
+  window.Depth = { get: compute, tiers: TIERS };
 })();
 
 /* ================================================================
@@ -12011,17 +12041,17 @@ function renderStats(){
       '<div class="stat stat-wallet" id="stat-worth" title="What your Collection is worth">' +
         '<div class="s-label">◈ Net worth</div>' +
         '<div class="s-val">'+(nw==null?'&mdash;':nw.toLocaleString('en-GB'))+'</div></div>';
-    /* Standing, not Level. Level is lifetime Discs — it measures how much of
+    /* Depth, not Level. Level is lifetime Discs — it measures how much of
        the app you have used, which rises fastest for somebody grinding
        minigames and barely moves for somebody quietly building a serious
-       crate. Standing counts records you have done more than score. Level is
+       crate. Depth counts records you have done more than score. Level is
        still on the profile as a statistic; this is what leads, because the
        number in the widest tile on the home page is the app saying what it
        thinks is worth doing. */
-    const st=window.Standing?Standing.get():null;
+    const st=window.Depth?Depth.get():null;
     walletTiles+=
-      (st?'<div class="stat stat-wallet stat-level" id="stat-standing" title="'+(st.top?'Top standing':(st.need+' more deep cuts to '+st.next))+'">'+
-        '<div class="s-label">◈ Standing</div><div class="s-val s-val-word">'+esc(st.tier)+'</div>'+
+      (st?'<div class="stat stat-wallet stat-level" id="stat-depth" title="'+(st.top?'As deep as it goes':(st.need+' more deep cuts to '+st.next))+'">'+
+        '<div class="s-label">◈ Depth</div><div class="s-val s-val-word">'+esc(st.tier)+'</div>'+
         '<div class="lvl-bar"><i style="width:'+st.pct+'%"></i></div>'+
         '<div class="lvl-sub">'+(st.top?st.deep+' deep cuts':(st.deep+' deep cuts · '+st.need+' to '+esc(st.next)))+'</div></div>':'')+
       '<div class="stat stat-wallet" id="stat-streak"><div class="s-label">\u{1F525} Streak</div><div class="s-val">'+(w.streak_current||0)+'</div></div>'+
@@ -12550,7 +12580,12 @@ function _artistKey(n){
     .toLowerCase().replace(/^the\s+/,'').replace(/[^a-z0-9]+/g,'');
 }
 function baseAlbumTitle(name){return String(name||'').toLowerCase().replace(/\(.*?\)|\[.*?\]/g,' ').replace(/\b(deluxe|edition|remaster(ed)?|expanded|version|explicit|anniversary|reissue|mono|stereo|bonus|special|the)\b/g,' ').replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');}
-function isNonStudio(name){const n=String(name||'').toLowerCase();return/\b(live|unplugged|in concert|tour|remix(es|ed)?|reimagined|instrumental(s)?|a ?cappella|karaoke|commentary|demos?|sessions?|b-sides|rarities|greatest hits|best of|collection|anthology|compilation|soundtrack|score|mixtape|sped.?up|slowed|nightcore|chopped (and|&|n) screwed|8d audio)\b/.test(n);}
+/* `demos` and `sessions` only count at the END of a title or inside brackets.
+   Matching them anywhere is what dropped Malcolm Todd's "Demos Before Prom"
+   out of his Completionist — the record simply was not in the list and nothing
+   anywhere said why. Mirrors NOT_STUDIO in api/catalogue.js and RE_OTHER in
+   api/_artists.js; change one and you must change all three. */
+function isNonStudio(name){const n=String(name||'').toLowerCase();return/\b(live|unplugged|in concert|tour|remix(es|ed)?|reimagined|instrumental(s)?|a ?cappella|karaoke|commentary|b-sides|rarities|greatest hits|best of|collection|anthology|compilation|soundtrack|score|mixtape|sped.?up|slowed|nightcore|chopped (and|&|n) screwed|8d audio)\b|\((demos?|sessions?)\)|\b(demos?|sessions?)\s*$/.test(n);}
 const _studioMem={};
 async function fetchStudioAlbums(artistId,urgent,artistName){
   if(_studioMem[artistId])return _studioMem[artistId];
@@ -13742,7 +13777,7 @@ const Cloud=(function(){
           '<button class="acct-menu-item" id="acct-activity">'+ICONS.stopwatch+' Recent activity</button>'+
           '<button class="acct-menu-item" data-go="people">'+ICONS.people+' People</button>'+
           '<button class="acct-menu-item" data-go="grooves">'+ICONS.groove+' Grooves</button>'+
-          '<button class="acct-menu-item" id="acct-reach">'+ICONS.share+' Reach</button>'+
+
           '<button class="acct-menu-item" id="acct-settings">\u2699 Settings</button>'+
           '<button class="acct-menu-item" id="acct-logout">\u21B3 Log out</button>'+
         '</div>';
@@ -13758,12 +13793,6 @@ const Cloud=(function(){
     if(avb)avb.addEventListener('click',function(e){e.stopPropagation();document.getElementById('acct-menu').classList.toggle('open');});
     acct.querySelectorAll('.acct-menu-item[data-go]').forEach(function(b){b.addEventListener('click',function(){document.getElementById('acct-menu').classList.remove('open');if(location.search.indexOf('u=')!==-1)history.replaceState(null,'',location.pathname);window.goToView(b.dataset.go);});});
     const lg=document.getElementById('acct-logout');if(lg)lg.addEventListener('click',logout);
-    const rch=document.getElementById('acct-reach');
-    if(rch)rch.addEventListener('click',function(e){
-      e.stopPropagation();
-      const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');
-      if(window.openReach)openReach();
-    });
     const stg=document.getElementById('acct-settings');
     if(stg)stg.addEventListener('click',function(e){
       e.stopPropagation();
@@ -14706,7 +14735,17 @@ async function drawProfile(host,prof,isOwner){
 
   function albumSlot(t,i){if(t)return'<div class="top3-slot" data-slot="'+i+'"><img src="'+esc(t.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div class="rank">#'+(i+1)+'</div></div>';return'<div class="top3-slot" data-slot="'+i+'">'+(isOwner?'+ pick #'+(i+1):'\u2014')+'</div>';}
   const slots=[0,1,2].map(function(i){return albumSlot(top3[i],i);}).join('');
-  function songRows(arr,emptyMsg){if(!arr.length)return'<div class="reco-note">'+emptyMsg+'</div>';return'<div class="song-mini-list">'+arr.map(function(s,i){return'<div class="song-mini"><span class="song-mini-rank">'+(i+1)+'</span><img src="'+esc(s.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div><div class="song-mini-name">'+esc(s.name)+'</div><div class="song-mini-artist">'+esc(s.artist||'')+'</div></div></div>';}).join('')+'</div>';}
+  /* A LIST IS AN ORDER, and these two were the only ones you could not put in
+     one. Reordering happens HERE rather than in the edit modal: the order is
+     the whole content of a Top 5, and making somebody open a settings sheet to
+     move their number four to number one is why nobody ever did. Owner only —
+     a grip on somebody else's list is a control that cannot do anything. */
+  function songItems(arr,own){return arr.map(function(s,i){return'<div class="song-mini'+(own?' sort-row':'')+'" data-i="'+i+'">'+
+    (own?'<span class="drag-grip" aria-hidden="true"></span>':'')+
+    '<span class="song-mini-rank">'+(i+1)+'</span><img src="'+esc(s.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div style="min-width:0;"><div class="song-mini-name">'+esc(s.name)+'</div><div class="song-mini-artist">'+esc(s.artist||'')+'</div></div></div>';}).join('');}
+  function songRows(arr,emptyMsg,id,own){if(!arr.length)return'<div class="reco-note">'+emptyMsg+'</div>';
+    return'<div class="song-mini-list"'+(id?' id="'+id+'"':'')+'>'+songItems(arr,own)+'</div>'+
+      (own&&arr.length>1?'<div class="reco-note reorder-hint">Drag the handle, or press and hold a row, to reorder.</div>':'');}
   /* Everything this person has actually done, in one block.
 
      The header used to carry four numbers — followers, following, albums,
@@ -14772,7 +14811,7 @@ async function drawProfile(host,prof,isOwner){
          ..._20260921140000: it is every Disc earned PLUS 1,200 an album, 300
          a song, 400 a completed game and 2,000 an active day. A number that
          measures something non-obvious has to say what, the same reason the
-         Standing block prints its rule — a ladder whose steps you cannot see
+         Depth block prints its rule — a ladder whose steps you cannot see
          is one people climb by accident. */
       {v:prof.level||1,           k:'Level',          hot:(prof.level||1)>=50,
        tip:'Albums and songs ranked, games finished, days active, and every Disc earned.'}
@@ -14794,14 +14833,14 @@ async function drawProfile(host,prof,isOwner){
       tiles.push({v:compDone,k:'Completionist',hot:compDone>=3});
       tiles.push({v:lists.length,k:'Lists',hot:lists.length>=5});
     }
-    /* Standing sits above Statistics because it is the one thing on this page
+    /* Depth sits above Statistics because it is the one thing on this page
        that is an argument rather than a count: it says what the app thinks is
        worth doing, and prints the rule so nobody has to guess at it. Owner
        only — it reads local ratings, so there is nothing to show on somebody
        else's profile and inventing a number there would be worse than a gap. */
-    var stg = (isOwner && window.Standing) ? Standing.get() : null;
+    var stg = (isOwner && window.Depth) ? Depth.get() : null;
     if (stg) {
-      doneHtml+='<div class="prof-section-title" style="margin-top:26px;">Standing</div>'+
+      doneHtml+='<div class="prof-section-title" style="margin-top:26px;">Depth</div>'+
         '<div class="stg-card">'+
           '<div class="stg-top"><div class="stg-tier">'+esc(stg.tier)+'</div>'+
             '<div class="stg-deep"><b>'+stg.deep+'</b> deep cuts</div></div>'+
@@ -14911,8 +14950,8 @@ async function drawProfile(host,prof,isOwner){
     tasteMatchHtml(taste,prof.username||'they')+
     '<div class="prof-section-title">Top 3 albums</div>'+
     '<div class="top3" id="prof-top3">'+slots+'</div>'+
-    ((topNow.length||isOwner)?'<div class="prof-section-title">Top 5 songs right now</div>'+songRows(topNow,isOwner?'Pick your current rotation in Edit profile.':'Nothing here yet.'):'')+
-    ((topAll.length||isOwner)?'<div class="prof-section-title">Top 10 songs of all time</div>'+songRows(topAll,isOwner?'Set your all-timers in Edit profile.':'Nothing here yet.'):'')+
+    ((topNow.length||isOwner)?'<div class="prof-section-title">Top 5 songs right now</div>'+songRows(topNow,isOwner?'Pick your current rotation in Edit profile.':'Nothing here yet.','prof-songs-now',isOwner):'')+
+    ((topAll.length||isOwner)?'<div class="prof-section-title">Top 10 songs of all time</div>'+songRows(topAll,isOwner?'Set your all-timers in Edit profile.':'Nothing here yet.','prof-songs-all',isOwner):'')+
     listsHtml+
     (!isOwner?'<div class="prof-section-title">'+esc(prof.username)+'\u2019s ranked albums</div>'+
       (nAlbums?'<div class="grid" id="prof-rankings"></div>':
@@ -14943,6 +14982,33 @@ async function drawProfile(host,prof,isOwner){
   host.querySelectorAll('.list-card').forEach(function(el){el.addEventListener('click',function(){const l=lists.find(function(x){return x.id===el.dataset.list;});if(l)openListView(l,isOwner);});});
 
   if(isOwner){
+    /* The saved order is the real one. Nothing here is "visually reordered":
+       the array is spliced, the rows are redrawn from it, and the column goes
+       up in the same gesture — so leaving the page, closing the app or opening
+       it on another device all read back what was dropped. A failed save puts
+       the row back rather than leaving a lie on the screen. */
+    [['prof-songs-now','top_songs_now',topNow],['prof-songs-all','top_songs_all',topAll]]
+      .forEach(function(spec){
+        const h=document.getElementById(spec[0]);
+        if(!h)return;
+        makeSortable(h,{onDrop:async function(f,t){
+          const arr=spec[2];
+          if(f!==t&&f>=0&&t>=0){const it=arr.splice(f,1)[0];arr.splice(t,0,it);}
+          h.innerHTML=songItems(arr,true);
+          if(f===t)return;
+          const before=arr.slice();
+          const patch={};patch[spec[1]]=arr.slice();
+          const res=await Cloud.saveProfile(patch);
+          if(res&&res.error){
+            // Put it back. A list that looks reordered and is not is worse
+            // than one that refused to move.
+            const it=arr.splice(t,1)[0];arr.splice(f,0,it);
+            h.innerHTML=songItems(arr,true);
+            if(window.toast)toast('Could not save that order');
+            else console.error('order not saved:',res.error,before);
+          }
+        }});
+      });
     document.getElementById('prof-edit').addEventListener('click',openProfileEdit);
     document.getElementById('prof-share').addEventListener('click',function(){handOff(document.getElementById('prof-share'),{url:shareUrl,text:'My crate on VINALL',copied:'Copied!'});});
     host.querySelectorAll('.top3-slot').forEach(function(el){el.addEventListener('click',openProfileEdit);});
@@ -15043,6 +15109,10 @@ let _peopleTimer=null;
 async function renderPeople(){
   const me=Cloud.getUser&&Cloud.getUser();
   const fhost=document.getElementById('people-following');
+  // Reach is a section of this page. Painted first and unconditionally: it
+  // says "log in to get your code" for a guest, which is a real answer, and
+  // the following list below it is allowed to be slow without holding it up.
+  if(window.Reach)try{Reach.render();}catch(e){}
   if(!me){document.getElementById('people-result').innerHTML='<div class="reco-note">Log in to follow people.</div>';fhost.innerHTML='';return;}
   fhost.innerHTML='<p class="reco-note">Loading\u2026</p>';
   await loadBlocks();
@@ -15178,11 +15248,18 @@ function drawEditSongs(){drawSongEditor('songsNow','pedit-songs-now',5);drawSong
 function drawSongEditor(key,hostId,max){
   const host=document.getElementById(hostId);if(!host)return;
   const arr=_profileEditing[key];
-  let html=arr.map(function(s,i){return'<div class="song-edit-row"><span class="song-mini-rank">'+(i+1)+'</span><img src="'+esc(s.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div style="flex:1;"><div class="song-mini-name">'+esc(s.name)+'</div><div class="song-mini-artist">'+esc(s.artist||'')+'</div></div><button class="rm-row" data-rm="'+i+'">&times;</button></div>';}).join('');
+  let html=arr.map(function(s,i){return'<div class="song-edit-row sort-row" data-i="'+i+'"><span class="drag-grip" aria-hidden="true"></span><span class="song-mini-rank">'+(i+1)+'</span><img src="'+esc(s.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div style="flex:1;min-width:0;"><div class="song-mini-name">'+esc(s.name)+'</div><div class="song-mini-artist">'+esc(s.artist||'')+'</div></div><button class="rm-row" data-rm="'+i+'">&times;</button></div>';}).join('');
   if(arr.length<max)html+='<button class="btn-mini song-add" data-add="1" style="margin-top:6px;">+ Add song</button>';
   host.innerHTML=html;
   host.querySelectorAll('[data-rm]').forEach(function(b){b.addEventListener('click',function(){arr.splice(+b.dataset.rm,1);drawSongEditor(key,hostId,max);});});
   const add=host.querySelector('[data-add]');if(add)add.addEventListener('click',function(){openPicker('song',function(item){arr.push(item);drawSongEditor(key,hostId,max);});});
+  // Same reorder as everywhere else. Reads _profileEditing[key] rather than
+  // the `arr` in scope: the host is wired once and outlives the array.
+  makeSortable(host,{onDrop:function(f,t){
+    const a=_profileEditing&&_profileEditing[key];
+    if(a&&f!==t&&f>=0&&t>=0){const it=a.splice(f,1)[0];a.splice(t,0,it);}
+    drawSongEditor(key,hostId,max);
+  }});
 }
 
 let _pickerCb=null,_pickerKind='album',_pickerTimer=null;
@@ -15471,7 +15548,7 @@ function drawListItems(){
   const host=document.getElementById('list-items');
   const arr=_listEditing.items;
   let html=arr.map(function(it,i){
-    return'<div class="song-edit-row" draggable="true" data-i="'+i+'">'+
+    return'<div class="song-edit-row sort-row" data-i="'+i+'">'+
       '<span class="drag-grip" aria-hidden="true"></span>'+
       '<span class="song-mini-rank">'+(i+1)+'</span>'+
       '<img src="'+esc(it.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
@@ -15491,129 +15568,196 @@ function drawListItems(){
     openPicker(_listEditing.kind,function(item){arr.push(item);drawListItems();});
   });
   host.querySelector('[data-fill]').addEventListener('click',fillListFromArtist);
-  wireListReorder(host,arr);
+  /* Reads _listEditing.items rather than the `arr` in scope: makeSortable
+     wires the host ONCE and the host outlives the list, so a closure over the
+     array would reorder the previous list after this one was opened. */
+  makeSortable(host,{onDrop:function(f,t){
+    const a=_listEditing&&_listEditing.items;
+    if(a&&f!==t&&f>=0&&t>=0){const it=a.splice(f,1)[0];a.splice(t,0,it);}
+    drawListItems();
+  }});
 }
 
-function wireListReorder(host,arr){
-  let held=null, timer=null, startY=0, from=-1, ph=null;
+/* ---- ONE SORTABLE, USED EVERYWHERE ---------------------------------------
+   The old reorder was three mechanisms fighting each other — a hold timer on
+   pointer events, `draggable="true"` HTML5 drag on every row, and
+   `touch-action: pan-y` — and on a phone none of the three won. What actually
+   happened:
 
-  function rows(){return Array.prototype.slice.call(host.querySelectorAll('.song-edit-row'));}
+     * NO POINTER CAPTURE. `pointermove` was bound to the host, and the row
+       being dragged is `pointer-events: none`, so the moment the finger left
+       the host's box the events stopped arriving and the row froze mid-air.
+     * THE BROWSER TOOK THE GESTURE. `touch-action: pan-y` tells the compositor
+       a vertical drag is a scroll, so as soon as the finger moved the browser
+       claimed it, fired `pointercancel`, and the drag died — leaving the
+       placeholder behind. Several dead placeholders stacked up is exactly the
+       column of empty dashed boxes in the bug report.
+     * HTML5 DRAG on top of that, which on touch fires a long-press selection
+       instead.
 
-  function begin(row,y){
-    from=+row.dataset.i;
-    held=row;
-    startY=y;
-    row.classList.add('dragging');
-    // A placeholder of the row's own height, so nothing below it jumps when
-    // the row leaves the flow.
-    ph=document.createElement('div');
-    ph.className='drop-ph';
-    ph.style.height=row.getBoundingClientRect().height+'px';
-    row.parentNode.insertBefore(ph,row);
-    row.style.width=row.getBoundingClientRect().width+'px';
-    if(window.buzz)buzz('tap');
+   So: ONE mechanism. Pointer events with `setPointerCapture`, a non-passive
+   `touchmove` that calls preventDefault while a drag is live (the browser has
+   not started scrolling yet, because the drag only begins from a finger that
+   held still), and the grip carrying `touch-action: none` so pressing it picks
+   the row up immediately — which is what a mouse expects and what every
+   reorder list on a phone does.
+
+   Two ways in, deliberately: the GRIP is instant, and a 300ms HOLD anywhere on
+   the row also works. A hold that fires on touch-down cannot be scrolled past;
+   8px of movement before it elapses cancels it, because that was a scroll.
+
+   The drop index is read off the DOM at the end rather than tracked in a
+   variable — the DOM is what the person was looking at. */
+function makeSortable(host, opts) {
+  if (!host || host._sortable) return;
+  host._sortable = true;
+  opts = opts || {};
+  var ROW = opts.rowSel || '.sort-row';
+  var IGNORE = opts.ignoreSel || 'button,a,input,select,textarea';
+  var HOLD = opts.hold || 300;
+
+  var held = null, ph = null, timer = null, pid = null;
+  var startY = 0, baseTop = 0, from = -1, scrollEl = null, autoT = null;
+  /* THE CONTAINING BLOCK, MEASURED. `position: fixed` resolves against the
+     viewport — unless an ancestor has a transform, filter or perspective, and
+     then it resolves against THAT. The list editor is a bottom sheet and the
+     sheet is transformed, so the lifted row sat ~180px below the finger while
+     the placeholder tracked it correctly. Rather than hunting for the ancestor
+     or reaching for a different positioning scheme, the row is placed, asked
+     where it actually landed, and corrected by the difference — which is right
+     whatever the ancestor turns out to be. */
+  var fixX = 0, fixY = 0;
+
+  function rows() {
+    return Array.prototype.slice.call(host.querySelectorAll(ROW));
+  }
+  function scrollParent(n) {
+    for (var e = n && n.parentNode; e && e !== document.body; e = e.parentNode) {
+      if (e.scrollHeight > e.clientHeight + 4) {
+        var ov = getComputedStyle(e).overflowY;
+        if (ov === 'auto' || ov === 'scroll') return e;
+      }
+    }
+    return null;
   }
 
-  function moveTo(y){
-    if(!held)return;
-    held.style.transform='translateY('+(y-startY)+'px)';
-    // Against each row's MIDPOINT rather than against what is under the
+  function begin(row, y, ev) {
+    var r = row.getBoundingClientRect();
+    from = rows().indexOf(row);
+    held = row; startY = y; baseTop = r.top;
+    scrollEl = scrollParent(row);
+    ph = document.createElement('div');
+    ph.className = 'drop-ph';
+    ph.style.height = r.height + 'px';
+    row.parentNode.insertBefore(ph, row);
+    row.classList.add('dragging');
+    row.style.position = 'fixed';
+    row.style.left = r.left + 'px';
+    row.style.top = r.top + 'px';
+    row.style.width = r.width + 'px';
+    row.style.margin = '0';
+    var landed = row.getBoundingClientRect();
+    fixX = r.left - landed.left; fixY = r.top - landed.top;
+    if (fixX) row.style.left = (r.left + fixX) + 'px';
+    if (fixY) row.style.top = (r.top + fixY) + 'px';
+    document.body.classList.add('is-sorting');
+    try { if (ev && ev.pointerId != null) { host.setPointerCapture(ev.pointerId); pid = ev.pointerId; } } catch (e) {}
+    if (window.buzz) buzz('tap');
+  }
+
+  function moveTo(y) {
+    if (!held) return;
+    held.style.top = (baseTop + fixY + (y - startY)) + 'px';
+    // Against each remaining row's MIDPOINT, not against what is under the
     // pointer: the row being dragged is under the pointer the whole time.
-    const others=rows().filter(function(r){return r!==held;});
-    let target=null;
-    for(let i=0;i<others.length;i++){
-      const b=others[i].getBoundingClientRect();
-      if(y<b.top+b.height/2){target=others[i];break;}
+    var others = rows().filter(function (r) { return r !== held; });
+    var target = null;
+    for (var i = 0; i < others.length; i++) {
+      var b = others[i].getBoundingClientRect();
+      if (y < b.top + b.height / 2) { target = others[i]; break; }
     }
-    if(target)host.insertBefore(ph,target);
-    else host.insertBefore(ph,host.querySelector('.list-add-row'));
+    if (target) { if (ph.nextSibling !== target || ph.parentNode !== target.parentNode) target.parentNode.insertBefore(ph, target); }
+    else if (others.length) { var last = others[others.length - 1]; if (last.nextSibling !== ph) last.parentNode.insertBefore(ph, last.nextSibling); }
+    autoScroll(y);
   }
 
-  function finish(){
-    clearTimeout(timer);timer=null;
-    if(!held){return;}
-    const order=rows().filter(function(r){return r!==held;});
-    // Where the placeholder ended up among the rows that did not move is the
-    // new index. Computed from the DOM rather than tracked in a variable,
-    // because the DOM is what the person was looking at.
-    let to=0;
-    const kids=Array.prototype.slice.call(host.children);
-    to=kids.filter(function(n){return n.classList.contains('song-edit-row')&&n!==held;})
-           .findIndex(function(n){return n.compareDocumentPosition(ph)&Node.DOCUMENT_POSITION_PRECEDING;});
-    if(to<0)to=order.length;
-    held.classList.remove('dragging');
-    held.style.transform='';held.style.width='';
-    if(ph&&ph.parentNode)ph.parentNode.removeChild(ph);
-    held=null;ph=null;
-    if(from>=0&&to>=0&&to!==from){
-      const it=arr.splice(from,1)[0];
-      arr.splice(to,0,it);
-      if(window.buzz)buzz('good');
-    }
-    from=-1;
-    drawListItems();
+  /* Without this a ten-item list cannot be reordered on a phone at all: the
+     bottom row has nowhere to go because the top of the list is off screen. */
+  function autoScroll(y) {
+    var box = scrollEl ? scrollEl.getBoundingClientRect()
+                       : { top: 0, bottom: window.innerHeight };
+    var EDGE = 64, step = 0;
+    if (y < box.top + EDGE) step = -Math.ceil((box.top + EDGE - y) / 6);
+    else if (y > box.bottom - EDGE) step = Math.ceil((y - (box.bottom - EDGE)) / 6);
+    clearInterval(autoT); autoT = null;
+    if (!step) return;
+    autoT = setInterval(function () {
+      if (!held) { clearInterval(autoT); autoT = null; return; }
+      if (scrollEl) scrollEl.scrollTop += step; else window.scrollBy(0, step);
+      moveTo(y);
+    }, 16);
   }
 
-  host.addEventListener('pointerdown',function(e){
-    const row=e.target.closest&&e.target.closest('.song-edit-row');
-    if(!row||e.target.closest('.rm-row'))return;
-    const y=e.clientY;
-    startY=y;
+  function finish() {
+    clearTimeout(timer); timer = null;
+    clearInterval(autoT); autoT = null;
+    document.body.classList.remove('is-sorting');
+    if (!held) return;
+    var row = held;
+    // Where the placeholder ended up among the rows that did not move.
+    var seq = Array.prototype.slice.call(ph.parentNode.children)
+      .filter(function (n) { return n === ph || (n !== row && n.matches && n.matches(ROW)); });
+    var to = seq.indexOf(ph);
+    try { if (pid != null) host.releasePointerCapture(pid); } catch (e) {}
+    pid = null;
+    row.classList.remove('dragging');
+    row.style.position = ''; row.style.left = ''; row.style.top = '';
+    row.style.width = ''; row.style.margin = '';
+    if (ph.parentNode) ph.parentNode.removeChild(ph);
+    held = null; ph = null;
+    var f = from; from = -1;
+    if (f >= 0 && to >= 0 && to !== f) {
+      if (window.buzz) buzz('good');
+      if (opts.onDrop) opts.onDrop(f, to);
+    } else if (opts.onDrop) {
+      opts.onDrop(f, f);      // still re-renders, so nothing is left mid-drag
+    }
+  }
+
+  host.addEventListener('pointerdown', function (e) {
+    if (held || e.button) return;
+    var row = e.target.closest && e.target.closest(ROW);
+    if (!row || !host.contains(row)) return;
+    if (e.target.closest(IGNORE)) return;
+    var y = e.clientY;
+    var grip = e.target.closest('.drag-grip');
+    if (grip) { e.preventDefault(); begin(row, y, e); return; }
     clearTimeout(timer);
-    timer=setTimeout(function(){begin(row,y);},260);
-    function cancelOnScroll(ev){
-      if(!held&&Math.abs(ev.clientY-y)>8){clearTimeout(timer);timer=null;
-        window.removeEventListener('pointermove',cancelOnScroll);}
+    timer = setTimeout(function () { if (!held) begin(row, y, e); }, HOLD);
+    function cancel(ev) {
+      if (held) return;
+      if (!ev || Math.abs(ev.clientY - y) > 8) { clearTimeout(timer); timer = null; off(); }
     }
-    window.addEventListener('pointermove',cancelOnScroll);
-    function up(){
-      clearTimeout(timer);timer=null;
-      window.removeEventListener('pointermove',cancelOnScroll);
-      window.removeEventListener('pointerup',up);
+    function off() {
+      window.removeEventListener('pointermove', cancel);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     }
-    window.addEventListener('pointerup',up);
+    function up() { clearTimeout(timer); timer = null; off(); }
+    window.addEventListener('pointermove', cancel);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   });
-  host.addEventListener('pointermove',function(e){
-    if(!held)return;
-    e.preventDefault();
-    moveTo(e.clientY);
-  });
-  window.addEventListener('pointerup',function(){if(held)finish();});
-  window.addEventListener('pointercancel',function(){if(held)finish();});
-
-  /* Desktop keeps native HTML5 drag as well as the hold: a mouse expects to
-     pick a row up immediately and waiting 260ms for it feels broken. */
-  host.addEventListener('dragstart',function(e){
-    const row=e.target.closest&&e.target.closest('.song-edit-row');
-    if(!row)return;
-    from=+row.dataset.i;
-    row.classList.add('dragging');
-    try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(from));}catch(err){}
-  });
-  host.addEventListener('dragover',function(e){
-    if(from<0)return;
-    e.preventDefault();
-    const row=e.target.closest&&e.target.closest('.song-edit-row');
-    host.querySelectorAll('.drop-over').forEach(function(n){n.classList.remove('drop-over');});
-    if(row&&+row.dataset.i!==from)row.classList.add('drop-over');
-  });
-  host.addEventListener('drop',function(e){
-    if(from<0)return;
-    e.preventDefault();
-    const row=e.target.closest&&e.target.closest('.song-edit-row');
-    host.querySelectorAll('.drop-over').forEach(function(n){n.classList.remove('drop-over');});
-    if(row){
-      const to=+row.dataset.i;
-      if(to!==from){const it=arr.splice(from,1)[0];arr.splice(to,0,it);if(window.buzz)buzz('good');}
-    }
-    from=-1;
-    drawListItems();
-  });
-  host.addEventListener('dragend',function(){
-    host.querySelectorAll('.dragging,.drop-over').forEach(function(n){n.classList.remove('dragging','drop-over');});
-    from=-1;
-  });
+  host.addEventListener('pointermove', function (e) { if (held) { e.preventDefault(); moveTo(e.clientY); } });
+  host.addEventListener('pointerup', function () { if (held) finish(); });
+  host.addEventListener('pointercancel', function () { if (held) finish(); });
+  window.addEventListener('pointerup', function () { if (held) finish(); });
+  /* The one line that stops the browser scrolling the page out from under a
+     live drag. Non-passive, or preventDefault is ignored. */
+  host.addEventListener('touchmove', function (e) { if (held) e.preventDefault(); }, { passive: false });
+  host.addEventListener('contextmenu', function (e) { if (held) e.preventDefault(); });
 }
+window.makeSortable = makeSortable;
 
 /* ---- FILL FROM AN ARTIST -------------------------------------------------
    "All Drake albums" as one tap, because typing a discography in one at a time
@@ -24207,7 +24351,7 @@ window.renderAdminStats = renderAdminStats;
      Flattened by ..._20260915140000_flatten_login_ladder.sql, from
      1,000 doubling to 32,000. The doubling meant day six alone paid more than
      maxing every game in the app pays in a day, which put this ladder in
-     direct opposition to Standing: one measures how deep you have gone and the
+     direct opposition to Depth: one measures how deep you have gone and the
      other paid best for opening the app and closing it.
 
      Day seven pays no Discs. The record is the reward, it is worth more than
@@ -26584,12 +26728,21 @@ window.renderAdminStats = renderAdminStats;
   function stats(session) {
     var got = session.rounds.filter(function (r) { return r.correct; });
     var secs = got.reduce(function (a, r) { return a + r.seconds; }, 0);
-    var tries = session.rounds.reduce(function (a, r) { return a + r.attempts; }, 0);
+    /* ACCURACY IS CORRECT OUT OF PLAYED, and it was correct out of GUESSES
+       TYPED. A skipped round records no attempt, so a run of four songs where
+       two were skipped and two were named on the first try printed "Songs 2 of
+       4" and "Accuracy 100%" on the same card — two numbers about the same run
+       that could not both be true.
+
+       Straight off the round list, so it can only ever say what happened, and
+       so 7 of 10 is exactly 70 rather than a rounding of a ratio of two other
+       numbers. */
     return {
       songs: session.correct, played: session.played, score: session.score,
       bestStreak: session.bestStreak,
+      guesses: session.rounds.reduce(function (a, r) { return a + r.attempts; }, 0),
       avgReveal: got.length ? (secs / got.length) : 0,
-      accuracy: tries ? Math.round(session.correct / tries * 100) : 0
+      accuracy: session.played ? Math.round(session.correct / session.played * 100) : 0
     };
   }
 
@@ -27020,7 +27173,10 @@ window.renderAdminStats = renderAdminStats;
     el('recall-summary').innerHTML =
       row('Songs', st.songs + ' of ' + st.played) +
       row('Longest streak', String(st.bestStreak)) +
-      row('Average reveal', st.avgReveal ? st.avgReveal.toFixed(1) + 's' : '—') +
+      // The label says which rounds the average covers — a figure taken from
+      // the hits, printed under "2 of 4", otherwise reads as the whole run.
+      row(st.songs < st.played ? 'Average reveal when right' : 'Average reveal',
+          st.avgReveal ? st.avgReveal.toFixed(1) + 's' : '—') +
       row('Accuracy', st.accuracy + '%') +
       row('Best', n(Math.max(Recall.best('endless'), st.score)) + (isBest ? ' · new' : ''));
     var sub = el('recall-over-note');
@@ -29815,8 +29971,11 @@ window.track = function (name, props) {
     prg.addEventListener('pointercancel', function () { dragging = false; prg.classList.remove('drag'); });
   }
   function seekTo(f) { var a = audio(); if (a.duration && isFinite(a.duration)) { a.currentTime = f * a.duration; paintProgress(); } }
-  function show() { build(); bar.hidden = false; void bar.offsetWidth; bar.classList.add('up'); }
-  function hide() { if (!bar) return; bar.classList.remove('up'); setTimeout(function () { if (bar && !cur) bar.hidden = true; }, 240); }
+  /* The For You feed measures what it has to clear at the bottom, and this bar
+     appearing or leaving changes that number — nothing else tells it. */
+  function refitFeed() { try { if (window.ForYou && ForYou.refit) ForYou.refit(); } catch (e) {} }
+  function show() { build(); bar.hidden = false; void bar.offsetWidth; bar.classList.add('up'); refitFeed(); }
+  function hide() { if (!bar) return; bar.classList.remove('up'); setTimeout(function () { if (bar && !cur) bar.hidden = true; refitFeed(); }, 240); }
   function mmss(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
 
   function paint() {
@@ -30294,19 +30453,10 @@ window.track = function (name, props) {
     });
   }
 
-  function open() {
-    var m = el('reach-modal');
-    if (!m) return;
-    m.classList.add('open');
-    render();
-  }
-  function close() { var m = el('reach-modal'); if (m) m.classList.remove('open'); }
-
-  document.addEventListener('DOMContentLoaded', function () {
-    var c = el('reach-close'); if (c) c.addEventListener('click', close);
-    var m = el('reach-modal');
-    if (m) m.addEventListener('click', function (e) { if (e.target === m) close(); });
-  });
+  /* Reach is a section of the People page now, not a modal. `open` survives
+     as the way anything else in the app asks for it — it goes to the page.
+     renderPeople() does the render, so this cannot draw into a hidden view. */
+  function open() { if (window.goToView) goToView('people'); }
 
   capture();
 
@@ -30403,10 +30553,6 @@ window.track = function (name, props) {
     { pool: 'shortlist', n: 1 },
     { pool: 'wander',    n: 1 },
   ];
-  /* How many times the feed may reach further out before admitting the library
-     is finished. Each step is a genuinely wider net — see expand(). */
-  var WIDEN_STEPS = 3;
-
   var PAGE = 6;          // cards added per top-up
   var LOOKAHEAD = 4;     // how close to the end before topping up
   var FROM_ALBUM = 2;    // songs taken per visit before an album rotates back
@@ -30417,6 +30563,7 @@ window.track = function (name, props) {
   var _items = [], _tok = 0, _unlocked = false, _playing = null, _io = null;
   var _pools = { partial: [], yours: [], shortlist: [], discovery: [], pushed: [], wander: [] };
   var _widen = 0;          // how far out expand() has already reached
+  var _remote = null;      // the discovery half, still in the post
   /* WHICH FEED. 'you' is the model; 'pushed' is only what other people put
      forward. One engine, one exclusion set, one card — the ONLY difference is
      which pools the mix may draw from, which is why switching tabs cannot
@@ -30676,9 +30823,27 @@ window.track = function (name, props) {
     }
   }
 
-  /* ---- the pools ------------------------------------------------------ */
-  async function buildPools(ctx) {
-    var pools = { partial: [], yours: [], shortlist: [], discovery: [], pushed: [], wander: [] };
+  /* ---- the pools ------------------------------------------------------
+     SPLIT IN TWO, AND THE SPLIT IS THE LOAD TIME.
+
+     This used to be one async function that the first card waited on: a
+     trending fetch, then SIX artist discographies ONE AFTER ANOTHER, then the
+     suggestions table — seven-plus serial round trips before anything was
+     drawn, and then the album previews on top. On a phone that is the several
+     seconds of "Finding songs for you…" in the report.
+
+     The first three pools need NO NETWORK AT ALL. Yours, Partial and Shortlist
+     are scans of localStorage, and on any crate worth the name they are also
+     the best material the feed has. So they are built synchronously, the feed
+     draws from them at once, and Discovery arrives behind it — the ranking is
+     untouched, it simply stops being in the way of the first card.
+
+     A brand new account has nothing local, so build() waits for the remote
+     half in that one case rather than showing an empty feed. */
+  function emptyPools() { return { partial: [], yours: [], shortlist: [], discovery: [], pushed: [], wander: [] }; }
+
+  function localPools(ctx) {
+    var pools = emptyPools();
 
     // 1. YOURS — records you have rated. Ordered by YOUR score: the one you
     //    scored 94 should offer up its songs before the one you scored 61.
@@ -30731,6 +30896,13 @@ window.track = function (name, props) {
     });
     pools.shortlist.sort(function (x, y) { return x._order - y._order; });
 
+    return pools;
+  }
+
+  /* Everything that costs a round trip. Runs CONCURRENTLY — the three sources
+     know nothing about each other and were only ever serial because they were
+     written in a line. */
+  async function remotePools(ctx, pools) {
     // 3. DISCOVERY — everything else the app can reach, ranked by SIGNALS.
     var seen = {}, cands = [];
     function add(c) {
@@ -30743,34 +30915,41 @@ window.track = function (name, props) {
       seen[c.id] = c; cands.push(c);
     }
 
-    try {
-      var tr = (window.Cloud && Cloud.fetchTrending) ? await Cloud.fetchTrending() : [];
-      (tr || []).forEach(function (r) {
-        add({ id: r.album_id, name: r.album_name, artist: r.album_artist, art: r.album_art,
-              communityScore: r.avg != null ? r.avg : r.score });
-      });
-    } catch (e) {}
-
     var tops = Object.keys(ctx.artist)
       .map(function (k) { return { k: k, name: ctx.artist[k].name, avg: ctx.artist[k].sum / ctx.artist[k].n }; })
+      .filter(function (a) { return a.k.indexOf('name:') !== 0; })
       .sort(function (a, b) { return b.avg - a.avg; }).slice(0, 6);
-    for (var i = 0; i < tops.length; i++) {
-      if (tops[i].k.indexOf('name:') === 0) continue;
-      try {
+
+    /* ONE ROUND, NOT EIGHT. Trending, the six discographies and the
+       suggestions table are independent, so they go together. Each one carries
+       its own catch: a feed short of one source is a shorter feed, not a
+       broken one. */
+    var got = await Promise.all([
+      (window.Cloud && Cloud.fetchTrending) ? Cloud.fetchTrending().catch(function () { return []; }) : [],
+      Promise.all(tops.map(function (t) {
         // The name rides along because a crate from before the catalogue moved
         // carries Spotify artist ids, and the route 400s on one with no name.
         var q = { include_groups: 'album' };
-        if (tops[i].name) q.name = tops[i].name;
-        var d = await spotifyGet('/artists/' + encodeURIComponent(tops[i].k) + '/albums?' + new URLSearchParams(q).toString());
-        (d.items || []).forEach(function (al) {
-          add({ id: al.id, name: al.name,
-                artist: (al.artists && al.artists[0] && al.artists[0].name) || tops[i].name || '',
-                artistId: (al.artists && al.artists[0] && al.artists[0].id) || tops[i].k,
-                art: (al.images && al.images[0] && al.images[0].url) || '',
-                year: (al.release_date || '').slice(0, 4) });
-        });
-      } catch (e) {}
-    }
+        if (t.name) q.name = t.name;
+        return spotifyGet('/artists/' + encodeURIComponent(t.k) + '/albums?' + new URLSearchParams(q).toString())
+          .catch(function () { return null; });
+      })),
+      (window.Cloud && Cloud.suggestionList) ? Cloud.suggestionList('song', null, 60).catch(function () { return []; }) : [],
+    ]);
+
+    (got[0] || []).forEach(function (r) {
+      add({ id: r.album_id, name: r.album_name, artist: r.album_artist, art: r.album_art,
+            communityScore: r.avg != null ? r.avg : r.score });
+    });
+    (got[1] || []).forEach(function (d, i) {
+      ((d && d.items) || []).forEach(function (al) {
+        add({ id: al.id, name: al.name,
+              artist: (al.artists && al.artists[0] && al.artists[0].name) || tops[i].name || '',
+              artistId: (al.artists && al.artists[0] && al.artists[0].id) || tops[i].k,
+              art: (al.images && al.images[0] && al.images[0].url) || '',
+              year: (al.release_date || '').slice(0, 4) });
+      });
+    });
 
     try {
       var mine = (window.CollectionWorth && CollectionWorth.mine && CollectionWorth.mine()) || [];
@@ -30782,7 +30961,7 @@ window.track = function (name, props) {
        carries its own album, so it is a record like any other once it is here;
        what it brings is that NO model chose it. */
     try {
-      var sug = (window.Cloud && Cloud.suggestionList) ? await Cloud.suggestionList('song', null, 60) : [];
+      var sug = got[2] || [];
       /* The same rows do two jobs: they ARE the Suggestions feed, and they
          raise a discovery candidate's score in For You. Annotating `cands`
          here rather than re-fetching is what lets the `pushed` signal fire
@@ -30875,6 +31054,13 @@ window.track = function (name, props) {
       tried++;
       var alb = queue.shift();
       if (!alb) break;
+      /* MAX_ALBUMS IS A MEMORY CEILING, AND IT WAS A SESSION TOTAL. A spent
+         album — every song of it served — stayed in `_tracks` forever holding
+         an empty list, so after forty records the feed could never expand a
+         forty-first and simply stopped, however many records were still
+         queued. That is the "not truly infinite" in the report. Spent boxes
+         are dropped below, so this now counts only what is still worth
+         keeping. */
       if (Object.keys(_tracks).length >= MAX_ALBUMS && !_tracks[alb.id]) { queue.push(alb); break; }
       var box = await albumTracks(alb);
       var took = 0;
@@ -30903,8 +31089,10 @@ window.track = function (name, props) {
           pool: pool,
         });
       }
-      // Back of the queue if it still has songs; dropped if it is spent.
+      // Back of the queue if it still has songs; dropped if it is spent —
+      // and the cached tracklist goes with it, so the ceiling above frees up.
       if (box.list.length) queue.push(alb);
+      else delete _tracks[alb.id];
     }
     return out;
   }
@@ -30916,9 +31104,10 @@ window.track = function (name, props) {
      feed degrades from "chosen for you" to "worth hearing" to "popular right
      now" and never to "you have seen this".
 
-     Returns true if it actually added records. Three steps and then the feed
-     is allowed to say the library is finished, which for a real crate it never
-     will be: step 3 alone is the whole Deezer chart.
+     Returns true if it actually added records, and that answer is the ONLY
+     thing that stops the feed — there is no step count any more. Step 3 is the
+     chart, eight artists at a time, so it can be called until the chart runs
+     out.
 
      Everything added goes through the same drawFrom exclusions, so nothing
      here can smuggle a seen or rated song back in. */
@@ -30959,24 +31148,43 @@ window.track = function (name, props) {
             art: r.album_art, _pool: 'discovery', _why: 'The Crate is rating this' });
         });
       } else {
-        /* 3. THE CHART. Nothing about you at all, which is the point: this is
-              the floor under the feed, and it is effectively bottomless. */
+        /* 3. THE CHART, AND IT REPEATS. Nothing about you at all, which is the
+              point: this is the floor under the feed.
+
+              It used to be the LAST step — three widenings and then "you have
+              heard the lot" over a chart it had read twelve artists of. Now
+              each pass takes the next eight artists off the same chart, so the
+              feed carries on until the chart itself is exhausted. Stopping is
+              decided by whether expand() actually ADDED anything, which is the
+              only honest test; WIDEN_STEPS is gone. */
+        /* THE CHART ROUTE IS NOT A SPOTIFY-SHAPED PATH, so it is fetched
+           directly rather than through the translator. `spotifyFetch(
+           '/chart-artists')` threw `unsupported-endpoint` on every call — the
+           catch swallowed it, expand() reported it had added nothing, and the
+           step this file calls "the floor under the feed, effectively
+           bottomless" has never once returned a record. Measured logged out:
+           five widenings, zero candidates, "You have heard the lot" over a
+           chart that was one fetch away. Same fetch the Popular tab uses. */
         var ch = null;
-        try { ch = await spotifyFetch('/chart-artists'); } catch (e) {}
+        try {
+          var cr = await fetch(((window.Native && Native.api) || '') + '/api/catalogue?path=chart-artists&limit=50');
+          if (cr.ok) ch = await cr.json();
+        } catch (e) {}
         var arts = (ch && (ch.artists || ch.items)) || [];
-        for (var n = 0; n < Math.min(arts.length, 12); n++) {
-          var dd = null;
-          try {
-            dd = await spotifyFetch('/artists/' + encodeURIComponent(arts[n].id) +
-                   '/albums?include_groups=album&name=' + encodeURIComponent(arts[n].name || ''));
-          } catch (e) {}
+        var from = (_widen - 3) * 8, take = arts.slice(from, from + 8);
+        var got = await Promise.all(take.map(function (a) {
+          return spotifyFetch('/artists/' + encodeURIComponent(a.id) +
+                 '/albums?include_groups=album&name=' + encodeURIComponent(a.name || ''))
+            .catch(function () { return null; });
+        }));
+        got.forEach(function (dd, k) {
           ((dd && dd.items) || []).forEach(function (al) {
             if (!al || !al.id || _ctx.ratedAlbum[al.id]) return;
-            _pools.discovery.push({ id: al.id, name: al.name, artist: arts[n].name,
+            _pools.discovery.push({ id: al.id, name: al.name, artist: take[k].name,
               art: (al.images && al.images[0] && al.images[0].url) || '', _pool: 'discovery',
               _why: 'Big right now' });
           });
-        }
+        });
       }
     } catch (e) {}
 
@@ -31002,9 +31210,29 @@ window.track = function (name, props) {
     return null;
   }
 
+  /* ONE PARALLEL ROUND INSTEAD OF SIX SERIAL ONES. Six cards is up to three
+     albums, and each album is a /api/preview fetch — asked for one at a time
+     inside the draw loop, that is three round trips stacked end to end in
+     front of the first card. They are all known in advance: the heads of
+     whichever pools the mix is about to read. albumTracks caches, so warming
+     one costs nothing when the loop reaches it. */
+  async function warmHeads() {
+    var want = [];
+    Object.keys(_pools).forEach(function (k) {
+      (_pools[k] || []).slice(0, 2).forEach(function (a) {
+        if (a && a.id && !_tracks[a.id] && want.indexOf(a) === -1) want.push(a);
+      });
+    });
+    if (!want.length) return;
+    await Promise.all(want.slice(0, 6).map(function (a) {
+      return albumTracks(a).catch(function () { return null; });
+    }));
+  }
+
   async function drawSongs(count) {
     var out = [];
     var dry = 0;
+    await warmHeads();
     while (out.length < count && dry < 4) {
       var pool = nextPool();
       if (!pool) { dry++; continue; }
@@ -31022,7 +31250,11 @@ window.track = function (name, props) {
     /* Widening is for the personalised feed only. Suggestions is, by
        definition, exactly what people have pushed — padding it out with
        chart records would make it a second For You wearing the wrong name. */
-    if (!out.length && _feed === 'you' && _widen < WIDEN_STEPS) {
+    if (!out.length && _feed === 'you') {
+      /* The discovery half may simply still be in the post — build() no longer
+         waits for it. Widening past a pool that is about to arrive would reach
+         for the chart while your own artists were one promise away. */
+      if (_remote) { var r = _remote; _remote = null; await r; _mixAt = 0; _mixTaken = 0; return drawSongs(count); }
       var grew = await expand();
       if (grew) { _mixAt = 0; _mixTaken = 0; return drawSongs(count); }
     }
@@ -31255,11 +31487,21 @@ window.track = function (name, props) {
 
     // What the card has to clear at the bottom: the bar's own height plus the
     // gap it floats above the edge, plus air.
+    /* THE PLAYER BAR IS PART OF THE FLOOR. It is a sibling of every view and
+       appears the moment something plays anywhere in the app, so measuring the
+       nav alone left the rating tray behind it — which is the same 45px
+       mistake as before, wearing a different element. Whichever of the two
+       starts highest is what the card has to clear. */
     var floor = 24;
-    if (nav) {
-      var r = nav.getBoundingClientRect();
-      if (r.height && r.bottom > top) floor = Math.round((vh - r.top) + 14);
-    }
+    [nav, document.getElementById('player-bar')].forEach(function (n) {
+      if (!n) return;
+      // NOT offsetParent: it is null for a `position: fixed` element, which
+      // both of these are, so testing it skipped the nav and left the rating
+      // tray 34px behind it. A hidden bar has zero height, which is the test
+      // that actually works here.
+      var r = n.getBoundingClientRect();
+      if (r.height && r.bottom > top) floor = Math.max(floor, Math.round((vh - r.top) + 14));
+    });
     host.style.setProperty('--fy-floor', floor + 'px');
 
     /* THE SQUARE'S SIDE, MEASURED RATHER THAN LEFT TO CSS.
@@ -31366,22 +31608,38 @@ window.track = function (name, props) {
         return;
       }
 
+      /* A RATING IS A CHANGE OF MIND WAITING TO HAPPEN, and this used to
+         disable the button on the first press — so a 5 you immediately wanted
+         to be a 7 was locked in on the one screen in the app whose whole
+         subject is what you think of a song. The whole product rests on score
+         history; a control that refuses a second opinion is the opposite of
+         that.
+
+         saveSong already does the right thing underneath: it writes to the key
+         the song ALREADY has, so a re-rate updates the one record rather than
+         starting a second, and the new score goes on the history. Nothing here
+         has to know that — it just has to stop getting in the way. */
       var k = +t.dataset.save, rec = _items[k];
       if (!rec) return;
       var sl = host.querySelector('[data-rate="' + k + '"]');
       var v = sl ? parseInt(sl.value, 10) : 7;
+      if (rec.myScore === v) return;            // pressing Rated again is a no-op
       if (window.saveSong) {
         saveSong(
           { id: rec.key, name: rec.title, artists: [{ name: rec.artist, id: rec.artistId || '' }] },
           v,
           { id: rec.albumId, name: rec.albumName, art: rec.art });
       }
-      // It is rated now, so it must never come back round.
-      if (_ctx) _ctx.ratedSong[rec.skey] = true;
+      var first = rec.myScore == null;
+      rec.myScore = v > 0 ? v : null;
+      // Rated songs never come back round in a LATER feed; the card in front
+      // of you stays live, which is the point.
+      if (_ctx) { if (v > 0) _ctx.ratedSong[rec.skey] = true; else delete _ctx.ratedSong[rec.skey]; }
       t.textContent = v > 0 ? ('Rated ' + v) : 'Skipped';
-      t.disabled = true;
       var card2 = host.querySelector('.fy-card[data-i="' + k + '"]');
-      if (card2) { card2.classList.add('is-rated'); if (window.burst) burst(card2); }
+      if (card2) card2.classList.toggle('is-rated', v > 0);
+      // The burst is for a verdict arriving, not for every nudge of a slider.
+      if (first && v > 0 && card2 && window.burst) burst(card2);
       if (window.buzz) buzz('good');
     });
 
@@ -31391,7 +31649,18 @@ window.track = function (name, props) {
       var o = host.querySelector('[data-out="' + r.dataset.rate + '"]');
       if (o) o.value = r.value;
       var b = host.querySelector('[data-save="' + r.dataset.rate + '"]');
-      if (b && !b.disabled) b.textContent = r.value > 0 ? 'Rate' : 'Skip';
+      /* The button says what pressing it would DO. "Rate" before there is one,
+         "Change to 7" once there is and the slider has moved off it, and
+         "Rated 5" when it is already exactly that — so there is never a live
+         button that would do nothing. */
+      if (b) {
+        var cur = (_items[+r.dataset.rate] || {}).myScore;
+        var nv = parseInt(r.value, 10);
+        b.textContent = nv <= 0 ? 'Skip'
+          : cur == null ? 'Rate'
+          : cur === nv ? ('Rated ' + nv)
+          : ('Change to ' + nv);
+      }
       /* The thumb and the numeral take the colour of the point on the track
          they are standing on. Set on the CARD rather than on the input, so
          the numeral beside it picks it up from the same variable — one
@@ -31411,7 +31680,18 @@ window.track = function (name, props) {
     try {
       _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0;
       _ctx = buildContext();
-      _pools = await buildPools(_ctx);
+      _pools = localPools(_ctx);
+
+      /* THE REMOTE HALF DOES NOT BLOCK THE FIRST CARD. It is kicked off here
+         and awaited only where there is genuinely nothing to show without it:
+         the Suggestions feed, which IS the remote half, and an account with an
+         empty crate. Everybody else gets a card while it lands, and the
+         promise is held so drawSongs can wait on it the moment the local pools
+         run dry rather than widening past a Discovery pool that was merely
+         still in the post. */
+      var localHas = _pools.yours.length + _pools.partial.length + _pools.shortlist.length;
+      _remote = remotePools(_ctx, _pools).catch(function () { return _pools; });
+      if (!localHas || _feed === 'pushed') await _remote;
       if (mine !== _tok) return;
 
       // The records that went into the pools, for the `repeat` signal.
@@ -31573,7 +31853,7 @@ window.track = function (name, props) {
   });
 
   window.ForYou = {
-    render: render, build: build, leave: leave, stop: stopAll, topUp: topUp,
+    render: render, build: build, leave: leave, stop: stopAll, topUp: topUp, refit: refit,
     setFeed: setFeed, push: doPush, quota: paintQuota,
     SIGNALS: SIGNALS, MIX: MIX, rank: rank, explain: explain,
     /* For tuning from the console. A ranking you cannot read is one you cannot
