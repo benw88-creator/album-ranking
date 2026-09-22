@@ -31227,13 +31227,15 @@ window.track = function (name, props) {
      advances; a pool with nothing left is skipped rather than producing a
      gap, so a brand new account gets an all-Discovery feed with no special
      case anywhere. */
-  function nextPool() {
+  function nextPool(dead) {
     var MIXN = FEEDS[_feed] || FEEDS.you;
     for (var guard = 0; guard < MIXN.length * 2; guard++) {
       var slot = MIXN[_mixAt % MIXN.length];
       if (_mixTaken >= slot.n) { _mixAt++; _mixTaken = 0; continue; }
       _mixTaken++;
-      if (_pools[slot.pool] && _pools[slot.pool].length) return slot.pool;
+      // A pool that has already come back empty this batch counts as empty,
+      // so the cursor moves past it instead of being handed it again.
+      if (!(dead && dead[slot.pool]) && _pools[slot.pool] && _pools[slot.pool].length) return slot.pool;
       // Empty pool: give the slot up rather than stalling on it.
       _mixAt++; _mixTaken = 0;
     }
@@ -31261,14 +31263,27 @@ window.track = function (name, props) {
 
   async function drawSongs(count) {
     var out = [];
-    var dry = 0;
     await warmHeads();
-    while (out.length < count && dry < 4) {
-      var pool = nextPool();
-      if (!pool) { dry++; continue; }
+    /* A BATCH ENDS WHEN EVERY POOL HAS BEEN TRIED, NOT AFTER FOUR MISSES.
+
+       It was a global `dry < 4`: four draws that produced nothing, from any
+       pools, ended the batch — and a draw produces nothing whenever the album
+       at the head of that pool has no usable preview, which on chart and
+       trending records is common. So a page of six routinely came back as one
+       or two, the feed read as barely moving, and the mix's own cursor made it
+       worse by handing the same empty pool back on the next turn.
+
+       A pool that comes back empty is marked dead FOR THIS BATCH and skipped;
+       the batch stops when there is nothing left to ask. The mix, the ordering
+       and the exclusions are untouched — this only changes when to stop. The
+       guard is there because drawFrom can legitimately return nothing many
+       times over and a batch must not become an unbounded crawl. */
+    var dead = {}, guard = 0;
+    while (out.length < count && guard++ < count * 6) {
+      var pool = nextPool(dead);
+      if (!pool) break;
       var got = await drawFrom(pool, 1);
-      if (!got.length) { dry++; continue; }
-      dry = 0;
+      if (!got.length) { dead[pool] = 1; continue; }
       out = out.concat(got);
     }
 
