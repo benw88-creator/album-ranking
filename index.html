@@ -7333,56 +7333,39 @@ button.rw-day {
 .shop-suggest b { display: block; font-size: 14px; color: var(--text); }
 .shop-suggest small { display: block; font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
 
-/* ---- FOR YOU — one song a screen, edge to edge -----------------------
-   THE SLEEVE IS THE SCREEN NOW. It used to be a square card floating in the
-   middle of a bounded feed with the page's gutters either side and 210px of
-   nothing under it, which is a website's idea of a feed. The art fills the
-   card, the card fills the viewport, and everything else sits ON the art.
+/* ---- FOR YOU — one record a screen, with room to breathe --------------
+   THE SLEEVE WAS FULL-BLEED AND IT WAS THE WRONG CALL. `object-fit: cover` on
+   a 9:19.5 window throws away about 45% of a square cover — on SAVAGE MODE II
+   you got a crop of two faces and no title, which is a strange thing to do in
+   an app whose whole subject is record sleeves. It also made the screen feel
+   zoomed in and cramped, because there was no edge anywhere: art to the four
+   corners with controls lying on top of it.
 
-   `object-fit: cover` is what keeps that honest: it fills both axes and crops
-   the overflow, so a square sleeve in a 9:19.5 window loses its sides and
-   NEVER stretches. `fill` would have been the one-word version of this and it
-   distorts every cover in the app. A blurred, scaled copy of the same sleeve
-   sits behind it so the crop has somewhere to blend out to rather than a hard
-   edge against the page — the same trick the artist hero bed uses.
+   The record is a SQUARE now, centred, with air around it. Nothing is cropped,
+   nothing is stretched, and the cover is a thing on a page rather than a
+   wallpaper. The blurred bed stays — same sleeve, overscaled and darkened — so
+   the page still takes its colour from the record without competing with it.
 
-   The feed runs UNDER the floating nav rather than stopping above it: the bar
-   is translucent and sits over the art, which is the only way the card gets
-   the whole screen. The overlay reserves room for it so nothing readable is
-   ever behind it. */
+   `aspect-ratio: 1` with `max-width`/`max-height` off the measured card is what
+   keeps it square: CSS alone could not be trusted with this (see fitFeed), so
+   the side is still one measured number, --fy-art. */
 .fy-feed {
   scroll-snap-type: y mandatory;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  /* Edge to edge: the page's gutter is given back so the art meets the sides
-     of the screen. The same token twice, never the same number twice — this
-     shipped as `-28px` once and overhung the viewport when the gutter became
-     16, which scrolls the whole page sideways. */
   margin-left: calc(var(--gutter) * -1);
   margin-right: calc(var(--gutter) * -1);
-  /* A fallback only: fitFeed() measures the real bound as soon as the feed is
-     built. Deliberately on the SHORT side — short shows a gap for one frame,
-     long puts a snap point below the fold and the feed will not advance. */
   height: calc(100vh - 150px);
   min-height: 360px;
   scrollbar-width: none;
-  background: #000;
+  background: var(--bg);
 }
 .fy-feed::-webkit-scrollbar { display: none; }
 @supports (height: 100dvh) {
-  /* dvh, because 100vh on iOS Safari is the height WITH the address bar
-     retracted — the card is then taller than the window and the next snap
-     point sits below the fold. */
   .fy-feed { height: calc(100dvh - 150px); }
 }
-/* The view's own top margin goes, so the feed starts directly under the
-   header instead of a section gap below it. */
 #view-foryou { margin-top: 0 !important; }
-/* On a desktop, full-bleed means a 1600px-wide window cropping a square
-   sleeve down to a letterbox strip of its middle. The feed is capped to
-   something phone-shaped and centred, which is the shape the design is for;
-   the crop then takes the same slice it does on a phone. */
 @media (min-width: 700px) {
   .fy-feed {
     max-width: 460px; margin-left: auto; margin-right: auto;
@@ -7395,59 +7378,54 @@ button.rw-day {
   scroll-snap-stop: always;      /* one song per flick, never two */
   position: relative;
   height: 100%;
-  display: block;
-  padding: 0;
-  text-align: left;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: var(--s3);
+  padding: var(--s5) var(--gutter);
   overflow: hidden;
-  background: #000;
+  text-align: center;
 }
 
-/* ---- the art layer ---- */
+/* ---- the bed ----
+   The same sleeve behind everything, blurred past recognition and pushed well
+   down, so the screen is in the record's colours without the record competing
+   with itself. It is a sibling of the art rather than inside it, because the
+   art is now a bounded square and the bed still has to reach the edges. */
+.fy-bed-wrap {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+}
+.fy-bed {
+  position: absolute; inset: -10%;
+  width: 120%; height: 120%;
+  object-fit: cover;
+  filter: blur(48px) saturate(1.3) brightness(.38);
+  transform: scale(1.1);
+}
+.fy-bed-wrap::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to bottom, rgba(6,5,5,.55), rgba(6,5,5,.2) 40%, rgba(6,5,5,.85));
+}
+
+/* ---- the record ----
+   ONE SQUARE, WHOLE. `contain`, not `cover`: a sleeve that has been cropped is
+   not the sleeve. */
 .fy-art {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  margin: 0; border: 0; padding: 0;
-  border-radius: 0;
-  background: none;
-  cursor: pointer;
-  display: block;
-  box-shadow: none;
+  position: relative; z-index: 2;
+  width: var(--fy-art, 300px); height: var(--fy-art, 300px);
+  flex: 0 0 auto;
+  margin: 0; padding: 0; border: 0;
+  border-radius: 14px; overflow: hidden;
+  background: rgba(0,0,0,.35);
+  cursor: pointer; display: block;
+  box-shadow: 0 26px 70px rgba(0,0,0,.6);
   transition: transform var(--dur) var(--ease);
 }
-.fy-art:active { transform: scale(.995); }
-/* The bed: the same sleeve, blurred and overscaled, so the crop has something
-   in its own colours to sit against instead of a black letterbox. `scale` and
-   not `width` — a blur samples past its own edges and a 1:1 bed shows a pale
-   rim all the way round. */
-.fy-art .fy-bed {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  transform: scale(1.35);
-  filter: blur(34px) saturate(1.25) brightness(.55);
-  z-index: 0;
-}
+.fy-art:active { transform: scale(.985); }
 .fy-art .fy-main {
-  position: absolute; inset: 0;
   width: 100%; height: 100%;
-  /* THE ONE LINE THAT MATTERS: fills the card, keeps the aspect ratio, crops
-     the difference. Never `fill`, never `100% 100%`. */
-  object-fit: cover;
-  object-position: center;
-  z-index: 1;
+  object-fit: cover;          /* the source IS square, so nothing is lost */
   display: block;
 }
-/* Legible text over an unknown photograph: a scrim top and bottom rather than
-   a flat wash, so the middle of the sleeve — which is the bit worth looking
-   at — is left alone. */
-.fy-shade {
-  position: absolute; inset: 0; pointer-events: none; z-index: 2;
-  background:
-    linear-gradient(to top, rgba(6,5,5,.92) 0%, rgba(6,5,5,.72) 22%, rgba(6,5,5,0) 52%),
-    linear-gradient(to bottom, rgba(6,5,5,.55) 0%, rgba(6,5,5,0) 22%);
-}
-/* The cue is only there when the browser has REFUSED to autoplay. Every card
-   tries to play itself on arrival now; this is what a refusal looks like. */
 .fy-cue {
   position: absolute; left: 50%; top: 50%; width: 76px; height: 76px;
   margin: -38px 0 0 -38px; border-radius: 50%; pointer-events: none; z-index: 3;
@@ -7466,41 +7444,22 @@ button.rw-day {
 @keyframes fyTap { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 .fy-card.no-clip .fy-art::after {
   content: 'No preview for this one';
-  position: absolute; left: 0; right: 0; top: 50%; z-index: 3;
-  text-align: center; font-size: 12px; color: rgba(255,245,235,.7);
+  position: absolute; left: 0; right: 0; bottom: 12px; z-index: 3;
+  text-align: center; font-size: 12px; color: rgba(255,245,235,.75);
 }
+.fy-card.is-rated .fy-art { outline: 3px solid var(--c-lime); outline-offset: 3px; }
 
-/* ---- the overlay ---- */
-.fy-over {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
-  display: flex; flex-direction: column; gap: var(--s2);
-  padding: var(--s4) var(--gutter);
-  /* Clears the floating nav, which the feed now runs underneath. Set by
-     fitFeed() off the bar's real box — its height is a token, it moves with
-     the safe-area inset, and it is not there at all above 700px. */
-  padding-bottom: var(--fy-floor, 96px);
-  color: #fff;
-  pointer-events: none;   /* the art behind it stays tappable... */
-}
-.fy-over > * { pointer-events: auto; }   /* ...except the controls themselves */
-
+/* ---- what it is, under it ---- */
+.fy-meta { position: relative; z-index: 2; width: 100%; max-width: 520px; }
 .fy-why {
   font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
   color: var(--c-lime); text-shadow: 0 1px 12px rgba(0,0,0,.8);
+  margin-bottom: var(--s2);
 }
-.fy-head {
-  display: flex; align-items: center; gap: 9px; max-width: 100%;
-}
-/* The equaliser, beside the title. The spans are in the markup on EVERY card
-   and hidden until it is sounding, rather than injected into whichever one is
-   playing — the feed rebuilds itself and a node added to a card would be
-   wiped by the next build. Same reasoning as the album page's track rows. */
+.fy-head { display: flex; align-items: center; justify-content: center; gap: 9px; max-width: 100%; }
 .fy-eq { display: none; align-items: flex-end; gap: 3px; height: 16px; flex: 0 0 auto; }
 .fy-card.is-playing .fy-eq { display: flex; }
 .fy-eq i { width: 3px; border-radius: 2px; background: var(--c-lime); animation: fyBar 1s ease-in-out infinite; }
-/* Three durations, none a multiple of another, so the pattern does not
-   visibly loop. HEIGHTS, not transforms — a scaled bar grows from its centre
-   and these sit on a floor. */
 .fy-eq i:nth-child(1) { height: 6px;  animation-duration: .74s; }
 .fy-eq i:nth-child(2) { height: 15px; animation-duration: .97s; }
 .fy-eq i:nth-child(3) { height: 10px; animation-duration: 1.19s; }
@@ -7509,78 +7468,32 @@ button.rw-day {
 .fy-title {
   background: none; border: 0; padding: 0; cursor: pointer; color: #fff;
   font-family: var(--font-display); font-size: var(--t-h2); font-weight: 800;
-  letter-spacing: -0.03em; line-height: 1.1; text-align: left;
+  letter-spacing: -0.03em; line-height: 1.15; text-align: center;
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   text-shadow: 0 2px 18px rgba(0,0,0,.75);
 }
-.fy-sub { font-size: 13px; color: rgba(255,245,235,.82); max-width: 100%; text-shadow: 0 1px 12px rgba(0,0,0,.8); }
+.fy-sub { font-size: 13.5px; color: rgba(255,245,235,.78); margin-top: 3px; text-shadow: 0 1px 12px rgba(0,0,0,.8); }
 .fy-alb { cursor: pointer; text-decoration: underline; text-decoration-color: rgba(255,245,235,.35); }
-.fy-alb:hover { color: #fff; }
 
-/* ---- the two pills at the top of a card ----
-   Small, translucent and sitting on the art rather than in a bar of their own:
-   this feed is one record a screen and a chrome strip would take a tenth of
-   it. */
-.fy-top {
-  position: absolute; top: 0; left: 0; right: 0; z-index: 5;
-  display: flex; align-items: center; justify-content: space-between; gap: var(--s2);
-  padding: var(--s3) var(--gutter);
-}
-.fy-pill {
-  border: 1px solid rgba(255,245,235,.22);
-  background: rgba(10,9,8,.45);
-  backdrop-filter: blur(10px);
-  color: rgba(255,245,235,.92);
-  font: 600 11.5px/1 var(--font-body);
-  /* 34px of box, but the padding makes the target the full 44 — the same
-     arrangement .sr-play uses to be a 30px circle nobody misses. */
-  padding: 11px 13px; border-radius: 999px;
-  display: inline-flex; align-items: center; gap: 6px;
-  cursor: pointer; white-space: nowrap;
-  transition: background var(--dur-quick) var(--ease), border-color var(--dur-quick) var(--ease),
-              transform var(--dur-quick) var(--ease);
-}
-.fy-pill:active { transform: scale(.94); }
-.fy-pill:disabled { opacity: .6; cursor: default; }
-.fy-push-arrow {
-  width: 0; height: 0;
-  border-bottom: 8px solid currentColor;
-  border-left: 5px solid transparent; border-right: 5px solid transparent;
-}
-.fy-pill.pushed {
-  background: color-mix(in srgb, var(--c-lime) 28%, rgba(10,9,8,.45));
-  border-color: var(--c-lime); color: var(--c-lime);
-}
-/* A tap on a phone leaves :hover on the last thing touched, so the lift is
-   desktop-only — the rule this app learned on the album card. */
-@media (hover: hover) {
-  .fy-pill:hover { background: rgba(10,9,8,.72); border-color: rgba(255,245,235,.4); }
-}
-
-/* ---- the rating bar ----
-   RED THROUGH TO GREEN, because the number means something and a single-hue
-   track does not. The gradient is painted on the track and the thumb carries
-   the colour of wherever it is standing, so the control says what a 2 is and
-   what a 9 is before you read the numeral.
-
-   `accent-color` cannot do this — it takes one colour — so the track and the
-   thumb are drawn per-engine. Both vendor blocks are needed and they CANNOT
-   BE COMBINED into one selector list: an unknown pseudo-element invalidates
-   the whole rule in both engines, so `::-webkit-slider-thumb, ::-moz-range-thumb`
-   in one rule styles neither. */
+/* ---- the one thing to do ----
+   The rating row is the whole instruction. It sits in its own tray so it reads
+   as a control rather than as more text on a picture, and the button says what
+   pressing it does. */
 .fy-rate {
+  position: relative; z-index: 2;
   display: flex; align-items: center; gap: var(--s3);
-  width: 100%; margin-top: var(--s2);
+  width: 100%; max-width: 520px;
+  padding: var(--s3) var(--s4);
+  border-radius: 999px;
+  background: rgba(10,9,8,.5);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,245,235,.14);
 }
 .fy-rate input[type="range"] {
   flex: 1 1 auto; min-width: 0;
   -webkit-appearance: none; appearance: none;
   background: none; cursor: pointer;
-  /* Bigger, because it was fiddly: a 4px track with a 12px thumb is a target
-     you aim at rather than one you grab. 44px of height is Apple's floor and
-     the padding does the work, so the track still reads as a thin line. */
-  height: 44px;
-  padding: 0; margin: 0;
+  height: 44px; padding: 0; margin: 0;
 }
 .fy-rate input[type="range"]::-webkit-slider-runnable-track {
   height: 10px; border-radius: 999px;
@@ -7596,7 +7509,6 @@ button.rw-day {
   -webkit-appearance: none; appearance: none;
   width: 26px; height: 26px; border-radius: 50%;
   background: #fff; border: 3px solid var(--fy-tint, #efb927);
-  /* Centres the thumb on a 10px track: (10 - 26) / 2. */
   margin-top: -8px;
   box-shadow: 0 0 0 4px rgba(0,0,0,.28), 0 0 22px var(--fy-tint, #efb927);
   transition: transform .12s var(--ease), box-shadow .12s var(--ease);
@@ -7616,7 +7528,59 @@ button.rw-day {
   text-shadow: 0 0 16px rgba(0,0,0,.8);
 }
 .fy-save { padding: 11px 18px; white-space: nowrap; }
-.fy-card.is-rated .fy-shade { box-shadow: inset 0 0 0 3px var(--c-lime); }
+
+/* ---- the two feeds ----
+   For You is a model of you; Suggestions is what other people put forward.
+   They are different questions, so they are different tabs rather than one
+   feed with a label on some cards. A segmented control at the top, in the
+   app's own language — the same `.seg` the games and the Collection use. */
+.fy-tabs {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 6;
+  display: flex; align-items: center; gap: var(--s2);
+  padding: var(--s3) var(--gutter);
+  pointer-events: none;
+}
+.fy-tabs > * { pointer-events: auto; }
+.fy-seg {
+  display: flex; gap: 2px; padding: 3px; border-radius: 999px;
+  background: rgba(10,9,8,.5); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,245,235,.16);
+}
+.fy-seg button {
+  border: 0; background: none; border-radius: 999px;
+  padding: 8px 14px; font: 600 12.5px var(--font-body);
+  color: rgba(255,245,235,.6); cursor: pointer; white-space: nowrap;
+}
+.fy-seg button.active { background: rgba(255,245,235,.14); color: #fff; }
+.fy-push-btn {
+  margin-left: auto;
+  border: 1px solid rgba(255,245,235,.22);
+  background: rgba(10,9,8,.5); backdrop-filter: blur(12px);
+  color: rgba(255,245,235,.92);
+  font: 600 12px var(--font-body);
+  padding: 10px 14px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+}
+.fy-push-btn:active { transform: scale(.94); }
+.fy-push-btn .fy-push-arrow {
+  width: 0; height: 0;
+  border-bottom: 8px solid currentColor;
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+}
+.fy-push-btn.pushed {
+  background: color-mix(in srgb, var(--c-lime) 28%, rgba(10,9,8,.5));
+  border-color: var(--c-lime); color: var(--c-lime);
+}
+.fy-push-btn:disabled { opacity: .5; }
+/* The tabs float over the art at the top and the nav floats over it at the
+   bottom, so the card has to reserve both. --fy-floor is the bar's real
+   footprint, measured in fitFeed off its own box — without this the rating
+   tray sat 4px UNDER the nav, which is the same 45px mistake the old overlay
+   made, smaller and just as wrong. Measured after: 81px of clearance. */
+.fy-card {
+  padding-top: calc(var(--s5) + 44px);
+  padding-bottom: var(--fy-floor, 96px);
+}
 
 .fy-loading { padding: 40px 0; text-align: center; color: var(--text-faint); }
 
@@ -8352,7 +8316,20 @@ window.ICONS = {
        upcoming releases — are kept below the feed rather than deleted: they
        answer a different question ("what is coming out") and they were not
        the problem. -->
-  <section id="view-foryou" class="view" style="display:none;">
+  <!-- FOR YOU is a model of you; SUGGESTIONS is what other people put
+       forward. Two different questions, so two tabs rather than one feed with
+       a label on some of its cards. The bar floats over the art rather than
+       taking a strip of its own, because the record is the screen. -->
+  <section id="view-foryou" class="view" style="display:none; position:relative;">
+    <div class="fy-tabs">
+      <div class="fy-seg" id="fy-seg">
+        <button data-feed="you" class="active">For You</button>
+        <button data-feed="pushed">Suggestions</button>
+      </div>
+      <button class="fy-push-btn" id="fy-push" type="button">
+        <span class="fy-push-arrow" aria-hidden="true"></span><span id="fy-push-label">Push</span>
+      </button>
+    </div>
     <div class="fy-feed" id="fy-feed"></div>
   </section>
 
@@ -13586,7 +13563,7 @@ const Cloud=(function(){
     return foreign;
   }
 
-  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best'];
+  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best','crate_foryou_songs','crate_foryou_seen'];
   const pending={};
   function isOn(){return!!(sb&&user);}
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
@@ -13661,6 +13638,19 @@ const Cloud=(function(){
     ['crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_blitz_best'].forEach(function(k){const a=lsGet(k)||0,b=cloud[k]||0;if(Math.max(a,b))lsSetRaw(k,Math.max(a,b));});
     const mHl=maxByKey(lsGet('crate_hl_best'),cloud['crate_hl_best']);
     if(Object.keys(mHl).length)lsSetRaw('crate_hl_best',mHl);
+    /* WHAT THE FOR YOU FEED HAS ALREADY SHOWN YOU.
+
+       Both are {songKey|albumId: timestamp} and both merge by UNION with the
+       later stamp winning, which is what maxByKey already does — and union is
+       the only correct rule here: a song shown on the phone must never come
+       back on the laptop, so the two devices have to agree on everything
+       EITHER of them has served. Newest-wins on the whole blob would drop half
+       the history and the feed would start repeating itself across devices,
+       which is the exact hard rule this is here to hold. */
+    const mFy=maxByKey(lsGet('crate_foryou_songs'),cloud['crate_foryou_songs']);
+    if(Object.keys(mFy).length)lsSetRaw('crate_foryou_songs',mFy);
+    const mFa=maxByKey(lsGet('crate_foryou_seen'),cloud['crate_foryou_seen']);
+    if(Object.keys(mFa).length)lsSetRaw('crate_foryou_seen',mFa);
     const mBd=mergeDailyOnce(lsGet('crate_blitz_daily'),cloud['crate_blitz_daily']);
     if(mBd)lsSetRaw('crate_blitz_daily',mBd);
     // Recall's daily takes the same rule, and its bests are a map by mode —
@@ -30388,11 +30378,34 @@ window.track = function (name, props) {
      rate, two from records you might, one from your shortlist. A pool with
      nothing in it is skipped and its slot goes to the next one, so a brand
      new account gets a feed that is all Discovery without any special case. */
+  /* THE MIX, AND WHY `partial` LEADS IT.
+
+     "Someone has rated 7 of 10 songs off an album, so the other 3 are the
+     strongest candidates in the app" is the single best signal this feed has,
+     and it was not being used at all: `yours` was ordered by the ALBUM's score
+     and knew nothing about how far through it you were. `partial` is the same
+     records re-ordered by how nearly finished they are, and it takes the
+     largest slice.
+
+     `pushed` is what other people put forward. It is one slot rather than
+     none, because a feed that is only ever a model of you is an echo chamber
+     and the one thing guaranteed to be outside it is somebody else's taste —
+     but it is not more than one, because the main feed is supposed to be about
+     you. (The Suggestions tab is where it is ALL of them.)
+
+     `wander` is deliberate noise: one card in nine that the model did not
+     choose. Without it the feed converges on four artists inside a week and
+     every card afterwards is predictable. */
   var MIX = [
-    { pool: 'yours',     n: 2 },
+    { pool: 'partial',   n: 3 },
     { pool: 'discovery', n: 2 },
+    { pool: 'yours',     n: 2 },
     { pool: 'shortlist', n: 1 },
+    { pool: 'wander',    n: 1 },
   ];
+  /* How many times the feed may reach further out before admitting the library
+     is finished. Each step is a genuinely wider net — see expand(). */
+  var WIDEN_STEPS = 3;
 
   var PAGE = 6;          // cards added per top-up
   var LOOKAHEAD = 4;     // how close to the end before topping up
@@ -30402,12 +30415,36 @@ window.track = function (name, props) {
 
   var _built = false, _busy = false, _topping = false;
   var _items = [], _tok = 0, _unlocked = false, _playing = null, _io = null;
-  var _pools = { yours: [], shortlist: [], discovery: [] };
+  var _pools = { partial: [], yours: [], shortlist: [], discovery: [], pushed: [], wander: [] };
+  var _widen = 0;          // how far out expand() has already reached
+  /* WHICH FEED. 'you' is the model; 'pushed' is only what other people put
+     forward. One engine, one exclusion set, one card — the ONLY difference is
+     which pools the mix may draw from, which is why switching tabs cannot
+     reintroduce a song either feed has already served. */
+  var _feed = 'you';
+  var FEEDS = {
+    /* SUGGESTIONS HAS FIRST CLAIM ON WHAT PEOPLE PUSHED, and For You has no
+       slot for it at all. That is not an oversight, it is the fix for one:
+       with a dedicated slot, the main feed ate the pushed pool — measured, a
+       90-card run consumed every pushed record there was and the Suggestions
+       tab then showed "nothing pushed yet" over records that had been pushed.
+       The shared exclusion set is the whole point and cannot be relaxed, so
+       the only answer is to stop the two feeds competing for the same rows.
+
+       Pushes still reach For You, through the `pushed` SIGNAL rather than a
+       slot: a record other people put forward scores higher as a discovery
+       candidate, so it surfaces on merit and in context. The feed is still
+       influenced by what the community is pushing; it just no longer empties
+       the tab whose entire job is showing it. */
+    you:    [{ pool: 'partial', n: 3 }, { pool: 'discovery', n: 2 },
+             { pool: 'yours', n: 2 }, { pool: 'shortlist', n: 1 },
+             { pool: 'wander', n: 1 }],
+    pushed: [{ pool: 'pushed', n: 1 }],
+  };
   var _tracks = {};       // albumId -> { alb, list: [remaining tracks] }
   var _mixAt = 0, _mixTaken = 0;
   var _used = {};         // normalised song key -> true, this session
   var _ctx = null;
-  var _exhausted = false;
 
   function el(id) { return document.getElementById(id); }
   function norm(x) {
@@ -30437,6 +30474,7 @@ window.track = function (name, props) {
       shortlist: (window.loadShortlist ? loadShortlist() : {}) || {},
       ratedAlbum: {}, ratedSong: {},
       seenAlbums: readSeen(SEEN_ALBUMS), seenSongs: readSeen(SEEN_SONGS),
+      songsByAlbum: {},
       maxPlays: 1,
     };
 
@@ -30465,6 +30503,9 @@ window.track = function (name, props) {
       var so = songs[k];
       addArtist(so.artistId, so.artist, (so.score || 0) * 10);
       ctx.ratedSong[songKey(so.artist, so.name)] = true;
+      // How many songs you have scored off each record, which is what makes a
+      // nearly-finished album the best candidate there is.
+      if (so.albumId) ctx.songsByAlbum[so.albumId] = (ctx.songsByAlbum[so.albumId] || 0) + 1;
     });
 
     try {
@@ -30492,13 +30533,42 @@ window.track = function (name, props) {
      Used to order the DISCOVERY pool. Yours and Shortlist have their own
      orders — a record you scored yourself needs no model to rank it. */
   var SIGNALS = [
-    { key: 'artist', weight: 3.0, note: 'how you rate this artist',
+    /* ONE INTERACTION IS A WEAK SIGNAL AND FIVE IS A STRONG ONE, and this did
+       not know the difference: it read the MEAN and nothing else, so an artist
+       you rated once at 90 outranked one you had rated six times at 85.
+
+       `conf` is that confidence, saturating at four rated records — past
+       four, more of them says very little you did not already know. And the
+       result is allowed to go NEGATIVE: an artist you have consistently scored
+       in the 30s is evidence AGAINST, not merely an absence of evidence, and
+       treating dislike as neutral is how a feed keeps offering you the thing
+       you keep marking down. */
+    { key: 'artist', weight: 3.0, note: 'how you rate this artist, and how often',
       score: function (c, ctx) {
         var a = ctx.artist[c.artistId] || ctx.artistName[norm(c.artist)];
         if (!a || !a.n) return 0;
-        // A 50 is worth nothing rather than half: the question is whether you
-        // LIKE them, not whether you have heard of them.
-        return Math.max(0, (a.sum / a.n) - 50) / 50;
+        var mean = a.sum / a.n;
+        var conf = Math.min(1, a.n / 4);
+        // -1 at 0, 0 at 50, +1 at 100 — symmetrical about "no opinion".
+        return ((mean - 50) / 50) * conf;
+      } },
+
+    /* THE BEST CANDIDATE IN THE APP: a record you are most of the way through.
+       Seven of ten rated means the other three are the likeliest cards this
+       feed will ever show, and it saturates at six because by then it is
+       already the strongest thing on the list. */
+    { key: 'partial', weight: 3.4, note: 'songs of it you have already rated',
+      score: function (c, ctx) {
+        var n = ctx.songsByAlbum[c.id] || 0;
+        return n ? Math.min(1, n / 6) : 0;
+      } },
+
+    /* Somebody put this forward on purpose. Weighted by how many people did,
+       saturating at five — five is already a room agreeing. */
+    { key: 'pushed', weight: 1.8, note: 'other people pushed it',
+      score: function (c) {
+        var b = Number(c.backers) || 0;
+        return b ? Math.min(1, b / 5) : 0;
       } },
 
     { key: 'listening', weight: 2.2, note: 'what you actually play',
@@ -30520,6 +30590,16 @@ window.track = function (name, props) {
         Object.keys(ctx.genre).forEach(function (k) { if (ctx.genre[k] > top) top = ctx.genre[k]; });
         return Math.min(1, g / top);
       } },
+
+    /* CONTROLLED RANDOMNESS, as a signal rather than as a shuffle afterwards.
+       Ranking is otherwise completely deterministic, so the same crate builds
+       the same feed in the same order every time and the twentieth card is
+       predictable from the first. A small jitter re-orders records that were
+       nearly tied — which is most of them — without ever lifting a genuinely
+       poor candidate over a genuinely good one, because 0.5 of weight cannot
+       out-argue 3.4 of partial. */
+    { key: 'jitter', weight: 0.5, note: 'a little noise, so the order is not fixed',
+      score: function () { return Math.random(); } },
 
     { key: 'collection', weight: 1.4, note: 'you own it and have never rated it',
       score: function (c, ctx) { return ctx.owned[c.id] ? 1 : 0; } },
@@ -30567,7 +30647,14 @@ window.track = function (name, props) {
     if (alb._pool === 'yours') {
       return alb.score != null ? ('From a record you gave ' + alb.score) : 'From a record you rated';
     }
+    if (alb._pool === 'partial') {
+      var n = ctx.songsByAlbum[alb.id] || 0;
+      return n === 1 ? 'You rated one song off this'
+                     : ('You rated ' + n + ' songs off this');
+    }
     if (alb._pool === 'shortlist') return 'On your shortlist';
+    if (alb._pool === 'pushed') return alb._why || 'Somebody pushed this';
+    if (alb._pool === 'wander') return 'Something different';
     var best = null;
     SIGNALS.forEach(function (s) {
       if (s.weight <= 0) return;
@@ -30577,6 +30664,9 @@ window.track = function (name, props) {
     if (!best) return 'Worth a listen';
     switch (best.key) {
       case 'artist':     return 'You rate ' + (alb.artist || 'them') + ' highly';
+      case 'partial':    return 'You started this record';
+      case 'pushed':     return 'Pushed by other people';
+      case 'jitter':     return 'Worth a listen';
       case 'collection': return 'You own this and have never rated it';
       case 'listening':  return 'You play ' + (alb.artist || 'them') + ' a lot';
       case 'community':  return 'Scoring well in the Crate';
@@ -30588,7 +30678,7 @@ window.track = function (name, props) {
 
   /* ---- the pools ------------------------------------------------------ */
   async function buildPools(ctx) {
-    var pools = { yours: [], shortlist: [], discovery: [] };
+    var pools = { partial: [], yours: [], shortlist: [], discovery: [], pushed: [], wander: [] };
 
     // 1. YOURS — records you have rated. Ordered by YOUR score: the one you
     //    scored 94 should offer up its songs before the one you scored 61.
@@ -30602,6 +30692,32 @@ window.track = function (name, props) {
       });
     });
     pools.yours.sort(function (x, y) { return x._order - y._order; });
+
+    /* PARTIAL — the strongest signal in the app, and it was not being used.
+
+       An album you have rated 7 songs off is an album you are most of the way
+       through; the other 3 are the likeliest cards this feed will ever show.
+       `yours` ordered by the ALBUM's score and knew nothing about that, so a
+       94 you had never opened the tracklist of outranked an 80 you were three
+       songs from finishing.
+
+       Ordered by how nearly done it is, and albums with NOTHING rated off them
+       are excluded — those are just `yours`, and they belong to the slower
+       slot. `ctx.songsByAlbum` counts what you have scored per record. */
+    Object.keys(ctx.albums).forEach(function (k) {
+      var a = ctx.albums[k];
+      if (!a || !a.name) return;
+      var done = ctx.songsByAlbum[a.id] || 0;
+      if (!done) return;
+      pools.partial.push({
+        id: a.id, name: a.name, artist: a.artist, artistId: a.artistId || '',
+        art: a.art, year: a.year || '', genre: a.genre || '',
+        score: a.score, _pool: 'partial', _done: done,
+        // More rated off it wins; the album's own score breaks the tie.
+        _order: -(done * 1000 + (a.score || 0)),
+      });
+    });
+    pools.partial.sort(function (x, y) { return x._order - y._order; });
 
     // 2. SHORTLIST — newest first, because a record you shortlisted this week
     //    is one you are still curious about.
@@ -30661,8 +30777,57 @@ window.track = function (name, props) {
       mine.forEach(function (r) { add({ id: r.album_id, name: r.name, artist: r.artist, art: r.art }); });
     } catch (e) {}
 
+    /* PUSHED — records other people put forward. Read straight off the
+       suggestions table, which needs no session and costs one trip. A push
+       carries its own album, so it is a record like any other once it is here;
+       what it brings is that NO model chose it. */
+    try {
+      var sug = (window.Cloud && Cloud.suggestionList) ? await Cloud.suggestionList('song', null, 60) : [];
+      /* The same rows do two jobs: they ARE the Suggestions feed, and they
+         raise a discovery candidate's score in For You. Annotating `cands`
+         here rather than re-fetching is what lets the `pushed` signal fire
+         without a second trip — and without a dedicated slot competing with
+         the tab. */
+      var backing = {};
+      (sug || []).forEach(function (r) { if (r && r.album_id) backing[r.album_id] = Number(r.backers) || 1; });
+      cands.forEach(function (c) { if (backing[c.id]) c.backers = backing[c.id]; });
+
+      (sug || []).forEach(function (r) {
+        if (!r || !r.album_id || !r.album) return;
+        if (ctx.ratedAlbum[r.album_id]) return;
+        pools.pushed.push({
+          id: r.album_id, name: r.album, artist: r.artist || '', art: r.art || '',
+          // Carried, not just used for the order: the `pushed` SIGNAL reads it
+          // when this record also turns up as a discovery candidate.
+          backers: Number(r.backers) || 1,
+          song: r.label || '',
+          _pool: 'pushed', _order: -(Number(r.backers) || 1),
+          _why: (Number(r.backers) > 1 ? (r.backers + ' people pushed this') : 'Somebody pushed this'),
+        });
+      });
+      pools.pushed.sort(function (x, y) { return x._order - y._order; });
+    } catch (e) {}
+
     cands.forEach(function (c) { c._score = rank(c, ctx); });
     cands.sort(function (x, y) { return y._score - x._score; });
+
+    /* WANDER — the anti-echo-chamber slot, and it is taken from the BOTTOM
+       half of the same ranked list rather than from a different source. That
+       matters: these are still real records the app can reach and play, they
+       are simply not the ones the model would have picked, so one card in nine
+       is something you would never otherwise be offered. Shuffled, so it is
+       not merely "the worst-scoring record" every time. */
+    var tail = cands.slice(Math.floor(cands.length / 2));
+    for (var w = tail.length - 1; w > 0; w--) {
+      var j = Math.floor(Math.random() * (w + 1));
+      var tmp = tail[w]; tail[w] = tail[j]; tail[j] = tmp;
+    }
+    pools.wander = tail.slice(0, 40).map(function (c) {
+      var d = Object.assign({}, c);
+      d._pool = 'wander';
+      d._why = 'Something different';
+      return d;
+    });
     pools.discovery = cands;
 
     return pools;
@@ -30716,9 +30881,14 @@ window.track = function (name, props) {
       while (box.list.length && took < FROM_ALBUM && out.length < want) {
         var t = box.list.shift();
         var k = songKey(alb.artist, t.title);
+        /* THE THREE EXCLUSIONS, AND NONE OF THEM HAS AN ESCAPE HATCH.
+           `seenSongs` used to be skipped once `_exhausted` was set, which let
+           the feed replay rather than dead-end. That is the one rule this feed
+           is not allowed to break, so exhaustion now widens the POOL instead
+           (see expand()) and a song that has been served is gone for good. */
         if (_ctx.ratedSong[k]) continue;                      // you already scored it
         if (_used[k]) continue;                               // already in this feed
-        if (!_exhausted && _ctx.seenSongs[k]) continue;       // shown in an earlier session
+        if (_ctx.seenSongs[k]) continue;                      // served in any session, ever
         _used[k] = true;
         took++;
         out.push({
@@ -30739,13 +30909,90 @@ window.track = function (name, props) {
     return out;
   }
 
+  /* WIDENING, RATHER THAN REPEATING.
+
+     Called only when every pool is dry. Each step reaches somewhere the last
+     one did not, in increasing order of how little it knows about you — so a
+     feed degrades from "chosen for you" to "worth hearing" to "popular right
+     now" and never to "you have seen this".
+
+     Returns true if it actually added records. Three steps and then the feed
+     is allowed to say the library is finished, which for a real crate it never
+     will be: step 3 alone is the whole Deezer chart.
+
+     Everything added goes through the same drawFrom exclusions, so nothing
+     here can smuggle a seen or rated song back in. */
+  async function expand() {
+    _widen++;
+    var before = 0;
+    Object.keys(_pools).forEach(function (k) { before += _pools[k].length; });
+
+    try {
+      if (_widen === 1) {
+        /* 1. THE REST OF THE ARTISTS YOU LIKE. buildPools only takes the top
+              six; this takes the next twenty, and their whole discographies. */
+        var more = Object.keys(_ctx.artist)
+          .map(function (k) { return { k: k, a: _ctx.artist[k] }; })
+          .filter(function (x) { return x.a && x.a.n; })
+          .sort(function (x, y) { return (y.a.sum / y.a.n) - (x.a.sum / x.a.n); })
+          .slice(6, 26);
+        for (var i = 0; i < more.length; i++) {
+          var d = null;
+          try {
+            d = await spotifyFetch('/artists/' + encodeURIComponent(more[i].k) +
+                  '/albums?include_groups=album&name=' + encodeURIComponent(more[i].a.name || ''));
+          } catch (e) {}
+          ((d && d.items) || []).forEach(function (al) {
+            if (!al || !al.id || _ctx.ratedAlbum[al.id]) return;
+            _pools.discovery.push({ id: al.id, name: al.name, artist: more[i].a.name,
+              art: (al.images && al.images[0] && al.images[0].url) || '', _pool: 'discovery',
+              _why: 'More from ' + (more[i].a.name || 'an artist you rate') });
+          });
+        }
+      } else if (_widen === 2) {
+        /* 2. WHAT THE CRATE IS PLAYING. Already fetched once for the community
+              signal; asked for in full here. */
+        var tr = (window.Cloud && Cloud.fetchTrending) ? await Cloud.fetchTrending() : [];
+        (tr || []).forEach(function (r) {
+          if (!r || !r.album_id || _ctx.ratedAlbum[r.album_id]) return;
+          _pools.discovery.push({ id: r.album_id, name: r.album_name, artist: r.album_artist,
+            art: r.album_art, _pool: 'discovery', _why: 'The Crate is rating this' });
+        });
+      } else {
+        /* 3. THE CHART. Nothing about you at all, which is the point: this is
+              the floor under the feed, and it is effectively bottomless. */
+        var ch = null;
+        try { ch = await spotifyFetch('/chart-artists'); } catch (e) {}
+        var arts = (ch && (ch.artists || ch.items)) || [];
+        for (var n = 0; n < Math.min(arts.length, 12); n++) {
+          var dd = null;
+          try {
+            dd = await spotifyFetch('/artists/' + encodeURIComponent(arts[n].id) +
+                   '/albums?include_groups=album&name=' + encodeURIComponent(arts[n].name || ''));
+          } catch (e) {}
+          ((dd && dd.items) || []).forEach(function (al) {
+            if (!al || !al.id || _ctx.ratedAlbum[al.id]) return;
+            _pools.discovery.push({ id: al.id, name: al.name, artist: arts[n].name,
+              art: (al.images && al.images[0] && al.images[0].url) || '', _pool: 'discovery',
+              _why: 'Big right now' });
+          });
+        }
+      }
+    } catch (e) {}
+
+    var after = 0;
+    Object.keys(_pools).forEach(function (k) { after += _pools[k].length; });
+    return after > before;
+  }
+
   /* The mix, as a cursor. Each call returns the next pool to draw from and
      advances; a pool with nothing left is skipped rather than producing a
      gap, so a brand new account gets an all-Discovery feed with no special
      case anywhere. */
   function nextPool() {
-    for (var guard = 0; guard < MIX.length * 2; guard++) {
-      var slot = MIX[_mixAt % MIX.length];
+    var MIXN = FEEDS[_feed] || FEEDS.you;
+    for (var guard = 0; guard < MIXN.length * 2; guard++) {
+      var slot = MIXN[_mixAt % MIXN.length];
       if (_mixTaken >= slot.n) { _mixAt++; _mixTaken = 0; continue; }
       _mixTaken++;
       if (_pools[slot.pool] && _pools[slot.pool].length) return slot.pool;
@@ -30767,16 +31014,17 @@ window.track = function (name, props) {
       out = out.concat(got);
     }
 
-    /* Everything is spent. Rather than dead-ending, let previously-seen songs
-       back in — oldest first, and still never anything you have rated. A feed
-       that stops is a bug; a feed that eventually comes round again is a
-       library with an end. */
-    if (!out.length && !_exhausted) {
-      _exhausted = true;
-      Object.keys(_tracks).forEach(function (id) { delete _tracks[id]; });
-      _pools = await buildPools(_ctx);
-      _mixAt = 0; _mixTaken = 0;
-      return drawSongs(count);
+    /* THE PERSONAL POOLS ARE SPENT. This used to let previously-seen songs
+       back in, which is the one thing the feed must never do. It widens
+       instead: each call to expand() reaches further out than the last, and
+       only when there is genuinely nothing left anywhere does the feed admit
+       it. A library really can end; a feed that repeats itself is a bug. */
+    /* Widening is for the personalised feed only. Suggestions is, by
+       definition, exactly what people have pushed — padding it out with
+       chart records would make it a second For You wearing the wrong name. */
+    if (!out.length && _feed === 'you' && _widen < WIDEN_STEPS) {
+      var grew = await expand();
+      if (grew) { _mixAt = 0; _mixTaken = 0; return drawSongs(count); }
     }
     return out;
   }
@@ -30801,27 +31049,18 @@ window.track = function (name, props) {
   function cardHtml(c, i) {
     var art = esc(c.art || '');
     return '<article class="fy-card" data-i="' + i + '" data-pool="' + esc(c.pool) + '" style="--fy-tint:' + tintFor(7) + '">' +
-      /* THE TWO PILLS. Outside .fy-over and above the art, because the
-         overlay is bottom-anchored and these belong at the top — and because
-         `pointer-events: none` on the overlay would otherwise have to be
-         unpicked for a row that is nowhere near it.
-
-         Push is on the CARD rather than in a menu: the record you would push
-         is the one playing, and any other arrangement means choosing it
-         again from a list you have just scrolled past. */
-      '<div class="fy-top">' +
-        '<button class="fy-pill" data-suggest="" type="button">What users suggested</button>' +
-        '<button class="fy-pill fy-push" data-push="' + i + '" type="button" aria-label="Push this to the feed">' +
-          '<span class="fy-push-arrow" aria-hidden="true"></span>Push' +
-        '</button>' +
+      // The bed: the same sleeve, blurred past recognition, giving the page the
+      // record's colours without competing with the record.
+      '<div class="fy-bed-wrap" aria-hidden="true">' +
+        (art ? '<img class="fy-bed" src="' + art + '" alt="" onerror="this.style.display=\'none\'">' : '') +
       '</div>' +
+      // The record itself, whole and square. `data-play`, never `data-open` —
+      // one control, one verb.
       '<button class="fy-art" data-play="' + i + '" aria-label="Play ' + esc(c.title || '') + '">' +
-        (art ? '<img class="fy-bed" src="' + art + '" alt="" aria-hidden="true" onerror="this.style.display=\'none\'">' : '') +
-        (art ? '<img class="fy-main" src="' + art + '" alt="" onerror="this.style.display=\'none\'">' : '') +
-        '<span class="fy-shade"></span>' +
+        (art ? '<img class="fy-main" src="' + art + '" alt="">' : '') +
         '<span class="fy-cue"></span>' +
       '</button>' +
-      '<div class="fy-over">' +
+      '<div class="fy-meta">' +
         '<div class="fy-why">' + esc(c.why || '') + '</div>' +
         '<div class="fy-head">' +
           '<span class="fy-eq" aria-hidden="true"><i></i><i></i><i></i></span>' +
@@ -30830,11 +31069,11 @@ window.track = function (name, props) {
         '<div class="fy-sub">' + esc(c.artist || '') +
           (c.albumName ? ' &middot; <span class="fy-alb" data-open="' + i + '">' + esc(c.albumName) + '</span>' : '') +
         '</div>' +
-        '<div class="fy-rate">' +
-          '<input type="range" min="0" max="10" step="1" value="7" data-rate="' + i + '" aria-label="Your score out of 10">' +
-          '<output data-out="' + i + '">7</output>' +
-          '<button class="btn-primary fy-save" data-save="' + i + '">Rate</button>' +
-        '</div>' +
+      '</div>' +
+      '<div class="fy-rate">' +
+        '<input type="range" min="0" max="10" step="1" value="7" data-rate="' + i + '" aria-label="Your score out of 10">' +
+        '<output data-out="' + i + '">7</output>' +
+        '<button class="btn-primary fy-save" data-save="' + i + '">Rate</button>' +
       '</div>' +
     '</article>';
   }
@@ -31014,15 +31253,43 @@ window.track = function (name, props) {
     var h = Math.round(vh - top);
     if (h > 320 && h > window.innerHeight * 0.45) host.style.height = h + 'px';
 
-    // What the overlay has to clear: the bar's own height plus whatever gap
-    // it floats above the bottom edge, plus a little air. No bar (desktop) is
-    // just the gutter.
+    // What the card has to clear at the bottom: the bar's own height plus the
+    // gap it floats above the edge, plus air.
     var floor = 24;
     if (nav) {
       var r = nav.getBoundingClientRect();
       if (r.height && r.bottom > top) floor = Math.round((vh - r.top) + 14);
     }
     host.style.setProperty('--fy-floor', floor + 'px');
+
+    /* THE SQUARE'S SIDE, MEASURED RATHER THAN LEFT TO CSS.
+
+       Every combination of aspect-ratio / max-width / max-height has an axis
+       where one constraint wins and the ratio is quietly dropped inside a flex
+       column — this feed shipped a 343x360 "square" the first time round. One
+       number, computed from what actually bounds it: the card's width, and the
+       height left after the reason line, the title, the subtitle and the
+       rating tray have taken theirs.
+
+       The chrome is MEASURED off the live card rather than typed, so changing
+       that copy cannot leave this wrong — and it is capped at 78% of the
+       card's height so the record never fills the screen again. Breathing room
+       is the point of the redesign, not a side effect of it. */
+    var card = host.querySelector('.fy-card');
+    if (!card) return;
+    var cs = window.getComputedStyle(card);
+    var w = card.clientWidth
+          - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    var avail = card.clientHeight
+          - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0)
+          - floor;
+    ['.fy-meta', '.fy-rate'].forEach(function (sel) {
+      var n = card.querySelector(sel);
+      if (n) avail -= n.getBoundingClientRect().height;
+    });
+    avail -= (parseFloat(cs.rowGap) || 0) * 2;
+    var side = Math.min(w, avail, card.clientHeight * 0.78);
+    host.style.setProperty('--fy-art', Math.max(150, Math.floor(side)) + 'px');
   }
   /* Debounced, because iOS fires a burst of these through a rotation or an
      app switch and only the last one is a real viewport. */
@@ -31142,23 +31409,30 @@ window.track = function (name, props) {
     var mine = ++_tok;
     host.innerHTML = '<div class="fy-loading">Finding songs for you&hellip;</div>';
     try {
-      _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _exhausted = false;
+      _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0;
       _ctx = buildContext();
       _pools = await buildPools(_ctx);
       if (mine !== _tok) return;
 
       // The records that went into the pools, for the `repeat` signal.
       var seenA = _ctx.seenAlbums;
-      ['yours', 'shortlist', 'discovery'].forEach(function (p) {
-        _pools[p].slice(0, 12).forEach(function (a) { seenA[a.id] = Date.now(); });
+      Object.keys(_pools).forEach(function (p) {
+        (_pools[p] || []).slice(0, 12).forEach(function (a) { seenA[a.id] = Date.now(); });
       });
       writeSeen(SEEN_ALBUMS, seenA);
 
       var first = await drawSongs(PAGE);
       if (mine !== _tok) return;
       if (!first.length) {
+        /* The two feeds run out for completely different reasons and must not
+           say the same thing. For You empty means the crate is too small;
+           Suggestions empty means nobody has pushed anything, which is a
+           thing the person reading it can personally fix. */
         host.innerHTML = '<div class="empty"><span class="emoji">' + (window.ICONS ? ICONS.sparkle : '') + '</span>' +
-          '<h3>Nothing to play yet</h3><p>Rate a few records and this fills up with songs worth hearing.</p></div>';
+          (_feed === 'pushed'
+            ? '<h3>Nothing pushed yet</h3><p>Records people put forward land here. Push one and you are the first.</p>'
+            : '<h3>Nothing to play yet</h3><p>Rate a few records and this fills up with songs worth hearing.</p>') +
+          '</div>';
         _built = true; return;
       }
       _items = first;
@@ -31180,6 +31454,7 @@ window.track = function (name, props) {
     // Re-measured on every entry: the header is a different height logged in
     // and logged out, and the banner appears and disappears above it.
     fitFeed();
+    paintQuota();
     if (force) build(true);
   }
 
@@ -31187,9 +31462,111 @@ window.track = function (name, props) {
   // <audio> element does not care that the card holding it is hidden.
   function leave() { stopAll(); if (_io) { _io.disconnect(); _io = null; } }
 
+  /* ---- the tabs, and pushing a record -----------------------------------
+     `setFeed` rebuilds rather than filtering: the two feeds have different
+     pools, and a filter over one list would have to decide what to do with the
+     cards already on screen. A rebuild is one line and cannot get that wrong.
+
+     THE EXCLUSION SET IS SHARED. `seenSongs` is the same map for both tabs, so
+     a record served under Suggestions can never come back under For You —
+     which is the hard rule, and would be the first thing a second engine
+     broke. */
+  function setFeed(which) {
+    which = which === 'pushed' ? 'pushed' : 'you';
+    if (which === _feed) return;
+    _feed = which;
+    var seg = el('fy-seg');
+    if (seg) seg.querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.feed === which);
+    });
+    build(true);
+  }
+
+  /* How many pushes are left today, straight from the server. Asked rather
+     than counted here: the cap is enforced in suggestion_add and a second copy
+     in the browser is a second copy to drift — the same rule as wallet_buy
+     taking a key and never a price. */
+  async function paintQuota() {
+    var b = el('fy-push'), lab = el('fy-push-label');
+    if (!b || !lab) return;
+    if (!(window.Cloud && Cloud.isOn && Cloud.isOn())) { lab.textContent = 'Push'; return; }
+    try {
+      var r = await Cloud.client().rpc('suggestion_quota');
+      if (r.error || !r.data) { lab.textContent = 'Push'; return; }
+      var left = Number(r.data.left);
+      lab.textContent = left > 0 ? ('Push · ' + left) : 'None left today';
+      b.disabled = left <= 0;
+    } catch (e) { lab.textContent = 'Push'; }
+  }
+
+  /* PUSH ANY RECORD, not only the one on screen. The card in front of you is
+     the obvious default and is offered first, but the point of a push is that
+     it is a recommendation — and the thing you most want to recommend is
+     rarely the thing the feed just handed you. So the button opens the search
+     the rest of the app already uses. */
+  async function pushFlow() {
+    if (!(window.Cloud && Cloud.isOn && Cloud.isOn())) {
+      if (window.toast) toast('Log in to push a record');
+      return;
+    }
+    var cur = (_playing != null) ? _items[_playing] : _items[0];
+    var choice = await ask({
+      title: 'Push a record',
+      body: cur ? ('Put one in front of everybody. Playing now: ' + cur.title + ' — ' + cur.artist) : 'Put a record in front of everybody.',
+      confirm: cur ? 'Push this one' : 'Search',
+      cancel: 'Search for another',
+    });
+    if (choice && cur) { await doPush(cur); return; }
+    // Either they asked to search, or there was nothing playing to push.
+    if (!window.openPicker) return;
+    openPicker('song', async function (item) {
+      /* A SONG SEARCH RETURNS A TRACK ID, AND THE FEED NEEDS AN ALBUM.
+
+         `pools.pushed` builds a record out of a push, and albumTracks() asks
+         /api/preview for the whole album by name — so a track id filed in
+         `album_id` would be a key that matches nothing and never becomes a
+         card. One extra search resolves the real record, which also makes the
+         "you have already rated this" check work on the way back in.
+
+         If it cannot be resolved the push still goes through, keyed on the
+         normalised name+artist: the pushed record is the useful half and an
+         unresolvable id is not a reason to refuse somebody's recommendation. */
+      var albName = item.album || item.name;
+      var albId = '';
+      try {
+        var hits = await searchItems(albName + ' ' + (item.artist || ''), 'album');
+        var want = norm(albName);
+        var hit = (hits || []).filter(function (a) { return norm(a.name) === want; })[0] || (hits || [])[0];
+        if (hit) albId = hit.id;
+      } catch (e) {}
+      await doPush({
+        title: item.name, artist: item.artist || '',
+        albumName: albName,
+        albumId: albId || (norm(item.artist) + '|' + norm(albName)),
+        art: item.art || '',
+      });
+    });
+  }
+
+  async function doPush(c) {
+    var res = (window.Suggestions && Suggestions.pushSong)
+      ? await Suggestions.pushSong(c, el('fy-push'))
+      : { error: 'off' };
+    paintQuota();
+    if (res && !res.error && _feed === 'pushed') build(true);
+    return res;
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     var host = el('fy-feed');
     if (host) wire(host);
+    var seg = el('fy-seg');
+    if (seg) seg.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-feed]');
+      if (b) setFeed(b.dataset.feed);
+    });
+    var pb = el('fy-push');
+    if (pb) pb.addEventListener('click', pushFlow);
     document.addEventListener('visibilitychange', function () { if (document.hidden) stopAll(); });
     // The clip runs out on its own and the card has to stop saying it plays.
     try { VinalAudio.on('end', function () { stopAll(); }); } catch (e) {}
@@ -31197,6 +31574,7 @@ window.track = function (name, props) {
 
   window.ForYou = {
     render: render, build: build, leave: leave, stop: stopAll, topUp: topUp,
+    setFeed: setFeed, push: doPush, quota: paintQuota,
     SIGNALS: SIGNALS, MIX: MIX, rank: rank, explain: explain,
     /* For tuning from the console. A ranking you cannot read is one you cannot
        fix: `ForYou.why(3)` names the pool the song came from and, for a
@@ -31218,11 +31596,12 @@ window.track = function (name, props) {
     stats: function () {
       return {
         shown: _items.length,
-        pools: { yours: _pools.yours.length, shortlist: _pools.shortlist.length, discovery: _pools.discovery.length },
+        pools: Object.keys(_pools).reduce(function (m, k) { m[k] = _pools[k].length; return m; }, {}),
         albumsFetched: Object.keys(_tracks).length,
         songsHeld: Object.keys(_tracks).reduce(function (n, k) { return n + _tracks[k].list.length; }, 0),
         uniqueShown: Object.keys(_used).length,
-        exhausted: _exhausted,
+        widened: _widen,
+        seenSongs: Object.keys(_ctx ? _ctx.seenSongs : {}).length,
         byPool: _items.reduce(function (m, c) { m[c.pool] = (m[c.pool] || 0) + 1; return m; }, {}),
       };
     },
