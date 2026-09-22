@@ -282,6 +282,39 @@
   --radius-xs:     3px;
 }
 
+/* TEST PRESSING — the plain one, and the only one with no colour in it.
+   Every other theme has an accent hue; this has silver. That is what lets it
+   be the cheapest without reading as the worst — a white-label test pressing
+   is a real object collectors want, not a stripped-back version of a record.
+   See ..._20260922140000_starter_theme.sql for why the shop needed a bottom
+   rung at all. */
+[data-theme="press"] {
+  --bg:            #0c0c0d;
+  --surface:       #141416;
+  --surface-2:     #1b1b1e;
+  --surface-3:     #232326;
+  --surface-4:     #2c2c30;
+  --text:          #f2f2f4;
+  --text-dim:      #9a9aa2;
+  --text-faint:    #5c5c64;
+  --border:        rgba(255,255,255,0.07);
+  --border-strong: rgba(255,255,255,0.15);
+  --gold:          #d8dbe0;
+  --gold-glow:     rgba(216,219,224,0.26);
+  --gold-dim:      rgba(216,219,224,0.12);
+  --accent-2:      #8d919a;
+  --accent-2-dim:  rgba(141,145,154,0.16);
+  --radius:        6px;
+  --radius-sm:     4px;
+  --radius-xs:     2px;
+}
+html[data-theme="press"] body {
+  /* The lathe marks on a blank label. Flat grey, no hue. */
+  background-image:
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(255,255,255,0.045) 0%, transparent 70%),
+    repeating-radial-gradient(circle at 50% -20%, rgba(255,255,255,0.022) 0 1px, transparent 1px 4px);
+}
+
 /* Background texture per theme — layered behind the existing radial
    glow on body, scoped with html[data-theme=...] so it's more specific
    than the base `body` rule and doesn't need !important. */
@@ -18014,6 +18047,11 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     vhs:      { name: 'VHS Tracking', cost: 30000, desc: 'Bottle-green black with phosphor green and hot pink.' },
     bone:     { name: 'Bone China',   cost: 30000, desc: 'Warm off-white on soot. Quiet, and the only pale one.' },
     neon:     { name: 'Neon Vault', cost: 35000, desc: 'Indigo black, magenta and cyan. Loud.' },
+    /* The bottom rung, and the only theme with no colour in it. Cheap because
+       it is the plain pressing, not because it is the lesser one — see the
+       starter_theme migration. The cost here is the fallback; loadPrices()
+       overwrites it from shop_items, which is what wallet_buy charges. */
+    press:    { name: 'Test Pressing', cost: 2000, desc: 'White label. Silver on black, no colour anywhere.' },
   };
   const SWATCH = {
     classic:  'linear-gradient(135deg,#0a0908 20%,#F5C842 60%,#ff7a4d)',
@@ -18023,6 +18061,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     vhs:      'linear-gradient(135deg,#07100d 20%,#3dffab 60%,#ff4fa3)',
     bone:     'linear-gradient(135deg,#141310 20%,#e6dcc4 60%,#b8705a)',
     neon:     'linear-gradient(135deg,#0a0616 20%,#ff3d9a 60%,#22e3ff)',
+    press:    'linear-gradient(135deg,#0c0c0d 20%,#d8dbe0 60%,#8d919a)',
   };
   const BANNERS = {
     none:   { name: 'None',      cost: 0,   desc: 'No banner — the plain profile header.', gradient: 'transparent' },
@@ -32365,9 +32404,15 @@ window.track = function (name, props) {
 
     function paintPicks() {
       var b = el('onb-go');
+      /* THREE, AND THE NUMBER IS LOAD-BEARING. Three albums and three songs at
+         400 each is 2,400, which is what somebody is guaranteed to have before
+         the minigame — win or lose — and Test Pressing costs 2,000. Drop this
+         to one and the shop beat stops being a purchase whenever the Earworm
+         round goes badly. The migration guards the other end of the same sum. */
       if (b) {
-        b.disabled = picked.length < 1;
-        b.textContent = picked.length ? ('Add these ' + picked.length) : 'Pick at least one';
+        b.disabled = picked.length < 3;
+        b.textContent = picked.length >= 3 ? ('Add these ' + picked.length)
+                      : ('Pick ' + (3 - picked.length) + ' more');
       }
       host.querySelectorAll('[data-q]').forEach(function (c) {
         c.classList.toggle('on', picked.some(function (p) { return _norm(p.name + p.artist) === c.dataset.q; }));
@@ -32387,7 +32432,7 @@ window.track = function (name, props) {
     show(
       '<div class="onb-kicker">Step two</div>' +
       '<h2 class="onb-h">What are you playing at the moment?</h2>' +
-      '<p class="onb-p">Up to five. This is what shapes your For You page.</p>' +
+      '<p class="onb-p">Three to five. This is what shapes your For You page.</p>' +
       '<div class="onb-chips">' + quick.map(function (s) {
         return '<button class="onb-chip" data-q="' + esc(_norm(s.name + s.artist)) + '">' +
           '<span>' + esc(s.name) + '</span><small>' + esc(s.artist) + '</small></button>';
@@ -32395,7 +32440,7 @@ window.track = function (name, props) {
       '<input class="g-input onb-find" id="onb-q" type="text" placeholder="…or search for a song" autocomplete="off">' +
       '<div class="onb-results" id="onb-res"></div>' +
       '<p class="onb-note">We’ll log these at 8/10 — change any of them whenever you like.</p>',
-      cta('Pick at least one')
+      cta('Pick 3 more')
     );
 
     host.querySelectorAll('[data-q]').forEach(function (c, i) {
@@ -32604,51 +32649,65 @@ window.track = function (name, props) {
     show('<div class="onb-kicker">Step five</div><h2 class="onb-h">Opening the shop…</h2>');
     try { if (window.Wallet && Wallet.load) await Wallet.load(); } catch (e) {}
     var bal = discs();
-    var B = (window.Wallet && Wallet.BANNERS) || {};
-    var SW = (window.Wallet && Wallet.BANNER_SWATCH) || {};
-    var owned = [];
-    try { owned = (Wallet.get().owned_banners) || []; } catch (e) {}
-    var offers = Object.keys(B)
-      .filter(function (k) { return k !== 'none' && B[k].cost > 0 && owned.indexOf(k) === -1; })
-      .sort(function (a, b) { return B[a].cost - B[b].cost; })
-      .slice(0, 2);
+    var W = window.Wallet || {};
+    /* Themes AND banners, cheapest first — which puts Test Pressing at the top,
+       and a theme is the better first purchase besides: equipping one repaints
+       the whole app in front of them, where a banner is a strip on a page they
+       have not visited yet. */
+    var have = { theme: [], banner: [] };
+    try { have.theme = W.get().owned_themes || []; have.banner = W.get().owned_banners || []; } catch (e) {}
+    var pool = [];
+    [['theme', W.THEMES || {}, W.SWATCH || {}], ['banner', W.BANNERS || {}, W.BANNER_SWATCH || {}]]
+      .forEach(function (g) {
+        Object.keys(g[1]).forEach(function (k) {
+          var it = g[1][k];
+          if (!it || !it.cost || k === 'none' || (have[g[0]] || []).indexOf(k) !== -1) return;
+          pool.push({ kind: g[0], key: k, name: it.name, desc: it.desc || '', cost: it.cost, sw: g[2][k] });
+        });
+      });
+    pool.sort(function (a, b) { return a.cost - b.cost; });
+    var offers = pool.slice(0, 2);
 
-    var afford = offers.filter(function (k) { return bal >= B[k].cost; }).length > 0;
-    var cheapest = offers[0] && B[offers[0]].cost;
+    var afford = offers.filter(function (o) { return bal >= o.cost; }).length > 0;
+    var cheapest = offers[0] && offers[0].cost;
 
     show(
       '<div class="onb-kicker">Step five</div>' +
       '<h2 class="onb-h">' + (afford ? 'Go on then — spend some.' : 'This is what they’re for.') + '</h2>' +
       '<div class="onb-wallet"><b>' + bal.toLocaleString('en-GB') + '</b><span>Discs to spend</span></div>' +
-      offers.map(function (k) {
-        var can = bal >= B[k].cost;
-        return '<button class="onb-buy" data-k="' + k + '"' + (can ? '' : ' disabled') + '>' +
-          '<span class="sw" style="background:' + (SW[k] || 'var(--surface-3)') + '"></span>' +
-          '<span><b>' + esc(B[k].name) + '</b><i>' + esc(B[k].desc || '') + '</i></span>' +
-          '<span class="px">' + B[k].cost.toLocaleString('en-GB') + '</span></button>';
+      offers.map(function (o, i) {
+        var can = bal >= o.cost;
+        return '<button class="onb-buy" data-i="' + i + '"' + (can ? '' : ' disabled') + '>' +
+          '<span class="sw" style="background:' + (o.sw || 'var(--surface-3)') + '"></span>' +
+          '<span><b>' + esc(o.name) + '</b><i>' + esc(o.desc) + '</i></span>' +
+          '<span class="px">' + o.cost.toLocaleString('en-GB') + '</span></button>';
       }).join('') +
-      (afford ? '<p class="onb-note">Buy one and it goes on your profile straight away.</p>'
+      (afford ? '<p class="onb-note">Buy one and it\u2019s yours straight away \u2014 a theme repaints the whole app.</p>'
               : '<p class="onb-note">You’re ' + Math.max(0, (cheapest || 0) - bal).toLocaleString('en-GB') +
                 ' off the cheapest one. One more game, or tomorrow’s login, covers it — the shop is under Shop whenever you want it.</p>'),
       cta(afford ? 'Maybe later' : 'Got it', 'onb-go')
     );
 
-    host.querySelectorAll('[data-k]').forEach(function (b) {
+    host.querySelectorAll('[data-i]').forEach(function (b) {
       b.addEventListener('click', async function () {
         if (b.disabled) return;
         b.disabled = true;
-        var k = b.dataset.k;
-        var res = await Wallet.buyBanner(k);
+        var o = offers[+b.dataset.i];
+        // wallet_buy, exactly as the Shop calls it. The server reads the price
+        // out of shop_items; nothing here ever names one.
+        var res = await (o.kind === 'theme' ? Wallet.buyTheme(o.key) : Wallet.buyBanner(o.key));
         if (res && res.error) {
           b.disabled = false;
           var e = el('onb-err'); if (e) e.textContent = res.error;
           return;
         }
-        try { await Wallet.equipBanner(k); } catch (e) {}
-        S.bought = B[k].name;
+        // Equipping a theme repaints the app underneath the overlay, which is
+        // the whole reason a theme leads this list.
+        try { await (o.kind === 'theme' ? Wallet.equipTheme(o.key) : Wallet.equipBanner(o.key)); } catch (e) {}
+        S.bought = o.name;
         b.classList.add('bought');
         b.querySelector('.px').textContent = 'Yours ✓';
-        host.querySelectorAll('[data-k]').forEach(function (o) { if (o !== b) o.disabled = true; });
+        host.querySelectorAll('[data-i]').forEach(function (n) { if (n !== b) n.disabled = true; });
         if (window.burst) try { burst(b, { count: 22, spread: 120 }); } catch (e) {}
         if (window.buzz) buzz('good');
         var g = el('onb-go'); if (g) g.textContent = 'Nice one — carry on';

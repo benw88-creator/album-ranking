@@ -598,15 +598,36 @@ modal and pays through `wallet_award_game`. The purchase is `wallet_buy`. The
 favourite artist is the same `Cloud.saveProfile({fav_artist})` the profile's own
 picker calls.
 
-**The shop beat cannot promise a purchase, and says so rather than faking one.**
-The cheapest thing in the shop is Mono Fade at 8,000; the honest ceiling on a
-first session is 3 albums + 5 songs (3,200, inside the 10-a-day rating cap) plus
-an Earworm win (2,000) — so somebody who wins lands around 5,200 and somebody
-who loses lands lower. The button is live the moment they can afford it and the
-gap is printed when they cannot. **Inventing a cheap tutorial-only item, or
-topping up the difference, is exactly the separate reward path this file exists
-without.** If a guaranteed purchase is wanted, the lever is a genuinely cheap
-item in `shop_items` that anybody can buy — not a special case here.
+**The shop beat completes a real purchase, and the way it was made to is the
+interesting part.** It could not, at first: the cheapest thing in the shop was
+Mono Fade at 8,000 and an honest first session is nowhere near it.
+
+    3 albums x 400                    1,200
+    3 songs  x 400                    1,200
+    one Earworm win                   2,000   -- IF they win
+                                      -----
+    guaranteed                        2,400
+    likely                            4,400
+
+The two obvious fixes were both the same mistake. Topping somebody up is a
+tutorial-only reward path to reconcile later, which is what this whole flow is
+written to avoid; discounting an existing item for new accounts is that again
+wearing a price tag. So instead the shop gained a **bottom rung**: Test
+Pressing, a real theme at 2,000 that anybody can buy at any time
+(`..._20260922140000_starter_theme.sql`). It is cheap because it is the plain
+one, not because it is for beginners — see the migration.
+
+**2,000 sits under the guaranteed 2,400, and both ends of that sum are
+guarded.** The migration raises if the price ever goes over 2,400 or if
+something cheaper appears; the song step requires three picks and says in a
+comment why. Drop the picks to one and the beat quietly stops being a purchase
+whenever the Earworm round goes badly.
+
+The offers are themes AND banners, cheapest first — so Test Pressing leads, and
+a theme is the better first purchase besides: **equipping one repaints the whole
+app in front of them**, where a banner is a strip on a page they have not
+visited yet. The button is still only live when they can afford it, because a
+skipped round is a real outcome.
 
 ### Per user, never per device
 
