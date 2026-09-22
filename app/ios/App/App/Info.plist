@@ -43,6 +43,23 @@
       </array>
     </dict>
 	</dict>
+	<!-- The avatar picker is a plain <input type="file" accept="image/*"> in the
+	     webview, and WKWebView's upload sheet offers Photo Library, Take Photo
+	     and Choose File whether or not this app asked for a camera. Tapping
+	     Take Photo with no NSCameraUsageDescription is not a refused
+	     permission, it is an immediate crash — so the string has to be here
+	     even though no Capacitor camera plugin is installed. The photo-library
+	     string is the same belt-and-braces: modern iOS serves that branch
+	     through PHPicker, which needs no permission, but older paths do not. -->
+	<key>NSCameraUsageDescription</key>
+	<string>VINALL asks for the camera only if you choose Take Photo when setting your profile picture. Nothing is recorded otherwise.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>VINALL asks for your photos only when you pick a profile picture. The image you choose is the only one it reads.</string>
+	<!-- Every connection this app makes is ordinary HTTPS and nothing else is
+	     encrypted, which is exempt. Declaring it here means App Store Connect
+	     stops asking the export-compliance question on every single upload. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

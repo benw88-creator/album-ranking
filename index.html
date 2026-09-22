@@ -8083,7 +8083,21 @@ input, textarea, select, [contenteditable="true"],
   .modal-panel { margin-bottom: env(safe-area-inset-bottom); }
 }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
+     remote copy blocks the FIRST PAINT on a round trip to somebody else's
+     CDN: measured as several seconds of black screen on a cold launch of
+     the native app, and a hang with no connection at all — in an app whose
+     whole 4.2 argument is that its assets are inside the binary. Off the
+     disk it parses in milliseconds and works with the radio off.
+     Pinned at 2.45.4, the exact version the CDN tag pinned, so this is a
+     change of origin and nothing else. Upgrading means a new file beside
+     this one and a new src — never an edit in place, so the version on the
+     page is always the version in the name.
+     Re-fetch with:
+       curl -L -o assets/supabase-js-2.45.4.min.js \
+         https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js
+     sha256 96277ec00e19df476d7396a8a2586b41ed1033dcf680f5aa79b0c556059792b8 -->
+<script src="/assets/supabase-js-2.45.4.min.js"></script>
 <script>
 /* Motion preference, applied before the first paint so the splash and the
    dashboard entrance both see it. Three states: follow the system (the
@@ -8500,7 +8514,7 @@ window.ICONS = {
 
   <!-- connect gate -->
   <div class="gate" id="gate" style="margin-top:24px;">
-    <h3>Can&rsquo;t reach Spotify right now</h3>
+    <h3>Can&rsquo;t reach the music catalogue</h3>
     <p>The music catalogue couldn&rsquo;t load. Try refreshing the page.</p>
     <button class="btn-mini" id="gate-connect" onclick="location.reload()">&#8635; Refresh</button>
   </div>
@@ -9978,7 +9992,7 @@ window.ICONS = {
    ================================================================ */
 const SPOTIFY_API = 'https://api.spotify.com/v1';
 
-let _token = null, _tokenExp = 0, _badToken = false;
+let _token = null, _tokenExp = 0;
 function validToken(t) { return !!t && t !== 'undefined' && t !== 'null'; }
 function _tokSave() { try { localStorage.setItem('sp_token', _token); localStorage.setItem('sp_token_exp', String(_tokenExp)); } catch(e){} }
 function _tokClear() { try { localStorage.removeItem('sp_token'); localStorage.removeItem('sp_token_exp'); sessionStorage.removeItem('sp_token'); sessionStorage.removeItem('sp_token_exp'); } catch(e){} }
@@ -9987,7 +10001,7 @@ async function getAccessToken() {
   let fromUrl = null, expIn = 3600;
   const urlBlob = (location.search||'')+'&'+(location.hash||'');
   if(urlBlob.indexOf('access_token')!==-1){const m=urlBlob.match(/access_token=([^&]+)/);if(m){try{fromUrl=decodeURIComponent(m[1]);}catch(e){fromUrl=m[1];}}const em=urlBlob.match(/expires_in=([0-9]+)/);if(em)expIn=parseInt(em[1],10);}
-  if(fromUrl&&!validToken(fromUrl)){history.replaceState(null,'',location.pathname);_badToken=true;fromUrl=null;}
+  if(fromUrl&&!validToken(fromUrl)){history.replaceState(null,'',location.pathname);fromUrl=null;}
   if(validToken(fromUrl)){_token=fromUrl;_tokenExp=Date.now()+(expIn*1000);_tokSave();history.replaceState(null,'',location.pathname);return _token;}
   if(_token&&Date.now()<_tokenExp-5000)return _token;
   try{const st=localStorage.getItem('sp_token');const se=parseInt(localStorage.getItem('sp_token_exp')||'0',10);if(validToken(st)&&Date.now()<se-5000){_token=st;_tokenExp=se;return _token;}}catch(e){}
@@ -10148,7 +10162,7 @@ function spotifyGet(path,opts){
   _spInflight[path]=p;return p;
 }
 function _isEmptyResult(d){if(!d||typeof d!=='object')return true;if(d.albums&&Array.isArray(d.albums.items))return d.albums.items.length===0;if(d.artists&&Array.isArray(d.artists.items))return d.artists.items.length===0;if(d.tracks&&Array.isArray(d.tracks.items))return d.tracks.items.length===0;if(Array.isArray(d.items))return d.items.length===0;return false;}
-function spotifyErrorMessage(e){if(!e)return 'Something went wrong.';if(e.message==='not-authenticated')return 'Music catalogue unavailable \u2014 try refreshing.';if(e.message==='token-expired'||e.status===401)return 'Session expired \u2014 try refreshing the page.';if(e.message==='network'||e.status===0)return 'Couldn\u2019t reach Spotify (network). Check your connection.';if(e.status===429)return 'Spotify is busy (rate limit). Give it ~15 seconds, then try again.';if(e.status)return 'Spotify error '+e.status+(e.detail?': '+e.detail:'')+(e.endpoint?' ['+e.endpoint+']':'');return 'Something went wrong: '+(e.message||'unknown')+'.';}
+function spotifyErrorMessage(e){if(!e)return 'Something went wrong.';if(e.message==='not-authenticated')return 'Music catalogue unavailable \u2014 try refreshing.';if(e.message==='token-expired'||e.status===401)return 'Session expired \u2014 try refreshing the page.';if(e.message==='network'||e.status===0)return 'Couldn\u2019t reach the music catalogue. Check your connection.';if(e.status===429)return 'The catalogue is busy (rate limit). Give it ~15 seconds, then try again.';if(e.status)return 'Catalogue error '+e.status+(e.detail?': '+e.detail:'')+(e.endpoint?' ['+e.endpoint+']':'');return 'Something went wrong: '+(e.message||'unknown')+'.';}
 
 /* ================================================================
    2. SEARCH
@@ -10218,16 +10232,15 @@ async function doSearch(q) {
   } catch (e) {
     if (e.stale) return;
     if (e.message === 'not-authenticated') {
-      suggestionsEl.innerHTML = '<div class="sugg-empty">' +
-        (_badToken ? 'That Spotify token wasn’t valid.' : 'Music search unavailable — try refreshing.') + '</div>';
+      suggestionsEl.innerHTML = '<div class="sugg-empty">Music search unavailable — try refreshing.</div>';
       suggestionsEl.classList.add('open');
       return;
     }
     let msg;
     if (e.message === 'token-expired' || e.status === 401) { msg = 'Session expired \u2014 try refreshing the page.'; }
     else if (e.status === 403) { msg = 'Search unavailable right now. Try again shortly.'; }
-    else if (e.status) { let reason = ''; try { const j = JSON.parse(e.detail || '{}'); reason = (j.error && (j.error.message || j.error)) || ''; } catch (_) { reason = (e.detail || '').slice(0, 140); } msg = 'Search failed (Spotify ' + e.status + ')' + (reason ? ': ' + reason : '') + '.'; }
-    else { msg = 'Search failed — couldn’t reach Spotify. Check your connection.'; }
+    else if (e.status) { let reason = ''; try { const j = JSON.parse(e.detail || '{}'); reason = (j.error && (j.error.message || j.error)) || ''; } catch (_) { reason = (e.detail || '').slice(0, 140); } msg = 'Search failed (' + e.status + ')' + (reason ? ': ' + reason : '') + '.'; }
+    else { msg = 'Search failed — couldn’t reach the catalogue. Check your connection.'; }
     suggestionsEl.innerHTML = '<div class="sugg-empty">' + msg + '</div>';
     suggestionsEl.classList.add('open');
   } finally { spinner.style.display = 'none'; }
@@ -13772,7 +13785,7 @@ async function pickNewrelArtist(artist) {
         '<div class="empty" style="padding:40px 24px;">' +
           '<span class="emoji">'+ICONS.mailbox+'</span>' +
           '<h3>No upcoming albums</h3>' +
-          '<p>' + esc(artist.name) + ' doesn\u2019t have anything announced on Spotify right now.</p>' +
+          '<p>' + esc(artist.name) + ' doesn\u2019t have anything announced right now.</p>' +
         '</div>' +
         (mostRecent.length ? '<p class="reco-note" style="margin-top:8px;">Their most recent release' + (mostRecent.length > 1 ? 's' : '') + ':</p><div class="grid" id="newrel-recent-grid"></div>' : '');
       if (mostRecent.length) {
@@ -30207,7 +30220,7 @@ window.track = function (name, props) {
       // first version told on most of an album.
       if (!has && !album.map) return;
       b.classList.toggle('nopv', !has);
-      b.title = has ? 'Play preview' : 'No preview - opens in Spotify';
+      b.title = has ? 'Play preview' : 'No preview for this track';
     });
   }
 
@@ -30383,7 +30396,7 @@ window.track = function (name, props) {
     art.src = (album && album.meta && album.meta.art) || '';
     bar.classList.toggle('offer', noPrev);
     if (noPrev) {
-      sub.innerHTML = esc(cur.artist || '') + ' <span class="pb-clip">&middot; no preview &mdash; Spotify has it in full</span>';
+      sub.innerHTML = esc(cur.artist || '') + ' <span class="pb-clip">&middot; no preview &mdash; full track on Deezer</span>';
       tog.innerHTML = '&#9654;';
     } else {
       sub.innerHTML = esc(cur.artist || '') + ' <span class="pb-clip">&middot; 30s preview</span>';
