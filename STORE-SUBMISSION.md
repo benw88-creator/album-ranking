@@ -431,9 +431,14 @@ revoke access "at any time for any reason" with no notice, and bar commercial us
 - [ ] Fill App Privacy / Data Safety using the table above
 - [ ] Paste the App Review notes above
 - [ ] Take the screenshots, from the populated demo account
-- [ ] Apply `20260916230000_listening_note_play.sql` by hand in the SQL editor.
-      Until it is, the player observes plays and writes nothing — no error, just
-      a table that never fills.
+- [x] Apply `20260916230000_listening_note_play.sql` — **already applied**,
+      confirmed 2026-09-22 by calling the function against production: it exists
+      and returns immediately on a null `auth.uid()`. The same probe found
+      `spin_tier_payouts`, `suggestions`, `xp_from_everything`, `push_limit` and
+      `starter_theme` all live too. **There is nothing left to apply by hand**;
+      `free_spin_pays_in_full` is the only one that cannot be proved from
+      outside, because `create or replace` leaves no trace, and it is pure
+      function-replacement so re-running it costs nothing.
 
 ### Done
 

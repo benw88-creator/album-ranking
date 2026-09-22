@@ -43,7 +43,12 @@ ever authenticates against Spotify. Only the app owner's credentials are involve
 - `assets/`, `dither-frames/` — static media
 - `supabase-migration-discs.sql` — loose schema SQL (see Database below)
 
-**Four migrations are waiting to be applied by hand** at the time of writing:
+**Those migrations have all been applied** — verified against production on
+2026-09-22 by probing for the functions and rows each one creates, not by
+remembering. What the paragraph below describes is therefore the *old* state; it
+is kept because the degradation rule it states is the one to design to, and
+because the next unapplied migration will put the app back in exactly it. The
+ones named were:
 `..._20260921100000_spin_tier_payouts.sql`, `..._20260921120000_suggestions.sql`,
 `..._20260921140000_xp_from_everything.sql`, and whatever has landed since. Every
 client-side feature that depends on them degrades rather than breaking — the
