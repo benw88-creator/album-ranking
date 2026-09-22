@@ -4972,6 +4972,27 @@ has to be changed by hand in the dashboard:
 Until that is done the old link shape still works — the `#type=recovery` and
 `?code=` branches are untouched — so the two can land in either order.
 
+### The splash does not stand in front of it, and the password is typed twice
+
+Somebody arriving from a reset email has already chosen to do a thing, and
+making them press GO first puts the one screen they need behind a tap on the
+flow where they are already frustrated enough to have asked for a new password.
+`dismissSplash()` is exported and called the moment an auth return is detected —
+it still waits on `Cloud.ready`, so the app underneath is finished before it is
+uncovered; only the press is gone. Detected at parse time as well, before
+`Cloud.init` cleans the URL.
+
+There is a confirm field, because this is the one input in the app nobody can
+see and getting it wrong locks somebody out of the account they have just spent
+five minutes recovering.
+
+**The failure prints the raw reason under the friendly line**, small and dim. A
+reset page is exactly where somebody needs to be able to say WHAT went wrong,
+and "it did not work" is the report that costs a day. Where no session comes
+back it also names the SHAPE of link that arrived — `token_hash`, `code`,
+`fragment` or `no token at all` — which is the single fact that says whether the
+email template is the problem.
+
 ### The origin has to be the one the link lands on
 
 `vinall.xyz` 308s to `www.vinall.xyz`, so a `redirectTo` aimed at the apex

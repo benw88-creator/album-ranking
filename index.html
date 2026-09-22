@@ -9556,6 +9556,11 @@ window.ICONS = {
         <div><h2>Choose a new password</h2><p>You&rsquo;re almost in.</p></div></div>
       <label class="g-label" style="text-align:left;" for="auth-newpass">New password</label>
       <input id="auth-newpass" class="g-input" type="password" placeholder="At least 6 characters" autocomplete="new-password">
+      <!-- Typed twice, because this is the one field in the app nobody can see
+           and getting it wrong locks somebody out of the account they have just
+           spent five minutes recovering. -->
+      <label class="g-label" style="text-align:left; margin-top:12px;" for="auth-newpass2">Confirm new password</label>
+      <input id="auth-newpass2" class="g-input" type="password" placeholder="Type it again" autocomplete="new-password">
       <button class="btn-primary g-btn-full" id="auth-newpass-submit" style="margin-top:16px;">Set new password</button>
       <div class="g-error" id="auth-newpass-error"></div>
     </div>
@@ -14359,7 +14364,10 @@ const Cloud=(function(){
       const btn=this;
       const errEl=document.getElementById('auth-newpass-error');
       const pass=document.getElementById('auth-newpass').value;
+      const pass2=document.getElementById('auth-newpass2').value;
+      errEl.style.color='var(--red)';
       if(!pass||pass.length<6){errEl.textContent='Password must be at least 6 characters.';return;}
+      if(pass!==pass2){errEl.textContent='Those two don\u2019t match.';return;}
       errEl.textContent='';btn.disabled=true;btn.textContent='Saving\u2026';
       try{
         const{error}=await sb.auth.updateUser({password:pass});
@@ -14371,7 +14379,14 @@ const Cloud=(function(){
         setTimeout(function(){closeAuth();},1500);
       }catch(e){errEl.textContent='Something went wrong. Try again.';btn.disabled=false;btn.textContent='Set new password';}
     });
-    document.getElementById('auth-newpass').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('auth-newpass-submit').click();});
+    // Enter moves to the confirm field first, then submits.
+    ['auth-newpass','auth-newpass2'].forEach(function(id){
+      document.getElementById(id).addEventListener('keydown',function(e){
+        if(e.key!=='Enter')return;
+        if(id==='auth-newpass'){document.getElementById('auth-newpass2').focus();return;}
+        document.getElementById('auth-newpass-submit').click();
+      });
+    });
     /* Coming back from the reset email.
        Three things arrive this way and only one of them used to be handled:
          #type=recovery...       the implicit flow, a session in the fragment
@@ -14409,6 +14424,7 @@ const Cloud=(function(){
 
     if (tokenHash && !authErr) {
       history.replaceState(null, '', location.pathname);
+      if (window.dismissSplash) try { dismissSplash(); } catch (e) {}
       setTimeout(async function () {
         let res = null;
         try { res = await sb.auth.verifyOtp({ type: otpType || 'recovery', token_hash: tokenHash }); }
@@ -14421,12 +14437,20 @@ const Cloud=(function(){
           const el = document.getElementById('auth-reset-error');
           if (el) {
             el.style.color = 'var(--red)';
-            el.textContent = 'That link has expired \u2014 they last an hour. Send yourself a new one.';
+            /* The raw reason under the friendly line. A reset page is
+               exactly where a person needs to be able to say WHAT went
+               wrong, and 'it did not work' is the report that costs a
+               day. Small and dim, so it is there without being the
+               message. */
+            var why = (res && res.error && res.error.message) || 'no session came back';
+            el.innerHTML = 'That link has expired \u2014 they last an hour. Send yourself a new one.' +
+              '<span style="display:block;margin-top:6px;font-size:11px;opacity:.6;">' + esc(why) + '</span>';
           }
         }
       }, 200);
     } else if (authErr) {
       history.replaceState(null, '', location.pathname);
+      if (window.dismissSplash) try { dismissSplash(); } catch (e) {}
       setTimeout(function () {
         document.getElementById('auth-modal').classList.add('open');
         showAuthView('forgot');
@@ -14442,6 +14466,7 @@ const Cloud=(function(){
                (query.get('code') && query.get('type') !== 'signup')) {
       // supabase-js consumes the fragment or exchanges the code itself; give it
       // a moment, then only offer the form if a session actually materialised.
+      if (window.dismissSplash) try { dismissSplash(); } catch (e) {}
       setTimeout(async function () {
         let ok = false;
         try { const { data } = await sb.auth.getSession(); ok = !!(data && data.session); } catch (e) {}
@@ -14452,7 +14477,14 @@ const Cloud=(function(){
         } else {
           showAuthView('forgot');
           const el = document.getElementById('auth-reset-error');
-          if (el) { el.style.color = 'var(--red)'; el.textContent = 'That link did not work. Send yourself a new one.'; }
+          if (el) {
+            el.style.color = 'var(--red)';
+            // Which SHAPE of link arrived, because that is the one fact
+            // that says whether the email template is the problem.
+            var shape = tokenHash ? 'token_hash' : (query.get('code') ? 'code' : (hash.get('access_token') ? 'fragment' : 'no token at all'));
+            el.innerHTML = 'That link did not work. Send yourself a new one.' +
+              '<span style="display:block;margin-top:6px;font-size:11px;opacity:.6;">link carried: ' + esc(shape) + '</span>';
+          }
         }
       }, 500);
     }
@@ -21038,6 +21070,21 @@ function playDismissAnimation(gateEl, callback) {
   }
   var cta = document.getElementById('splash-cta');
   if (cta) cta.addEventListener('click', dismiss);
+
+  /* AN AUTH RETURN DOES NOT GET A SPLASH. Somebody arriving from a reset email
+     has already chosen to do a thing; making them press GO first puts the one
+     screen they need behind a tap, on the flow where they are already
+     frustrated enough to have asked for a new password.
+
+     `dismiss()` still waits on Cloud.ready, so the app underneath is finished
+     before it is uncovered — this only removes the press. Read here at parse
+     time, BEFORE Cloud.init cleans the URL, and exported as well so the auth
+     code can call it directly the moment it decides a recovery link is real. */
+  window.dismissSplash = dismiss;
+  try {
+    var q = location.search + ' ' + location.hash;
+    if (/token_hash=|type=recovery|error_description=|[?#&]error=/.test(q)) dismiss();
+  } catch (e) {}
 })();
 </script>
 
