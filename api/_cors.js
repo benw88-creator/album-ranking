@@ -9,8 +9,8 @@
 //
 // Aliasing the origin instead was checked and cannot work. WKWebView will not
 // let a URL scheme handler claim https, so iosScheme can never be
-// wildcrate.xyz and the iOS origin is a custom scheme whatever the hostname
-// says; and on Android setting hostname to wildcrate.xyz makes Capacitor's
+// vinall.xyz and the iOS origin is a custom scheme whatever the hostname
+// says; and on Android setting hostname to vinall.xyz makes Capacitor's
 // WebViewLocalServer own that entire host, so /api/* would be looked for
 // inside the app bundle and 404 rather than reaching Vercel at all.
 //

@@ -1,6 +1,18 @@
 # VINALL
 
-Album-ranking web app (renamed from Vinal to VINALL), live at https://wildcrate.xyz.
+Album-ranking web app (renamed from Vinal to VINALL), live at https://vinall.xyz.
+
+**The domain was `wildcrate.xyz` and is now `vinall.xyz`.** One wrinkle that is not
+cosmetic: **the apex 308-redirects to `www.vinall.xyz`, and a CORS preflight may not
+be redirected.** Several `/api/*` routes carry an Authorization header, which forces
+one — so `Native.api` is `https://www.vinall.xyz` while `Native.site`, which only
+ever goes in front of a human, is the apex. Measured: `OPTIONS /api/collection-buy`
+is a 308 on the apex and a 204 on www. Get that the wrong way round and every
+authorised call from the native app fails while the plain GETs carry on working.
+
+`app/capacitor.config.json` still carries `appId: xyz.wildcrate.vinall`. Left alone
+deliberately: an appId is the app's identity in both stores, not a URL, and changing
+it is a decision rather than a rename.
 
 ## Shape
 
@@ -2944,7 +2956,7 @@ never which records came up:
 ```
 Cover Fire #2449 — 1,163
 ○●●●○●●○○●  6/10
-wildcrate.xyz
+vinall.xyz
 ```
 
 `marks[]` is pushed one per round in `answer()` and reset in `begin()`.
@@ -3510,7 +3522,7 @@ gains a write policy.
   2,993-against-5,000 is untouched. What it moves is real terms — the cheapest tag is
   about three and a half days of everything rather than four — and that is a decision
   being made here rather than discovered later.
-- **`wildcrate.xyz/#recall` opens straight into it.** There is no `/recall` path: this
+- **`vinall.xyz/#recall` opens straight into it.** There is no `/recall` path: this
   app is one static file with no router and no build step, so a real path would mean a
   `vercel.json` rewrite — a deploy-config change to reach a view the hash already
   reaches.
@@ -3970,7 +3982,7 @@ iOS and Android wrappers around the same `index.html` the website serves.
 stays flat and must**, because Vercel auto-detects a root `package.json` and
 starts trying to build a site that is already finished. `.vercelignore`
 excludes `app/` from the deploy as well, so the native source never reaches
-wildcrate.xyz.
+vinall.xyz.
 
 ```
 cd app && npm install      # once
@@ -3993,19 +4005,19 @@ on iOS, `https://localhost` on Android — so every relative `/api/...` is
 cross-origin, and none of the nine routes set a single CORS header, because
 until now the page and the routes shared an origin.
 
-The tempting fix is to alias the origin to `wildcrate.xyz` and make the whole
+The tempting fix is to alias the origin to `vinall.xyz` and make the whole
 question disappear. **It cannot work, on either platform, and both reasons are
 in Capacitor's own source rather than being a matter of taste:**
 
 - **iOS.** `server.iosScheme` can never be `https`: WKWebView refuses to
   register a URL scheme handler for a scheme it already owns, which is stated
   in the CLI's own type declarations. So the origin is a custom scheme
-  whatever `hostname` says — `capacitor://wildcrate.xyz` is still cross-origin
-  to `https://wildcrate.xyz`.
+  whatever `hostname` says — `capacitor://vinall.xyz` is still cross-origin
+  to `https://vinall.xyz`.
 - **Android.** `hostname` is worse than useless there. `WebViewLocalServer`
   routes anything whose host matches the bridge host through `handleLocalRequest`,
   which looks the path up **inside the app bundle** and returns 404 when it is
-  not there. Aliasing to wildcrate.xyz would therefore make the local server own
+  not there. Aliasing to vinall.xyz would therefore make the local server own
   `/api/*` and the routes would never be reached at all.
 
 So: `api/_cors.js`, called first in all nine routes, plus `Native.api` in front
@@ -4047,7 +4059,7 @@ back to exactly what the web did, because the same file is still the site.
 | | |
 |---|---|
 | `Native.on` | are we in the app |
-| `Native.api` | `https://wildcrate.xyz` natively, `''` on the web |
+| `Native.api` | `https://www.vinall.xyz` natively, `''` on the web |
 | `Native.site` | what a link handed to another person has to say |
 | `Native.hand` | `Share` or `Copy` — the verb the buttons print |
 | `Native.call/has/share` | the bridge |
@@ -4191,7 +4203,7 @@ recoverable for a signed-in account and gone for everybody else.
 - **No push notifications.** No infrastructure for them, and they drag in a
   permission prompt, a token store and a privacy-label change.
 - No deep links, so a password-reset mail opens the website rather than the
-  app. `Native.site` points `redirectTo` at wildcrate.xyz on purpose: the
+  app. `Native.site` points `redirectTo` at vinall.xyz on purpose: the
   capacitor scheme is not on Supabase's redirect allow-list and would silently
   fall back to Site URL anyway.
 
@@ -4832,8 +4844,9 @@ explanation.
 **The reset link going to `localhost` is a Supabase dashboard setting, not app code.**
 Authentication → URL Configuration:
 
-- **Site URL** must be `https://wildcrate.xyz` (it defaults to `http://localhost:3000`)
-- **Redirect URLs** must include `https://wildcrate.xyz/**`, plus
+- **Site URL** must be `https://vinall.xyz` (it defaults to `http://localhost:3000`)
+- **Redirect URLs** must include `https://vinall.xyz/**` and
+  `https://www.vinall.xyz/**`, plus
   `https://*.vercel.app/**` if preview deploys should work
 
 Supabase silently falls back to Site URL whenever a requested `redirectTo` is not on the
@@ -4852,7 +4865,7 @@ than cosmetics.
 
 `confirm()` and `alert()` draw a **system** dialog, and in a webview that dialog
 is titled with the origin — so spending a Mythic album pick came with a box
-saying *wildcrate.xyz says…*, which is an app admitting it is a web page. There
+saying *vinall.xyz says…*, which is an app admitting it is a web page. There
 were seven confirms, six alerts and a prompt; there are now none.
 
 `ask(opts)` is promise-based, themed, and carries three rules the native one

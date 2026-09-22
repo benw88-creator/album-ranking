@@ -7916,7 +7916,7 @@ input, textarea, select, [contenteditable="true"],
 <!-- ================================================================
      NATIVE — the one place that knows whether this is the app or the site.
 
-     index.html is served two ways now: from wildcrate.xyz, and from inside a
+     index.html is served two ways now: from vinall.xyz, and from inside a
      Capacitor binary where the same file is bundled and served from the app's
      own origin (capacitor://localhost on iOS, https://localhost on Android).
      Three things stop being true in there, and all three are silent failures
@@ -7930,7 +7930,7 @@ input, textarea, select, [contenteditable="true"],
        - navigator.vibrate does not exist in a WKWebView, so every piece of
          tactile feedback in the app does nothing on iPhone.
 
-     Aliasing the origin to wildcrate.xyz was checked and cannot work — see
+     Aliasing the origin to vinall.xyz was checked and cannot work — see
      api/_cors.js, which carries the reasoning and the other half of the fix.
 
      Everything below feature-detects and falls back to exactly what the web
@@ -7972,14 +7972,20 @@ input, textarea, select, [contenteditable="true"],
     has: has,
     /* Prefixed onto every /api/ path. Empty on the web, so the request is
        same-origin and relative exactly as it always was. */
-    api: on ? 'https://wildcrate.xyz' : '',
+    /* WWW, NOT THE APEX, AND THAT IS NOT A PREFERENCE. vinall.xyz 308s to
+       www.vinall.xyz — and a CORS PREFLIGHT MAY NOT BE REDIRECTED. Several of
+       these routes carry an Authorization header, which forces one, so an
+       apex base would fail every authorised call from the app while the plain
+       GETs carried on working: the worst shape a wrong URL can have. Measured:
+       OPTIONS on the apex is a 308, on www it is a 204. */
+    api: on ? 'https://www.vinall.xyz' : '',
     /* The verb every hand-it-over button prints. A button labelled Copy that
        opens a share sheet names one action and performs another, which is the
        worst shape a control can have — see the Market's old "Price it". */
     hand: on ? 'Share' : 'Copy',
     /* What a link handed to another person has to say. On the web this is
        what the code already built by hand. */
-    site: on ? 'https://wildcrate.xyz/' : (location.origin + location.pathname),
+    site: on ? 'https://vinall.xyz/' : (location.origin + location.pathname),
     /* Resolves true only when the sheet actually handed the text somewhere.
        The plugin REJECTS when somebody backs out, which is the only way to
        tell that from a share — and a button saying Shared over a cancelled
@@ -9337,7 +9343,7 @@ window.ICONS = {
 <div class="modal" id="ptop-modal">
   <div class="modal-panel">
     <button class="modal-close" id="ptop-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji" data-icon="search"></span><div><h2 id="ptop-title">Search</h2><p>Type to search Spotify.</p></div></div>
+    <div class="modal-head"><span class="mh-emoji" data-icon="search"></span><div><h2 id="ptop-title">Search</h2><p>Type to search Deezer.</p></div></div>
     <input id="ptop-search" class="g-input" type="text" placeholder="Search&hellip;" autocomplete="off" style="margin-bottom:12px;">
     <div id="ptop-list" style="max-height:50vh; overflow-y:auto;"></div>
   </div>
@@ -9656,7 +9662,7 @@ window.ICONS = {
 <!-- ===================== ASK =====================
      VINALL's own confirm. The browser's confirm() and alert() draw a SYSTEM
      dialog, and in a webview that dialog is titled with the origin — an app
-     that says "wildcrate.xyz says…" over a question about an album is an app
+     that says "vinall.xyz says…" over a question about an album is an app
      that has just admitted it is a web page. It also cannot be styled, cannot
      be themed, and blocks the whole thread while it is up.
 
@@ -20283,12 +20289,12 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
      ewShareGrid() built the whole message including its footer, and
      ewRenderResult() printed that string verbatim into `.drop-share` as a
-     preview — so "wildcrate.xyz" appeared on screen under the record you had
+     preview — so the domain appeared on screen under the record you had
      just been shown, reading as a stray caption on the artwork rather than as
      the last line of something you were about to paste. Splitting it means
      the screen shows the grid and the clipboard gets the link, with one
      definition of each and no way for them to drift. */
-  function ewShareText() { return ewShareGrid() + '\nwildcrate.xyz'; }
+  function ewShareText() { return ewShareGrid() + '\nvinall.xyz'; }
 
   /* Today's result on the Minigames card, the same as the Daily Drop's.
      The element was already in the markup and nothing ever wrote to it. */
@@ -21326,7 +21332,7 @@ function playDismissAnimation(gateEl, callback) {
   }
   // Same split as Earworm: the grid is what goes on screen, the link is what
   // goes on the clipboard. One definition of each.
-  function shareText() { return shareGrid() + '\nwildcrate.xyz'; }
+  function shareText() { return shareGrid() + '\nvinall.xyz'; }
 
   function showResult(won) {
     var sub = answer.artist + ' · ' + (answer.year || '') + (answer.genre ? ' · ' + answer.genre : '');
@@ -25627,7 +25633,7 @@ window.renderAdminStats = renderAdminStats;
   function shareText(rec) {
     var marks = (rec.marks || []).map(function (ok) { return ok ? '\u25cf' : '\u25cb'; }).join('');
     return NAME + ' #' + rec.day + ' \u2014 ' + (rec.score || 0).toLocaleString('en-GB') + '\n' +
-      marks + '  ' + (rec.correct || 0) + '/' + ROUNDS + '\n' + 'wildcrate.xyz';
+      marks + '  ' + (rec.correct || 0) + '/' + ROUNDS + '\n' + 'vinall.xyz';
   }
 
   window.Blitz = {
@@ -26772,12 +26778,12 @@ window.renderAdminStats = renderAdminStats;
       return { title: 'RECALL — Endless', lines: [
         rec.songs + ' song' + (rec.songs === 1 ? '' : 's') + ' · ' + (rec.score || 0).toLocaleString('en-GB') + ' points',
         'best streak ' + (rec.bestStreak || 0) + ' · average reveal ' + (rec.avgReveal || 0).toFixed(1) + 's'
-      ], url: 'wildcrate.xyz' };
+      ], url: 'vinall.xyz' };
     }
     return { title: 'RECALL #' + rec.day, lines: [
       marks + '  ' + (rec.correct ? (STEPS[rec.step] + '.0s') : 'missed'),
       (rec.score || 0).toLocaleString('en-GB') + ' points'
-    ], url: 'wildcrate.xyz' };
+    ], url: 'vinall.xyz' };
   }
   function shareText(rec) {
     var c = shareCard(rec);
@@ -27403,7 +27409,7 @@ window.renderAdminStats = renderAdminStats;
   window.openRecall = open;
   paintCard();
 
-  /* wildcrate.xyz/#recall opens straight into it. There is no /recall path
+  /* vinall.xyz/#recall opens straight into it. There is no /recall path
      because this app is one static file with no router and no build step —
      adding a rewrite to reach a view would be a deploy-config change for a
      link, and the hash needs neither. */
@@ -30300,7 +30306,7 @@ window.track = function (name, props) {
     // Native.site, never location.origin — inside the app that origin is
     // capacitor://localhost, and a link nobody else's phone can open is worse
     // than no share button at all.
-    var base = (window.Native && Native.site) || 'https://wildcrate.xyz/';
+    var base = (window.Native && Native.site) || 'https://vinall.xyz/';
     return base.replace(/\/+$/, '/') + '?ref=' + encodeURIComponent(code);
   }
 
@@ -30571,7 +30577,20 @@ window.track = function (name, props) {
   var CLIP_S = 30;
 
   var _built = false, _busy = false, _topping = false;
-  var _items = [], _tok = 0, _unlocked = false, _playing = null, _io = null;
+  /* TWO TOKENS, AND THEY WERE ONE — WHICH IS WHY THE FEED WAS NOT INFINITE.
+
+     `_tok` guarded three things: the playback of a card, a rebuild, and a
+     top-up. playCard() bumps it on EVERY card, and the observer callback that
+     triggers a top-up calls playCard immediately afterwards — so topUp read
+     the token, went off to fetch six songs, came back to find playCard had
+     moved it, and threw the whole batch away. It had already marked those
+     songs used, so they were gone for the session as well.
+
+     The feed therefore stopped growing at whatever the first page held and
+     then printed "You have heard the lot" over a pool with hundreds of songs
+     in it. Playback and the feed are unrelated concerns and now have a token
+     each. */
+  var _items = [], _tok = 0, _feedTok = 0, _unlocked = false, _playing = null, _io = null;
   var _pools = { partial: [], yours: [], shortlist: [], discovery: [], pushed: [], wander: [] };
   var _widen = 0;          // how far out expand() has already reached
   var _remote = null;      // the discovery half, still in the post
@@ -31380,10 +31399,10 @@ window.track = function (name, props) {
     var host = el('fy-feed');
     if (!host) return;
     _topping = true;
-    var mine = _tok;
+    var mine = _feedTok;
     try {
       var more = await drawSongs(PAGE);
-      if (mine !== _tok) return;
+      if (mine !== _feedTok) return;
       /* GENUINELY NOTHING LEFT. It cannot happen on a real crate — the test
          with three rated records and a shortlist still held 223 songs in
          memory and 20 unspent records after 66 cards — but a library of one
@@ -31393,16 +31412,27 @@ window.track = function (name, props) {
         if (!host.querySelector('.fy-end')) {
           var end = document.createElement('article');
           end.className = 'fy-card fy-end';
+          /* Observed like any other card, so arriving at it asks again. A
+             top-up that came back empty because the network dropped for two
+             seconds must not be the permanent end of the feed — and the
+             observer skips anything without a usable index, so before this the
+             end card was a full stop whatever caused it. */
+          end.dataset.i = '-1';
           end.innerHTML = '<div class="fy-why">That is everything</div>' +
             '<div class="fy-end-body"><h3>You have heard the lot</h3>' +
             '<p>Rate more records, or shortlist a few from the Crate, and this fills up again.</p>' +
             '<button class="btn-primary" id="fy-end-crate">Go to the Crate</button></div>';
           host.appendChild(end);
+          if (_io) _io.observe(end);
           var b = end.querySelector('#fy-end-crate');
           if (b) b.addEventListener('click', function () { stopAll(); if (window.goToView) goToView('crate'); });
         }
         return;
       }
+      // More arrived, so the end card was wrong. Take it away before the new
+      // cards go in, or the feed has a full stop in the middle of it.
+      var stale = host.querySelector('.fy-end');
+      if (stale) { if (_io) _io.unobserve(stale); stale.remove(); }
       var base = _items.length;
       _items = _items.concat(more);
       var frag = document.createElement('div');
@@ -31432,6 +31462,8 @@ window.track = function (name, props) {
         if (!en.isIntersecting) return;
         var i = parseInt(en.target.dataset.i, 10);
         if (isNaN(i)) return;
+        // The end card. Reaching it asks once more rather than being final.
+        if (i < 0) { topUp(); return; }
         if (i >= _items.length - LOOKAHEAD) topUp();
         /* IT TRIES. This used to be `if (!_unlocked) return;`, so nothing in
            the feed played until somebody had guessed that the sleeve was a
@@ -31686,7 +31718,7 @@ window.track = function (name, props) {
     if (!host || _busy) return;
     if (_built && !force) return;
     _busy = true;
-    var mine = ++_tok;
+    var mine = ++_feedTok;
     host.innerHTML = '<div class="fy-loading">Finding songs for you&hellip;</div>';
     try {
       _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0;
@@ -31703,7 +31735,7 @@ window.track = function (name, props) {
       var localHas = _pools.yours.length + _pools.partial.length + _pools.shortlist.length;
       _remote = remotePools(_ctx, _pools).catch(function () { return _pools; });
       if (!localHas || _feed === 'pushed') await _remote;
-      if (mine !== _tok) return;
+      if (mine !== _feedTok) return;
 
       // The records that went into the pools, for the `repeat` signal.
       var seenA = _ctx.seenAlbums;
@@ -31713,7 +31745,7 @@ window.track = function (name, props) {
       writeSeen(SEEN_ALBUMS, seenA);
 
       var first = await drawSongs(PAGE);
-      if (mine !== _tok) return;
+      if (mine !== _feedTok) return;
       if (!first.length) {
         /* The two feeds run out for completely different reasons and must not
            say the same thing. For You empty means the crate is too small;

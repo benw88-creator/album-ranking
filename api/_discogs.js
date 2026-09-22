@@ -25,7 +25,7 @@ import { normTitle } from './_streams.js';
 
 // Discogs rejects any request without a User-Agent. This is the single most
 // common first failure and it returns a 403 that looks like an auth problem.
-const UA = 'VINALL/1.0 +https://wildcrate.xyz';
+const UA = 'VINALL/1.0 +https://vinall.xyz';
 
 const API = 'https://api.discogs.com';
 

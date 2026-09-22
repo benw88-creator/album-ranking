@@ -19,7 +19,7 @@ the code every time, not once.**
 
 ## What is actually being submitted
 
-The same `index.html` that serves wildcrate.xyz, bundled inside a Capacitor
+The same `index.html` that serves vinall.xyz, bundled inside a Capacitor
 wrapper (`app/`). Not a webview pointed at the live site — the assets ship
 inside the binary. See **Guideline 4.2** below, which is the one this decision
 exists to answer.
@@ -124,7 +124,7 @@ website. Three things answer it, and they are in the build rather than in an
 argument:
 
 - **The web assets are bundled, not fetched.** The app does not point a webview
-  at wildcrate.xyz. `index.html`, the artwork and the fonts are in the binary,
+  at vinall.xyz. `index.html`, the artwork and the fonts are in the binary,
   which is also why it opens with no connection.
 - **It uses the device.** Haptics on every tap, correct guess and win; the system
   share sheet for results and invite links; lock-screen media controls and

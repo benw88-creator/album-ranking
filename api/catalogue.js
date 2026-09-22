@@ -54,7 +54,7 @@
 // That is what makes this a switch rather than a migration: no table is
 // re-keyed and nobody's crate is rewritten.
 
-const UA = 'VINALL/1.0 (+https://wildcrate.xyz)';
+const UA = 'VINALL/1.0 (+https://vinall.xyz)';
 const WEEK = 'public, s-maxage=604800, stale-while-revalidate=86400';
 const DAY  = 'public, s-maxage=86400, stale-while-revalidate=3600';
 /* For any response carrying a Deezer preview url. Those are SIGNED and live
@@ -226,6 +226,50 @@ export default async function handler(req, res) {
         }));
         out.albums = { items, total: j.total || 0 };
       }
+      if (/track/.test(type)) {
+        /* THE TRACK BRANCH DID NOT EXIST, so `searchItems(q, 'song')` — the
+           only way into "push a song to For You" — asked for `type=track`, got
+           `{}` back, read `data.tracks` as undefined and printed "No results"
+           for every query ever typed into it. The feature has never worked
+           since the catalogue moved.
+
+           Deezer's own relevance order is already right (Drake's "God's Plan"
+           leads that query), so it is kept. What it needs is DEDUPING: the
+           same recording comes back off a single, an album and a deluxe, and a
+           picker showing one song four times is a picker nobody trusts. Keyed
+           on artist+title with `rank` — Deezer's popularity field — deciding
+           the winner, which is the same rule `nb_fan` plays for artists. */
+        const j = await dz('/search/track?limit=' + Math.max(limit, 25) + '&q=' + encodeURIComponent(term));
+        const byKey = new Map();
+        (j.data || []).forEach((t) => {
+          if (!t || !t.id || !t.title) return;
+          const k = loose((t.artist && t.artist.name) || '') + '|' + loose(t.title);
+          const ex = byKey.get(k);
+          if (!ex || (t.rank || 0) > (ex.rank || 0)) byKey.set(k, t);
+        });
+        out.tracks = {
+          items: [...byKey.values()].slice(0, limit).map(t => ({
+            id: String(t.id),
+            name: t.title,
+            duration_ms: (t.duration || 0) * 1000,
+            preview_url: t.preview || '',
+            artists: t.artist ? [{ id: String(t.artist.id), name: t.artist.name }] : [],
+            album: t.album ? {
+              id: String(t.album.id), name: t.album.title,
+              images: [
+                t.album.cover_xl && { url: t.album.cover_xl, width: 1000, height: 1000 },
+                t.album.cover_big && { url: t.album.cover_big, width: 500, height: 500 },
+                t.album.cover_medium && { url: t.album.cover_medium, width: 250, height: 250 },
+              ].filter(Boolean),
+            } : { id: '', name: '', images: [] },
+            external_urls: { spotify: t.link || '' },
+            link: t.link || '',
+            uri: 'deezer:track:' + t.id,
+            source: 'deezer',
+          })),
+          total: j.total || 0,
+        };
+      }
       if (/artist/.test(type)) {
         /* DEEZER RETURNS THESE IN ITS OWN ORDER AND FILES SEVERAL ARTISTS UNDER
            ONE NAME. Searching "Drake" put four different Drakes above the one
@@ -249,7 +293,11 @@ export default async function handler(req, res) {
           total: j.total || 0
         };
       }
-      res.setHeader('Cache-Control', DAY);
+      /* A TRACK RESULT CARRIES SIGNED PREVIEW URLS (?hdnea=exp=…), which live
+         about ten minutes — so a track search cannot take the day-long cache
+         the album and artist searches do. A url with a signature in it is a
+         credential, not metadata. */
+      res.setHeader('Cache-Control', /track/.test(type) ? CLIP : DAY);
       res.status(200).json(out);
       return;
     }

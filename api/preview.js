@@ -48,7 +48,7 @@
 // karaoke game. Same rule `collectionName` plays for Apple and the album-match
 // score plays above.
 
-const UA = 'VINALL/1.0 (+https://wildcrate.xyz)';
+const UA = 'VINALL/1.0 (+https://vinall.xyz)';
 
 function clean(s) {
   return String(s || '')

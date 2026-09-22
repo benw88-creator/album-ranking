@@ -53,7 +53,7 @@ export async function spotifyToken() {
 // from Deezer and the one thing still asked of Spotify is "what is this
 // artist's id" — one search per artist, cached across a batch, and no album
 // metadata is read or stored.
-const UA = 'vinall-bid-wars/1.0 (+https://wildcrate.xyz)';
+const UA = 'vinall-bid-wars/1.0 (+https://vinall.xyz)';
 const _artistIds = {};          // lowercased artist name -> spotify artist id
 
 function looseName(s) {
@@ -119,7 +119,7 @@ export async function artistStreamTable(artistId, cache) {
   if (cache[artistId] !== undefined) return cache[artistId];
   try {
     const r = await fetch('https://kworb.net/spotify/artist/' + artistId + '_songs.html', {
-      headers: { 'User-Agent': 'vinall-bid-wars/1.0 (+https://wildcrate.xyz)' },
+      headers: { 'User-Agent': 'vinall-bid-wars/1.0 (+https://vinall.xyz)' },
     });
     if (!r.ok) { cache[artistId] = null; return null; }
     const html = await r.text();

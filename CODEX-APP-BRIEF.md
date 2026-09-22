@@ -5,7 +5,7 @@ to be pasted as a first message.
 
 ---
 
-You are taking VINALL — a music ranking web app live at https://wildcrate.xyz —
+You are taking VINALL — a music ranking web app live at https://vinall.xyz —
 and shipping it as a native iOS and Android app using **Capacitor**, without
 rewriting the web app.
 
@@ -63,7 +63,7 @@ as a build step *inside `app/`*, leaving the repo root untouched.
 ### The consequence, and it is the largest piece of work in this port
 
 Bundled assets are served from a Capacitor origin — `capacitor://localhost` on
-iOS, `https://localhost` on Android — not from `wildcrate.xyz`. So **every call
+iOS, `https://localhost` on Android — not from `vinall.xyz`. So **every call
 to `/api/*` becomes cross-origin.**
 
 I checked: **none of the nine routes in `api/` sets a single CORS header**, and
@@ -82,7 +82,7 @@ simulator alone.
 
 - **Alias the origin.** Capacitor's `server.hostname` (with
   `server.androidScheme: 'https'`) makes the webview serve the bundled files
-  under `https://wildcrate.xyz`, so `/api/*` is same-origin and CORS never
+  under `https://vinall.xyz`, so `/api/*` is same-origin and CORS never
   applies. Cheapest by far — it touches no serverless route. Confirm what it does
   to `localStorage` scoping, because the app's entire working state lives there
   and losing it on upgrade would wipe people's crates on their own device.
