@@ -7704,7 +7704,23 @@ body.is-sorting, body.is-sorting * {
   flex: 1; height: 3px; border-radius: 2px; background: var(--surface-4);
   transition: background .4s var(--ease);
 }
-.onb-rail i.on { background: var(--gold); }
+.onb-rail i.on { background: var(--onb-c, var(--gold)); box-shadow: 0 0 14px var(--onb-c, var(--gold)); }
+/* POSITIONAL, like the nav and the minigame grid. Seven segments, the app's
+   own five fixed hues plus gold and a second cyan, so the bar warms up as it
+   fills rather than being one colour repeated. Fixed hues, never --accent-2:
+   a progress bar that changes colour with the equipped theme is not progress,
+   it is decoration. */
+.onb-rail i:nth-child(1) { --onb-c: var(--c-cyan); }
+.onb-rail i:nth-child(2) { --onb-c: var(--c-blue); }
+.onb-rail i:nth-child(3) { --onb-c: var(--c-violet); }
+.onb-rail i:nth-child(4) { --onb-c: var(--c-pink); }
+.onb-rail i:nth-child(5) { --onb-c: var(--gold); }
+.onb-rail i:nth-child(6) { --onb-c: #ff8a3d; }
+.onb-rail i:nth-child(7) { --onb-c: var(--c-lime); }
+/* The one you are on breathes; the ones behind it are simply lit. */
+.onb-rail i.now { animation: onbRail 2.4s var(--ease) infinite; }
+@keyframes onbRail { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .onb-rail i.now { animation: none; } }
 .onb-body { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; max-width: 520px; width: 100%; margin: 0 auto; }
 .onb-foot { flex: 0 0 auto; max-width: 520px; width: 100%; margin: 18px auto 0; }
 
@@ -7895,6 +7911,99 @@ body.is-sorting, body.is-sorting * {
   text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 8px;
 }
 .onb-err { color: var(--red); font-size: 13px; margin-top: 10px; min-height: 17px; }
+
+/* ---- welcome: the mark, the word, one line ----------------------------- */
+.onb-hero { text-align: center; }
+.onb-word {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(38px, 13vw, 62px); letter-spacing: -.05em; line-height: 1;
+  margin-top: 4px;
+}
+.onb-lede { color: var(--text-dim); font-size: 16px; margin-top: 14px; }
+
+/* ---- username, and the badge it earns ---------------------------------- */
+.onb-user { margin-top: 20px; font-size: 16px; text-align: center; }
+.onb-reveal { text-align: center; }
+.onb-name {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(26px, 8vw, 40px); letter-spacing: -.035em;
+  display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;
+}
+/* The badge lands rather than fades: it overshoots, settles, and keeps a slow
+   sheen. Short, and nothing childish — it has to read as an award, which is
+   what the gold and the ring are doing. */
+.onb-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: 800 13px/1 var(--font-body); letter-spacing: .08em;
+  padding: 8px 12px; border-radius: 999px; color: #1a1408;
+  background: linear-gradient(135deg, #ffe9a8, #F5C842 42%, #ff9d3d);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.35) inset, 0 10px 30px rgba(245,200,66,.42);
+  animation: onbBadge .72s cubic-bezier(.2,1.5,.35,1) .18s both;
+}
+@keyframes onbBadge {
+  from { opacity: 0; transform: scale(.4) rotate(-14deg); }
+  60%  { opacity: 1; transform: scale(1.14) rotate(3deg); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .onb-badge { animation: none; } }
+
+/* ---- the artist grid --------------------------------------------------- */
+.onb-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 14px 10px; margin-top: 20px;
+  max-height: 52vh; overflow-y: auto; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 16px, #000 calc(100% - 20px), transparent 100%);
+}
+.onb-grid::-webkit-scrollbar { display: none; }
+.onb-grid-wait { min-height: 200px; }
+.onb-ar { background: none; border: 0; padding: 0; cursor: pointer; text-align: center; }
+.onb-ar-img {
+  display: block; width: 100%; aspect-ratio: 1; border-radius: 50%;
+  overflow: hidden; background: var(--surface-3);
+  box-shadow: 0 0 0 2px transparent; transition: box-shadow .2s var(--ease), transform .2s var(--ease);
+}
+.onb-ar-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.onb-ar-n {
+  display: block; margin-top: 7px; font-size: 12px; font-weight: 600;
+  color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.onb-ar:active .onb-ar-img { transform: scale(.94); }
+.onb-ar.on .onb-ar-img { box-shadow: 0 0 0 3px var(--gold), 0 8px 26px rgba(245,200,66,.3); }
+.onb-ar.on .onb-ar-n { color: var(--gold); }
+.onb-ar.just .onb-ar-img { animation: onbPop .34s var(--ease); }
+.onb-ar.nope .onb-ar-img { animation: onbNope .34s var(--ease); }
+@media (prefers-reduced-motion: reduce) {
+  .onb-ar.just .onb-ar-img, .onb-ar.nope .onb-ar-img { animation: none; }
+}
+
+/* ---- the quiet second action, and the Discs pill ----------------------- */
+.onb-alt {
+  display: block; margin: 12px auto 0; background: none; border: 0;
+  color: var(--text-faint); font: 600 13.5px var(--font-body); cursor: pointer; padding: 8px;
+}
+.onb-alt:active { color: var(--text-dim); }
+.onb-cover-wait {
+  width: min(230px, 56vw); aspect-ratio: 1; border-radius: 16px;
+  margin: 0 auto; background: var(--surface-3); animation: onbRail 1.4s var(--ease) infinite;
+}
+/* Rises off the middle of the card and goes. Not celebrate() — that is the
+   app's word for a WIN, and being paid for a rating is a transaction
+   clearing. */
+.onb-pop {
+  position: fixed; left: 50%; top: 52%; transform: translate(-50%,-50%);
+  z-index: 205; pointer-events: none;
+  font: 800 17px/1 var(--font-body); letter-spacing: -.01em;
+  color: #1a1408; padding: 11px 18px; border-radius: 999px;
+  background: linear-gradient(135deg, #ffe9a8, #F5C842 50%, #ff9d3d);
+  box-shadow: 0 14px 40px rgba(245,200,66,.4);
+  animation: onbPopUp 1.5s var(--ease) both;
+}
+@keyframes onbPopUp {
+  0%   { opacity: 0; transform: translate(-50%,-30%) scale(.7); }
+  18%  { opacity: 1; transform: translate(-50%,-50%) scale(1.06); }
+  30%  { transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-140%) scale(.96); }
+}
 
 /* ---- Reach (referrals) ------------------------------------------------
    Its own block rather than reusing the Shop's rows: a code is a thing to be
@@ -32496,21 +32605,31 @@ window.track = function (name, props) {
   var S = null;
   function save() { S.at = Date.now(); write(S); }
 
-  /* ---- what got done, for the recap ----------------------------------- */
+  /* ---- what got done, for the beats that report it -------------------- */
   function ratedCount() { try { return Object.keys(loadAlbums() || {}).length; } catch (e) { return 0; } }
   function discs() { try { return (window.Wallet && Wallet.get && Wallet.get().discs) || 0; } catch (e) { return 0; } }
 
   /* ---- chrome --------------------------------------------------------- */
-  var STEPS = ['welcome', 'album1', 'songs', 'artist', 'albums23', 'game', 'shop', 'recap'];
-  /* Skip appears from the shop beat on. Before that the flow is four short
-     asks and there is nothing worth skipping; after it, everything left is
-     optional and says so. */
-  var SKIP_FROM = STEPS.indexOf('shop');
+  var STEPS = ['welcome', 'username', 'first', 'artists', 'albums', 'game', 'shop'];
+  /* SKIP HAS TO EXIST SOMEWHERE. It used to appear from the shop beat, which
+     was the last-but-one; the shop is now the LAST beat and its own button
+     ends the flow, so keying off it left a six-screen tutorial with no way
+     out at all — including for an App Review account. It starts at the
+     artist grid instead: the three screens before that are one tap each and
+     genuinely not worth skipping, and everything from there on is longer. The
+     last step is still excluded, because an offer to skip under a button that
+     already finishes is two exits. */
+  var SKIP_FROM = STEPS.indexOf('artists');
 
+  /* The rail gains a colour per segment rather than a number. It is the only
+     thing on screen that says how far in you are, so it has to carry that
+     without a label — the brief bans "Step 3" and it was right to: a counter
+     turns a flow into a form. The hues are the app's own fixed five plus
+     gold, assigned by POSITION in CSS, so the bar warms up as it fills. */
   function paintRail() {
     if (!rail) return;
     rail.innerHTML = STEPS.map(function (_, i) {
-      return '<i class="' + (i <= S.step ? 'on' : '') + '"></i>';
+      return '<i class="' + (i < S.step ? 'on' : i === S.step ? 'on now' : '') + '"></i>';
     }).join('');
   }
 
@@ -32587,10 +32706,13 @@ window.track = function (name, props) {
   }
 
   /* ---- the rating card, used by both album beats ----------------------- */
-  function rateCard(meta, kicker, head, onDone) {
+  /* `alt` is an optional second action under the save button — used by the
+     first record, where "not this one" swaps the album rather than making
+     somebody score a record they have never heard. */
+  function rateCard(meta, kicker, head, onDone, alt) {
     show(
-      '<div class="onb-kicker">' + esc(kicker) + '</div>' +
-      '<h2 class="onb-h">' + esc(head) + '</h2>' +
+      (kicker ? '<div class="onb-kicker">' + esc(kicker) + '</div>' : '') +
+      (head ? '<h2 class="onb-h">' + esc(head) + '</h2>' : '') +
       '<img class="onb-cover" src="' + esc(meta.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
       '<div class="onb-alb"><h3>' + esc(meta.name) + '</h3>' +
         '<p>' + esc(meta.artist) + (meta.year ? ' · ' + esc(meta.year) : '') + '</p></div>' +
@@ -32598,8 +32720,10 @@ window.track = function (name, props) {
         '<input type="range" id="onb-r" min="0" max="100" step="1" value="72" aria-label="Your score out of 100">' +
         '<div class="onb-score" id="onb-rs">72<span>/100</span></div>' +
       '</div>',
-      cta('Save it')
+      cta('Save it') +
+      (alt ? '<button class="onb-alt" id="onb-alt">' + esc(alt.label) + '</button>' : '')
     );
+    if (alt) { var ab = el('onb-alt'); if (ab) ab.addEventListener('click', alt.fn); }
     var sl = el('onb-r'), out = el('onb-rs'), step = host.querySelector('.onb-step');
     function paint() {
       var v = parseInt(sl.value, 10);
@@ -32623,288 +32747,336 @@ window.track = function (name, props) {
   /* ---- 0. welcome ------------------------------------------------------ */
   function welcome() {
     show(
-      '<div class="onb-disc" aria-hidden="true"></div>' +
-      '<h2 class="onb-h" style="text-align:center;">Your taste, scored.</h2>' +
-      '<p class="onb-p" style="text-align:center;">Rate records, earn Discs, and find out what you actually think.</p>',
-      cta('Let’s go')
+      '<div class="onb-hero">' +
+        '<div class="onb-disc" aria-hidden="true"></div>' +
+        '<div class="onb-word">VINALL</div>' +
+        '<p class="onb-lede">Welcome to VINALL. Let’s get started.</p>' +
+      '</div>',
+      cta('Begin')
     );
     onCta(next);
   }
 
-  /* ---- 1. the first rating --------------------------------------------- */
-  async function album1() {
-    show('<div class="onb-kicker">One moment</div><h2 class="onb-h">Finding you a record…</h2>');
-    var meta = await resolve(famous(1)[0]);
-    S.first = meta.name;
-    rateCard(meta, 'Your first record', 'What do you make of this one?', function () { next(); });
+  /* A named record out of the static pool, so the artwork is the one the
+     games already use and no lookup is needed to draw the card. The catalogue
+     resolve still happens before saving, so the rating is keyed on the same
+     Deezer id the album page would use. */
+  function fromPool(title) {
+    var rows = [];
+    try { rows = (window.VinalPool && VinalPool.albums) || []; } catch (e) {}
+    var want = _norm(title);
+    for (var i = 0; i < rows.length; i++) {
+      if (_norm(rows[i][0]) === want) {
+        return { name: rows[i][0], artist: rows[i][1], year: String(rows[i][2] || ''), art: rows[i][6] || '' };
+      }
+    }
+    return null;
   }
 
-  /* ---- 2. songs you are enjoying --------------------------------------- */
-  /* Multi-select first, search second: three taps beats three searches, and
-     the point of this beat is momentum. The score is stated rather than
-     invented quietly — "we'll log these as an 8" is a fact somebody can
-     disagree with, and changing it later is one slider. */
-  function songs() {
-    /* THE FIRST FORTY ROWS ARE THE CLASSIC-ROCK CANON — Bohemian Rhapsody,
-       Like a Rolling Stone, What's Going On — and offering those to somebody
-       who has just signed up is asking them to have an opinion about their
-       dad's records. `slice(0, 40)` was choosing by POSITION IN THE TABLE,
-       which correlates with nothing.
+  /* ---- 1. username, and the badge that comes with it -------------------- */
+  /* THE OG BADGE IS NOT GRANTED HERE. Every account already gets it on insert,
+     from `pin_profile_economy` — so this reveals something that is already
+     true rather than inventing a tutorial-only reward, which is the same rule
+     every other beat follows. Nothing is written but the username. */
+  function username() {
+    show(
+      '<h2 class="onb-h">Pick a username.</h2>' +
+      '<input class="g-input onb-user" id="onb-u" type="text" maxlength="20" ' +
+        'placeholder="username" autocomplete="off" autocapitalize="none" spellcheck="false">' +
+      '<div class="onb-err" id="onb-uerr"></div>',
+      cta('Continue')
+    );
+    var inp = el('onb-u'), err = el('onb-uerr'), btn = el('onb-go');
+    try { var cur = (Cloud.getProfile && Cloud.getProfile()) || null; if (cur && cur.username) inp.value = cur.username; } catch (e) {}
+    function ok() { return validUsername(inp.value.trim()); }
+    function paint() { if (btn) btn.disabled = !ok(); }
+    inp.addEventListener('input', function () { err.textContent = ''; paint(); });
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter' && ok()) go2(); });
+    paint();
+    setTimeout(function () { try { inp.focus(); } catch (e) {} }, 120);
+    onCta(go2);
 
-       2010 onwards is the filter, and it is the whole fix: the pool already
-       holds Drake, Taylor Swift, Travis Scott, SZA, The Weeknd, Billie Eilish,
-       Olivia Rodrigo, Dua Lipa and Kendrick — they were simply further down.
-       Forty-one rows qualify, which is plenty for eight chips.
+    async function go2() {
+      var u = inp.value.trim();
+      if (!validUsername(u)) { err.textContent = '3–20 characters: letters, numbers, underscores.'; return; }
+      if (hasSlur(u)) { err.textContent = 'Pick another one.'; return; }
+      btn.disabled = true; btn.textContent = 'Saving…';
+      var res = null;
+      try { res = await Cloud.saveProfile({ username: u }); } catch (e) { res = { error: String((e && e.message) || e) }; }
+      if (res && res.error) {
+        err.textContent = /duplicate|unique/i.test(res.error) ? 'That one is taken.' : res.error;
+        btn.disabled = false; btn.textContent = 'Continue';
+        return;
+      }
+      S.username = u;
+      reveal(u);
+    }
 
-       NOT a new pool. SONG_ROWS feeds Recall's schedule, and adding a row to it
-       re-deals every day of that schedule to 2028 — see the Recall section. */
-    var rows = [];
+    /* The reward is the animation and nothing else — no paragraph explaining
+       what OG means. A badge that has to be captioned is not a badge. */
+    function reveal(u) {
+      show(
+        '<div class="onb-reveal">' +
+          '<div class="onb-name">' + esc(u) +
+            '<span class="onb-badge" id="onb-badge">' + (BADGES.og.emoji || '') + ' OG</span>' +
+          '</div>' +
+        '</div>',
+        ''
+      );
+      if (window.buzz) buzz('big');
+      var b = el('onb-badge');
+      if (b && window.burst) setTimeout(function () { try { burst(b, { count: 26, spread: 130 }); } catch (e) {} }, 420);
+      // The button arrives after the badge has landed, so the moment is not
+      // something to click through.
+      setTimeout(function () {
+        foot.innerHTML = cta('Continue');
+        onCta(next);
+      }, 1250);
+    }
+  }
+
+  /* ---- 2. the first record --------------------------------------------- */
+  /* Thriller first because nearly everybody has an opinion about it in two
+     seconds, and Graduation behind it for the people who do not. "Not this
+     one" swaps the record rather than making somebody score something they
+     have never heard — a tutorial that forces a dishonest first rating has
+     poisoned the one thing the app is for. */
+  async function first() {
+    var picks = ['Thriller', 'Graduation'];
+    var n = 0;
+
+    async function card() {
+      var row = fromPool(picks[n]) || famous(1)[0];
+      show('<div class="onb-cover onb-cover-wait"></div>');
+      var meta = await resolve(row);
+      S.first = meta.name;
+      rateCard(meta, '', '', function () { next(); },
+        n === 0 ? { label: 'Not this one', fn: function () { n = 1; card(); } } : null);
+    }
+    await card();
+  }
+
+  /* ---- 3. the artists they actually listen to --------------------------
+     A grid of faces off Deezer's own chart, not a search box: recognising is
+     faster than typing, and three to ten taps is the whole ask. The chart is
+     the same one the minigame's Popular tab uses, so there is no second
+     source of "who is popular" to keep in step. */
+  async function artists() {
+    var MIN = 3, MAX = 10;
+    show('<h2 class="onb-h">Who do you listen to?</h2><div class="onb-grid onb-grid-wait"></div>');
+
+    var list = [];
     try {
-      rows = ((window.VinalPool && VinalPool.songs) || [])
-        .filter(function (r) { return (parseInt(r[2], 10) || 0) >= 2010; });
+      var r = await fetch(((window.Native && Native.api) || '') + '/api/catalogue?path=chart-artists&limit=50');
+      if (r.ok) list = ((await r.json()).items) || [];
     } catch (e) {}
-    var quick = [], used = {};
-    while (quick.length < 8 && rows.length) {
-      var r = rows.splice(Math.floor(Math.random() * rows.length), 1)[0];
-      if (!r || used[r[0]]) continue;
-      used[r[0]] = 1;
-      // [title, artist, year, genre, seconds, trackNo, album, art]
-      quick.push({ name: r[0], artist: r[1], album: r[6] || '', art: r[7] || '' });
-    }
+    list = list.filter(function (a) { return a && a.id && a.name; });
+    /* A dead chart must not be a dead tutorial. Skipping straight past is
+       better than a blank grid with a disabled button under it — the albums
+       beat falls back to the famous pool when there is nothing selected. */
+    if (list.length < MIN) { S.artists = []; next(); return; }
+
     var picked = [];
-
-    function paintPicks() {
+    function key(a) { return String(a.id); }
+    function paint() {
       var b = el('onb-go');
-      /* THREE, AND THE NUMBER IS LOAD-BEARING. Three albums and three songs at
-         400 each is 2,400, which is what somebody is guaranteed to have before
-         the minigame — win or lose — and Test Pressing costs 2,000. Drop this
-         to one and the shop beat stops being a purchase whenever the Earworm
-         round goes badly. The migration guards the other end of the same sum. */
       if (b) {
-        b.disabled = picked.length < 3;
-        b.textContent = picked.length >= 3 ? ('Add these ' + picked.length)
-                      : ('Pick ' + (3 - picked.length) + ' more');
+        b.disabled = picked.length < MIN;
+        b.textContent = picked.length < MIN ? ('Pick ' + (MIN - picked.length) + ' more') : 'Continue';
       }
-      host.querySelectorAll('[data-q]').forEach(function (c) {
-        c.classList.toggle('on', picked.some(function (p) { return _norm(p.name + p.artist) === c.dataset.q; }));
+      host.querySelectorAll('[data-ar]').forEach(function (n) {
+        n.classList.toggle('on', picked.indexOf(n.dataset.ar) !== -1);
       });
-      // The other half of the confirmation: the chip says THIS one went in,
-      // the line says how many are in.
-      var cnt = el('onb-count');
-      if (cnt) cnt.textContent = picked.length ? (picked.length + ' of 5 added') : '';
-    }
-    /* A tap that only recolours a border is a tap somebody is not sure landed,
-       and this is the one beat where they do it three times in a row. `node` is
-       whatever they actually pressed — a chip or a search row — so the
-       confirmation happens WHERE THE FINGER IS rather than somewhere else on
-       the screen. */
-    function add(item, node) {
-      var k = _norm(item.name + item.artist);
-      var on = picked.some(function (p) { return _norm(p.name + p.artist) === k; });
-      if (on) {
-        picked = picked.filter(function (p) { return _norm(p.name + p.artist) !== k; });
-      } else if (picked.length < 5) {
-        picked.push(item);
-        if (window.buzz) buzz('good');
-        if (node) {
-          // Restarted rather than toggled: the class has to leave and come back
-          // or a second pick replays nothing.
-          node.classList.remove('just'); void node.offsetWidth; node.classList.add('just');
-        }
-        flyTick(node);
-      } else if (node) {
-        // Five is the cap, and a shake says so without a line of copy.
-        node.classList.remove('nope'); void node.offsetWidth; node.classList.add('nope');
-        if (window.buzz) buzz('bad');
-      }
-      paintPicks();
-    }
-
-    /* A tick that lifts off whatever was pressed and fades. One element that
-       removes itself, and nothing at all under reduced motion. */
-    function flyTick(node) {
-      if (!node) return;
-      try { if (matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (e) {}
-      var r = node.getBoundingClientRect();
-      var t = document.createElement('span');
-      t.className = 'onb-tick';
-      t.textContent = '\u2713';
-      t.style.left = (r.left + r.width / 2) + 'px';
-      t.style.top = (r.top + r.height / 2) + 'px';
-      document.body.appendChild(t);
-      setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 900);
+      var c = el('onb-count');
+      if (c) c.textContent = picked.length ? (picked.length + ' of ' + MAX) : '';
     }
 
     show(
-      '<div class="onb-kicker">Step two</div>' +
-      '<h2 class="onb-h">What are you playing at the moment?</h2>' +
-      '<p class="onb-p">Three to five. This is what shapes your For You page.</p>' +
-      '<div class="onb-chips">' + quick.map(function (s) {
-        return '<button class="onb-chip" data-q="' + esc(_norm(s.name + s.artist)) + '">' +
-          '<span>' + esc(s.name) + '</span><small>' + esc(s.artist) + '</small></button>';
+      '<h2 class="onb-h">Who do you listen to?</h2>' +
+      '<div class="onb-grid">' + list.map(function (a) {
+        var img = (a.images && a.images[0] && a.images[0].url) || '';
+        return '<button class="onb-ar" data-ar="' + esc(key(a)) + '">' +
+          '<span class="onb-ar-img">' + (img ? '<img src="' + esc(img) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '') + '</span>' +
+          '<span class="onb-ar-n">' + esc(a.name) + '</span></button>';
       }).join('') + '</div>' +
-      '<div class="onb-count" id="onb-count"></div>' +
-      '<input class="g-input onb-find" id="onb-q" type="text" placeholder="…or search for a song" autocomplete="off">' +
-      '<div class="onb-results" id="onb-res"></div>' +
-      '<p class="onb-note">We’ll log these at 8/10 — change any of them whenever you like.</p>',
+      '<div class="onb-count" id="onb-count"></div>',
       cta('Pick 3 more')
     );
 
-    host.querySelectorAll('[data-q]').forEach(function (c, i) {
-      c.addEventListener('click', function () { add(quick[i], c); });
-    });
-
-    var t = null;
-    el('onb-q').addEventListener('input', function () {
-      var q = this.value.trim();
-      clearTimeout(t);
-      if (q.length < 2) { el('onb-res').innerHTML = ''; return; }
-      t = setTimeout(async function () {
-        var res = [];
-        try { res = await searchItems(q, 'song'); } catch (e) {}
-        el('onb-res').innerHTML = (res || []).slice(0, 6).map(function (s, i) {
-          return '<button class="onb-row" data-s="' + i + '">' +
-            '<img src="' + esc(s.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
-            '<div><b>' + esc(s.name) + '</b><i>' + esc(s.artist || '') + '</i></div></button>';
-        }).join('');
-        el('onb-res').querySelectorAll('[data-s]').forEach(function (b) {
-          b.addEventListener('click', function () {
-            add(res[+b.dataset.s], b);
-            el('onb-q').value = ''; el('onb-res').innerHTML = '';
-          });
-        });
-      }, 320);
-    });
-
-    paintPicks();
-    onCta(function () {
-      var b = el('onb-go'); if (b) b.disabled = true;
-      picked.forEach(function (s, i) {
-        try {
-          saveSong({ id: 'x' + _norm(s.artist + s.name), name: s.name,
-                     artists: [{ name: s.artist, id: '' }] }, 8,
-                   { id: 'x' + _norm(s.artist + (s.album || s.name)), name: s.album || s.name, art: s.art || '' });
-        } catch (e) {}
+    host.querySelectorAll('[data-ar]').forEach(function (n, idx) {
+      n.addEventListener('click', function () {
+        var id = n.dataset.ar, at = picked.indexOf(id);
+        if (at !== -1) { picked.splice(at, 1); }
+        else if (picked.length < MAX) {
+          picked.push(id);
+          if (window.buzz) buzz('tap');
+          n.classList.remove('just'); void n.offsetWidth; n.classList.add('just');
+        } else {
+          // Ten is the cap, and a shake says so without a line of copy.
+          n.classList.remove('nope'); void n.offsetWidth; n.classList.add('nope');
+          if (window.buzz) buzz('bad');
+        }
+        paint();
       });
-      S.songs = picked.length;
+    });
+    paint();
+
+    onCta(async function () {
+      var b = el('onb-go'); if (b) { b.disabled = true; b.textContent = 'Saving…'; }
+      var chosen = picked.map(function (id) {
+        var a = list.filter(function (x) { return String(x.id) === id; })[0] || {};
+        return { id: String(a.id), name: a.name, art: (a.images && a.images[0] && a.images[0].url) || '' };
+      });
+      S.artists = chosen;
+      /* The first pick leads the profile. The old flow asked for a favourite
+         artist outright and this replaces that screen, so the field still gets
+         filled rather than quietly becoming dead — it is the same
+         Cloud.saveProfile call the profile's own picker makes. */
+      if (chosen[0]) {
+        try { await Cloud.saveProfile({ fav_artist: { id: chosen[0].id, name: chosen[0].name, image: chosen[0].art } }); } catch (e) {}
+      }
       if (window.buzz) buzz('good');
       next();
     });
   }
 
-  /* ---- 3. favourite artist --------------------------------------------- */
-  function artist() {
-    show(
-      '<div class="onb-kicker">Step three</div>' +
-      '<h2 class="onb-h">Who do you always come back to?</h2>' +
-      '<p class="onb-p">One artist. They’ll lead your profile.</p>' +
-      '<input class="g-input onb-find" id="onb-q" type="text" placeholder="Search an artist" autocomplete="off" autofocus>' +
-      '<div class="onb-results" id="onb-res"></div>',
-      ''
-    );
-    var t = null;
-    el('onb-q').addEventListener('input', function () {
-      var q = this.value.trim();
-      clearTimeout(t);
-      if (q.length < 2) { el('onb-res').innerHTML = ''; return; }
-      t = setTimeout(async function () {
-        var res = [];
-        try { res = await searchItems(q, 'artist'); } catch (e) {}
-        el('onb-res').innerHTML = (res || []).slice(0, 6).map(function (a, i) {
-          return '<button class="onb-row" data-a="' + i + '">' +
-            '<img src="' + esc(a.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'" style="border-radius:50%;">' +
-            '<div><b>' + esc(a.name) + '</b></div></button>';
-        }).join('');
-        el('onb-res').querySelectorAll('[data-a]').forEach(function (b) {
-          b.addEventListener('click', function () { chose(res[+b.dataset.a]); });
-        });
-      }, 320);
-    });
-
-    async function chose(a) {
-      if (!a) return;
-      S.artist = { id: a.id, name: a.name, art: a.art || '' };
-      // Saved for real, the same call the profile's own picker makes.
-      try { await Cloud.saveProfile({ fav_artist: { id: a.id, name: a.name, image: a.art || '' } }); } catch (e) {}
-      if (window.buzz) buzz('good');
-      // Answered immediately and by name, so the app reads as listening.
-      show(
-        '<div class="onb-kicker">Noted</div>' +
-        '<img class="onb-cover" style="border-radius:50%;width:min(170px,42vw);" src="' + esc(a.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
-        '<h2 class="onb-h" style="text-align:center;">Nice — more like ' + esc(a.name) + ', then.</h2>' +
-        '<p class="onb-p" style="text-align:center;">They’ll lead your profile and steer what we put in front of you.</p>',
-        cta('Keep going')
-      );
-      onCta(next);
-    }
-  }
-
-  /* ---- 4. two more records, chosen around them ------------------------- */
-  /* Drawn from the artist they just named, so the list is already personal by
-     the time they reach it. Their own discography first, the famous pool as
-     the fallback — and anything already in the crate is skipped, because
-     being asked to rate the record you rated ninety seconds ago is the
-     tutorial admitting it has not been paying attention. */
-  async function albums23() {
+  /* ---- 4. three records, off three of their own artists ------------------
+     One album each from three DIFFERENT artists they just picked, so the
+     round is already personal and does not read as the same artist three
+     times. Anything already in the crate is skipped — being asked to rate
+     the record you rated ninety seconds ago is the tutorial admitting it has
+     not been paying attention. */
+  async function albums() {
+    var WANT = 3;
     var mine = {};
-    try { Object.keys(loadAlbums()).forEach(function (k) { var a = loadAlbums()[k]; mine[_norm(a.name + a.artist)] = 1; }); } catch (e) {}
-    show('<div class="onb-kicker">Two more</div><h2 class="onb-h">Lining up something you’ll know…</h2>');
+    try {
+      var all = loadAlbums() || {};
+      Object.keys(all).forEach(function (k) { mine[_norm(all[k].name + all[k].artist)] = 1; });
+    } catch (e) {}
+
+    show('<div class="onb-cover onb-cover-wait"></div>');
+
+    var chosen = (S.artists || []).slice();
+    // Shuffle so the same three are not always the first three picked.
+    for (var i = chosen.length - 1; i > 0; i--) {
+      var j2 = Math.floor(Math.random() * (i + 1)); var t = chosen[i]; chosen[i] = chosen[j2]; chosen[j2] = t;
+    }
+
+    /* THE CURATED POOL FIRST, the discography second. A random draw across a
+       whole discography is what the brief asked for and it is not what the
+       brief wanted: it returned DONDA 2 and a Black Panther soundtrack, which
+       are records to rate on your fourth visit, not your first. The static
+       pool the games already use is the canon — Graduation, good kid, Take
+       Care — which is exactly the shape of the example given (Rodeo, Late
+       Registration, Die Lit). Still random, just random among records somebody
+       can have an opinion about. The discography is the fallback for an artist
+       the pool does not carry, so nobody's pick is ever refused. */
+    var poolRows = [];
+    try { poolRows = (window.VinalPool && VinalPool.albums) || []; } catch (e) {}
+
+    function famousBy(name) {
+      var want = _norm(name), out = [];
+      poolRows.forEach(function (r) {
+        if (_norm(r[1]) === want && !mine[_norm(r[0] + name)]) {
+          out.push({ name: r[0], artist: name, year: String(r[2] || ''), art: r[6] || '' });
+        }
+      });
+      return out;
+    }
 
     var list = [];
-    if (S.artist && S.artist.id) {
-      try {
-        var d = await fetchStudioAlbums(S.artist.id, true, S.artist.name);
-        (d || []).slice(0, 8).forEach(function (al) {
-          list.push({ id: al.id, name: al.name, artist: S.artist.name, art: al.art || '', year: al.year || '', artistId: S.artist.id });
-        });
-      } catch (e) {}
+    for (var a = 0; a < chosen.length && list.length < WANT; a++) {
+      var art = chosen[a];
+      var known = famousBy(art.name);
+      if (known.length) {
+        var k = known[Math.floor(Math.random() * known.length)];
+        mine[_norm(k.name + art.name)] = 1;
+        var meta = await resolve(k);
+        meta.artistId = meta.artistId || art.id;
+        list.push(meta);
+        continue;
+      }
+      var d = null;
+      try { d = await fetchStudioAlbums(art.id, true, art.name); } catch (e) { d = null; }
+      var pool = (d || []).filter(function (al) {
+        return al && al.name && !mine[_norm(al.name + art.name)];
+      });
+      if (!pool.length) continue;
+      // Nearest the top of the discography rather than anywhere in it: the
+      // deep end of a back catalogue is not a first-session question.
+      var pick = pool[Math.floor(Math.random() * Math.min(pool.length, 12))];
+      mine[_norm(pick.name + art.name)] = 1;
+      list.push({ id: pick.id, name: pick.name, artist: art.name,
+                  art: pick.art || art.art || '', year: pick.year || '', artistId: art.id });
     }
-    list = list.filter(function (a) { return !mine[_norm(a.name + a.artist)]; });
-    while (list.length < 2) {
-      var f = famous(3).filter(function (p) { return !mine[_norm(p.name + p.artist)]; });
+    // A chart that answered but discographies that did not still has to leave
+    // three records to rate, or the shop beat cannot be a purchase.
+    while (list.length < WANT) {
+      var f = famous(4).filter(function (x) { return !mine[_norm(x.name + x.artist)]; });
       if (!f.length) break;
-      for (var i = 0; i < f.length && list.length < 2; i++) list.push(await resolve(f[i]));
+      for (var q = 0; q < f.length && list.length < WANT; q++) {
+        mine[_norm(f[q].name + f[q].artist)] = 1;
+        list.push(await resolve(f[q]));
+      }
     }
-    if (list.length < 2) { next(); return; }
+    if (!list.length) { next(); return; }
 
     var n = 0;
     function one() {
       var meta = list[n];
-      rateCard(meta, n === 0 ? 'Record two' : 'Record three',
-        n === 0 ? 'And this one?' : 'Last one — then it opens up.',
-        function () {
-          n++;
-          if (n < 2) { one(); return; }
-          next();
-        });
+      var before = discs();
+      rateCard(meta, '', '', function () {
+        // The real delta, read after the save has landed. Nothing invented:
+        // a rating past the daily cap pays nothing and says nothing.
+        var got = Math.max(0, discs() - before);
+        if (got) discPop(got);
+        n++;
+        if (n < list.length) { setTimeout(one, got ? 900 : 0); return; }
+        setTimeout(next, got ? 900 : 0);
+      });
     }
     one();
   }
 
-  /* ---- 5. the unlock, and actually playing it -------------------------- */
-  /* Three rated albums is the REAL gate — `GATES['ew-card'].need` is 3 — so
-     nothing here grants anything. The door is open because they opened it. */
+  /* A small pill that rises off the middle of the card and goes. Deliberately
+     not `celebrate()` — that is the app's word for a win, and being paid for
+     a rating is a transaction clearing. */
+  function discPop(nDiscs) {
+    try { if (matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (e) {}
+    var d = document.createElement('div');
+    d.className = 'onb-pop';
+    d.textContent = '+' + nDiscs.toLocaleString('en-GB') + ' Discs';
+    document.body.appendChild(d);
+    if (window.buzz) buzz('good');
+    setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 1500);
+  }
+
+  /* ---- 5. the first minigame -------------------------------------------
+     RECALL, not Earworm. Recall's gate is 0 — it asks nothing of your crate,
+     which is exactly why it is the right first game — so nothing is granted
+     here either; it opens the one that was already open.
+
+     ENDLESS RATHER THAN THE DAILY, and that is load-bearing. `finishDaily`
+     pays only `&& correct`, so a tutorial built on the daily stops being a
+     purchase the moment somebody does not get it, which is the trap the old
+     Earworm beat was written around. Endless pays on `st.songs > 0` — for
+     playing. It also leaves today's daily unplayed, which is a real one to
+     come back to rather than one the tutorial spent for them. */
   function game() {
     var before = discs();
-    show(
-      '<div class="onb-kicker" style="color:var(--c-violet);">Three records in</div>' +
-      '<h2 class="onb-h">You’ve unlocked Earworm.</h2>' +
-      '<p class="onb-p">A record’s title, letter by letter, six guesses. Win it and you’re paid in Discs.</p>',
-      cta('Play a round')
-    );
-    // The app's own unlock language, in the minigame grid's own colour.
+    show('<h2 class="onb-h">Recall is open.</h2>', cta('Play a round'));
     try {
-      celebrate('Earworm', 'Name the record from its shape',
-        { eyebrow: 'Minigame Unlocked', accent: 'var(--c-violet)' });
+      celebrate('Recall', 'One second of a record.',
+        { eyebrow: 'Minigame Unlocked', accent: 'var(--c-blue)' });
     } catch (e) {}
     onCta(function () {
-      if (!window.openEarworm) { afterGame(before); return; }
-      var m = el('ew-modal');
-      openEarworm();
+      if (!window.openRecall) { afterGame(before); return; }
+      var m = el('recall-modal');
+      openRecall('endless');
       if (!m) { afterGame(before); return; }
-      /* Resume when the sheet closes, watched on its own class rather than
-         wired into Earworm — the game knows nothing about this and should not
-         have to. Same idiom Recall uses for its own teardown. */
+      /* Resumed when the sheet closes, watched on its own class rather than
+         wired into Recall — the game knows nothing about this and should not
+         have to. */
       var obs = new MutationObserver(function () {
         if (m.classList.contains('open')) return;
         obs.disconnect();
@@ -32919,11 +33091,8 @@ window.track = function (name, props) {
     try { if (window.Wallet && Wallet.refresh) await Wallet.refresh(); } catch (e) {}
     var now = discs(), gained = Math.max(0, now - before);
     show(
-      '<div class="onb-kicker">Your Discs</div>' +
-      '<h2 class="onb-h">' + (gained ? 'That’s ' + gained.toLocaleString('en-GB') + ' Discs.' : 'Everything you rate pays.') + '</h2>' +
-      '<div class="onb-wallet"><b id="onb-tick">0</b><span>Discs</span></div>' +
-      '<p class="onb-p" style="text-align:center;">Ratings, games and turning up all pay. Discs buy records and the way your profile looks.</p>',
-      cta('What can I spend them on?')
+      '<div class="onb-wallet"><b id="onb-tick">0</b><span>Discs</span></div>',
+      cta('Spend them')
     );
     tick(el('onb-tick'), Math.max(0, now - gained), now, 1100);
     if (gained && window.burst) try { burst(el('onb-tick'), { count: 24, spread: 120 }); } catch (e) {}
@@ -32953,7 +33122,7 @@ window.track = function (name, props) {
      Inventing a cheap tutorial-only item, or handing over the difference,
      would be exactly the separate reward path this file exists without. */
   async function shop() {
-    show('<div class="onb-kicker">Step five</div><h2 class="onb-h">Opening the shop…</h2>');
+    show('<h2 class="onb-h">Opening the shop…</h2>');
     try { if (window.Wallet && Wallet.load) await Wallet.load(); } catch (e) {}
     var bal = discs();
     var W = window.Wallet || {};
@@ -32979,8 +33148,7 @@ window.track = function (name, props) {
     var cheapest = offers[0] && offers[0].cost;
 
     show(
-      '<div class="onb-kicker">Step five</div>' +
-      '<h2 class="onb-h">' + (afford ? 'Go on then — spend some.' : 'This is what they’re for.') + '</h2>' +
+      '<h2 class="onb-h">' + (afford ? 'Go on then.' : 'Nearly.') + '</h2>' +
       '<div class="onb-wallet"><b>' + bal.toLocaleString('en-GB') + '</b><span>Discs to spend</span></div>' +
       offers.map(function (o, i) {
         var can = bal >= o.cost;
@@ -32989,9 +33157,8 @@ window.track = function (name, props) {
           '<span><b>' + esc(o.name) + '</b><i>' + esc(o.desc) + '</i></span>' +
           '<span class="px">' + o.cost.toLocaleString('en-GB') + '</span></button>';
       }).join('') +
-      (afford ? '<p class="onb-note">Buy one and it\u2019s yours straight away \u2014 a theme repaints the whole app.</p>'
-              : '<p class="onb-note">You’re ' + Math.max(0, (cheapest || 0) - bal).toLocaleString('en-GB') +
-                ' off the cheapest one. One more game, or tomorrow’s login, covers it — the shop is under Shop whenever you want it.</p>'),
+      (afford ? '' : '<p class="onb-note">' + Math.max(0, (cheapest || 0) - bal).toLocaleString('en-GB') +
+                ' short. Tomorrow’s login covers it.</p>'),
       cta(afford ? 'Maybe later' : 'Got it', 'onb-go')
     );
 
@@ -33017,7 +33184,7 @@ window.track = function (name, props) {
         host.querySelectorAll('[data-i]').forEach(function (n) { if (n !== b) n.disabled = true; });
         if (window.burst) try { burst(b, { count: 22, spread: 120 }); } catch (e) {}
         if (window.buzz) buzz('good');
-        var g = el('onb-go'); if (g) g.textContent = 'Nice one — carry on';
+        var g = el('onb-go'); if (g) g.textContent = 'Done';
         save();
       });
     });
@@ -33025,32 +33192,9 @@ window.track = function (name, props) {
     onCta(next);
   }
 
-  /* ---- 7. what just happened ------------------------------------------- */
-  function recap() {
-    var rows = [];
-    rows.push(['Records ranked', String(ratedCount())]);
-    if (S.songs) rows.push(['Songs added', String(S.songs)]);
-    if (S.artist && S.artist.name) rows.push(['Favourite artist', S.artist.name]);
-    rows.push(['Minigame unlocked', 'Earworm']);
-    if (S.bought) rows.push(['Bought', S.bought]);
-    rows.push(['Discs', discs().toLocaleString('en-GB')]);
-
-    show(
-      '<div class="onb-kicker">Done</div>' +
-      '<h2 class="onb-h">That’s the loop.</h2>' +
-      '<p class="onb-p">Rate, earn, spend, come back. There is a free spin waiting for you in Shop, and a new game every day.</p>' +
-      '<div class="onb-recap">' + rows.map(function (r) {
-        return '<div><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>';
-      }).join('') + '</div>',
-      cta('Start using VINALL')
-    );
-    if (window.burst) try { burst(host.querySelector('.onb-h'), { count: 30, spread: 150 }); } catch (e) {}
-    onCta(function () { finish(false); });
-  }
-
   /* ---- the driver ------------------------------------------------------ */
-  var DRAW = { welcome: welcome, album1: album1, songs: songs, artist: artist,
-               albums23: albums23, game: game, shop: shop, recap: recap };
+  var DRAW = { welcome: welcome, username: username, first: first,
+               artists: artists, albums: albums, game: game, shop: shop };
   function draw() {
     var name = STEPS[S.step];
     if (!name) { finish(false); return; }
