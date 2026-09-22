@@ -577,6 +577,93 @@ multiplier is applied before the streak increments, so the peak really is one
 below the final count), and Earworm and the Daily Drop, which print no derived
 numbers at all.
 
+## Onboarding — the first five minutes
+
+`#onb`, the `Onboard` module at the bottom of `index.html`, and
+`crate_onboard_v1` in `SYNC_KEYS`. **No migration.**
+
+Eight beats: welcome, rate a record, songs you are playing, favourite artist,
+two more records, the unlock and a round of the game, the shop, the recap. One
+ask on screen at a time and never more than three actions between payoffs — a
+settings wall is the fastest way to lose somebody who has just signed up.
+
+### Every reward in it is the real one
+
+That is the load-bearing decision, and it is why there is no second code path
+to reconcile later. The ratings go through `saveAlbum`/`saveSong`, so they pay
+the same 400 the server pays for any rating and carry score history from the
+first one. The unlock is the real `GATES['ew-card'].need` of 3, reached by
+rating three real albums — nothing is granted. The minigame is the real Earworm
+modal and pays through `wallet_award_game`. The purchase is `wallet_buy`. The
+favourite artist is the same `Cloud.saveProfile({fav_artist})` the profile's own
+picker calls.
+
+**The shop beat cannot promise a purchase, and says so rather than faking one.**
+The cheapest thing in the shop is Mono Fade at 8,000; the honest ceiling on a
+first session is 3 albums + 5 songs (3,200, inside the 10-a-day rating cap) plus
+an Earworm win (2,000) — so somebody who wins lands around 5,200 and somebody
+who loses lands lower. The button is live the moment they can afford it and the
+gap is printed when they cannot. **Inventing a cheap tutorial-only item, or
+topping up the difference, is exactly the separate reward path this file exists
+without.** If a guaranteed purchase is wanted, the lever is a genuinely cheap
+item in `shop_items` that anybody can buy — not a special case here.
+
+### Per user, never per device
+
+The flag rides `crate_onboard_v1` through `SYNC_KEYS`, so it lives in
+`app_state` keyed by user id and inherits the whole account-bleed fix for free:
+`claimLocalState` wipes localStorage when the stamp says the data belongs to
+somebody else, so a fresh account on a phone that has already done this starts
+clean and gets the tutorial, while the same person on a new device pulls their
+flag down and does not. A `profiles` column would have worked and cost a
+migration for a boolean.
+
+`maybeStart()` is called from `onAuthed` **after the merge** — before it, this
+browser's localStorage may still be the last person's.
+
+Its merge rule takes the **furthest progress, not the newest write**. It is the
+one key here where "later" and "further on" disagree: finishing on a phone and
+then opening a laptop that stopped at step two would otherwise hand somebody a
+tutorial they had already done.
+
+### Three things that were wrong on the first pass
+
+- **`draw()` wrapped an async step in a plain try/catch, which catches
+  nothing.** Three of the eight are async; a rejection would have gone to the
+  window and left the overlay on "Finding you a record…" for ever. It is
+  `Promise.resolve(step()).catch(bail)` now.
+- **The "this account has a crate already" guard would have closed the flow on
+  somebody resuming.** They are three albums in by design. It only applies to an
+  account that has never started one (`!S.at`).
+- **A token refresh re-runs `onAuthed`**, and redrawing the live step would have
+  wiped whatever was half typed. `open()` returns early if it is already open.
+
+### Smaller decisions
+
+- **It is not a `.modal`.** The back-button observer watches `.modal, .activity`
+  and closes the top layer, which is right for a sheet and wrong for a tutorial
+  somebody is three steps into. `z-index: 195` puts it over the nav (150) and the
+  player bar (160) and UNDER the modals (200), the tier reveal (210) and
+  `#celebrate` (220) — so Earworm plays on top of it, the score reveal lands on
+  top of it, and the unlock covers the lot.
+- **The first record comes off the top of the Daily Drop's own pool**, not a
+  recommender that knows nothing about them yet — it has to be one somebody can
+  have an opinion about in two seconds. The row only CHOOSES; the record is then
+  resolved against the real catalogue so the rating is keyed on the same Deezer
+  id the album page uses. A synthetic id would be the "two keys for one record"
+  trap, filed on day one.
+- **Records two and three come from the artist they just named**, minus anything
+  already in the crate — being asked to rate the record you rated ninety seconds
+  ago is the tutorial admitting it has not been listening.
+- **The song beat says what it is doing**: "we'll log these at 8/10 — change any
+  of them whenever you like". Quietly inventing a score for somebody is the one
+  thing this app does not do, and re-rating is one slider.
+- **Skip appears at the shop beat and not before**, which is where the brief put
+  it: the first five asks are short enough that there is nothing worth skipping.
+  It is hidden again on the recap — an offer to skip under a "Start using
+  VINALL" button is two exits.
+- `Onboard.restart()` replays it from the console without signing up again.
+
 ## The traps that keep recurring
 
 Each of these has now been shipped **more than once**, in different parts of the file, by
