@@ -416,15 +416,21 @@ revoke access "at any time for any reason" with no notice, and bar commercial us
 
 ## Still needed from you
 
-- [ ] **A real support address** to replace `spam30492@gmail.com` in
-      `privacy.html`, `terms.html` and the store listing. Apple emails this during
-      review and a bounce or an unread mailbox is a rejection, so it has to be one
-      you actually open — a Gmail alias is fine, a dead one is not. **This blocks
-      submission.**
-- [ ] **A demo account for App Review**, with a populated crate. Create it, put
-      the email and password in App Store Connect → App Review Information, and
-      make sure it stays alive. Most of the app is behind login, so without this
-      the reviewer sees a login wall and rejects. **This blocks submission.**
+- [x] **A real support address** — `vinall.support@gmail.com`, swapped into
+      `privacy.html` and `terms.html` on 2026-09-22. Use the same one in the App
+      Store Connect listing. Apple emails it during review, so it has to stay
+      monitored.
+- [ ] **A demo account for App Review**, with a populated crate. **It must not
+      be an admin account**, and it must not be anybody's real one. An account
+      with `profiles.is_admin` renders its balance as `∞`, enables every Buy
+      button regardless of cost, and lets any cosmetic be equipped unowned — so a
+      reviewer reading "Discs are earned only, there is no in-app purchase" would
+      be looking at infinite currency and a shop with nothing locked. It also
+      draws the admin analytics panel on that profile. And App Review tests
+      in-app account deletion, which this app performs immediately and
+      irreversibly: point them at a real account and they can wipe it.
+      Create a fresh one, put the credentials in App Store Connect → App Review
+      Information, and keep it alive. **This blocks submission.**
 - [ ] **Apple Developer Program enrolment** — £79/year in the UK, identity check,
       has a lead time. Google Play is a one-off $25 (about £20).
 - [ ] Answer the age-rating questionnaire using the table above
