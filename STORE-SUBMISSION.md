@@ -17,6 +17,46 @@ the code every time, not once.**
 
 ---
 
+## Re-verified against the code, 2026-09-22
+
+This file tells you to re-read it against the code every time. Doing that turned
+up five things, and they are recorded here rather than silently fixed in the
+tables above, because the point of that instruction is to see what drifted.
+
+- **"no third-party script beyond the Supabase client" is now literally true.**
+  It was not: the Supabase client was a `<script src>` to jsDelivr, synchronous
+  and in `<head>`, so first paint waited on somebody else's CDN and the app
+  could not start with the radio off. It is vendored at `assets/` now, same
+  pinned 2.45.4. **Google Fonts is still fetched** from `fonts.googleapis.com`
+  on every load and is the one remaining third-party request. It is not in
+  `privacy.html`. Either bundle the four families or add Google to the Other
+  services list — an EU regulator has taken the view that embedding Google
+  Fonts discloses the visitor's IP to Google.
+- **Discogs was an undisclosed third party** and is now in `privacy.html`.
+  Score-mode Bid Wars reach it and `DISCOGS_TOKEN` is set in production, so the
+  mode is live. `CLAUDE.md` says the picker is hidden; it is not — `#war-mode`
+  carries no `display:none` and no CSS rule hides it. Decide which is true
+  before submitting, because the answer changes whether Discogs belongs in the
+  privacy policy at all.
+- **`NSCameraUsageDescription` was missing and that was a crash**, not a refused
+  permission: the avatar picker is a plain file input and WKWebView's upload
+  sheet offers Take Photo regardless. Added, with the photo-library string and
+  `ITSAppUsesNonExemptEncryption`.
+- **The error copy still named Spotify** — the catalogue gate, four search
+  failure messages and the player bar. Corrected. The two places that mean
+  Spotify *stream counts* are accurate and were left alone.
+- **Cold launch to first paint is ~4-5s** on an iPhone 17 simulator, almost all
+  of it a black screen. Measured, not estimated. The cause is 400KB of blocking
+  CSS in `<head>` plus 1.3MB of inline JS, not the network. Not a rejection on
+  its own; it is the worst thing about the first thirty seconds of owning this
+  app.
+
+Verified in a Release build on the simulator: **BUILD SUCCEEDED**, Xcode's own
+`-validate-for-store` passed, search and the Deezer preview player both work
+cross-origin from `capacitor://localhost`, and the login sheet reaches Supabase.
+
+---
+
 ## What is actually being submitted
 
 The same `index.html` that serves vinall.xyz, bundled inside a Capacitor
