@@ -7786,6 +7786,49 @@ body.is-sorting, body.is-sorting * {
 .onb-chip:active { transform: scale(.96); }
 .onb-chip.on { border-color: var(--gold); background: var(--gold-dim); color: var(--gold); }
 .onb-chip.on small { color: inherit; opacity: .75; }
+/* The pick has to LOOK like it landed — this is the one beat somebody does
+   three times in a row, and a border changing colour is not an answer. The
+   chip pops, a tick lifts off it, and a counter under the row says how many
+   are in. */
+.onb-chip.on::after {
+  content: '✓'; font-size: 12px; line-height: 1; opacity: 0;
+  animation: onbTickIn .26s var(--ease) .04s forwards;
+}
+.onb-chip.just { animation: onbPop .34s var(--ease); }
+.onb-chip.nope { animation: onbNope .34s var(--ease); }
+@keyframes onbTickIn { to { opacity: 1; } }
+@keyframes onbPop {
+  0%   { transform: scale(1); }
+  38%  { transform: scale(1.09); box-shadow: 0 0 0 6px var(--gold-dim); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+}
+@keyframes onbNope {
+  0%,100% { transform: translateX(0); }
+  25%     { transform: translateX(-5px); }
+  75%     { transform: translateX(5px); }
+}
+/* Fixed, so it is positioned against the viewport whatever it lifted off. */
+.onb-tick {
+  position: fixed; z-index: 400; pointer-events: none;
+  margin: -12px 0 0 -9px;
+  font: 800 22px/1 var(--font-display); color: var(--gold);
+  text-shadow: 0 0 18px var(--gold-glow);
+  animation: onbFly .85s var(--ease) forwards;
+}
+@keyframes onbFly {
+  0%   { opacity: 0; transform: scale(.5); }
+  22%  { opacity: 1; transform: scale(1.25) translateY(-4px); }
+  100% { opacity: 0; transform: scale(1) translateY(-42px); }
+}
+.onb-count {
+  margin-top: 10px; min-height: 16px;
+  font: 700 12px var(--font-body); letter-spacing: .06em; text-transform: uppercase;
+  color: var(--gold);
+}
+@media (prefers-reduced-motion: reduce) {
+  .onb-chip.just, .onb-chip.nope, .onb-chip.on::after { animation: none; }
+  .onb-chip.on::after { opacity: 1; }
+}
 
 .onb-find { width: 100%; margin-top: 16px; }
 .onb-results { margin-top: 10px; max-height: 44vh; overflow-y: auto; }
@@ -14293,7 +14336,16 @@ const Cloud=(function(){
           // origin not on Supabase’s allow-list is silently replaced by
           // the project’s Site URL — which is how this ended up sending
           // people to localhost.
-          redirectTo:Native.site
+          /* THE ORIGIN HAS TO BE THE ONE THE LINK WILL LAND ON, exactly.
+             vinall.xyz 308s to www.vinall.xyz, so a link aimed at the apex
+             arrives on a DIFFERENT ORIGIN from the one that asked for it —
+             and anything the reset flow left in storage (and the Supabase
+             allow-list match) is per-origin. On the web `location.origin` is
+             already www, because Vercel has moved you there before this runs;
+             in the app the origin is `capacitor://localhost`, which is not a
+             web origin at all, so it is the canonical site or nothing. */
+          redirectTo: (Native.on ? 'https://www.vinall.xyz/'
+                                 : (location.origin + location.pathname))
         });
         if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Send reset link';return;}
         errEl.style.color='var(--gold)';
@@ -14333,7 +14385,47 @@ const Cloud=(function(){
     const authErr = hash.get('error_description') || hash.get('error') ||
                     query.get('error_description') || query.get('error');
 
-    if (authErr) {
+    /* ?token_hash=...&type=recovery — AND THIS IS THE ONE THAT ACTUALLY WORKS.
+
+       Supabase's default reset email links at /auth/v1/verify?token=…, which
+       CONSUMES the single-use token on a plain GET and then redirects here with
+       a session in the fragment. Anything that fetches a URL in an email burns
+       it: Gmail's image proxy, Outlook Safe Links, Apple Mail privacy relay,
+       every corporate scanner. By the time the person taps it, the token is
+       spent — and what they get is "this link has expired or was already
+       used" over a link they have never clicked. Reported exactly that way.
+
+       A token_hash link is inert until the BROWSER exchanges it, so a scanner
+       fetching it does nothing but load this page. It also fixes reset from the
+       native app, which could not work at all before: the email opens Safari,
+       which is a different origin from the webview that asked, and nothing
+       origin-scoped survives that. verifyOtp needs none of it.
+
+       The email template has to be changed to match — see the Password reset
+       section of CLAUDE.md. Until it is, the two branches below still handle
+       the old link shapes, so this is safe to ship first. */
+    const tokenHash = query.get('token_hash') || hash.get('token_hash');
+    const otpType = query.get('type') || hash.get('type');
+
+    if (tokenHash && !authErr) {
+      history.replaceState(null, '', location.pathname);
+      setTimeout(async function () {
+        let res = null;
+        try { res = await sb.auth.verifyOtp({ type: otpType || 'recovery', token_hash: tokenHash }); }
+        catch (e) { res = { error: { message: String((e && e.message) || e) } }; }
+        document.getElementById('auth-modal').classList.add('open');
+        if (res && !res.error && res.data && res.data.session) {
+          showAuthView('recovery');
+        } else {
+          showAuthView('forgot');
+          const el = document.getElementById('auth-reset-error');
+          if (el) {
+            el.style.color = 'var(--red)';
+            el.textContent = 'That link has expired \u2014 they last an hour. Send yourself a new one.';
+          }
+        }
+      }, 200);
+    } else if (authErr) {
       history.replaceState(null, '', location.pathname);
       setTimeout(function () {
         document.getElementById('auth-modal').classList.add('open');
@@ -14341,8 +14433,8 @@ const Cloud=(function(){
         const el = document.getElementById('auth-reset-error');
         if (el) {
           el.style.color = 'var(--red)';
-          el.textContent = /expired|invalid/i.test(authErr)
-            ? 'That link has expired or was already used. Send yourself a new one.'
+          el.textContent = /expired|invalid|denied/i.test(authErr)
+            ? 'That link has expired or was already used \u2014 sometimes an email app opens it before you do. Send yourself a new one and open it straight away.'
             : String(authErr).replace(/\+/g, ' ');
         }
       }, 300);
@@ -32390,8 +32482,24 @@ window.track = function (name, props) {
      invented quietly — "we'll log these as an 8" is a fact somebody can
      disagree with, and changing it later is one slider. */
   function songs() {
+    /* THE FIRST FORTY ROWS ARE THE CLASSIC-ROCK CANON — Bohemian Rhapsody,
+       Like a Rolling Stone, What's Going On — and offering those to somebody
+       who has just signed up is asking them to have an opinion about their
+       dad's records. `slice(0, 40)` was choosing by POSITION IN THE TABLE,
+       which correlates with nothing.
+
+       2010 onwards is the filter, and it is the whole fix: the pool already
+       holds Drake, Taylor Swift, Travis Scott, SZA, The Weeknd, Billie Eilish,
+       Olivia Rodrigo, Dua Lipa and Kendrick — they were simply further down.
+       Forty-one rows qualify, which is plenty for eight chips.
+
+       NOT a new pool. SONG_ROWS feeds Recall's schedule, and adding a row to it
+       re-deals every day of that schedule to 2028 — see the Recall section. */
     var rows = [];
-    try { rows = ((window.VinalPool && VinalPool.songs) || []).slice(0, 40); } catch (e) {}
+    try {
+      rows = ((window.VinalPool && VinalPool.songs) || [])
+        .filter(function (r) { return (parseInt(r[2], 10) || 0) >= 2010; });
+    } catch (e) {}
     var quick = [], used = {};
     while (quick.length < 8 && rows.length) {
       var r = rows.splice(Math.floor(Math.random() * rows.length), 1)[0];
@@ -32417,16 +32525,51 @@ window.track = function (name, props) {
       host.querySelectorAll('[data-q]').forEach(function (c) {
         c.classList.toggle('on', picked.some(function (p) { return _norm(p.name + p.artist) === c.dataset.q; }));
       });
+      // The other half of the confirmation: the chip says THIS one went in,
+      // the line says how many are in.
+      var cnt = el('onb-count');
+      if (cnt) cnt.textContent = picked.length ? (picked.length + ' of 5 added') : '';
     }
-    function add(item) {
+    /* A tap that only recolours a border is a tap somebody is not sure landed,
+       and this is the one beat where they do it three times in a row. `node` is
+       whatever they actually pressed — a chip or a search row — so the
+       confirmation happens WHERE THE FINGER IS rather than somewhere else on
+       the screen. */
+    function add(item, node) {
       var k = _norm(item.name + item.artist);
-      if (picked.some(function (p) { return _norm(p.name + p.artist) === k; })) {
+      var on = picked.some(function (p) { return _norm(p.name + p.artist) === k; });
+      if (on) {
         picked = picked.filter(function (p) { return _norm(p.name + p.artist) !== k; });
       } else if (picked.length < 5) {
         picked.push(item);
-        if (window.buzz) buzz('tap');
+        if (window.buzz) buzz('good');
+        if (node) {
+          // Restarted rather than toggled: the class has to leave and come back
+          // or a second pick replays nothing.
+          node.classList.remove('just'); void node.offsetWidth; node.classList.add('just');
+        }
+        flyTick(node);
+      } else if (node) {
+        // Five is the cap, and a shake says so without a line of copy.
+        node.classList.remove('nope'); void node.offsetWidth; node.classList.add('nope');
+        if (window.buzz) buzz('bad');
       }
       paintPicks();
+    }
+
+    /* A tick that lifts off whatever was pressed and fades. One element that
+       removes itself, and nothing at all under reduced motion. */
+    function flyTick(node) {
+      if (!node) return;
+      try { if (matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (e) {}
+      var r = node.getBoundingClientRect();
+      var t = document.createElement('span');
+      t.className = 'onb-tick';
+      t.textContent = '\u2713';
+      t.style.left = (r.left + r.width / 2) + 'px';
+      t.style.top = (r.top + r.height / 2) + 'px';
+      document.body.appendChild(t);
+      setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 900);
     }
 
     show(
@@ -32437,6 +32580,7 @@ window.track = function (name, props) {
         return '<button class="onb-chip" data-q="' + esc(_norm(s.name + s.artist)) + '">' +
           '<span>' + esc(s.name) + '</span><small>' + esc(s.artist) + '</small></button>';
       }).join('') + '</div>' +
+      '<div class="onb-count" id="onb-count"></div>' +
       '<input class="g-input onb-find" id="onb-q" type="text" placeholder="…or search for a song" autocomplete="off">' +
       '<div class="onb-results" id="onb-res"></div>' +
       '<p class="onb-note">We’ll log these at 8/10 — change any of them whenever you like.</p>',
@@ -32444,7 +32588,7 @@ window.track = function (name, props) {
     );
 
     host.querySelectorAll('[data-q]').forEach(function (c, i) {
-      c.addEventListener('click', function () { add(quick[i]); });
+      c.addEventListener('click', function () { add(quick[i], c); });
     });
 
     var t = null;
@@ -32462,7 +32606,7 @@ window.track = function (name, props) {
         }).join('');
         el('onb-res').querySelectorAll('[data-s]').forEach(function (b) {
           b.addEventListener('click', function () {
-            add(res[+b.dataset.s]);
+            add(res[+b.dataset.s], b);
             el('onb-q').value = ''; el('onb-res').innerHTML = '';
           });
         });

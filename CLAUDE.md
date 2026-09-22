@@ -4942,12 +4942,50 @@ minute.
 
 ## Password reset
 
-The client side is complete: `resetPasswordForEmail` sends
-`redirectTo: location.origin + location.pathname`, and on return the app handles all three
-things that can arrive — `#type=recovery` (implicit flow), `?code=` (PKCE), and
-`#error=...` for an expired or already-used link. That last case is the common one and used
-to be ignored entirely, which is why a dead link dumped people on the normal app with no
-explanation.
+### The link was being burnt before anybody clicked it
+
+Reported as: the reset email takes you to the site, which shows the reset form
+again with *"that link has expired or was already used"* under it — on a link
+that had never been used.
+
+Supabase's default template links at `/auth/v1/verify?token=…`, and **that URL
+CONSUMES the single-use token on a plain GET**. Anything that fetches a URL in
+an email burns it: Gmail's image proxy, Outlook Safe Links, Apple Mail's privacy
+relay, every corporate scanner. By the time a person taps it the token is spent,
+and the error they get is truthful and completely baffling.
+
+The fix is a **`token_hash` link plus `verifyOtp`**, which is inert until the
+browser exchanges it — a scanner fetching it does nothing but load the page. It
+has a second payoff: **reset from the native app could not work at all before**,
+because the email opens Safari and anything origin-scoped from the webview that
+asked is not there. `verifyOtp` needs none of it.
+
+**It is two halves and the client half is already shipped.** The email template
+has to be changed by hand in the dashboard:
+
+**Authentication → Emails → Reset Password**, replace the link with:
+
+```
+<a href="{{ .SiteURL }}/?token_hash={{ .TokenHash }}&type=recovery">Reset your password</a>
+```
+
+Until that is done the old link shape still works — the `#type=recovery` and
+`?code=` branches are untouched — so the two can land in either order.
+
+### The origin has to be the one the link lands on
+
+`vinall.xyz` 308s to `www.vinall.xyz`, so a `redirectTo` aimed at the apex
+arrives on a **different origin** from the one that asked. On the web
+`location.origin` is already www because Vercel has moved you there before the
+call runs; in the app the origin is `capacitor://localhost`, which is not a web
+origin at all, so it is the canonical site or nothing. That is why `redirectTo`
+is `https://www.vinall.xyz/` natively rather than `Native.site`, which is the
+apex because it is what goes in front of a person.
+
+The client handles all four things that can arrive: `?token_hash=`,
+`#type=recovery` (implicit), `?code=` (PKCE) and `#error=...`. That last case was
+ignored entirely once, which is why a dead link used to dump people on the
+normal app with no explanation at all.
 
 **The reset link going to `localhost` is a Supabase dashboard setting, not app code.**
 Authentication → URL Configuration:
