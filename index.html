@@ -9850,6 +9850,17 @@ function _spCacheWrite(path,data){var _t=_spTtl(path);try{localStorage.setItem(S
    because after this there is nothing left matching, and it is the difference
    between the clip fix taking effect now and taking effect tomorrow. */
 try{Object.keys(localStorage).forEach(function(k){if(k.indexOf('spc:')===0)localStorage.removeItem(k);});}catch(e){}
+/* ONE-TIME SWEEP OF THE CACHED DISCOGRAPHIES. `demos` and `sessions` stopped
+   being matched anywhere in a title and Pt. 1 / Pt. 2 now fold into the whole
+   record, so every `studio:` entry written before that is a Completionist list
+   the route would no longer produce — and they live 24 hours. Same argument as
+   the sweep above: a flag rather than an unconditional pass, because clearing
+   these on every load would just delete the cache. Bump the number the next
+   time what the route returns changes shape. */
+try{ if(localStorage.getItem('vinall_studio_gen')!=='2'){
+  Object.keys(localStorage).forEach(function(k){if(k.indexOf(SPC+'studio:')===0)localStorage.removeItem(k);});
+  localStorage.setItem('vinall_studio_gen','2');
+} }catch(e){}
 
 const _spInflight={};
 function spotifyGet(path,opts){
