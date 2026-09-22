@@ -7536,6 +7536,12 @@ body.is-sorting, body.is-sorting * {
   backdrop-filter: blur(14px);
   border: 1px solid rgba(255,245,235,.14);
 }
+/* A horizontal range inside a vertical snap-scroller will happily claim a
+   vertical drag that starts on it, which on a card where the slider spans the
+   width is a large dead zone the feed will not scroll from. pan-x hands the
+   vertical axis back to the feed and keeps the horizontal drag the slider
+   actually wants. */
+.fy-rate input[type="range"] { touch-action: pan-x; }
 .fy-rate input[type="range"] {
   flex: 1 1 auto; min-width: 0;
   -webkit-appearance: none; appearance: none;
@@ -12051,6 +12057,29 @@ positionNavIndicator();
 // indicator doesn't sit a few px off on first paint.
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(positionNavIndicator);
 
+/* A NAV TAP ALWAYS LANDS AT THE TOP OF ITS DESTINATION — the same place you
+   would be if you had just opened it. Pressing the tab you are already on is
+   the only way back up from the bottom of a long list and every other app has
+   taught people to expect it; pressing a different one should not inherit
+   wherever you happened to have left that page.
+
+   `auto`, never `smooth`: this is a teleport, not a tour, and smooth-scrolling
+   up from the bottom of a six-hundred-card Crate is two seconds of watching.
+   For You scrolls INSIDE ITSELF, so putting the window at 0 says nothing about
+   which card is on screen — its own scroller has to be reset too, and the
+   observer then starts the first card exactly as it would on a fresh open. */
+function scrollViewToTop(mode) {
+  try { window.scrollTo({ top: 0, behavior: 'auto' }); }
+  catch (e) { try { window.scrollTo(0, 0); } catch (_) {} }
+  try { document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch (e) {}
+  var inner = mode === 'foryou' ? document.getElementById('fy-feed') : null;
+  if (inner) {
+    try { inner.scrollTo({ top: 0, behavior: 'auto' }); }
+    catch (e) { try { inner.scrollTop = 0; } catch (_) {} }
+  }
+}
+window.scrollViewToTop = scrollViewToTop;
+
 document.getElementById('modes').addEventListener('click', function (e) {
   const b = e.target.closest('button'); if (!b) return;
   if (location.search.indexOf('u=') !== -1) { history.replaceState(null, '', location.pathname); }
@@ -12059,6 +12088,7 @@ document.getElementById('modes').addEventListener('click', function (e) {
   // engine; on the web it is nothing, which is what it always was.
   if (window.buzz && b.dataset.mode !== currentMode) buzz('tap');
   setMode(b.dataset.mode);
+  scrollViewToTop(b.dataset.mode);
 });
 window.renderArtistHero = renderArtistHero;
 
@@ -26735,6 +26765,18 @@ window.renderAdminStats = renderAdminStats;
   function prefetch(track) { return resolve(track).then(function (r) { return r; }, function () { return null; }); }
 
   /* ---- transport ----------------------------------------------------- */
+  /* AN EXTERNAL STOP MUST ALSO CANCEL A PLAY THAT IS STILL IN THE POST, and
+     that is why this is a second function rather than a line inside halt().
+     `play()` takes its token and THEN calls halt(), so bumping the token in
+     halt itself would make every play cancel itself on its first line.
+
+     The bug this fixes: leaving For You while a clip was still resolving
+     paused nothing — nothing was playing yet — and then the resolve landed,
+     saw its token was still current, set the src and started the audio on
+     whatever screen the person had moved to. Every caller outside this module
+     gets this version. */
+  function stopExternal() { playTok++; halt(); }
+
   function halt() {
     if (raf) { cancelAnimationFrame(raf); raf = 0; }
     if (hardStop) { clearTimeout(hardStop); hardStop = 0; }
@@ -26854,8 +26896,8 @@ window.renderAdminStats = renderAdminStats;
     prefetch: prefetch,
     playPreview: play,
     play: play,
-    stopPreview: halt,
-    stop: halt,
+    stopPreview: stopExternal,
+    stop: stopExternal,
     position: function () { var p = provider(); return p.position ? p.position() : (el ? el.currentTime : 0); },
     on: function (k, fn) { if (listeners[k]) listeners[k].push(fn); }
   };
@@ -30965,6 +31007,13 @@ window.track = function (name, props) {
     { pool: 'wander',    n: 1 },
   ];
   var PAGE = 6;          // cards added per top-up
+  /* THE FIRST PAINT IS NOT A FULL PAGE. drawSongs walks its pools one album at
+     a time and a miss costs a round trip, so asking for six before painting
+     anything is six waits the person sits through watching "Finding songs for
+     you". Two is enough to fill the screen and start the audio; the rest is
+     fetched behind it by the top-up that build() fires immediately, and is
+     ready long before a thumb reaches card three. */
+  var FIRST_PAGE = 2;    // cards drawn before the feed is shown at all
   var LOOKAHEAD = 4;     // how close to the end before topping up
   var FROM_ALBUM = 2;    // songs taken per visit before an album rotates back
   var MAX_ALBUMS = 40;   // ceiling on records expanded in one session
@@ -30985,6 +31034,7 @@ window.track = function (name, props) {
      in it. Playback and the feed are unrelated concerns and now have a token
      each. */
   var _items = [], _tok = 0, _feedTok = 0, _unlocked = false, _playing = null, _io = null;
+  var _settle = 0, _scrollWired = false;
   var _pools = { partial: [], yours: [], shortlist: [], discovery: [], pushed: [], wander: [] };
   var _widen = 0;          // how far out expand() has already reached
   var _remote = null;      // the discovery half, still in the post
@@ -31790,6 +31840,10 @@ window.track = function (name, props) {
 
   function stopAll() {
     try { VinalAudio.stop(); } catch (e) {}
+    /* Bumped here as well as in VinalAudio, so a playCard already past its
+       await returns at its next token check instead of painting `is-playing`
+       onto a card in a feed nobody is looking at any more. */
+    _tok++;
     _playing = null;
     var host = el('fy-feed');
     if (!host) return;
@@ -31864,8 +31918,44 @@ window.track = function (name, props) {
   /* One observer for the feed. 60% visible is "the one you are looking at" —
      lower and two cards qualify at once on a short phone, which is how a feed
      ends up playing two songs. */
+  /* THE OBSERVER CAN MISS A FLICK, and that is the "scrolling to the next one
+     does not change the song" report. A fast snap can carry a card past
+     without any PAINTED frame in which it is 60% visible, so the callback
+     never fires: the feed shows one record and plays another, or nothing.
+
+     This is the backstop, not a second engine. When scrolling settles,
+     whatever is under the middle of the feed is what should be playing — and
+     it agrees with the observer rather than racing it, because playCard
+     returns immediately when the card is already the one playing. Measured
+     off getBoundingClientRect rather than offsetTop: offsetTop is relative to
+     the offsetParent, which is not necessarily the scroller. */
+  function settle() {
+    _settle = 0;
+    var host = el('fy-feed');
+    if (!host || document.body.dataset.section !== 'foryou') return;
+    var hr = host.getBoundingClientRect(), mid = hr.top + hr.height / 2;
+    var best = -1, bd = 1e9;
+    host.querySelectorAll('.fy-card').forEach(function (n) {
+      var i = parseInt(n.dataset.i, 10);
+      if (isNaN(i) || i < 0) return;
+      var r = n.getBoundingClientRect(), d = Math.abs((r.top + r.height / 2) - mid);
+      if (d < bd) { bd = d; best = i; }
+    });
+    if (best >= 0 && best !== _playing) playCard(best);
+  }
+
   function observe(host) {
     if (_io) { _io.disconnect(); _io = null; }
+    /* Wired once: build() replaces the feed's innerHTML, never the feed
+       itself, so a listener added here survives every rebuild and adding it
+       again per build would stack duplicates. */
+    if (!_scrollWired) {
+      _scrollWired = true;
+      host.addEventListener('scroll', function () {
+        if (_settle) clearTimeout(_settle);
+        _settle = setTimeout(settle, 140);
+      }, { passive: true });
+    }
     _io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         if (!en.isIntersecting) return;
@@ -32153,7 +32243,7 @@ window.track = function (name, props) {
       });
       writeSeen(SEEN_ALBUMS, seenA);
 
-      var first = await drawSongs(PAGE);
+      var first = await drawSongs(FIRST_PAGE);
       if (mine !== _feedTok) return;
       if (!first.length) {
         /* The two feeds run out for completely different reasons and must not
@@ -32174,6 +32264,8 @@ window.track = function (name, props) {
       _built = true;
       observe(host);
       window.ForYou._last = { ctx: _ctx, pools: _pools };
+      // The rest of the page, behind the card that is already on screen.
+      topUp();
     } catch (e) {
       host.innerHTML = '<div class="reco-note">Couldn’t build your feed just now.</div>';
     } finally { _busy = false; }
@@ -32187,6 +32279,17 @@ window.track = function (name, props) {
     // and logged out, and the banner appears and disappears above it.
     fitFeed();
     paintQuota();
+    /* THE OBSERVER DOES NOT SURVIVE LEAVING, AND NOTHING PUT IT BACK.
+
+       leave() disconnects it — correctly, so a hidden feed cannot start a
+       song — but render() never re-attached it, so the SECOND visit to For You
+       had a feed in which no card ever started itself again. Scrolling moved
+       the cards and the audio never followed, which is most of "scrolling to
+       the next one does not change the song": it was not a missed threshold,
+       it was no observer at all. Re-attaching also restarts whatever is on
+       screen, because an IntersectionObserver reports intersecting elements as
+       soon as it is given them. */
+    if (!_io) observe(host);
     if (force) build(true);
   }
 
