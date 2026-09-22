@@ -7740,16 +7740,46 @@ body.is-sorting, body.is-sorting * {
 .onb-step { animation: onbIn .42s var(--ease) both; }
 @keyframes onbIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
-/* The welcome record. A drawn disc rather than an image — it is the app's own
-   motif and it costs nothing to ship. */
+/* THE WELCOME RECORD IS THE SPLASH'S RECORD, not a second one. It used to be a
+   flat prismatic wheel, which read as a colour swatch rather than as vinyl —
+   and it is the first thing after the splash, where the person has just
+   watched the real drawn record fly into the header. Two different records
+   half a second apart is the brand contradicting itself.
+
+   So this is `.sd-vinyl`'s own stack: the sheen turning WITH the disc, the
+   groove pitch, the wider bands a real pressing has, and the dark body. The
+   label is a ::after rather than a child element, because this is one div in
+   a template string and a label nobody can see the point of is not worth a
+   second node. Dark label, gold rim — the same decision the splash records,
+   for the same reason. */
 .onb-disc {
-  width: min(190px, 46vw); aspect-ratio: 1; border-radius: 50%; margin: 0 auto 26px;
+  position: relative; width: min(190px, 46vw); aspect-ratio: 1; border-radius: 50%;
+  margin: 0 auto 26px; display: grid; place-items: center;
   background:
-    radial-gradient(circle at 50% 50%, #12100e 0 21%, transparent 21.4%),
-    repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.055) 0 1px, transparent 1px 3px),
-    conic-gradient(from 210deg, #F5C842, #ff8a3d 28%, #ff3d9a 52%, #22e3ff 74%, #F5C842);
-  box-shadow: 0 26px 70px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.1);
-  animation: vinylSpin 14s linear infinite;
+    conic-gradient(from 210deg at 50% 50%,
+      rgba(255,255,255,0.000) 0deg,  rgba(255,255,255,0.055) 26deg,
+      rgba(255,255,255,0.012) 66deg, rgba(255,255,255,0.000) 120deg,
+      rgba(255,255,255,0.000) 200deg, rgba(255,255,255,0.038) 232deg,
+      rgba(255,255,255,0.008) 270deg, rgba(255,255,255,0.000) 340deg),
+    repeating-radial-gradient(circle at 50% 50%,
+      rgba(255,255,255,0.045) 0px, rgba(255,255,255,0.045) 0.5px,
+      rgba(0,0,0,0.55) 1.5px, rgba(0,0,0,0.00) 3px),
+    repeating-radial-gradient(circle at 50% 50%,
+      rgba(255,255,255,0.030) 0px, rgba(255,255,255,0.030) 1px,
+      transparent 1px, transparent 27px),
+    radial-gradient(circle at 38% 32%, #2a2724 0%, #141211 26%, #0b0a09 62%, #050404 100%);
+  box-shadow: 0 26px 70px rgba(0,0,0,.62), inset 0 0 0 1px rgba(255,255,255,.07);
+  animation: vinylSpin 6s linear infinite;
+  will-change: transform;
+}
+.onb-disc::after {
+  content: ''; width: 27%; height: 27%; border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #2b2620 0%, #17130f 46%, #0d0b09 100%);
+  box-shadow:
+    0 0 0 2.5% #060505,
+    inset 0 0 0 1.5px rgba(245,200,66,0.55),
+    inset 0 0 44px rgba(0,0,0,0.55),
+    0 0 70px rgba(245,200,66,0.10);
 }
 @media (prefers-reduced-motion: reduce) { .onb-disc { animation: none; } }
 
@@ -27239,6 +27269,35 @@ window.renderAdminStats = renderAdminStats;
       oneGo: true, endless: false, bonus: false,
       candidates: function () { return dayCandidates(dayNo()); }
     },
+    /* THE TUTORIAL'S ROUND, AND IT IS THE SAME RECORD FOR EVERYBODY.
+       Mr. Brightside because it is the most recognisable thing in the pool at
+       one second, which is what a first round has to be — Recall teaches
+       itself, and it cannot do that on a record nobody knows.
+
+       A MODE RATHER THAN A BRANCH, which is what the registry is for: `mode`
+       is plain text on recall_results with no check constraint, so a third one
+       costs no migration. It is NOT in the lobby's two buttons, so nobody can
+       reach it except through the tutorial.
+
+       endless:true is deliberate and is what makes it pay — finishDaily pays
+       only `&& correct`, where finishSession pays on st.songs > 0, for
+       playing. oneRound then gives it a single Done button instead of "Next
+       song", so it is one round and not a run. And it leaves today's daily
+       untouched, which is a real one to come back to. */
+    tutorial: {
+      key: 'tutorial', label: 'Recall', short: 'Recall',
+      blurb: 'One song.',
+      oneGo: false, endless: true, bonus: false, oneRound: true,
+      candidates: function () {
+        var hit = pool().filter(function (t) {
+          return /^mr\.?\s*brightside$/i.test(String(t.title || '').trim())
+              && /killers/i.test(String(t.artist || ''));
+        });
+        // If it ever leaves the pool, one round of something is better than a
+        // tutorial that cannot start.
+        return hit.length ? hit : pool().slice(0, 1);
+      }
+    },
     endless: {
       key: 'endless', label: 'Endless Recall', short: 'Endless',
       blurb: 'Round after round. Stop when you like.',
@@ -27625,7 +27684,13 @@ window.renderAdminStats = renderAdminStats;
     host.classList.add('on');
 
     var acts = el('recall-rev-actions');
-    if (sess.m.endless) {
+    if (sess.m.oneRound) {
+      // One round, so there is nothing to go on to — and Done has to reach
+      // finishSession rather than the lobby, because that is what pays.
+      acts.innerHTML = '<button class="btn-primary" id="recall-stop">Done</button>';
+      el('recall-stop').addEventListener('click', function () { finishSession(); });
+      setTimeout(function () { var b = el('recall-stop'); if (b) b.focus(); }, 40);
+    } else if (sess.m.endless) {
       acts.innerHTML = '<button class="btn-primary" id="recall-next">Next song</button>' +
         '<button class="rc-skip" id="recall-stop">Finish</button>';
       el('recall-next').addEventListener('click', nextRound);
@@ -27722,7 +27787,9 @@ window.renderAdminStats = renderAdminStats;
        properly and THEN closing the sheet files the same run twice, once as a
        session row on the server and once as a play in the game log. */
     sess.done = true;
-    Recall.setBest('endless', st.score);
+    // The session's own mode, not a hardcoded 'endless' — otherwise the
+    // tutorial's single round files itself as an Endless personal best.
+    Recall.setBest(sess.mode, st.score);
     show('recall-over');
     // The big number IS the score; the chip beside the wordmark would be the
     // same number twice.
@@ -32611,15 +32678,12 @@ window.track = function (name, props) {
 
   /* ---- chrome --------------------------------------------------------- */
   var STEPS = ['welcome', 'username', 'first', 'artists', 'albums', 'game', 'shop'];
-  /* SKIP HAS TO EXIST SOMEWHERE. It used to appear from the shop beat, which
-     was the last-but-one; the shop is now the LAST beat and its own button
-     ends the flow, so keying off it left a six-screen tutorial with no way
-     out at all — including for an App Review account. It starts at the
-     artist grid instead: the three screens before that are one tap each and
-     genuinely not worth skipping, and everything from there on is longer. The
-     last step is still excluded, because an offer to skip under a button that
-     already finishes is two exits. */
-  var SKIP_FROM = STEPS.indexOf('artists');
+  /* NO "SKIP THE REST". The way out of a record you cannot score is "Don't
+     know it." on the card itself, which is a smaller, more honest offer: it
+     costs one album rather than the whole flow, and it means nobody is ever
+     scoring something they have not heard to get past a screen. A rating
+     given to escape a tutorial is a rating that poisons the one thing this
+     app is for. */
 
   /* The rail gains a colour per segment rather than a number. It is the only
      thing on screen that says how far in you are, so it has to carry that
@@ -32635,13 +32699,7 @@ window.track = function (name, props) {
 
   function show(html, footHtml) {
     host.innerHTML = '<div class="onb-step">' + html + '</div>';
-    foot.innerHTML = (footHtml || '') +
-      // Not on the last screen: there is nothing left to skip there, and an
-      // offer to skip under a "Start using VINALL" button is two exits.
-      ((S.step >= SKIP_FROM && S.step < STEPS.length - 1)
-        ? '<button class="onb-skip" id="onb-skip">Skip the rest — you can do all this later</button>' : '');
-    var sk = el('onb-skip');
-    if (sk) sk.addEventListener('click', function () { finish(true); });
+    foot.innerHTML = (footHtml || '');
     paintRail();
     host.parentNode.scrollTop = 0;
   }
@@ -32850,8 +32908,13 @@ window.track = function (name, props) {
       show('<div class="onb-cover onb-cover-wait"></div>');
       var meta = await resolve(row);
       S.first = meta.name;
+      /* Thriller first because nearly everybody can score it in two seconds.
+         Not knowing it swaps to Graduation; not knowing that one skips the
+         beat rather than insisting — there is no third record worth asking
+         for, and the artist round is about to ask properly anyway. */
       rateCard(meta, '', '', function () { next(); },
-        n === 0 ? { label: 'Not this one', fn: function () { n = 1; card(); } } : null);
+        { label: 'Don\u2019t know it.',
+          fn: function () { if (n === 0) { n = 1; card(); } else { next(); } } });
     }
     await card();
   }
@@ -32947,7 +33010,7 @@ window.track = function (name, props) {
      the record you rated ninety seconds ago is the tutorial admitting it has
      not been paying attention. */
   async function albums() {
-    var WANT = 3;
+    var WANT = 3, DRAWN = 6;
     var mine = {};
     try {
       var all = loadAlbums() || {};
@@ -32985,7 +33048,7 @@ window.track = function (name, props) {
     }
 
     var list = [];
-    for (var a = 0; a < chosen.length && list.length < WANT; a++) {
+    for (var a = 0; a < chosen.length && list.length < DRAWN; a++) {
       var art = chosen[a];
       var known = famousBy(art.name);
       if (known.length) {
@@ -33012,7 +33075,7 @@ window.track = function (name, props) {
     // A chart that answered but discographies that did not still has to leave
     // three records to rate, or the shop beat cannot be a purchase.
     while (list.length < WANT) {
-      var f = famous(4).filter(function (x) { return !mine[_norm(x.name + x.artist)]; });
+      var f = famous(6).filter(function (x) { return !mine[_norm(x.name + x.artist)]; });
       if (!f.length) break;
       for (var q = 0; q < f.length && list.length < WANT; q++) {
         mine[_norm(f[q].name + f[q].artist)] = 1;
@@ -33021,19 +33084,22 @@ window.track = function (name, props) {
     }
     if (!list.length) { next(); return; }
 
-    var n = 0;
+    /* MORE CANDIDATES THAN RECORDS WANTED, because "Don't know it." has to be
+       able to cost an album without costing the round. Three is still the
+       number rated; the extras are only there so a skip has somewhere to go. */
+    var at = 0, done = 0;
     function one() {
-      var meta = list[n];
+      if (done >= WANT || at >= list.length) { next(); return; }
+      var meta = list[at];
       var before = discs();
       rateCard(meta, '', '', function () {
         // The real delta, read after the save has landed. Nothing invented:
         // a rating past the daily cap pays nothing and says nothing.
         var got = Math.max(0, discs() - before);
         if (got) discPop(got);
-        n++;
-        if (n < list.length) { setTimeout(one, got ? 900 : 0); return; }
-        setTimeout(next, got ? 900 : 0);
-      });
+        at++; done++;
+        setTimeout(one, got ? 900 : 0);
+      }, { label: 'Don\u2019t know it.', fn: function () { at++; one(); } });
     }
     one();
   }
@@ -33056,12 +33122,12 @@ window.track = function (name, props) {
      which is exactly why it is the right first game — so nothing is granted
      here either; it opens the one that was already open.
 
-     ENDLESS RATHER THAN THE DAILY, and that is load-bearing. `finishDaily`
+     ITS OWN MODE, so every new account gets the SAME record — Mr. Brightside,
+     the most recognisable thing in the pool at one second. See Recall.MODES.
+     It behaves as endless underneath, which is what makes it pay: finishDaily
      pays only `&& correct`, so a tutorial built on the daily stops being a
-     purchase the moment somebody does not get it, which is the trap the old
-     Earworm beat was written around. Endless pays on `st.songs > 0` — for
-     playing. It also leaves today's daily unplayed, which is a real one to
-     come back to rather than one the tutorial spent for them. */
+     purchase the moment somebody does not get it. It also leaves today's
+     daily unplayed, which is a real one to come back to. */
   function game() {
     var before = discs();
     show('<h2 class="onb-h">Recall is open.</h2>', cta('Play a round'));
@@ -33072,7 +33138,7 @@ window.track = function (name, props) {
     onCta(function () {
       if (!window.openRecall) { afterGame(before); return; }
       var m = el('recall-modal');
-      openRecall('endless');
+      openRecall('tutorial');
       if (!m) { afterGame(before); return; }
       /* Resumed when the sheet closes, watched on its own class rather than
          wired into Recall — the game knows nothing about this and should not
