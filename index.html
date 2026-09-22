@@ -2434,6 +2434,35 @@ button.idx.loading { opacity: 0.6; }
 }
 .save-flash.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* ---- +250 DISCS ---------------------------------------------------------
+   Earning currency should not look like being told something. Gold, the
+   number first and big, the unit quiet beside it.
+
+   It clears the floating nav rather than sitting behind it, and it is
+   `pointer-events: none` — a notification that can swallow the tap you were
+   about to make on the card underneath is a notification that costs you a
+   rating. */
+.disc-earned {
+  position: fixed; left: 50%; bottom: calc(var(--nav-h, 64px) + 28px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%) translateY(14px) scale(.96);
+  display: flex; align-items: baseline; gap: 7px;
+  padding: 10px 18px; border-radius: 999px;
+  background: color-mix(in srgb, var(--gold) 16%, var(--surface-3));
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+  box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 26px var(--gold-dim);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s var(--ease), transform .2s var(--ease);
+  z-index: 190;   /* over the nav (160) and the player, under the modals (200) */
+  white-space: nowrap;
+}
+.disc-earned.show { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+.disc-earned .de-n { font: 700 19px/1 var(--font-mono); color: var(--gold); }
+.disc-earned .de-u { font: 600 12px/1 var(--font-body); color: var(--gold); opacity: .8; }
+.disc-earned .de-w { font: 500 11.5px/1 var(--font-body); color: var(--text-faint); }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .disc-earned { transition: opacity .2s linear; }
+}
+
 /* Sits above the floating nav rather than over it, and looks like a thing you
    press rather than a notice you have to dismiss — because the only useful
    response to it is one tap. */
@@ -7719,6 +7748,49 @@ button.rw-day {
 #prof-rankings > *    { contain-intrinsic-size: auto 240px; }
 .col-grid > *         { contain-intrinsic-size: auto 96px; }
 #listview-items > *   { contain-intrinsic-size: auto 62px; }
+
+/* ================================================================
+   NOTHING IS SELECTABLE EXCEPT THE THINGS THAT SHOULD BE
+   ================================================================
+   Holding a row in the list editor to drag it raised iOS's text-selection
+   handles and the blue highlight over the album title — so the gesture that
+   is supposed to pick a record up instead selected the words on it, and the
+   magnifier loupe came with it. That is the single clearest tell that this is
+   a web page in a wrapper rather than an app.
+
+   `user-select: none` on the body, and `-webkit-touch-callout: none` with it:
+   they are different things and BOTH are needed. `user-select` stops the
+   highlight; `touch-callout` stops the long-press sheet ("Copy / Look Up /
+   Share") and the magnifier, which fires on a press-and-hold whatever the
+   selection rules say. Missing the second is why "I added user-select:none and
+   it still pops up" is the commonest version of this bug.
+
+   THE OPT-OUT MATTERS AS MUCH AS THE RULE. Text somebody may genuinely need to
+   copy is listed back in: fields they type into, the referral code (the entire
+   point of which is being read off one screen and typed into another), the
+   share rows the games produce, and the legal pages, which people are entitled
+   to copy out of. Blanket-disabling selection everywhere is how an app ends up
+   with a support code nobody can copy.
+
+   `::selection` stays styled for those, so where selection IS allowed it looks
+   deliberate rather than like the browser default. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+input, textarea, select, [contenteditable="true"],
+.reach-code-box, .reach-code, .drop-share, .sugg-note,
+.doc-body, .doc-body *, code, pre {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+/* A row being dragged must not scroll the page under it either. The pointer
+   handler calls preventDefault, but touch-action is what tells the compositor
+   BEFORE the first event arrives — without it iOS has already begun a scroll
+   by the time JavaScript is asked. */
+.song-edit-row { -webkit-user-select: none; user-select: none; }
 
 /* ================================================================
    SAFE AREAS — deliberately the LAST thing in this stylesheet.
@@ -17903,6 +17975,38 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     clearTimeout(toast._tm);
     toast._tm = setTimeout(function () { t.classList.remove('show'); }, 1600);
   }
+  /* ---- +250 DISCS -------------------------------------------------------
+     Every path that grants Discs called `toast('+N Discs')`, which is the same
+     grey pill the app uses for "Saved" and for "Log in to back a suggestion" —
+     so earning currency looked exactly like being told something. It has its
+     own now: gold, a disc glyph, the number at a size worth glancing at.
+
+     IT TAKES THE AMOUNT THAT ACTUALLY LANDED, never an intended one. Every
+     caller passes the server's figure, which is the rule this file learned the
+     hard way when awardDiscs toasted a number nothing had written. A
+     notification that can disagree with the balance is worse than none,
+     because it is the thing people check the balance AGAINST. */
+  function discEarned(n, why) {
+    n = Math.round(Number(n) || 0);
+    if (n <= 0) return;
+    let t = document.getElementById('disc-earned');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'disc-earned';
+      t.className = 'disc-earned';
+      document.body.appendChild(t);
+    }
+    t.innerHTML = '<span class="de-n">+' + n.toLocaleString('en-GB') + '</span>' +
+                  '<span class="de-u">Discs</span>' +
+                  (why ? '<span class="de-w">' + String(why).replace(/[&<>"]/g, '') + '</span>' : '');
+    t.classList.remove('show');
+    void t.offsetWidth;
+    t.classList.add('show');
+    clearTimeout(discEarned._tm);
+    discEarned._tm = setTimeout(function () { t.classList.remove('show'); }, 2200);
+  }
+  window.discEarned = discEarned;
+
   /* GLOBAL, because five modules want it and it is a UI primitive rather than
      a wallet one — the same argument that puts burst/ripple/buzz on window.
      It was local here, and this file already carries a note saying so, because
@@ -18024,6 +18128,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      identical — the same argument as burst/ripple/buzz being global. */
   async function payoutFrom(fromEl, amount, w) {
     if (!(amount > 0)) { if (w) applyWallet(w); return; }
+    // Said out loud as well as thrown: the discs flying to the header are a
+    // lovely animation and not a number anybody can read.
+    discEarned(amount);
     // Hold the balance at its old value until the discs land, so the number
     // moves *because* they arrived. applyWallet would otherwise snap it first.
     const pending = w;
@@ -18244,7 +18351,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       }
     }
     applyWallet(w);
-    if (w.earned > 0) { toast('+' + w.earned + ' Discs'); spawnDiscParticle(w.earned); }
+    if (w.earned > 0) { discEarned(w.earned, 'rating'); spawnDiscParticle(w.earned); }
     if (w.milestone && typeof window.celebrate === 'function') {
       window.celebrate('🔥 ' + w.milestone + '-day streak!', 'Keep it going — rate something tomorrow.');
     }
@@ -18279,7 +18386,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       if (window.reportIssue) reportIssue('game award did not move the balance', { game: game, before: before });
     }
     if (w.earned > 0) {
-      toast('+' + w.earned + ' Discs' + (opts && opts.reason ? (' — ' + opts.reason) : ''));
+      discEarned(w.earned, (opts && opts.reason) || '');
       spawnDiscParticle(w.earned);
       if (navigator.vibrate) { try { navigator.vibrate([8, 40, 14]); } catch (e) {} }
     } else if (w.capped) {
@@ -18325,7 +18432,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (w.claimed_already) return w;
 
     if (w.earned > 0) {
-      toast('+' + (w.earned || 0).toLocaleString('en-GB') + ' Discs — day ' + w.login_streak);
+      discEarned(w.earned, 'day ' + w.login_streak);
       /* Thrown from the ladder tile you pressed, when there is one. The claim
          is the single most rewarding second in the app and it used to be a
          number ticking in the header while you looked at a button. */
@@ -18357,7 +18464,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     applyWallet(res.data);
     const gained = (state.discs || 0) - (before || 0);
     if (gained > 0) {
-      toast('+' + gained + ' Discs' + (reason ? (' — ' + reason) : ''));
+      discEarned(gained, reason || '');
       spawnDiscParticle(gained);
       if (navigator.vibrate) { try { navigator.vibrate([8, 40, 14]); } catch (e) {} }
     }
@@ -23811,13 +23918,14 @@ window.renderAdminStats = renderAdminStats;
     /* Said on the button, not discovered in the result. A free spin that
        quietly pays a quarter reads as the machine short-changing you; one that
        says so first reads as a free spin. */
-    go.title = _freeSpin
-      ? 'Today’s free spin. Anything you do not own comes whole — Discs pay a quarter.'
-      : '';
+    /* The quarter is gone (..._20260922100000): a free spin pays exactly what a
+       paid one pays, so there is no longer a rule to explain here — only the
+       fact that today's is free. */
+    go.title = _freeSpin ? 'Today’s free spin, on the house.' : '';
     var note = el('draw-free-note');
     if (note) {
       note.style.display = _freeSpin ? '' : 'none';
-      note.textContent = 'Free spin — records and cosmetics in full, Discs at a quarter.';
+      note.textContent = 'Today’s spin is on the house.';
     }
   }
   function spinLabel() {
@@ -24016,10 +24124,9 @@ window.renderAdminStats = renderAdminStats;
       var value = won.duplicate ? 'Already yours — ' + esc(won.granted || won.label) + ', paid out instead'
         : won.kind === 'picks' ? (won.picks === 1 ? '1 free record' : won.picks + ' free records')
         : '';
-      /* Named at the moment it costs you something, not only before the spin.
-         A quarter that is explained where the number is is a rule; a quarter
-         discovered by subtracting two numbers is a bug report. */
-      var freeNote = (won.free && paysDiscs) ? 'Free spin — Discs pay a quarter' : '';
+      /* Nothing is scaled any more, so there is no discrepancy left to
+         explain — only the pleasant fact that this one cost nothing. */
+      var freeNote = won.free ? 'Free spin' : '';
       r.innerHTML = '<div class="dr-tier">' + esc(tierName(won.tier)) + '</div>' +
         '<div class="dr-label">' + esc(head) + '</div>' +
         (value ? '<div class="dr-val">' + value + '</div>' : '') +
@@ -27622,11 +27729,27 @@ window.track = function (name, props) {
     q = seed || '';
     el('sugg-title').textContent = COPY[mode].title;
     el('sugg-blurb').textContent = COPY[mode].blurb;
+    /* ON TOP, AND THAT IS THE WHOLE OF BOTH REPORTED BUGS.
+
+       This sheet is opened FROM the Shop, which is another `.modal` at
+       z-index 200 — and `#sugg-modal` sits at line ~8895 of the markup while
+       `#shop-modal` sits at ~9083. Equal z-index, later in the DOM wins, so
+       the Shop painted straight over it: the sheet was open the whole time
+       and only became visible once the Shop was closed.
+
+       The keyboard "bug" was the same thing wearing a different hat. The
+       input really did take focus, so iOS raised the keyboard — over the
+       Shop, because that is what was on screen. A keyboard with no visible
+       field under it is what that looks like.
+
+       `.on-top` is z-index 240 and already exists for exactly this: the
+       picker uses it to open over the list editor. */
+    modal.classList.add('on-top');
     modal.classList.add('open');
     drawCompose();
     load();
   }
-  function close() { modal.classList.remove('open'); }
+  function close() { modal.classList.remove('open'); modal.classList.remove('on-top'); }
 
   el('sugg-close').addEventListener('click', close);
   modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
@@ -30864,10 +30987,32 @@ window.track = function (name, props) {
        search field is not on every viewport, the bar's height is a token and
        it is not there at all above 700px. A calc() of guesses put the rating
        slider 45px behind the nav last time. */
+    /* THE BLACK SQUARE ON COMING BACK TO THE APP WAS MEASURED HERE.
+
+       This runs on `resize`, and iOS fires resize while an app is being
+       suspended and snapshotted for the switcher — at which point the visual
+       viewport reports a height that has nothing to do with the screen.
+       fitFeed dutifully wrote that number onto the feed as a pixel height, the
+       app went away, and on return nothing re-measured: the feed stayed short
+       and the space under it was the black the feed sits on.
+
+       Two guards, and they fix different halves:
+
+         * NEVER MEASURE WHILE HIDDEN. A backgrounded page's viewport is not a
+           viewport, and this is the only moment the bad number can be taken.
+         * NEVER ACCEPT AN IMPLAUSIBLE ONE. Even visible, the transition frames
+           report odd sizes; a feed shorter than half the window is not a
+           measurement, it is a glitch, and keeping the previous height is
+           always the better answer.
+
+       And it re-measures on the way back — see the resume listeners below.
+       Recovering is what actually matters: a bad number taken once must not be
+       permanent. */
+    if (document.hidden) return;
     var top = host.getBoundingClientRect().top;
     var vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
     var h = Math.round(vh - top);
-    if (h > 320) host.style.height = h + 'px';
+    if (h > 320 && h > window.innerHeight * 0.45) host.style.height = h + 'px';
 
     // What the overlay has to clear: the bar's own height plus whatever gap
     // it floats above the bottom edge, plus a little air. No bar (desktop) is
@@ -30879,7 +31024,22 @@ window.track = function (name, props) {
     }
     host.style.setProperty('--fy-floor', floor + 'px');
   }
-  window.addEventListener('resize', function () { if (_built) fitFeed(); });
+  /* Debounced, because iOS fires a burst of these through a rotation or an
+     app switch and only the last one is a real viewport. */
+  var _fitT = null;
+  function refit() {
+    clearTimeout(_fitT);
+    _fitT = setTimeout(function () { if (_built) fitFeed(); }, 60);
+  }
+  window.addEventListener('resize', refit);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', refit);
+  /* COMING BACK IS THE MOMENT THAT WAS MISSING. Between them these cover every
+     way a phone returns to this app: the tab becoming visible again, a
+     bfcache restore, and the window regaining focus. Cheap, idempotent, and
+     the only thing that can undo a height taken during a suspend. */
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) refit(); });
+  window.addEventListener('pageshow', refit);
+  window.addEventListener('focus', refit);
 
   function wire(host) {
     host.addEventListener('click', function (e) {
