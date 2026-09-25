@@ -2003,9 +2003,26 @@ html[data-motion="none"] .card { animation: none; }
 }
 .del-btn:hover { color: var(--red); border-color: var(--red); background: rgba(226,75,74,0.1); }
 
+.top-add-btn {
+  height: 28px; padding: 0 8px; border-radius: 7px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-faint); font-size: 11px; font-weight: 600;
+  flex-shrink: 0; white-space: nowrap;
+}
+.top-add-btn:hover { color: var(--gold); border-color: var(--gold-dim); }
+.top-add-menu {
+  display: flex; gap: 6px; justify-content: flex-end;
+  padding: 6px 0 0; flex-basis: 100%;
+}
+.top-add-menu button {
+  padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  background: var(--surface2); border: 1px solid var(--border-strong); color: var(--text);
+}
+.top-add-menu button:hover { border-color: var(--gold); color: var(--gold); }
+
 /* ---- SONG LIST ---- */
 .song-row {
-  display: flex; align-items: center; gap: 14px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   padding: 12px 16px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -2567,6 +2584,23 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 .seg button.active { background: var(--surface-3); color: var(--gold); }
 .seg button:hover:not(.active) { color: var(--text); }
 
+/* ---- LEADERBOARD BAR — moved out of the grid so it reads as the thing
+   above the minigames, not another tile inside them. A slim clickable bar,
+   not another big card. ---- */
+.lb-bar {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-radius: var(--radius);
+  background: linear-gradient(100deg, var(--surface2), var(--surface));
+  border: 1px solid var(--border-strong); cursor: pointer; text-align: left;
+  color: var(--text);
+}
+.lb-bar:active { transform: scale(0.99); }
+.lb-bar-icon { font-size: 20px; color: var(--gold); flex-shrink: 0; }
+.lb-bar-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lb-bar-text b { font-family: var(--font-display); font-size: 15px; }
+.lb-bar-text small { font-size: 12px; color: var(--text-dim); }
+.lb-bar-go { margin-left: auto; color: var(--gold); font-size: 16px; flex-shrink: 0; }
+
 /* ---- GAMES ---- */
 .games-grid {
   display: grid;
@@ -2704,8 +2738,137 @@ html[data-motion="none"] .game-card.gc-lead::after { animation: none; }
   color: var(--g);
   background: var(--g-dim);
   box-shadow: inset 0 0 0 1px var(--border-strong);
+  position: relative; overflow: hidden;
 }
-.gc-emoji .ui-icon, .gc-emoji svg { width: 24px; height: 24px; }
+.gc-emoji .ui-icon, .gc-emoji svg { width: 24px; height: 24px; position: relative; z-index: 1; }
+
+/* ---- ONE ANIMATION PER GAME, EACH ITS OWN --------------------------------
+   Behind the icon rather than moved onto it, so the glyph itself stays put
+   and legible while the well underneath does the work. Every one is
+   transform/opacity/background-position only — no layout thrash, all ten
+   can run at once on a phone without cost. Each is a small gesture toward
+   what that game actually does, not a shared effect recoloured ten times,
+   and each stops dead under prefers-reduced-motion with everything else
+   in this file. */
+.gc-emoji::before { content: ''; position: absolute; inset: 0; pointer-events: none; }
+
+/* Recall — a sound pulse expanding outward, like a note landing. */
+#recall-card .gc-emoji::before {
+  border-radius: 50%; border: 1.5px solid var(--g);
+  animation: gcPulseRing 2.6s var(--ease) infinite;
+}
+@keyframes gcPulseRing {
+  0% { transform: scale(.35); opacity: .8; }
+  70%, 100% { transform: scale(1.15); opacity: 0; }
+}
+
+/* Bid Wars — a glint sweeping once then pausing, like light catching a coin
+   mid-flip. The pause is the anticipation; a constant sweep would just be
+   noise. */
+#war-card .gc-emoji::before {
+  background: linear-gradient(115deg, transparent 20%, color-mix(in srgb, var(--g) 55%, transparent) 48%, transparent 76%);
+  background-size: 260% 260%;
+  animation: gcCoinFlip 3.6s cubic-bezier(.3,.7,.2,1) infinite;
+}
+@keyframes gcCoinFlip {
+  0%, 55%, 100% { background-position: 130% 0%; }
+  22% { background-position: -30% 0%; }
+}
+
+/* Daily Drop — a dot falling and settling, one drop per loop. */
+#drop-card .gc-emoji::before {
+  background: radial-gradient(circle 3.5px at 50% 0%, var(--g) 99%, transparent 100%);
+  animation: gcDrop 2.2s cubic-bezier(.5,0,.7,1) infinite;
+}
+@keyframes gcDrop {
+  0% { background-position: 0 -10px; opacity: 0; }
+  35% { opacity: 1; }
+  55% { background-position: 0 26px; opacity: 1; }
+  62% { background-position: 0 22px; }
+  70%, 100% { background-position: 0 26px; opacity: 0; }
+}
+
+/* Earworm — a text cursor blinking, because the game is spelling something
+   out letter by letter. */
+#ew-card .gc-emoji::before {
+  left: auto; right: 9px; top: 50%; width: 2px; height: 16px;
+  margin-top: -8px; background: var(--g);
+  animation: gcCaret 1s steps(1) infinite;
+}
+@keyframes gcCaret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+
+/* Guess the Cover — a shutter iris closing in and releasing, the way a
+   camera actually confirms a shot. */
+[data-game="cover"] .gc-emoji::before {
+  border-radius: 50%; background: var(--g);
+  animation: gcShutter 2.8s var(--ease) infinite;
+}
+@keyframes gcShutter {
+  0%, 82%, 100% { transform: scale(0); opacity: 0; }
+  88% { transform: scale(1.4); opacity: .55; }
+  94% { transform: scale(.9); opacity: .3; }
+}
+
+/* Cover EXTREME — the same idea as Cover, but flickering and irregular,
+   because this mode is the brutal one. */
+[data-game="coverx"] .gc-emoji::before {
+  background: var(--g);
+  animation: gcFlicker 1.7s linear infinite;
+}
+@keyframes gcFlicker {
+  0%, 100% { opacity: 0; } 4% { opacity: .5; } 7% { opacity: 0; }
+  38% { opacity: .35; } 42% { opacity: 0; } 60% { opacity: .55; } 64% { opacity: 0; }
+}
+
+/* Guess from Tracklist — thin rows scrolling past, like a tracklist
+   scrolling under a finger. */
+[data-game="tracklist"] .gc-emoji::before {
+  background: repeating-linear-gradient(to bottom, var(--g) 0 2px, transparent 2px 9px);
+  background-size: 100% 36px;
+  opacity: .5;
+  animation: gcScroll 2.4s linear infinite;
+}
+@keyframes gcScroll { from { background-position: 0 0; } to { background-position: 0 -36px; } }
+
+/* Guess the Year — a page turning corner-first, like a calendar flipping. */
+[data-game="year"] .gc-emoji::before {
+  left: auto; right: 0; top: 0; width: 16px; height: 16px;
+  background: linear-gradient(135deg, transparent 50%, var(--g) 50%);
+  transform-origin: top right;
+  animation: gcFlip 3s var(--ease) infinite;
+}
+@keyframes gcFlip {
+  0%, 60% { transform: rotate(0deg); opacity: .5; }
+  80% { transform: rotate(-25deg); opacity: .8; }
+  100% { transform: rotate(0deg); opacity: .5; }
+}
+
+/* Cover Fire — rapid strobed flashes, a burst rather than a steady pulse,
+   for the game that is ten sleeves in sixty seconds. */
+#blitz-card .gc-emoji::before {
+  background: var(--g);
+  animation: gcStrobe 2.4s linear infinite;
+}
+@keyframes gcStrobe {
+  0%, 100% { opacity: 0; } 2% { opacity: .6; } 5% { opacity: 0; }
+  10% { opacity: .6; } 13% { opacity: 0; } 18% { opacity: .6; } 21% { opacity: 0; }
+}
+
+/* Higher or Lower — an arrow bobbing between the two answers, up then
+   down, never settling. */
+#hl-card .gc-emoji::before {
+  left: 50%; top: 50%; width: 0; height: 0; margin: -8px 0 0 -5px;
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-bottom: 8px solid var(--g);
+  animation: gcSeesaw 1.8s var(--ease) infinite;
+}
+@keyframes gcSeesaw {
+  0%, 100% { transform: translateY(-3px); opacity: .9; }
+  50% { transform: translateY(3px) rotate(180deg); opacity: .9; }
+}
+
+@media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) .gc-emoji::before { animation: none !important; } }
+html[data-motion="none"] .gc-emoji::before { animation: none !important; }
 .game-card h3 { font-family: var(--font-display); font-size: 17px; font-weight: 700; margin: var(--s3) 0 5px; letter-spacing: -0.015em; }
 .game-card p {
   font-size: var(--t-sm); color: var(--text-dim); line-height: 1.45;
@@ -4617,16 +4780,16 @@ body.entering-done #artist-hero {
   position: relative;
   display: flex;
   align-items: baseline;
-  gap: 14px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 28px;
-  padding: 18px 22px;
+  margin-bottom: 14px;
+  padding: 9px 14px;
   border-radius: var(--radius);
   background: var(--surface);
   border: 1px solid var(--border);
 }
 .fal-label {
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -4635,7 +4798,7 @@ body.entering-done #artist-hero {
 }
 .fal-name {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -4658,13 +4821,13 @@ body.entering-done #artist-hero {
 }
 .fav-artist-empty {
   display: flex; align-items: center; justify-content: center;
-  height: 64px;
+  height: 38px;
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius);
   color: var(--text-faint);
-  font-size: 14px;
+  font-size: 12.5px;
   cursor: pointer;
-  margin-bottom: 28px;
+  margin-bottom: 14px;
   transition: border-color 0.15s, color 0.15s;
 }
 .fav-artist-empty:hover { border-color: var(--gold); color: var(--gold); }
@@ -5377,6 +5540,16 @@ html[data-motion="none"] .colb-tick { animation: none; transform: rotate(42deg) 
   background: linear-gradient(150deg, var(--c-cyan-dim), var(--surface) 62%);
   padding: 18px 20px; margin-top: 10px;
 }
+/* About You — violet rather than gold or cyan, so it does not read as a
+   third copy of Depth or Taste Match. Short lines, generous line-height:
+   this is meant to be READ, not scanned like a stat tile. */
+.ay-card {
+  border: 1px solid var(--border-strong); border-radius: 16px;
+  background: linear-gradient(150deg, var(--c-violet-dim), var(--surface) 62%);
+  padding: 16px 18px; margin-top: 10px;
+}
+.ay-card p { font-size: 14px; line-height: 1.55; margin: 0 0 10px; }
+.ay-card p:last-child { margin-bottom: 0; }
 .tm-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .tm-pct {
   font-family: var(--font-display); font-size: 34px; font-weight: 800;
@@ -7446,31 +7619,116 @@ body.is-sorting, body.is-sorting * {
   }
 }
 
-.dm-box { margin: 14px 0; }
-.dm-title { font-size: 13px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+/* Daily Missions — a compact dropdown off the Home header, not a page of its
+   own. It behaves like the info popover: fixed, anchored under the button,
+   closes on an outside tap, no background blur. */
+.dm-wrap { position: relative; }
+.dm-toggle { position: relative; }
+.dm-badge {
+  position: absolute; top: -4px; right: -4px; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--gold);
+}
+.dm-panel {
+  display: none; position: absolute; top: calc(100% + 8px); right: 0;
+  z-index: 40; width: 268px; max-width: calc(100vw - 32px);
+  background: var(--surface2); border: 1px solid var(--border-strong);
+  border-radius: var(--radius); box-shadow: 0 16px 40px rgba(0,0,0,.45);
+  padding: 12px 14px;
+  transform-origin: top right;
+  opacity: 0; transform: scale(.94) translateY(-4px);
+  transition: opacity .15s var(--ease), transform .15s var(--ease);
+}
+.dm-panel.open { display: block; }
+.dm-panel.in { opacity: 1; transform: none; }
+.dm-title { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
 .dm-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); font-size: 13px; }
 .dm-row:first-of-type { border-top: none; }
 .dm-nm { flex: 1; min-width: 0; }
 .dm-prog { color: var(--text-faint); font-size: 12px; }
 .dm-claimed { opacity: .5; }
-.dm-done { color: var(--c-lime, #7dff8a); }
+.dm-done { color: var(--c-lime, #7dff8a); font-size: 15px; }
+.dm-row .btn-mini[data-dm-claim] {
+  color: var(--gold); border-color: var(--gold-dim);
+}
+.dm-row .btn-mini[data-dm-claim]:disabled { color: var(--text-faint); border-color: var(--border); }
+/* The claim itself — same idea as the login ladder's tile: a quick pop and
+   settle rather than a burst of confetti, so repeated claims never feel like
+   the same big celebration playing six times in a row. */
+.dm-row.dm-claiming { animation: dmClaim .42s var(--ease); }
+@keyframes dmClaim { 0% { transform: scale(1); } 45% { transform: scale(1.035); background: rgba(245,200,66,.12); } 100% { transform: scale(1); } }
+.list-top-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+/* TOURNAMENT — the main event. A pulsing gold border and a slow diagonal
+   sweep of light, own keyframes, own colour. Glowy but not obnoxious: the
+   glow breathes over 2.6s rather than flashing. */
+.list-tourn-btn {
+  position: relative; overflow: hidden; width: 100%;
+  padding: 13px 16px; border-radius: 12px; text-align: center;
+  background: linear-gradient(150deg, var(--gold-dim), var(--surface2) 70%);
+  border: 1px solid var(--gold-dim);
+  animation: ltbPulse 2.6s ease-in-out infinite;
+}
+.ltb-label { position: relative; z-index: 1; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--gold); }
+.ltb-glow {
+  position: absolute; inset: -40%; z-index: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(245,200,66,.28) 48%, transparent 66%);
+  background-size: 220% 220%;
+  animation: ltbSweep 3.4s linear infinite;
+}
+@keyframes ltbSweep { 0% { background-position: 0% 0%; } 100% { background-position: -220% 0%; } }
+@keyframes ltbPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(245,200,66,0); border-color: var(--gold-dim); }
+  50% { box-shadow: 0 0 22px rgba(245,200,66,.35); border-color: var(--gold); }
+}
+/* FILL FROM AN ARTIST — quieter, its own identity: a corner shimmer rather
+   than a full sweep or a pulsing border, so the two bulk actions are never
+   mistaken for one design applied twice. */
+.list-fill-btn {
+  position: relative; overflow: hidden; width: 100%;
+  padding: 11px 16px; border-radius: 12px; text-align: center;
+  background: var(--surface2); border: 1px solid var(--border-strong);
+}
+.lfb-label { position: relative; z-index: 1; font-size: 13px; font-weight: 600; color: var(--text); }
+.lfb-shimmer {
+  position: absolute; top: -60%; right: -30%; width: 70%; height: 220%; z-index: 0;
+  background: radial-gradient(circle, rgba(125,213,255,.22), transparent 70%);
+  animation: lfbDrift 5s ease-in-out infinite;
+}
+@keyframes lfbDrift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-14%, 10%) scale(1.15); }
+}
 .tourn-progress { text-align: center; color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
 .tourn-pair { display: flex; gap: 12px; }
 .tourn-card { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
   padding: 12px; text-align: center; cursor: pointer; }
 .tourn-card:hover, .tourn-card:active { border-color: var(--gold-dim); }
+.tourn-card { transition: transform .22s var(--ease), opacity .22s var(--ease), border-color .22s var(--ease); }
+.tourn-card.tourn-win { border-color: var(--c-lime); transform: scale(1.045); box-shadow: 0 0 20px rgba(125,255,138,.28); }
+.tourn-card.tourn-lose { opacity: .35; transform: scale(.96); }
 .tourn-card img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; margin-bottom: 8px; }
 .tourn-card .tc-nm { font-size: 13px; font-weight: 600; }
 .tourn-card .tc-ar { font-size: 12px; color: var(--text-dim); }
 .tourn-vs { align-self: center; color: var(--text-faint); font-size: 12px; }
+/* Anchored to the record's own corner rather than the top of the screen,
+   which is where .fy-push-btn already lives — the two used to compete for
+   the same top-right inch of the viewport. Outline by default, so it reads
+   as a control rather than a TikTok-style alarm; the fill is the whole
+   feedback and it is the app's own accent, never stock red. */
+.fy-art-wrap { position: relative; z-index: 2; display: inline-block; flex: 0 0 auto; }
 .fy-like {
-  position: absolute; top: calc(var(--s5) + 8px); right: calc(var(--gutter) + 8px);
-  z-index: 3; width: 40px; height: 40px; border-radius: 50%; border: none;
-  background: rgba(0,0,0,.35); color: rgba(255,255,255,.7);
-  font-size: 19px; line-height: 1; display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
+  position: absolute; bottom: 10px; right: 10px;
+  z-index: 3; width: 36px; height: 36px; border-radius: 50%; border: none;
+  background: rgba(10,9,8,.55); backdrop-filter: blur(6px);
+  color: rgba(255,245,235,.82);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: transform .15s var(--ease), color .15s var(--ease), background .15s var(--ease);
 }
-.fy-like.liked { color: var(--c-pink, #ff5fa0); }
+.fy-like svg { fill: none; stroke: currentColor; stroke-width: 1.8; transition: fill .15s var(--ease); }
+.fy-like:active { transform: scale(.88); }
+.fy-like.liked { color: var(--gold); background: rgba(10,9,8,.7); }
+.fy-like.liked svg { fill: var(--gold); stroke: var(--gold); }
+.fy-like.just-liked { animation: fyLikePop .38s var(--ease); }
+@keyframes fyLikePop { 0% { transform: scale(1); } 40% { transform: scale(1.28); } 100% { transform: scale(1); } }
 .fy-card {
   scroll-snap-align: center;
   scroll-snap-stop: always;      /* one song per flick, never two */
@@ -7659,21 +7917,26 @@ body.is-sorting, body.is-sorting * {
 .fy-push-btn {
   margin-left: auto;
   border: 1px solid rgba(255,245,235,.22);
-  background: rgba(10,9,8,.5); backdrop-filter: blur(12px);
+  background: linear-gradient(160deg, rgba(255,245,235,.1), rgba(10,9,8,.55));
+  backdrop-filter: blur(12px);
   color: rgba(255,245,235,.92);
   font: 600 12px var(--font-body);
-  padding: 10px 14px; border-radius: 999px;
+  padding: 9px 15px 9px 12px; border-radius: 999px;
   display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 6px 16px rgba(0,0,0,.25);
+  transition: transform .15s var(--ease), border-color .15s var(--ease), box-shadow .15s var(--ease);
 }
 .fy-push-btn:active { transform: scale(.94); }
 .fy-push-btn .fy-push-arrow {
   width: 0; height: 0;
   border-bottom: 8px solid currentColor;
   border-left: 5px solid transparent; border-right: 5px solid transparent;
+  filter: drop-shadow(0 0 4px currentColor);
 }
 .fy-push-btn.pushed {
-  background: color-mix(in srgb, var(--c-lime) 28%, rgba(10,9,8,.5));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c-lime) 34%, transparent), rgba(10,9,8,.55));
   border-color: var(--c-lime); color: var(--c-lime);
+  box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 0 18px color-mix(in srgb, var(--c-lime) 35%, transparent);
 }
 .fy-push-btn:disabled { opacity: .5; }
 /* The tabs float over the art at the top and the nav floats over it at the
@@ -8474,6 +8737,84 @@ input, textarea, select, [contenteditable="true"],
 </script>
 
 <!-- ================================================================
+     REMINDERS — the two things worth a nudge, and nothing else.
+
+     Local notifications only: no server, no device token, no infrastructure
+     to build or maintain, because the two things worth a nudge here are both
+     already known ON THE DEVICE — the login streak and whether today's
+     Recall has been played. A local notification can say both without VINALL
+     ever learning who has notifications on.
+
+     Scheduled fresh each session rather than left running for weeks: a
+     notification set six days ago cannot know the streak was claimed an hour
+     ago, so `sync()` cancels and re-lays both for TODAY (a fixed local time,
+     hours away) every time the wallet loads. If today is already claimed or
+     already played, that half is simply not scheduled — never scheduled and
+     then hoped to be irrelevant.
+
+     A toggle, not a prompt on load: notifications asked for before anybody
+     has decided they want them is how permission gets permanently denied.
+     Off entirely on the web and inside a browser tab — LocalNotifications
+     is a native plugin and Native.call already no-ops without it. ================================================================ -->
+<script>
+(function () {
+  var KEY = 'crate_reminders_on';
+  var STREAK_ID = 8801, RECALL_ID = 8802;
+
+  function on() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
+  function setOn(v) { try { localStorage.setItem(KEY, v ? '1' : '0'); } catch (e) {} }
+
+  // A fixed local time today, or tomorrow if that time has already passed —
+  // there is no point scheduling a nudge for a moment already behind us.
+  function atLocal(hour, minute) {
+    var d = new Date();
+    d.setHours(hour, minute, 0, 0);
+    if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+    return d;
+  }
+
+  async function requestPermission() {
+    if (!window.Native || !Native.on) return false;
+    var chk = await Native.call('LocalNotifications', 'checkPermissions', {});
+    if (chk && chk.display === 'granted') return true;
+    var req = await Native.call('LocalNotifications', 'requestPermissions', {});
+    return !!(req && req.display === 'granted');
+  }
+
+  async function sync() {
+    if (!window.Native || !Native.on) return;
+    await Native.call('LocalNotifications', 'cancel', { notifications: [{ id: STREAK_ID }, { id: RECALL_ID }] });
+    if (!on()) return;
+    var st = (window.Wallet && Wallet.get) ? Wallet.get() : null;
+    var notifs = [];
+    if (st) {
+      var todayUtc = new Date().toISOString().slice(0, 10);
+      var claimedToday = st.login_last_date && String(st.login_last_date).slice(0, 10) === todayUtc;
+      if (!claimedToday) {
+        notifs.push({
+          id: STREAK_ID, title: 'Your streak is waiting',
+          body: (st.login_streak > 0 ? 'Day ' + (st.login_streak + 1) + ' is still there.' : 'Come back and claim today.'),
+          schedule: { at: atLocal(20, 0) }
+        });
+      }
+    }
+    try {
+      var doneToday = window.Recall && Recall.dailyDone && Recall.dailyDone();
+      if (!doneToday) {
+        notifs.push({
+          id: RECALL_ID, title: 'Recall', body: 'Today’s record is ready to name.',
+          schedule: { at: atLocal(12, 0) }
+        });
+      }
+    } catch (e) {}
+    if (notifs.length) await Native.call('LocalNotifications', 'schedule', { notifications: notifs });
+  }
+
+  window.Reminders = { isOn: on, setOn: function (v) { setOn(v); sync(); }, sync: sync, requestPermission: requestPermission };
+})();
+</script>
+
+<!-- ================================================================
      THE KEYBOARD, AND THE VIEWPORT UNIT THAT DOES NOT KNOW ABOUT IT
      ================================================================
      Reported as: the on-screen keyboard covers the field being typed into.
@@ -8740,6 +9081,10 @@ window.discAmt = function (n) {
           <h2>Today</h2>
         </div>
         <div class="today-head-right">
+          <div class="dm-wrap">
+            <button class="btn-mini dm-toggle" id="dm-toggle" aria-haspopup="true" aria-expanded="false">Missions<span class="dm-badge" id="dm-badge" style="display:none;"></span></button>
+            <div class="dm-panel" id="dm-panel"></div>
+          </div>
           <span class="today-count" id="today-count" style="display:none;"></span>
           <span class="today-hint" id="today-hint">Tap an answer &mdash; it moves on by itself</span>
           <!-- Undo lives up here rather than on the card. With auto-advance on,
@@ -8945,7 +9290,12 @@ window.discAmt = function (n) {
 
   <!-- ============================ GAMES ============================ -->
   <section id="view-games" class="view" style="display:none;">
-    <div class="section-head"><h2>Minigames</h2><span class="muted">Test yourself on any artist, genre or era</span></div>
+    <button class="lb-bar" id="leaderboard-card">
+      <span class="lb-bar-icon" data-icon="stopwatch"></span>
+      <span class="lb-bar-text"><b>Leaderboard</b><small>Fastest runs and top scores, worldwide</small></span>
+      <span class="lb-bar-go">&rarr;</span>
+    </button>
+    <div class="section-head" style="margin-top:20px;"><h2>Minigames</h2><span class="muted">Test yourself on any artist, genre or era</span></div>
     <div class="games-grid" id="games-grid">
       <!-- RECALL AND BID WARS LEAD, and they are marked `.gc-lead` rather than
            just moved: two cards at the top of a grid of eleven identical
@@ -9036,12 +9386,6 @@ window.discAmt = function (n) {
            wallet_award_game('tournament') case are all left in place — parked
            the same way market-mode Bid Wars is, so bringing it back is putting
            a card back rather than rebuilding it. -->
-      <div class="game-card" id="leaderboard-card">
-        <div class="gc-emoji" data-icon="stopwatch"></div>
-        <h3>Speed Leaderboard</h3>
-        <p>Fastest perfect runs, worldwide.</p>
-        <div class="gc-go">View &rarr;</div>
-      </div>
     </div>
   </section>
 
@@ -9692,6 +10036,15 @@ window.discAmt = function (n) {
       </div>
     </div>
 
+    <div class="set-group" id="set-reminders-group" style="display:none;">
+      <div class="shop-section-title">Reminders</div>
+      <div class="set-row">
+        <div class="set-copy"><div class="set-name">Streak &amp; Recall nudges</div>
+          <div class="set-note">One notification if today's streak is unclaimed, one if Recall is unplayed.</div></div>
+        <input type="checkbox" id="set-reminders-on">
+      </div>
+    </div>
+
     <div class="set-group" id="set-likes-group" style="display:none;">
       <div class="shop-section-title">Liked songs</div>
       <div class="set-row">
@@ -10080,6 +10433,7 @@ window.discAmt = function (n) {
       <button data-game="coverx" style="flex:1;">EXTREME</button>
       <button data-game="tracklist" style="flex:1;">Tracklist</button>
       <button data-game="year" style="flex:1;">Year</button>
+      <button data-game="recall" style="flex:1;">Recall</button>
     </div>
     <div id="lb-list" style="max-height:56vh; overflow-y:auto;"></div>
   </div>
@@ -11701,9 +12055,31 @@ window.removeSong = removeSong;
      meta: id -> {name, artist, art}, for naming the records in the evidence.
            Falls back to whatever `theirs` carries when it holds full objects,
            so a profile needs to pass nothing. */
+  // Folds accents and case, same rule as album_match_key/myScoreFor/colKey —
+  // a record rated under a legacy Spotify id and offered here under Deezer's
+  // numeric one is the same record with two keys, and an id-only check reads
+  // it as unheard. Third or fourth place this app has had to get that right.
+  function foldKey(name, artist) {
+    function f(x) { return String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/[^a-z0-9]+/g, ''); }
+    return f(name) + '|' + f(artist);
+  }
+  function nameIndexOf(obj) {
+    var out = {};
+    if (!obj) return out;
+    Object.keys(obj).forEach(function (k) {
+      var v = obj[k];
+      if (v && typeof v === 'object' && typeof v.score === 'number' && v.score > 0) {
+        var key = foldKey(v.name, v.artist);
+        if (key !== '|') out[key] = true;
+      }
+    });
+    return out;
+  }
+
   function compare(mine, theirs, meta) {
     var A = toScores(mine), B = toScores(theirs);
     meta = meta || {};
+    var mineNames = nameIndexOf(mine);
     function nameOf(id) {
       var m = meta[id] || (theirs && theirs[id]) || (mine && mine[id]) || {};
       return { id: id, name: m.name || '', artist: m.artist || '', art: m.art || '' };
@@ -11747,7 +12123,11 @@ window.removeSong = removeSong;
 
     // The discovery payoff, and the reason this is not just a stat: records
     // they rate highly that you have never had an opinion about.
-    var unheard = Object.keys(B).filter(function (id) { return A[id] == null && B[id] >= LOVE_MIN; })
+    var unheard = Object.keys(B).filter(function (id) {
+        if (A[id] != null || B[id] < LOVE_MIN) return false;
+        var r = nameOf(id);
+        return !r.name || !mineNames[foldKey(r.name, r.artist)];
+      })
       .sort(function (x, y) { return B[y] - B[x]; }).slice(0, 6)
       .map(function (id) { var r = nameOf(id); r.them = B[id]; return r; });
 
@@ -12597,9 +12977,40 @@ function renderSongs(){
         '<button class="sr-play" data-crateplay="'+esc(s.id)+'" aria-label="Play a preview of '+esc(s.name)+'"></button>'+
         '<input type="range" class="song-slider" min="0" max="10" step="1" value="'+s.score+'" data-song="'+s.id+'">'+
         '<div class="song-score">'+s.score+'</div>'+
+        '<button class="top-add-btn" data-topadd="'+s.id+'" aria-label="Add to Top 5 or Top 10" title="Add to Top 5 / Top 10">+Top</button>'+
         '<button class="del-btn" data-delsong="'+s.id+'" aria-label="Remove">'+ICONS.trash+'</button>'+
+      '</div>'+
+      '<div class="top-add-menu" id="top-add-menu-'+esc(s.id)+'" style="display:none;">'+
+        '<button data-topadd-do="now">Top 5</button>'+
+        '<button data-topadd-do="all">Top 10</button>'+
       '</div></div>';
   }).join('');
+  host.querySelectorAll('[data-topadd]').forEach(function(b){
+    b.addEventListener('click',function(ev){
+      ev.stopPropagation();
+      var menu=document.getElementById('top-add-menu-'+b.dataset.topadd);
+      if(!menu)return;
+      var open=menu.style.display!=='none';
+      host.querySelectorAll('.top-add-menu').forEach(function(m){m.style.display='none';});
+      menu.style.display=open?'none':'flex';
+    });
+  });
+  host.querySelectorAll('[data-topadd-do]').forEach(function(b){
+    b.addEventListener('click',async function(ev){
+      ev.stopPropagation();
+      var menu=b.closest('.top-add-menu');
+      var id=(menu.id||'').replace('top-add-menu-','');
+      var s=(loadSongs()||{})[id];
+      if(!s)return;
+      var which=b.dataset.topaddDo;
+      b.disabled=true;
+      var res=await addSongToTop({id:s.id,name:s.name,artist:s.artist,art:s.art},which);
+      b.disabled=false;
+      menu.style.display='none';
+      if(res.error){if(window.reportIssue)reportIssue('addSongToTop failed',{error:res.error});return;}
+      if(window.buzz)buzz('good');
+    });
+  });
   host.querySelectorAll('.song-slider').forEach(function(sl){
     sl.addEventListener('input',function(){
       const v=parseInt(sl.value,10);
@@ -13155,7 +13566,11 @@ function renderAuthArea(connected){
   const seg=document.getElementById('lb-game-seg');
   let activeGame='cover';
 
-  const GAME_NAMES={cover:'Guess the Cover',coverx:'Cover EXTREME',tracklist:'Guess from Tracklist',year:'Guess the Year'};
+  const GAME_NAMES={cover:'Guess the Cover',coverx:'Cover EXTREME',tracklist:'Guess from Tracklist',year:'Guess the Year',recall:'Recall'};
+  // Every other game here races a clock \u2014 lower is better. Recall is a score,
+  // reusing the same time_ms column (same table, same dedup-by-user, same
+  // architecture) rather than a schema change for one game.
+  const SCORE_GAMES={recall:true};
 
   function open(){modal.classList.add('open');loadBoard();}
   function close(){modal.classList.remove('open');}
@@ -13166,9 +13581,11 @@ function renderAuthArea(connected){
       listHost.innerHTML='<div class="reco-note">Log in to see global times \u2014 and to have your own runs counted.</div>';
       return;
     }
-    const rows=await Cloud.fetchLeaderboard(activeGame, null);
+    const isScore=!!SCORE_GAMES[activeGame];
+    const rows=await Cloud.fetchLeaderboard(activeGame, null, !isScore);
     if(!rows.length){
-      listHost.innerHTML='<div class="empty" style="padding:32px 20px;"><span class="emoji">\u23F1\ufe0f</span><h3>No times yet</h3><p>Be the first to post a perfect 5/5 run on '+esc(GAME_NAMES[activeGame]||activeGame)+'.</p></div>';
+      listHost.innerHTML='<div class="empty" style="padding:32px 20px;"><span class="emoji">\u23F1\ufe0f</span><h3>Nothing yet</h3><p>'+
+        (isScore?'Be the first to post a high score on Recall.':'Be the first to post a perfect 5/5 run on '+esc(GAME_NAMES[activeGame]||activeGame)+'.')+'</p></div>';
       return;
     }
     const me=Cloud.getUser&&Cloud.getUser();
@@ -13179,7 +13596,7 @@ function renderAuthArea(connected){
         '<span style="width:34px; text-align:center; font-family:var(--font-display); font-weight:700; font-size:'+(i<3?'18px':'14px')+';">'+medal+'</span>'+
         '<div style="flex:1;"><div class="nm">'+esc(r.username||'user')+(mine?' <span style="color:var(--gold);font-size:11px;">(you)</span>':'')+'</div>'+
         (r.mode_label?'<div class="ar">'+esc(r.mode_label)+'</div>':'')+'</div>'+
-        '<div style="font-family:var(--font-display); font-weight:700; color:var(--gold);">'+(r.time_ms/1000).toFixed(1)+'s</div>'+
+        '<div style="font-family:var(--font-display); font-weight:700; color:var(--gold);">'+(isScore?Number(r.time_ms).toLocaleString('en-GB'):(r.time_ms/1000).toFixed(1)+'s')+'</div>'+
       '</div>';
     }).join('');
   }
@@ -14494,7 +14911,11 @@ const Cloud=(function(){
        the last person who signed in here. */
     if(window.Onboard)try{Onboard.maybeStart();}catch(e){}
     
-    try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderArtistHero();if(window.renderToday)renderToday(true);if(window.renderDiary)renderDiary();}if(currentMode==='foryou'&&window.ForYou)ForYou.build(true);if(currentMode==='profile'&&window.renderProfile)renderProfile();}catch(e){}
+    try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderArtistHero();if(window.renderToday)renderToday(true);if(window.renderDiary)renderDiary();}if(window.Reminders)Reminders.sync();if(currentMode==='foryou'&&window.ForYou){ForYou.build(true);}else if(window.ForYou){/* Warmed quietly while hidden (display:none skips the IntersectionObserver,
+      so nothing plays or scrolls by itself) so the FIRST time somebody opens
+      For You this session it is already built rather than starting a fresh
+      "Finding songs for you" — the fetch happens once, in the background,
+      instead of once per visit. */ForYou.build();}if(currentMode==='profile'&&window.renderProfile)renderProfile();}catch(e){}
     flashSaved();
   }
   /* Reconcile, not backfill — and the difference is the whole point.
@@ -15205,10 +15626,10 @@ const Cloud=(function(){
       return res.error?{error:res.error.message}:{ok:true};
     }catch(e){return{error:String(e&&e.message||e)};}
   }
-  async function fetchLeaderboard(gameType,modeKey){
+  async function fetchLeaderboard(gameType,modeKey,ascending){
     if(!sb)return[];
     try{
-      let q=sb.from('leaderboard_times').select('username,mode_label,time_ms,created_at,user_id').eq('game_type',gameType).order('time_ms',{ascending:true}).limit(50);
+      let q=sb.from('leaderboard_times').select('username,mode_label,time_ms,created_at,user_id').eq('game_type',gameType).order('time_ms',{ascending:ascending!==false}).limit(50);
       if(modeKey)q=q.eq('mode_key',modeKey);
       const res=await q;
       if(res.error)return[];
@@ -15394,10 +15815,7 @@ function tasteMatchHtml(tm,uname){
           '<button class="btn-mini tm-add" data-tmadd="'+esc(r.id)+'">'+
           (window.shortlistHas&&shortlistHas(r.id)?'Shortlisted':'+ Shortlist')+'</button>');
       }).join('');
-  h+='<div class="tm-note">100% is identical opinions. 0% is no closer than two people '+
-     'picked at random who rate the way you two do — which is why these numbers sit '+
-     'lower than the ones on sites that count how many records you both own.</div>'+
-    '</div>';
+  h+='</div>';
   return h;
 }
 
@@ -15415,6 +15833,135 @@ function tasteMatchHtml(tm,uname){
    its own catch, so a single failing call degrades its own section rather than
    emptying the page — which is also why this is Promise.all over already-safe
    promises rather than a pile of try/catch around awaits. */
+/* ABOUT YOU — a read of your own crate, not a horoscope.
+
+   Gated on having rated enough for a pattern to mean anything rather than a
+   coincidence — 15 is the same order of magnitude as every other "enough
+   data" gate in this app (Taste Match wants 5 shared, Higher or Lower's full
+   mode wants 25). Below it, the section says what is missing rather than
+   guessing from four albums.
+
+   Every line comes out of a real number computed from THIS person's own
+   ratings — average score, who they rate most, whether they ever change
+   their mind, their best and worst score — never a fixed template with a
+   name dropped in. Which lines actually show depends on what is true of the
+   data: someone who has never re-rated anything gets a different card from
+   someone who rewrites their opinions constantly, because they are
+   different people. `seededPick` is deterministic against the ratings
+   themselves so the card reads the same on every visit until the data
+   actually changes, rather than reshuffling itself on a refresh. */
+function seededPick(seed, arr) {
+  var h = 0;
+  for (var i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return arr[h % arr.length];
+}
+function buildAboutYouLines(albums, songs, prof) {
+  var n = albums.length;
+  var scores = albums.map(function (a) { return a.score; });
+  var avg = scores.reduce(function (a, b) { return a + b; }, 0) / n;
+  var sorted = albums.slice().sort(function (a, b) { return b.score - a.score; });
+  var top = sorted[0], bottom = sorted[sorted.length - 1];
+
+  var byArtist = {};
+  albums.forEach(function (a) {
+    var k = (a.artist || 'Unknown').trim();
+    (byArtist[k] = byArtist[k] || []).push(a.score);
+  });
+  var artists = Object.keys(byArtist).map(function (k) {
+    var arr = byArtist[k];
+    return { name: k, n: arr.length, avg: arr.reduce(function (x, y) { return x + y; }, 0) / arr.length };
+  }).sort(function (a, b) { return b.n - a.n; });
+  var loyal = artists[0];
+
+  var rerated = albums.filter(function (a) { return a.history && a.history.length > 1; });
+  var seed = albums.map(function (a) { return (a.id || '') + a.score; }).join('').slice(0, 240);
+
+  var lines = [];
+
+  if (avg <= 55) {
+    lines.push(seededPick(seed + '1', [
+      'Average score is ' + Math.round(avg) + '. You rate like most records owe you an apology before they even start.',
+      Math.round(avg) + ' average across ' + n + ' albums — you are not out here handing out participation trophies.'
+    ]));
+  } else if (avg >= 82) {
+    lines.push(seededPick(seed + '1', [
+      'Average score ' + Math.round(avg) + '. You basically like everything that makes it into your crate — the bar to get rated is low, the bar to leave with a bad score is high.',
+      'You are handing out ' + Math.round(avg) + 's like sweets. Either your taste is genuinely that dialled in, or you are just a soft grader.'
+    ]));
+  }
+
+  if (loyal && loyal.n >= Math.max(4, Math.round(n * 0.15))) {
+    lines.push(seededPick(seed + '2', [
+      loyal.name + ' makes up ' + loyal.n + ' of your ' + n + ' ratings. That has stopped being a favourite artist and started being a personality trait.',
+      'Roughly one in every ' + Math.max(2, Math.round(n / loyal.n)) + ' albums you rate is ' + loyal.name + '. No further questions.'
+    ]));
+  }
+
+  if (rerated.length >= 3) {
+    lines.push(seededPick(seed + '3', [
+      'You have changed your mind on ' + rerated.length + ' albums after the fact. Nothing in your crate is a settled argument.',
+      rerated.length + ' records you rated more than once. Half your crate is still a live debate with yourself.'
+    ]));
+  } else if (rerated.length === 0 && n >= 20) {
+    lines.push('Every one of your ' + n + ' ratings is a first and final verdict — no do-overs, no growth arc, no changing your mind later.');
+  }
+
+  if (top && top.score >= 90) {
+    lines.push(esc2ay(top.name) + ' by ' + esc2ay(top.artist || 'someone') + ' is sitting on a ' + top.score + '. That is not a rating, that is an endorsement.');
+  }
+  if (bottom && bottom.score <= 25 && n >= 15) {
+    lines.push('And then there is ' + esc2ay(bottom.name) + ' at ' + bottom.score + '. Someone made you sit through that and you clearly have not forgiven them.');
+  }
+
+  var genreCounts = {};
+  albums.forEach(function (a) { if (a.genre) genreCounts[a.genre] = (genreCounts[a.genre] || 0) + 1; });
+  var genreKeys = Object.keys(genreCounts);
+  if (genreKeys.length) {
+    genreKeys.sort(function (a, b) { return genreCounts[b] - genreCounts[a]; });
+    var topGenre = genreKeys[0], share = genreCounts[topGenre] / n;
+    if (share >= 0.4) {
+      lines.push(Math.round(share * 100) + '% of what you rate is ' + topGenre + '. You know exactly what you like and you are not going looking for anything else.');
+    }
+  }
+
+  if (songs.length && n) {
+    var ratio = songs.length / n;
+    if (ratio >= 3) lines.push('You rate about ' + Math.round(ratio) + ' songs for every album. You are a singles person who happens to also rank albums.');
+    else if (ratio < 0.3 && n >= 15) lines.push('Barely any song ratings next to ' + n + ' album ones — you commit to whole records, not moments off them.');
+  }
+
+  if (prof && prof.fav_artist && prof.fav_artist.name && loyal) {
+    var favName = prof.fav_artist.name;
+    var favKey = Object.keys(byArtist).find(function (k) { return k.toLowerCase() === favName.toLowerCase(); });
+    if (favKey && favKey.toLowerCase() !== loyal.name.toLowerCase()) {
+      var favArr = byArtist[favKey];
+      var favAvg = favArr.reduce(function (a, b) { return a + b; }, 0) / favArr.length;
+      if (Math.abs(favAvg - avg) >= 12) {
+        lines.push('You call ' + esc2ay(favName) + ' your favourite but only average them ' + Math.round(favAvg) +
+          (favAvg < avg ? ' — below your own baseline. Loyalty and love are not the same thing here.'
+                        : ' — well above your usual. That is not a favourite, that is a soft spot.'));
+      }
+    }
+  }
+
+  return lines.slice(0, 5);
+}
+function esc2ay(s) { return String(s == null ? '' : s); }
+function aboutYouHtml(albumsObj, songsObj, prof, isOwner) {
+  if (!isOwner) return '';
+  var albums = Object.values(albumsObj || {}).filter(function (a) { return a && typeof a.score === 'number'; });
+  var UNLOCK = 15;
+  var title = '<div class="prof-section-title" style="margin-top:26px;">About You</div>';
+  if (albums.length < UNLOCK) {
+    var need = UNLOCK - albums.length;
+    return title + '<div class="reco-note">Rate ' + need + ' more album' + (need === 1 ? '' : 's') +
+      ' and there will be enough here to say something real.</div>';
+  }
+  var lines = buildAboutYouLines(albums, Object.values(songsObj || {}), prof);
+  if (!lines.length) return '';
+  return title + '<div class="ay-card">' + lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join('') + '</div>';
+}
+
 async function drawProfile(host,prof,isOwner){
   const me=Cloud.getUser&&Cloud.getUser();
   function safe(p,fallback){
@@ -15677,6 +16224,7 @@ async function drawProfile(host,prof,isOwner){
     '</div>'+
     mastersHtml(masters,isOwner,prof.username||'they')+
     doneHtml+
+    aboutYouHtml(albumsObj,songsObj,prof,isOwner)+
     tasteMatchHtml(taste,prof.username||'they')+
     '<div class="prof-section-title">Top 3 albums</div>'+
     '<div class="top3" id="prof-top3">'+slots+'</div>'+
@@ -16032,6 +16580,34 @@ function openFavArtistPicker(){
   });
 }
 
+/* Add a song straight to Top 5 (now) or Top 10 (all) from wherever it is
+   rated, without a trip through Edit profile. Reads the profile FRESH rather
+   than trusting _profileEditing, which may not even exist yet if Edit
+   profile has never been opened this session — the same reason
+   drawEditSongs reads from `prof` on open rather than caching. Same rules as
+   the editor: max length, and a duplicate (by id, falling back to name+
+   artist for a record whose id changed under it) is a no-op rather than a
+   second copy. */
+async function addSongToTop(track,which){
+  if(!window.Cloud||!Cloud.isOn||!Cloud.isOn())return{error:'not logged in'};
+  var key=which==='all'?'top_songs_all':'top_songs_now';
+  var max=which==='all'?10:5;
+  var me=Cloud.getUser&&Cloud.getUser();
+  if(!me)return{error:'not logged in'};
+  var prof=await Cloud.fetchProfile(me.id);
+  if(!prof)return{error:'could not load profile'};
+  var arr=(prof[key]||[]).slice();
+  function foldK(n,a){return String(n||'').toLowerCase().trim()+'|'+String(a||'').toLowerCase().trim();}
+  var dupe=arr.some(function(x){return x&&(x.id===track.id||foldK(x.name,x.artist)===foldK(track.name,track.artist));});
+  if(dupe)return{ok:true,already:true};
+  if(arr.length>=max)return{error:'Top '+max+' is already full — remove one in Edit profile first.'};
+  arr.push({id:track.id,name:track.name,artist:track.artist,art:track.art});
+  var res=await Cloud.saveProfile(function(){var o={};o[key]=arr;return o;}());
+  if(res.error)return{error:res.error};
+  if(window.currentMode==='profile'&&window.renderProfile)renderProfile();
+  return{ok:true};
+}
+
 async function saveProfileEdits(){
   const errEl=document.getElementById('pedit-error');const btn=document.getElementById('pedit-save');
   const username=sanitizeText(document.getElementById('pedit-username').value,20);
@@ -16275,72 +16851,118 @@ function closeListEditor(){document.getElementById('list-modal').classList.remov
    The drop target is worked out from the POINTER against each row's midpoint,
    not from what is under the finger: the row being dragged is under the finger
    the whole time. */
-/* TOURNAMENT — a head-to-head sort, not a shuffle.
-   Merge sort with the comparator resolved by a tap: O(n log n) comparisons,
-   run one at a time so the same two records are never asked about twice, and
-   lower positions come out of the same merges that decide the top — a loser
-   from one matchup is still compared against losers from another whenever the
-   merge step needs to place it, so the tail of the list is ordered by the same
-   process as the head rather than left in whatever order it arrived. */
-function mergeSortAsync(list,cmp){
-  if(list.length<=1)return Promise.resolve(list.slice());
-  var mid=Math.floor(list.length/2);
-  return mergeSortAsync(list.slice(0,mid),cmp).then(function(left){
-    return mergeSortAsync(list.slice(mid),cmp).then(function(right){
-      return mergeAsync(left,right,cmp);
-    });
-  });
-}
-function mergeAsync(a,b,cmp){
-  a=a.slice();b=b.slice();var out=[];
-  function step(){
-    if(!a.length)return Promise.resolve(out.concat(b));
-    if(!b.length)return Promise.resolve(out.concat(a));
-    return cmp(a[0],b[0]).then(function(aWins){
-      out.push(aWins?a.shift():b.shift());
-      return step();
-    });
-  }
-  return step();
-}
+/* TOURNAMENT — adaptive, not a full sort.
+
+   A plain merge sort gets an EXACT order in O(n log n) comparisons, which is
+   real for 57 songs: ~330. Nobody is answering 330 head-to-heads for one
+   list. What actually matters for a Top-whatever list is getting the order
+   RIGHT WHERE IT IS UNCERTAIN, and a full sort spends most of its
+   comparisons re-confirming things that were already obvious three rounds
+   ago — the same waste a binary search avoids by not checking every element.
+
+   So this runs an Elo ladder instead: every item starts level, each pick
+   updates both ratings (K=32, standard logistic expected-score), and the
+   NEXT pair is chosen by two rules applied in order —
+     1. whichever item has had the FEWEST comparisons so far (so nothing is
+        decided on one lucky/unlucky pick and nothing is asked about five
+        times while another item is asked about zero),
+     2. paired against the closest-rated item it has not already faced.
+   Two items already ten places apart in the standings is not an interesting
+   question — the useful comparisons are the close ones, which is exactly
+   "prioritise comparisons that provide the most useful information" done
+   without a probability model heavier than logistic Elo needs to be.
+
+   The budget is a flat multiple of the list size rather than log2(n): for
+   57 songs that is the "dozens, not hundreds" the whole feature exists for,
+   and it is why the loser of one matchup still meets losers from other
+   matchups — nothing here is a single-elimination bracket, every item keeps
+   getting paired against its nearest rating until the budget runs out, so
+   the tail of the list is a product of the same process as the top rather
+   than left in whatever order it arrived. Final order is a plain sort by
+   rating, which is the ranking model doing the inference the brief asks
+   for rather than the raw tally of wins. */
 function runTournament(arr){
   if(!arr||arr.length<2)return;
   var modal=document.getElementById('tournament-modal'),pair=document.getElementById('tourn-pair'),
       prog=document.getElementById('tourn-progress');
-  var total=arr.length,estCmps=Math.max(1,Math.ceil(total*Math.log2(total))),done=0;
+  var n=arr.length;
+  // ~1.5-1.6x the list, floored at n-1 (everybody gets at least one
+  // comparison) and capped at 4n so a huge fill-from-artist list still ends
+  // in a bounded number of taps rather than growing without limit.
+  var budget=Math.max(n-1,Math.min(Math.ceil(n*1.6)+3,n*4));
+  var K=32;
+  var items=arr.map(function(it,i){return{it:it,idx:i,rating:1200,cmps:0,seen:{}};});
+  var done=0,cancelled=false,busy=false;
   var closeBtn=document.getElementById('tournament-close');
-  var cancelled=false;
   function close(){cancelled=true;modal.classList.remove('open');}
   closeBtn.onclick=close;
   modal.addEventListener('click',function h(e){if(e.target===modal)close();});
   modal.classList.add('open');
-  function cmp(x,y){
-    return new Promise(function(resolve){
-      if(cancelled){resolve(true);return;}
-      done++;
-      prog.textContent='Pick the one you prefer — '+Math.min(done,estCmps)+' of ~'+estCmps;
-      pair.innerHTML=
-        '<div class="tourn-card" data-pick="a"><img src="'+esc(x.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
-          '<div class="tc-nm">'+esc(x.name)+'</div><div class="tc-ar">'+esc(x.artist||'')+'</div></div>'+
-        '<div class="tourn-vs">vs</div>'+
-        '<div class="tourn-card" data-pick="b"><img src="'+esc(y.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
-          '<div class="tc-nm">'+esc(y.name)+'</div><div class="tc-ar">'+esc(y.artist||'')+'</div></div>';
-      pair.querySelector('[data-pick="a"]').onclick=function(){resolve(true);};
-      pair.querySelector('[data-pick="b"]').onclick=function(){resolve(false);};
-    });
+
+  function pickPair(){
+    var byFewest=items.slice().sort(function(a,b){return a.cmps-b.cmps;});
+    var a=byFewest[0];
+    var rest=items.filter(function(x){return x!==a&&!a.seen[x.idx];});
+    if(!rest.length)rest=items.filter(function(x){return x!==a;});
+    rest.sort(function(x,y){return Math.abs(x.rating-a.rating)-Math.abs(y.rating-a.rating);});
+    return[a,rest[0]];
   }
-  mergeSortAsync(arr,cmp).then(function(sorted){
-    if(cancelled)return;
-    arr.length=0;Array.prototype.push.apply(arr,sorted);
+  function applyElo(w,l){
+    var ew=1/(1+Math.pow(10,(l.rating-w.rating)/400));
+    w.rating+=K*(1-ew);
+    l.rating-=K*(1-ew);
+  }
+  function finish(){
+    items.sort(function(a,b){return b.rating-a.rating;});
+    arr.length=0;items.forEach(function(x){arr.push(x.it);});
     modal.classList.remove('open');
     drawListItems();
-  });
+  }
+  function round(){
+    if(cancelled)return;
+    if(done>=budget||items.length<2){finish();return;}
+    var p=pickPair(),a=p[0],b=p[1];
+    prog.textContent='Pick the one you prefer — '+(done+1)+' of ~'+budget;
+    pair.innerHTML=
+      '<div class="tourn-card" data-pick="a"><img src="'+esc(a.it.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+        '<div class="tc-nm">'+esc(a.it.name)+'</div><div class="tc-ar">'+esc(a.it.artist||'')+'</div></div>'+
+      '<div class="tourn-vs">vs</div>'+
+      '<div class="tourn-card" data-pick="b"><img src="'+esc(b.it.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+        '<div class="tc-nm">'+esc(b.it.name)+'</div><div class="tc-ar">'+esc(b.it.artist||'')+'</div></div>';
+    var cardA=pair.querySelector('[data-pick="a"]'),cardB=pair.querySelector('[data-pick="b"]');
+    function choose(winner,loser,winCard,loseCard){
+      if(busy)return;busy=true;
+      winCard.classList.add('tourn-win');
+      loseCard.classList.add('tourn-lose');
+      winner.cmps++;loser.cmps++;
+      winner.seen[loser.idx]=1;loser.seen[winner.idx]=1;
+      applyElo(winner,loser);
+      done++;
+      // Long enough to register as a decision, short enough that the whole
+      // thing still feels like rapid-fire picks rather than a quiz.
+      setTimeout(function(){busy=false;round();},260);
+    }
+    cardA.onclick=function(){choose(a,b,cardA,cardB);};
+    cardB.onclick=function(){choose(b,a,cardB,cardA);};
+  }
+  round();
 }
 
 function drawListItems(){
   const host=document.getElementById('list-items');
   const arr=_listEditing.items;
-  let html=arr.map(function(it,i){
+  const kindWord=_listEditing.kind==='song'?'Song':'Album';
+  // Tournament and Fill lead the sheet, above the rows, so nobody has to
+  // scroll past a growing list to find the two things that build it. Each
+  // gets its own identity rather than sharing one glow: Tournament is the
+  // main event (pulsing border, its own sweep), Fill is the quieter bulk
+  // action (a corner shimmer), so the two are never mistaken for each other.
+  let html='<div class="list-top-actions">'+
+    (arr.length>=2?'<button class="list-tourn-btn" data-tourn="1"><span class="ltb-glow"></span><span class="ltb-label">'+kindWord+' Tournament</span></button>':'')+
+    '<button class="list-fill-btn" data-fill="1"><span class="lfb-shimmer"></span><span class="lfb-label">Fill from an artist</span></button>'+
+    '</div>'+
+    '<div class="list-fill-note" id="list-fill-note"></div>';
+  html+=arr.map(function(it,i){
     return'<div class="song-edit-row sort-row" data-i="'+i+'">'+
       '<span class="drag-grip" aria-hidden="true"></span>'+
       '<span class="song-mini-rank">'+(i+1)+'</span>'+
@@ -16351,10 +16973,7 @@ function drawListItems(){
   }).join('');
   html+='<div class="list-add-row">'+
     '<button class="btn-mini" data-add="1">+ Add '+(_listEditing.kind==='song'?'song':'album')+'</button>'+
-    '<button class="btn-mini" data-fill="1">Fill from an artist</button>'+
-    (arr.length>=2?'<button class="btn-mini" data-tourn="1">'+(_listEditing.kind==='song'?'Song':'Album')+' Tournament</button>':'')+
-    '</div>'+
-    '<div class="list-fill-note" id="list-fill-note"></div>';
+    '</div>';
   host.innerHTML=html;
   host.querySelectorAll('[data-rm]').forEach(function(b){
     b.addEventListener('click',function(e){e.stopPropagation();arr.splice(+b.dataset.rm,1);drawListItems();});
@@ -18695,6 +19314,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     pierre:     { name: 'YO PIERRE, YOU WANNA COME OUT HERE?', cost: 300000 },
     f1lthy:     { name: 'WAKE UP, F1LTHY',                     cost: 300000 },
     profit:     { name: 'I GOT TOO MUCH PROFIT',               cost: 1000000 },
+    cashmoneyap:   { name: 'CASH MONEY AP',                                cost: 50000 },
+    leanhabit:     { name: 'PROMETHAZINE HABIT LEAN HABIT CODEINE HABIT',  cost: 68000 },
+    likeadream:    { name: 'LIFE IS LIKE A MOTHERFUCKIN’ DREAM',           cost: 118000 },
+    countingup:    { name: 'I’M COUNTING UP MONEY FOR FUN',                cost: 145000 },
   };
 
   /* Every tag gets its own colours and one of three motions.
@@ -18749,6 +19372,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     murda:      { a: '#dc2626', b: '#fbbf24', m: 'sweep'   },
     turbo:      { a: '#06b6d4', b: '#f97316', m: 'pulse'   },
     f1lthy:     { a: '#a855f7', b: '#f43f5e', m: 'flicker' },
+    cashmoneyap:   { a: '#22c55e', b: '#facc15', m: 'sweep'   },
+    leanhabit:     { a: '#a78bfa', b: '#67e8f9', m: 'pulse'   },
+    likeadream:    { a: '#f0abfc', b: '#818cf8', m: 'flicker' },
+    countingup:    { a: '#34d399', b: '#fde68a', m: 'sweep'   },
   };
 
   /* ---- Name flair --------------------------------------------------------
@@ -19908,6 +20535,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         });
       }
     }
+    // Native only — LocalNotifications has nothing to schedule on the web.
+    const remGroup = document.getElementById('set-reminders-group');
+    if (remGroup) {
+      remGroup.style.display = (window.Native && Native.on) ? '' : 'none';
+      const remCb = document.getElementById('set-reminders-on');
+      if (remCb && window.Reminders) remCb.checked = Reminders.isOn();
+    }
     document.getElementById('settings-modal').classList.add('open');
   };
 
@@ -19923,6 +20557,15 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     const likesCb = document.getElementById('set-likes-public');
     if (likesCb) likesCb.addEventListener('change', function () {
       if (window.Cloud) Cloud.saveProfile({ likes_public: likesCb.checked });
+    });
+
+    // ---- Reminders --------------------------------------------------------
+    const remCb = document.getElementById('set-reminders-on');
+    if (remCb) remCb.addEventListener('change', async function () {
+      if (!remCb.checked) { if (window.Reminders) Reminders.setOn(false); return; }
+      const granted = window.Reminders && await Reminders.requestPermission();
+      if (!granted) { remCb.checked = false; return; }
+      Reminders.setOn(true);
     });
 
     // ---- Motion setting -------------------------------------------------
@@ -25219,40 +25862,8 @@ window.renderAdminStats = renderAdminStats;
   function payFor(day) { return LADDER[day - 1]; }
   function n(v) { return (Number(v) || 0).toLocaleString('en-GB'); }
 
-  /* Daily Missions — six small ones, 10,000 Discs total, reset at UTC
-     midnight like everything else here. Progress is computed server-side on
-     every call (never a client counter), so a refresh cannot move it and a
-     claim re-checks the same query rather than trusting what status handed
-     back a moment ago — same posture as wallet_buy taking a key, not a price. */
-  async function renderMissions() {
-    var box = document.getElementById('dm-box');
-    if (!box || !window.Cloud || !Cloud.client) return;
-    var r = await Cloud.client().rpc('daily_missions_status');
-    if (r.error || !r.data) { box.innerHTML = ''; return; }
-    var ms = r.data.missions || [];
-    box.innerHTML = '<div class="dm-title">Daily Missions</div>' +
-      ms.map(function (m) {
-        return '<div class="dm-row' + (m.claimed ? ' dm-claimed' : '') + '">' +
-          '<div class="dm-nm">' + esc(m.label) + '</div>' +
-          '<div class="dm-prog">' + m.progress + '/' + m.target + '</div>' +
-          (m.claimed
-            ? '<span class="dm-done">✓</span>'
-            : '<button class="btn-mini" data-dm-claim="' + esc(m.key) + '"' + (m.done ? '' : ' disabled') + '>' + n(m.reward) + '</button>') +
-        '</div>';
-      }).join('');
-    box.querySelectorAll('[data-dm-claim]').forEach(function (b) {
-      b.addEventListener('click', async function () {
-        if (b.disabled) return;
-        b.disabled = true;
-        var res = await Cloud.client().rpc('daily_missions_claim', { p_key: b.dataset.dmClaim });
-        if (res.error) { b.disabled = false; return; }
-        if (window.buzz) buzz('good');
-        if (window.burst) burst(b, { count: 16, spread: 100 });
-        if (window.Wallet && Wallet.load) await Wallet.load();
-        renderRewards();
-      });
-    });
-  }
+  // Daily Missions moved to a dropdown on Home — see the Missions module
+  // near the Today block. Nothing here renders them any more.
 
   async function renderRewards() {
     var host = document.getElementById('rewards-body');
@@ -25338,7 +25949,6 @@ window.renderAdminStats = renderAdminStats;
        balance, a tile and two doors. */
     host.innerHTML =
       '<div class="rw-ladder">' + days + '</div>' +
-      '<div class="dm-box" id="dm-box"><div class="dm-loading">Missions…</div></div>' +
       (st.album_picks > 0
         ? '<div class="rw-picks"><b>' + st.album_picks + ' free record' + (st.album_picks === 1 ? '' : 's') +
           '</b> waiting' +
@@ -25355,7 +25965,6 @@ window.renderAdminStats = renderAdminStats;
     // The reel is a sibling of this element, so it renders itself rather than
     // being part of the innerHTML above.
     if (window.renderDrawTab) window.renderDrawTab();
-    renderMissions();
 
     /* Claiming from the tile. It stays pressed and says so rather than
        disappearing, because the tile is also the thing that tells you what you
@@ -25376,6 +25985,7 @@ window.renderAdminStats = renderAdminStats;
       if (!w.claimed_already) {
         if (window.burst) burst(dayBtn, { count: w.album_pick ? 50 : 20, spread: w.album_pick ? 240 : 130 });
         if (window.buzz) buzz(w.album_pick ? 'big' : 'good');
+        if (window.Reminders) Reminders.sync();
       }
       renderRewards();
       if (window.markRewardsDot) markRewardsDot();
@@ -28041,6 +28651,7 @@ window.renderAdminStats = renderAdminStats;
                                  correct: !!correct, attempts: attempts });
     if (window.notePlay) notePlay('recall');
     if (window.Wallet && Wallet.awardGame && correct) Wallet.awardGame('recall', { reason: 'Recall' });
+    if (window.Reminders) Reminders.sync();
     paintCard();
     dailyExtras(rec);
     if (!on()) return;
@@ -28149,6 +28760,17 @@ window.renderAdminStats = renderAdminStats;
     paintCard();
     if (!on()) return;
     try { await Cloud.recallSession(st.score, st.songs, st.bestStreak, Math.round(st.avgReveal)); } catch (e) {}
+    /* The leaderboard, not per round — a run's total is the thing worth
+       comparing. Only a genuine new personal best is submitted: fetchLeaderboard
+       already keeps one row per user (fastest/highest), so a worse run is
+       thrown away there regardless, but posting every mediocre run is still
+       noise and, on a slow connection, a stale insert racing a later one for
+       no reason. Real songs answered required, or an empty run at Discs bought
+       nothing and posted a genuine "0" that reads as a joke entry. */
+    if (isBest && st.songs > 0) {
+      try { await Cloud.submitLeaderboardTime('recall', sess.mode, sess.mode === 'daily' ? 'Daily' : 'Endless', st.score); }
+      catch (e) {}
+    }
   }
   function row(k, v) { return '<div class="rc-sum-row"><span>' + esc(k) + '</span><b>' + esc(v) + '</b></div>'; }
 
@@ -29577,6 +30199,7 @@ window.track = function (name, props) {
 
   var _queue = [];
   var _qi = 0;
+  var _queueGen = 0;   // bumped every time _queue is REPLACED (not just advanced)
 
   function shuffle(a) {
     for (var i = a.length - 1; i > 0; i--) {
@@ -29935,10 +30558,14 @@ window.track = function (name, props) {
       : 'Tap an answer, then Next when you are ready';
   }
 
-  var _undoItem = null, _undoQ = null, _undoRestore = null;
+  var _undoItem = null, _undoQ = null, _undoRestore = null, _undoIndex = -1, _undoGen = -1;
 
   function setUndoable(item, q, restore) {
     _undoItem = item; _undoQ = q; _undoRestore = restore || null;
+    // The index into _queue this answer belongs to, and which generation of
+    // the queue it belongs to — buildQueue() makes a NEW array, so an index
+    // from a previous generation points at nothing real.
+    _undoIndex = _qi; _undoGen = _queueGen;
     var b = document.getElementById('today-undo');
     if (b) {
       b.style.display = ''; b.disabled = false; b.textContent = 'Undo';
@@ -29948,7 +30575,7 @@ window.track = function (name, props) {
     }
   }
   function clearUndoable() {
-    _undoItem = null; _undoQ = null; _undoRestore = null;
+    _undoItem = null; _undoQ = null; _undoRestore = null; _undoIndex = -1; _undoGen = -1;
     var b = document.getElementById('today-undo');
     if (b) b.style.display = 'none';
   }
@@ -29958,21 +30585,40 @@ window.track = function (name, props) {
     var b = document.getElementById('today-undo');
     if (b) { b.disabled = true; b.textContent = '…'; }
     var item = _undoItem, q = _undoQ, restore = _undoRestore;
+    var idx = _undoIndex, gen = _undoGen;
     await removeAnswer(item, q);
     paintCount(false);
-    // If that card is still on screen, put its options back. If it has already
-    // gone, the answer is simply deleted and the question returns to the pool
-    // on the next rebuild — there is no sensible way to slide a card backwards.
+    // Fast path: the card that was answered is still the one on screen (Auto
+    // is off, or nobody has tapped since) — put its own options back in place.
     var restored = false;
     try { restored = !!(restore && restore()); } catch (e) {}
     if (!restored) {
-      // `toast` is local to the Wallet module, not global, so the header hint
-      // carries the confirmation instead — and puts itself back after.
-      var hint = document.getElementById('today-hint');
-      if (hint) {
-        var was = hint.textContent;
-        hint.textContent = 'Answer removed';
-        setTimeout(function () { hint.textContent = was; }, 2200);
+      /* The common path, with Auto on: by the time Undo is reachable the card
+         has already slid away and advance() has moved _qi past it. This used
+         to just delete the answer and leave you looking at whatever the feed
+         had already moved on to — deleting the record but never taking you
+         anywhere, which is what made the button read as broken. Rather than
+         waiting for a future queue rebuild that may be a long way off, jump
+         straight back to that question NOW: same queue (checked by
+         generation, since buildQueue() swaps the array for a new one and an
+         old index into it means nothing), same entry, remounted fresh so it
+         answers exactly like landing on it normally — and the user's previous
+         answer is gone (removeAnswer already ran), so it is a plain unanswered
+         card again, ready to take a new pick. */
+      if (gen === _queueGen && idx >= 0 && idx < _queue.length && _queue[idx] && _queue[idx].t === 'ask') {
+        _qi = idx;
+        mountCard._kind = kindOf(_queue[_qi]);
+        var el = mountCard(cardHTML(_queue[_qi]), true);
+        if (el) wireCard(el);
+      } else {
+        // `toast` is local to the Wallet module, not global, so the header
+        // hint carries the confirmation instead — and puts itself back after.
+        var hint = document.getElementById('today-hint');
+        if (hint) {
+          var was = hint.textContent;
+          hint.textContent = 'Answer removed';
+          setTimeout(function () { hint.textContent = was; }, 2200);
+        }
       }
     }
     clearUndoable();
@@ -29993,6 +30639,7 @@ window.track = function (name, props) {
       // Endless: the finders re-run, and anything just answered drops out.
       _queue = buildQueue();
       _qi = 0;
+      _queueGen++;   // the array is a different one now — old indices are void
     }
     if (window.track && _queue[_qi] && _queue[_qi].t === 'ask') track('question_shown', { q: _queue[_qi].d.q.id, why: _queue[_qi].d.type });
     mountCard._kind = kindOf(_queue[_qi]);
@@ -30263,6 +30910,8 @@ window.track = function (name, props) {
     catch (e) { _plays = []; }
     _queue = buildQueue();
     _qi = 0;
+    _queueGen++;
+    clearUndoable();   // a fresh queue means the old index no longer means anything
     host.innerHTML = '';
     if (window.track && _queue[0] && _queue[0].t === 'ask') track('question_shown', { q: _queue[0].d.q.id, why: _queue[0].d.type });
     mountCard._kind = kindOf(_queue[0]);
@@ -30370,6 +31019,100 @@ window.track = function (name, props) {
   }
   window.VinallLore = { load: loadLore, save: saveAnswer, questions: QUESTIONS, count: loreCount,
                         items: function () { return _loreList || []; } };
+})();
+
+/* ================================================================
+   DAILY MISSIONS — a dropdown off the Home header, not a page of its own.
+
+   Progress is server-computed on every open (daily_missions_status), never a
+   client counter, so a refresh cannot move it — see the migration for why.
+   The panel is a popover, same shape as the info popup: fixed position,
+   closes on an outside tap, no backdrop blur, opens instantly rather than
+   taking over the screen.
+   ================================================================ */
+(function () {
+  function n(v) { return (Number(v) || 0).toLocaleString('en-GB'); }
+  var toggle = document.getElementById('dm-toggle');
+  var panel = document.getElementById('dm-panel');
+  var badge = document.getElementById('dm-badge');
+  if (!toggle || !panel) return;
+
+  function esc2(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  }); }
+
+  function close() {
+    panel.classList.remove('in');
+    setTimeout(function () { panel.classList.remove('open'); }, 150);
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+
+  async function open() {
+    if (panel.classList.contains('open')) { close(); return; }
+    panel.classList.add('open');
+    void panel.offsetWidth;
+    panel.classList.add('in');
+    toggle.setAttribute('aria-expanded', 'true');
+    panel.innerHTML = '<div class="dm-title">Daily Missions</div><div class="reco-note">Loading…</div>';
+    await render();
+  }
+
+  async function render() {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn() || !Cloud.client) {
+      panel.innerHTML = '<div class="dm-title">Daily Missions</div><div class="reco-note">Log in to track these.</div>';
+      if (badge) badge.style.display = 'none';
+      return;
+    }
+    var r = await Cloud.client().rpc('daily_missions_status');
+    if (r.error || !r.data) {
+      panel.innerHTML = '<div class="dm-title">Daily Missions</div><div class="reco-note">Could not load these right now.</div>';
+      return;
+    }
+    var ms = r.data.missions || [];
+    panel.innerHTML = '<div class="dm-title">Daily Missions</div>' +
+      ms.map(function (m) {
+        return '<div class="dm-row' + (m.claimed ? ' dm-claimed' : '') + '" data-dm-row="' + esc2(m.key) + '">' +
+          '<div class="dm-nm">' + esc2(m.label) + '</div>' +
+          '<div class="dm-prog">' + m.progress + '/' + m.target + '</div>' +
+          (m.claimed
+            ? '<span class="dm-done">✓</span>'
+            : '<button class="btn-mini" data-dm-claim="' + esc2(m.key) + '"' + (m.done ? '' : ' disabled') + '>' + n(m.reward) + '</button>') +
+        '</div>';
+      }).join('');
+    // A gold dot on the toggle whenever something is ready to claim — the
+    // reason to open the dropdown, spotted before you do.
+    var ready = ms.some(function (m) { return m.done && !m.claimed; });
+    if (badge) badge.style.display = ready ? '' : 'none';
+
+    panel.querySelectorAll('[data-dm-claim]').forEach(function (b) {
+      b.addEventListener('click', async function (ev) {
+        ev.stopPropagation();
+        if (b.disabled) return;
+        b.disabled = true;
+        var res = await Cloud.client().rpc('daily_missions_claim', { p_key: b.dataset.dmClaim });
+        if (res.error) { b.disabled = false; return; }
+        if (window.buzz) buzz('good');
+        if (window.burst) burst(b, { count: 14, spread: 90 });
+        var row = panel.querySelector('[data-dm-row="' + b.dataset.dmClaim + '"]');
+        if (row) row.classList.add('dm-claiming');
+        if (window.Wallet && Wallet.load) await Wallet.load();
+        // Re-render after the pop has had a moment to play, not before —
+        // swapping the row's content mid-animation is what "glitches".
+        setTimeout(render, 320);
+      });
+    });
+  }
+
+  toggle.addEventListener('click', function (ev) { ev.stopPropagation(); open(); });
+  document.addEventListener('click', function (ev) {
+    if (panel.classList.contains('open') && !panel.contains(ev.target) && ev.target !== toggle) close();
+  });
+  // Refresh the ready-dot once signed in, so the badge is right before
+  // anybody has thought to open the dropdown.
+  function initDot() { if (window.Cloud && Cloud.isOn && Cloud.isOn()) render(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDot);
+  else initDot();
+  window.renderMissionsDot = render;
 })();
 
 /* ================================================================
@@ -32327,11 +33070,13 @@ window.track = function (name, props) {
       '</div>' +
       // The record itself, whole and square. `data-play`, never `data-open` —
       // one control, one verb.
-      '<button class="fy-art" data-play="' + i + '" aria-label="Play ' + esc(c.title || '') + '">' +
-        (art ? '<img class="fy-main" src="' + art + '" alt="">' : '') +
-        '<span class="fy-cue"></span>' +
-      '</button>' +
-      '<button class="fy-like' + (window.likedSongHas && likedSongHas(c.key) ? ' liked' : '') + '" data-like="' + i + '" aria-label="Like">♥</button>' +
+      '<div class="fy-art-wrap">' +
+        '<button class="fy-art" data-play="' + i + '" aria-label="Play ' + esc(c.title || '') + '">' +
+          (art ? '<img class="fy-main" src="' + art + '" alt="">' : '') +
+          '<span class="fy-cue"></span>' +
+        '</button>' +
+        '<button class="fy-like' + (window.likedSongHas && likedSongHas(c.key) ? ' liked' : '') + '" data-like="' + i + '" aria-label="Like"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 20.6s-7.6-4.5-10.2-9C.3 8.6 1 5.4 3.7 4.1c2-.9 4.3-.3 5.7 1.4l2.6 3.1 2.6-3.1c1.4-1.7 3.7-2.3 5.7-1.4 2.7 1.3 3.4 4.5 1.9 7.5-2.6 4.5-10.2 9-10.2 9Z"/></svg></button>' +
+      '</div>' +
       '<div class="fy-meta">' +
         '<div class="fy-why">' + esc(c.why || '') + '</div>' +
         '<div class="fy-head">' +
@@ -32653,7 +33398,10 @@ window.track = function (name, props) {
         if (!lc) return;
         var on = window.toggleLikedSong && toggleLikedSong({ id: lc.key, name: lc.title, artist: lc.artist, art: lc.art });
         t.classList.toggle('liked', !!on);
-        if (window.buzz) buzz('tap');
+        if (on) {
+          t.classList.remove('just-liked'); void t.offsetWidth; t.classList.add('just-liked');
+          if (window.buzz) buzz('good');
+        } else if (window.buzz) buzz('tap');
         return;
       }
 
