@@ -330,7 +330,14 @@ html[data-theme="cassette"] body {
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
+/* No element anywhere is meant to make the page wider than the viewport —
+   full-bleed elements use negative margins that cancel out, not real
+   overflow — so this clips accidental width rather than papering over one
+   card's bug. Fixes the horizontal wobble on The Crate (and anywhere else)
+   at its actual source rather than hiding the scrollbar a stray pixel of
+   overflow would still leave scrollable. */
+body { overflow-x: hidden; width: 100%; }
 
 /* ---- no scrollbars, anywhere -------------------------------------------
    The thin grey overlay bar is the operating system's furniture, not this
@@ -410,6 +417,10 @@ body[data-section="profile"]      { --section: var(--c-pink);    --section-dim: 
    fades out of it, so the top of every page announces where you are. */
 .section-head h2 { position: relative; }
 .section-head h2 [data-icon], .section-head h2 svg { color: var(--section); }
+/* The disc stays black-and-white everywhere — it is the record, not a themed
+   accent, and Collection's own section colour happening to be pink is not a
+   reason for it to look like a cosmetic. */
+.section-head h2 [data-icon="disc"] { color: var(--text); }
 .section-head::after {
   content: ''; display: block; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
   background: linear-gradient(90deg, var(--section), transparent 42%);
@@ -2230,6 +2241,17 @@ button.idx.loading { opacity: 0.6; }
 .song-name { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .song-sub { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .song-rate { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+/* Small and quiet — a track row already has a lot going on, so this is an
+   outline until pressed rather than another loud control. */
+.song-like {
+  width: 22px; height: 22px; border-radius: 50%; border: none; background: none;
+  color: var(--text-faint); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; cursor: pointer; padding: 0;
+}
+.song-like svg { fill: none; stroke: currentColor; stroke-width: 1.8; transition: fill .15s var(--ease); }
+.song-like.liked { color: var(--gold); }
+.song-like.liked svg { fill: var(--gold); stroke: var(--gold); }
+.song-like.just-liked { animation: fyLikePop .38s var(--ease); }
 /* ---- THE SONG SLIDER ----------------------------------------------------
    It was a 4px line with a 16px thumb, 140px wide and dropping to 80 on a
    phone. Eleven steps across 80 pixels is 8px a step, which is not a control
@@ -2435,6 +2457,13 @@ button.idx.loading { opacity: 0.6; }
 
 /* ---- RECO + HOME ---- */
 .reco-note { font-size: 13px; color: var(--text-dim); margin-bottom: 18px; line-height: 1.6; }
+.loading-dots::after { content: '.'; animation: loadingDots 1.2s steps(1, jump-none) infinite; }
+@keyframes loadingDots {
+  0%   { content: '.'; }
+  33%  { content: '..'; }
+  66%  { content: '...'; }
+  100% { content: '.'; }
+}
 
 /* ---- EMPTY STATE --------------------------------------------------------
    These were 128px of padding around a grey glyph, which on a phone is most
@@ -2789,35 +2818,34 @@ html[data-motion="none"] .game-card.gc-lead::after { animation: none; }
 }
 
 /* Earworm — a text cursor blinking, because the game is spelling something
-   out letter by letter. */
+   out letter by letter. A soft fade rather than a hard on/off cut, which read
+   as broken rather than as a cursor. */
 #ew-card .gc-emoji::before {
   left: auto; right: 9px; top: 50%; width: 2px; height: 16px;
   margin-top: -8px; background: var(--g);
-  animation: gcCaret 1s steps(1) infinite;
+  animation: gcCaret 1.4s ease-in-out infinite;
 }
-@keyframes gcCaret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes gcCaret { 0%, 100% { opacity: 1; } 50% { opacity: .12; } }
 
-/* Guess the Cover — a shutter iris closing in and releasing, the way a
-   camera actually confirms a shot. */
+/* Guess the Cover — an aperture breathing open and shut, the way a camera
+   actually confirms a shot. Never fully gone: it used to sit invisible for
+   most of the loop and then burst, which read as a blank card that suddenly
+   glitched rather than an animation. */
 [data-game="cover"] .gc-emoji::before {
   border-radius: 50%; background: var(--g);
-  animation: gcShutter 2.8s var(--ease) infinite;
+  animation: gcShutter 2.4s var(--ease) infinite;
 }
 @keyframes gcShutter {
-  0%, 82%, 100% { transform: scale(0); opacity: 0; }
-  88% { transform: scale(1.4); opacity: .55; }
-  94% { transform: scale(.9); opacity: .3; }
+  0%, 100% { transform: scale(.55); opacity: .28; }
+  50% { transform: scale(1); opacity: .55; }
 }
 
-/* Cover EXTREME — the same idea as Cover, but flickering and irregular,
-   because this mode is the brutal one. */
+/* Cover EXTREME — the same aperture, tighter and quicker, because this mode
+   is the brutal one. Intensity comes from tempo, not from a literal flicker —
+   a strobing icon well is what "buggy" looks like, not "extreme". */
 [data-game="coverx"] .gc-emoji::before {
-  background: var(--g);
-  animation: gcFlicker 1.7s linear infinite;
-}
-@keyframes gcFlicker {
-  0%, 100% { opacity: 0; } 4% { opacity: .5; } 7% { opacity: 0; }
-  38% { opacity: .35; } 42% { opacity: 0; } 60% { opacity: .55; } 64% { opacity: 0; }
+  border-radius: 50%; background: var(--g);
+  animation: gcShutter .9s var(--ease) infinite;
 }
 
 /* Guess from Tracklist — thin rows scrolling past, like a tracklist
@@ -2843,19 +2871,23 @@ html[data-motion="none"] .game-card.gc-lead::after { animation: none; }
   100% { transform: rotate(0deg); opacity: .5; }
 }
 
-/* Cover Fire — rapid strobed flashes, a burst rather than a steady pulse,
-   for the game that is ten sleeves in sixty seconds. */
+/* Cover Fire — three quick pulses then a breath, a burst rather than a
+   steady beat, for the game that is ten sleeves in sixty seconds. Eased in
+   and out rather than snapped on and off, and never below .25 opacity, so
+   it reads as rapid-fire rather than as a strobe cutting out. */
 #blitz-card .gc-emoji::before {
-  background: var(--g);
-  animation: gcStrobe 2.4s linear infinite;
+  border-radius: 50%; background: var(--g);
+  animation: gcBurst 2.2s var(--ease) infinite;
 }
-@keyframes gcStrobe {
-  0%, 100% { opacity: 0; } 2% { opacity: .6; } 5% { opacity: 0; }
-  10% { opacity: .6; } 13% { opacity: 0; } 18% { opacity: .6; } 21% { opacity: 0; }
+@keyframes gcBurst {
+  0%, 100%      { transform: scale(.68); opacity: .25; }
+  14%, 34%, 54% { transform: scale(1.06); opacity: .8; }
+  24%, 44%      { transform: scale(.68); opacity: .25; }
 }
 
-/* Higher or Lower — an arrow bobbing between the two answers, up then
-   down, never settling. */
+/* Higher or Lower — a straight bob between the two answers, up then down,
+   never settling. The full rotation this had before flipped the arrow
+   upside down at the midpoint, which read as a jump rather than motion. */
 #hl-card .gc-emoji::before {
   left: 50%; top: 50%; width: 0; height: 0; margin: -8px 0 0 -5px;
   border-left: 5px solid transparent; border-right: 5px solid transparent;
@@ -2863,8 +2895,8 @@ html[data-motion="none"] .game-card.gc-lead::after { animation: none; }
   animation: gcSeesaw 1.8s var(--ease) infinite;
 }
 @keyframes gcSeesaw {
-  0%, 100% { transform: translateY(-3px); opacity: .9; }
-  50% { transform: translateY(3px) rotate(180deg); opacity: .9; }
+  0%, 100% { transform: translateY(-4px); }
+  50% { transform: translateY(4px); }
 }
 
 @media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) .gc-emoji::before { animation: none !important; } }
@@ -2876,7 +2908,10 @@ html[data-motion="none"] .gc-emoji::before { animation: none !important; }
   overflow: hidden;
 }
 .gc-go { margin-top: var(--s3); font-size: 11px; font-weight: 700; color: var(--g); letter-spacing: 0.06em; text-transform: uppercase; }
-.gc-best { position: absolute; top: var(--s4); right: var(--s4); font-size: var(--t-xs); color: var(--text-faint); font-family: var(--font-display); font-weight: 600; max-width: 45%; text-align: right; line-height: 1.25; }
+/* Off — a corner full of "best 5/5" / "streams 485" / "rating 6" was reading
+   as metadata about the game rather than an invitation into it. The card's
+   name, description and Play are the whole pitch now. */
+.gc-best { display: none; }
 
 /* ---- MODAL ---- */
 .modal {
@@ -2926,6 +2961,13 @@ html[data-motion="none"] .gc-emoji::before { animation: none !important; }
     padding: var(--s6) var(--s4) calc(var(--s5) + env(safe-area-inset-bottom, 0px));
     animation: sheetUp var(--dur) var(--ease) both;
   }
+  /* --kb updates in whatever steps visualViewport's own resize event reports
+     the keyboard animating in, which can land in more than one jump. Without
+     a transition each of those is an instant snap of max-height — which is
+     the split-second "glitch" the field briefly sitting under the keyboard
+     is reported as. Scoped to while a keyboard is actually up, so a normal
+     sheet open/close keeps its own timing untouched. */
+  body.kb-up .modal-panel { transition: max-height .16s var(--ease); }
   /* The home-indicator inset belongs to the home indicator, and while a
      keyboard is up the home indicator is not there — paying for both leaves a
      band of dead space between the sheet and the keys. */
@@ -5191,6 +5233,7 @@ body.entering-done #artist-hero {
   display: flex; align-items: center; gap: 12px; padding: 12px;
   border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2);
   transition: border-color .18s var(--ease), transform .18s var(--ease);
+  cursor: pointer;
 }
 .col-rec:hover { border-color: var(--section); transform: translateY(-2px); }
 .col-rec.owned { border-color: var(--section-dim); background: linear-gradient(120deg, var(--section-dim), var(--surface-2) 65%); }
@@ -5272,19 +5315,22 @@ body.entering-done #artist-hero {
   opacity: 1;
 }
 .col-bought:disabled { opacity: 1; cursor: default; }
-.colb-tick {
-  width: 13px; height: 13px; flex-shrink: 0;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(42deg) scale(0);
-  transform-origin: 70% 70%;
-  animation: colbTick .34s var(--ease) .06s forwards;
+/* A drawn ring and tick, the same language as the Shop's own purchase stamp
+   — not a CSS border rotated into a corner, which is the "generic checkbox"
+   look this replaces. */
+.colb-tick { width: 15px; height: 15px; flex-shrink: 0; overflow: visible; }
+.colb-tick circle, .colb-tick path {
+  fill: none; stroke: currentColor; stroke-width: 1.6;
+  stroke-linecap: round; stroke-linejoin: round;
 }
-@keyframes colbTick { to { transform: rotate(42deg) scale(1); } }
+.colb-tick circle { stroke-dasharray: 39; stroke-dashoffset: 39; animation: colbRing .3s var(--ease) forwards; }
+.colb-tick path   { stroke-dasharray: 9.2; stroke-dashoffset: 9.2; animation: colbCheck .2s var(--ease) .24s forwards; }
+@keyframes colbRing  { to { stroke-dashoffset: 0; } }
+@keyframes colbCheck { to { stroke-dashoffset: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  html:not([data-motion="full"]) .colb-tick { animation: none; transform: rotate(42deg) scale(1); }
+  html:not([data-motion="full"]) .colb-tick circle, html:not([data-motion="full"]) .colb-tick path { animation: none; stroke-dashoffset: 0; }
 }
-html[data-motion="none"] .colb-tick { animation: none; transform: rotate(42deg) scale(1); }
+html[data-motion="none"] .colb-tick circle, html[data-motion="none"] .colb-tick path { animation: none; stroke-dashoffset: 0; }
 
 /* ================================================================
    CERTIFICATION — Silver, Gold, Platinum, Diamond on a record you own.
@@ -7619,15 +7665,59 @@ body.is-sorting, body.is-sorting * {
   }
 }
 
-/* Daily Missions — a compact dropdown off the Home header, not a page of its
-   own. It behaves like the info popover: fixed, anchored under the button,
-   closes on an outside tap, no background blur. */
-.dm-wrap { position: relative; }
-.dm-toggle { position: relative; }
+/* FYP is the one screen that is the whole point of opening the app, so it
+   gets the whole screen: no wordmark, no search field, no footer above or
+   below the record. fitFeed() measures the feed's own top and bottom at
+   runtime (see the JS), so hiding these is enough on its own — the feed
+   grows to fill exactly what they gave back, nothing hardcoded here. */
+body[data-section="foryou"] header,
+body[data-section="foryou"] .search-block,
+body[data-section="foryou"] .site-foot {
+  display: none;
+}
+/* The floating tabs normally sit under the header, which was carrying the
+   safe-area inset for both of them. Gone full-screen, the tabs are the
+   top-most thing on screen and need that inset themselves. */
+body[data-section="foryou"] .fy-tabs {
+  padding-top: max(var(--s3), calc(env(safe-area-inset-top) + 10px));
+}
+
+/* Daily Missions — a compact dropdown in Home's own top-right corner, right
+   under the account avatar in the header above it, and out of the Today row
+   entirely — squeezed in there alongside Auto/Refresh/Undo was what made that
+   row cramped.
+
+   It behaves like the info popover: anchored under the button, closes on an
+   outside tap, no background blur. */
+/* Reserves its own strip above the Today row rather than sitting on top of
+   it — the two occupied the same top-right corner at once otherwise, which
+   is the "buggy" overlap the button was reported with. */
+#view-home { position: relative; padding-top: 46px; }
+.dm-wrap { position: absolute; top: 0; right: 0; z-index: 20; }
+.dm-toggle {
+  position: relative;
+  transition: transform .12s var(--ease), border-color .18s var(--ease), color .18s var(--ease);
+}
+.dm-toggle:active { transform: scale(.94); }
+/* A mission ready to claim gets a slow breathing glow on the button itself —
+   noticeable at rest, not just a dot you have to spot — plus the dot. Nothing
+   plays at all when nothing is claimable, so the glow still means something
+   when it shows up. */
+.dm-toggle.ready {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+  animation: dmReady 2.2s ease-in-out infinite;
+}
+@keyframes dmReady {
+  0%, 100% { box-shadow: 0 0 0 rgba(245,200,66,0); }
+  50%      { box-shadow: 0 0 14px rgba(245,200,66,.4); }
+}
 .dm-badge {
   position: absolute; top: -4px; right: -4px; width: 8px; height: 8px;
   border-radius: 50%; background: var(--gold);
+  animation: dmBadgePop .3s var(--ease);
 }
+@keyframes dmBadgePop { from { transform: scale(0); } to { transform: scale(1); } }
 .dm-panel {
   display: none; position: absolute; top: calc(100% + 8px); right: 0;
   z-index: 40; width: 268px; max-width: calc(100vw - 32px);
@@ -7640,7 +7730,14 @@ body.is-sorting, body.is-sorting * {
 }
 .dm-panel.open { display: block; }
 .dm-panel.in { opacity: 1; transform: none; }
-.dm-title { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .dm-toggle.ready { animation: none; }
+  html:not([data-motion="full"]) .dm-badge { animation: none; }
+}
+html[data-motion="none"] .dm-toggle.ready, html[data-motion="none"] .dm-badge { animation: none; }
+.dm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.dm-title { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0; }
+.dm-today { font-size: 12px; font-weight: 700; color: var(--gold); font-family: var(--font-mono); flex-shrink: 0; white-space: nowrap; }
 .dm-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); font-size: 13px; }
 .dm-row:first-of-type { border-top: none; }
 .dm-nm { flex: 1; min-width: 0; }
@@ -7709,6 +7806,11 @@ body.is-sorting, body.is-sorting * {
 .tourn-card .tc-nm { font-size: 13px; font-weight: 600; }
 .tourn-card .tc-ar { font-size: 12px; color: var(--text-dim); }
 .tourn-vs { align-self: center; color: var(--text-faint); font-size: 12px; }
+.tourn-undo {
+  display: block; margin: 14px auto 0; background: none; border: none;
+  color: var(--text-faint); font-size: 12.5px; padding: 4px 8px; cursor: pointer;
+}
+.tourn-undo:hover { color: var(--text-dim); }
 /* Anchored to the record's own corner rather than the top of the screen,
    which is where .fy-push-btn already lives — the two used to compete for
    the same top-right inch of the viewport. Outline by default, so it reads
@@ -7914,8 +8016,23 @@ body.is-sorting, body.is-sorting * {
   color: rgba(255,245,235,.6); cursor: pointer; white-space: nowrap;
 }
 .fy-seg button.active { background: rgba(255,245,235,.14); color: #fff; }
-.fy-push-btn {
+/* Sits between the segmented control and Push, never crowding either: the
+   segment keeps its own width, Push keeps `margin-left:auto` pushing the pair
+   of them to the right, and the tabs row's own gap does the spacing. */
+.fy-refresh-btn {
   margin-left: auto;
+  width: 34px; height: 34px; flex-shrink: 0;
+  border: 1px solid rgba(255,245,235,.22);
+  background: rgba(10,9,8,.5); backdrop-filter: blur(12px);
+  color: rgba(255,245,235,.85);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: transform .15s var(--ease), color .15s var(--ease);
+}
+.fy-refresh-btn:active { transform: scale(.9) rotate(-40deg); }
+.fy-refresh-btn.spin svg { animation: fyRefreshSpin .5s linear; }
+@keyframes fyRefreshSpin { to { transform: rotate(320deg); } }
+.fy-push-btn {
   border: 1px solid rgba(255,245,235,.22);
   background: linear-gradient(160deg, rgba(255,245,235,.1), rgba(10,9,8,.55));
   backdrop-filter: blur(12px);
@@ -8898,7 +9015,11 @@ window.ICONS = {
   disc: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>',
   // The currency mark: a small pressed disc, gold with a dark centre. Used
   // beside every price so a number always reads as Discs without the word.
-  coin: '<svg class="ui-icon disc-coin" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--gold)"/><circle cx="8" cy="8" r="7" fill="none" stroke="rgba(0,0,0,.28)" stroke-width=".7"/><circle cx="8" cy="8" r="4.6" fill="none" stroke="rgba(0,0,0,.18)" stroke-width=".6"/><circle cx="8" cy="8" r="1.9" fill="rgba(0,0,0,.55)"/></svg>',
+  // An outline, same shape language as the vinyl (ICONS.disc): a ring and a
+  // centre dot. Hardcoded to var(--gold) rather than currentColor, so it
+  // stays the currency's own colour wherever it lands — including inside a
+  // section-tinted price line, which is what turned a filled coin pink.
+  coin: '<svg class="ui-icon disc-coin" viewBox="0 0 16 16" fill="none" stroke="var(--gold)" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="var(--gold)" stroke="none"/></svg>',
   fire: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 1.8c.6 1.7-.3 2.6-1 3.4-1 1.1-1.7 2-1.7 3.4a2.7 2.7 0 0 0 5.4 0c0-.7-.2-1.2-.5-1.7.9.5 1.5 1.4 1.5 2.6a4 4 0 1 1-8 0c0-3 2.3-4 2.6-6.4.4.4.7 1 .7 1.7 0-1.3.5-2.3 1-3Z"/></svg>',
   person: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="5.2" r="2.6"/><path d="M2.8 14c.6-2.8 2.6-4.3 5.2-4.3S13.6 11.2 14.2 14"/></svg>',
   people: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="5.8" cy="5" r="2.1"/><circle cx="11.2" cy="6" r="1.7"/><path d="M1.6 13.6c.5-2.4 2-3.6 4.2-3.6s3.7 1.2 4.2 3.6M10 10.4c1.7.1 2.9 1.2 3.3 3.2"/></svg>',
@@ -9072,6 +9193,14 @@ window.discAmt = function (n) {
          never furniture — and it saves a trip to Rewards for the one action
          that should never need looking for. -->
 
+    <!-- Right side of Home, under the account avatar in the header above —
+         its own corner rather than squeezed into the Today row with Auto,
+         Refresh and Undo, which is what made that row cramped. -->
+    <div class="dm-wrap" id="dm-wrap">
+      <button class="btn-mini dm-toggle" id="dm-toggle" aria-haspopup="true" aria-expanded="false">Missions<span class="dm-badge" id="dm-badge" style="display:none;"></span></button>
+      <div class="dm-panel" id="dm-panel"></div>
+    </div>
+
     <!-- TODAY — the loop. First thing on the page, because everything else
          here is a record of what it already asked. -->
     <div class="today-block">
@@ -9081,10 +9210,6 @@ window.discAmt = function (n) {
           <h2>Today</h2>
         </div>
         <div class="today-head-right">
-          <div class="dm-wrap">
-            <button class="btn-mini dm-toggle" id="dm-toggle" aria-haspopup="true" aria-expanded="false">Missions<span class="dm-badge" id="dm-badge" style="display:none;"></span></button>
-            <div class="dm-panel" id="dm-panel"></div>
-          </div>
           <span class="today-count" id="today-count" style="display:none;"></span>
           <span class="today-hint" id="today-hint">Tap an answer &mdash; it moves on by itself</span>
           <!-- Undo lives up here rather than on the card. With auto-advance on,
@@ -9178,6 +9303,9 @@ window.discAmt = function (n) {
         <button data-feed="you" class="active">For You</button>
         <button data-feed="pushed">Suggestions</button>
       </div>
+      <button class="fy-refresh-btn" id="fy-refresh" type="button" aria-label="Refresh">
+        <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M13.3 8A5.3 5.3 0 1 1 11.7 4.2"/><path d="M13.4 2.8v3.2h-3.2"/></svg>
+      </button>
       <button class="fy-push-btn" id="fy-push" type="button">
         <span class="fy-push-arrow" aria-hidden="true"></span><span id="fy-push-label">Push</span>
       </button>
@@ -10220,6 +10348,7 @@ window.discAmt = function (n) {
     <button class="modal-close" id="tournament-close" aria-label="Close">&times;</button>
     <div class="tourn-progress" id="tourn-progress"></div>
     <div class="tourn-pair" id="tourn-pair"></div>
+    <button type="button" class="tourn-undo" id="tourn-undo" style="visibility:hidden;">Undo</button>
   </div>
 </div>
 
@@ -10370,7 +10499,7 @@ window.discAmt = function (n) {
 <div class="modal" id="war-new-modal">
   <div class="modal-panel">
     <button class="modal-close" id="war-new-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji" data-icon="trophy"></span><div><h2>Start a war</h2><p>Pick someone you follow. They&rsquo;ll get a challenge.</p></div></div>
+    <div class="modal-head"><span class="mh-emoji" data-icon="trophy"></span><div><h2>Start a war</h2></div></div>
     <!-- Market mode is parked, not deleted. The picker is hidden and every war
          is created as `streams`; the server, the mode column, _discogs.js and
          /api/album-market are all still in place, so bringing it back is
@@ -10956,6 +11085,9 @@ function renderTracks(tracks, meta) {
       '<div class="song-rate">' +
         '<input type="range" class="song-slider" min="0" max="10" step="1" value="' + val + '" data-track="' + t.id + '">' +
         '<div class="song-score">' + val + '</div>' +
+        '<button type="button" class="song-like' + (window.likedSongHas && likedSongHas(t.id) ? ' liked' : '') + '" data-like="' + esc(t.id) + '" aria-label="Like">' +
+          '<svg viewBox="0 0 24 24" width="15" height="15"><path d="M12 20.6s-7.6-4.5-10.2-9C.3 8.6 1 5.4 3.7 4.1c2-.9 4.3-.3 5.7 1.4l2.6 3.1 2.6-3.1c1.4-1.7 3.7-2.3 5.7-1.4 2.7 1.3 3.4 4.5 1.9 7.5-2.6 4.5-10.2 9-10.2 9Z"/></svg>' +
+        '</button>' +
       '</div></div>';
   }).join('');
 
@@ -10971,6 +11103,18 @@ function renderTracks(tracks, meta) {
       row.querySelector('.song-score').textContent = v;
       const t = tracks.find(function (x) { return x.id === sl.dataset.track; });
       saveSong(t, v, meta);
+    });
+  });
+  host.querySelectorAll('.song-like').forEach(function (b) {
+    b.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      const t = tracks.find(function (x) { return x.id === b.dataset.like; });
+      if (!t || !window.toggleLikedSong) return;
+      const artistName = (t.artists || []).map(function (a) { return a.name; }).join(', ');
+      const on = toggleLikedSong({ id: t.id, name: t.name, artist: artistName, art: meta && meta.art });
+      b.classList.toggle('liked', !!on);
+      if (on) { b.classList.remove('just-liked'); void b.offsetWidth; b.classList.add('just-liked'); if (window.buzz) buzz('good'); }
+      else if (window.buzz) buzz('tap');
     });
   });
 }
@@ -12657,13 +12801,18 @@ function positionNavIndicator() {
   const indicator = document.getElementById('nav-indicator');
   const active = nav && nav.querySelector('button.active[data-mode]');
   if (!nav || !indicator || !active) { if (indicator) indicator.style.width = '0'; return; }
-  const navRect = nav.getBoundingClientRect();
-  const btnRect = active.getBoundingClientRect();
-  indicator.style.width = btnRect.width + 'px';
-  // Was a hardcoded 5, which was the nav's padding copied into the JS. Read
-  // it instead, so restyling the bar cannot leave the pill a few px out.
-  const pad = parseFloat(getComputedStyle(nav).paddingLeft) || 0;
-  indicator.style.transform = 'translateX(' + (btnRect.left - navRect.left - pad) + 'px)';
+  /* offsetLeft/offsetWidth are measured from the nearest positioned
+     ancestor's PADDING edge — which, for an absolutely positioned element,
+     is exactly the coordinate space `left`/`transform` already use. The
+     previous version measured with getBoundingClientRect and then
+     subtracted the nav's own padding a second time, which is the wrong
+     box-model edge: insets on an absolutely positioned child are already
+     relative to the padding edge, so subtracting padding again shifted the
+     pill by the gap between the border and the padding — a few pixels off
+     the button it is meant to sit under, on every screen size at once,
+     because it was never a viewport-specific number to begin with. */
+  indicator.style.width = active.offsetWidth + 'px';
+  indicator.style.transform = 'translateX(' + active.offsetLeft + 'px)';
   /* The pill takes the destination's own hue, read off the button rather than
      mapped here — the map lives in one place, in the CSS beside the buttons,
      and a second copy of it in JS is a second copy to drift. Empty on a build
@@ -14363,7 +14512,7 @@ function timeAgo(t){const s=Math.floor((Date.now()-t)/1000);if(s<60)return'just 
 function renderActivity(){
   const host=document.getElementById('activity-list');if(!host)return;
   const list=loadActivity();
-  if(!list.length){host.innerHTML='<div class="act-empty">No activity yet. Rate an album to get started.</div>';return;}
+  if(!list.length){host.innerHTML='<div class="act-empty">No activity yet.</div>';return;}
   host.innerHTML=list.map(function(a){
     let textHtml;
     if(a.t2&&a.verb){textHtml=esc(a.verb)+' <b>'+esc(a.name||'')+'</b>'+(a.score!=null?' <span class="act-score">'+esc(String(a.score))+'</span>':'');}
@@ -14911,7 +15060,7 @@ const Cloud=(function(){
        the last person who signed in here. */
     if(window.Onboard)try{Onboard.maybeStart();}catch(e){}
     
-    try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderArtistHero();if(window.renderToday)renderToday(true);if(window.renderDiary)renderDiary();}if(window.Reminders)Reminders.sync();if(currentMode==='foryou'&&window.ForYou){ForYou.build(true);}else if(window.ForYou){/* Warmed quietly while hidden (display:none skips the IntersectionObserver,
+    try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderArtistHero();if(window.renderToday)renderToday(true);if(window.renderDiary)renderDiary();}if(window.Reminders)Reminders.sync();if(window.warmCollection)warmCollection();if(currentMode==='foryou'&&window.ForYou){ForYou.build(true);}else if(window.ForYou){/* Warmed quietly while hidden (display:none skips the IntersectionObserver,
       so nothing plays or scrolls by itself) so the FIRST time somebody opens
       For You this session it is already built rather than starting a fresh
       "Finding songs for you" — the fetch happens once, in the background,
@@ -16884,7 +17033,7 @@ function closeListEditor(){document.getElementById('list-modal').classList.remov
 function runTournament(arr){
   if(!arr||arr.length<2)return;
   var modal=document.getElementById('tournament-modal'),pair=document.getElementById('tourn-pair'),
-      prog=document.getElementById('tourn-progress');
+      prog=document.getElementById('tourn-progress'),undoBtn=document.getElementById('tourn-undo');
   var n=arr.length;
   // ~1.5-1.6x the list, floored at n-1 (everybody gets at least one
   // comparison) and capped at 4n so a huge fill-from-artist list still ends
@@ -16893,6 +17042,14 @@ function runTournament(arr){
   var K=32;
   var items=arr.map(function(it,i){return{it:it,idx:i,rating:1200,cmps:0,seen:{}};});
   var done=0,cancelled=false,busy=false;
+  // One entry per decision, holding exactly enough to put both items back
+  // exactly where they were — rating, comparison count, and whether they had
+  // already faced each other before this pick (pickPair can re-pair two
+  // items that have already met, once everyone else is exhausted, so "had
+  // they seen each other" is not always false and has to be recorded rather
+  // than assumed). Popping one and re-showing the same pair is what makes
+  // repeated Undo safe: nothing is inferred, everything is restored.
+  var history=[];
   var closeBtn=document.getElementById('tournament-close');
   function close(){cancelled=true;modal.classList.remove('open');}
   closeBtn.onclick=close;
@@ -16918,10 +17075,8 @@ function runTournament(arr){
     modal.classList.remove('open');
     drawListItems();
   }
-  function round(){
-    if(cancelled)return;
-    if(done>=budget||items.length<2){finish();return;}
-    var p=pickPair(),a=p[0],b=p[1];
+  function paintUndo(){ if(undoBtn) undoBtn.style.visibility=history.length?'visible':'hidden'; }
+  function showPair(a,b){
     prog.textContent='Pick the one you prefer — '+(done+1)+' of ~'+budget;
     pair.innerHTML=
       '<div class="tourn-card" data-pick="a"><img src="'+esc(a.it.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
@@ -16932,6 +17087,12 @@ function runTournament(arr){
     var cardA=pair.querySelector('[data-pick="a"]'),cardB=pair.querySelector('[data-pick="b"]');
     function choose(winner,loser,winCard,loseCard){
       if(busy)return;busy=true;
+      history.push({
+        aIdx:a.idx,bIdx:b.idx,
+        aRating:a.rating,bRating:b.rating,aCmps:a.cmps,bCmps:b.cmps,
+        aSawB:!!a.seen[b.idx],bSawA:!!b.seen[a.idx]
+      });
+      paintUndo();
       winCard.classList.add('tourn-win');
       loseCard.classList.add('tourn-lose');
       winner.cmps++;loser.cmps++;
@@ -16945,6 +17106,26 @@ function runTournament(arr){
     cardA.onclick=function(){choose(a,b,cardA,cardB);};
     cardB.onclick=function(){choose(b,a,cardB,cardA);};
   }
+  function round(){
+    if(cancelled)return;
+    if(done>=budget||items.length<2){finish();return;}
+    var p=pickPair();
+    showPair(p[0],p[1]);
+  }
+  function undo(){
+    if(busy||!history.length)return;
+    var h=history.pop();
+    paintUndo();
+    var a=items[h.aIdx],b=items[h.bIdx];
+    a.rating=h.aRating;a.cmps=h.aCmps;
+    b.rating=h.bRating;b.cmps=h.bCmps;
+    if(h.aSawB)a.seen[b.idx]=1;else delete a.seen[b.idx];
+    if(h.bSawA)b.seen[a.idx]=1;else delete b.seen[a.idx];
+    done--;
+    showPair(a,b);
+  }
+  if(undoBtn)undoBtn.onclick=undo;
+  paintUndo();
   round();
 }
 
@@ -23152,6 +23333,22 @@ function playDismissAnimation(gateEl, callback) {
   }
 
   function other(w) { return w.initiator_id === me().id ? w.opponent_id : w.initiator_id; }
+  /* Whether this war's reveal has already played for this person, on this
+     device. Grows only — never replaced wholesale — so an old id is never
+     lost when a new one is added. Local rather than synced: this is "have I
+     watched this", not economy state, and it costs nothing to lose on a
+     reinstall. */
+  var WAR_SEEN_KEY = 'crate_war_seen_v1';
+  function warRevealSeen(id) {
+    try { return !!(JSON.parse(localStorage.getItem(WAR_SEEN_KEY) || '{}')[id]); } catch (e) { return false; }
+  }
+  function markWarRevealSeen(id) {
+    try {
+      var m = JSON.parse(localStorage.getItem(WAR_SEEN_KEY) || '{}');
+      m[id] = 1;
+      localStorage.setItem(WAR_SEEN_KEY, JSON.stringify(m));
+    } catch (e) {}
+  }
   function nameOf(id) { var p = _profiles[id]; return (p && p.username) || 'someone'; }
   function avaOf(id) {
     var p = _profiles[id];
@@ -23219,7 +23416,7 @@ function playDismissAnimation(gateEl, callback) {
     var wars = await myWars();
     if (!wars.length) {
       act.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.trophy +
-        '</span><h3>No wars yet</h3><p>Challenge someone you follow and find out who really knows The Crate.</p></div>';
+        '</span><h3>No wars yet</h3><p>Challenge someone you follow.</p></div>';
       return;
     }
 
@@ -23290,7 +23487,7 @@ function playDismissAnimation(gateEl, callback) {
           // RLS already limits this to wars we are in.
           if (_war && row.id === _war.id && row.status === 'resolved') {
             _war = row;
-            loadProfiles([other(row)]).then(function () { showReveal(row); });
+            loadProfiles([other(row)]).then(function () { showReveal(row); markWarRevealSeen(row.id); });
           }
           renderWars();
         })
@@ -23311,6 +23508,7 @@ function playDismissAnimation(gateEl, callback) {
           _war = w;
           await loadProfiles([other(w)]);
           showReveal(w);
+          markWarRevealSeen(w.id);
           renderWars();
         }
       } catch (e) {}
@@ -23332,7 +23530,12 @@ function playDismissAnimation(gateEl, callback) {
     document.getElementById('war-modal').classList.add('open');
     document.getElementById('war-error').textContent = '';
 
-    if (w.status === 'resolved') { showReveal(w); return; }
+    if (w.status === 'resolved') {
+      var already = warRevealSeen(w.id);
+      showReveal(w, { instant: already });
+      if (!already) markWarRevealSeen(w.id);
+      return;
+    }
 
     var mine = null;
     try {
@@ -23524,7 +23727,7 @@ function playDismissAnimation(gateEl, callback) {
     }
     var w = res.data;
     _war = w;
-    if (w && w.status === 'resolved') showReveal(w);
+    if (w && w.status === 'resolved') { showReveal(w); markWarRevealSeen(w.id); }
     else showWaiting(w || _war, _bids);
     renderWars();
   }
@@ -23552,7 +23755,8 @@ function playDismissAnimation(gateEl, callback) {
   // waits until the last one has settled so the outcome is earned rather
   // than announced.
 
-  function showReveal(w) {
+  function showReveal(w, opts) {
+    var instant = !!(opts && opts.instant);
     stopPoll();
     setPane('reveal');
     var iAmInit = w.initiator_id === me().id;
@@ -23592,8 +23796,11 @@ function playDismissAnimation(gateEl, callback) {
 
     var rows = host.querySelectorAll('.war-rev');
     var runMine = 0, runTheirs = 0;
+    // Already watched once: land on the finished board straight away rather
+    // than counting through it again — a result you have already seen is a
+    // state, not an event to replay.
     rows.forEach(function (row, i) {
-      setTimeout(function () {
+      var step = function () {
         row.classList.add('in');
         var r = recs[i];
         if (r.won_by === w.initiator_id) { if (iAmInit) runMine += Number(r.value) || 0; else runTheirs += Number(r.value) || 0; }
@@ -23602,10 +23809,11 @@ function playDismissAnimation(gateEl, callback) {
         document.getElementById('war-score-them-num').textContent = fmtVal(runTheirs, w);
         document.getElementById('war-score-me').classList.toggle('lead', runMine > runTheirs);
         document.getElementById('war-score-them').classList.toggle('lead', runTheirs > runMine);
-      }, 320 + i * 460);
+      };
+      if (instant) step(); else setTimeout(step, 320 + i * 460);
     });
 
-    setTimeout(function () {
+    var finish = function () {
       document.getElementById('war-score-me-num').textContent = fmtVal(mineTotal, w);
       document.getElementById('war-score-them-num').textContent = fmtVal(theirsTotal, w);
       /* What the server actually paid, read off the war rather than inferred
@@ -23632,12 +23840,16 @@ function playDismissAnimation(gateEl, callback) {
         (line ? '<small>' + line + '</small>' : '');
       verdict.classList.add('in');
       if (window.Wallet && Wallet.refresh) Wallet.refresh();
-      if (oc === 'won' && typeof window.celebrate === 'function') {
+      // The trophy screen is a one-time event, not a description of the war's
+      // state — replaying it every time the war is reopened is what made a
+      // settled war feel like it kept winning itself.
+      if (!instant && oc === 'won' && typeof window.celebrate === 'function') {
         window.celebrate(fmtVal(mineTotal, w) + ' against ' + fmtVal(theirsTotal, w),
           (Number(paid) > 0 ? '+' + Number(paid).toLocaleString('en-GB') + ' Discs' : ''),
           { eyebrow: 'Bid War — won', accent: '#e24b4a' });
       }
-    }, 320 + rows.length * 460 + 260);
+    };
+    if (instant) finish(); else setTimeout(finish, 320 + rows.length * 460 + 260);
   }
 
   // ---- challenging someone ------------------------------------------------
@@ -23711,7 +23923,7 @@ function playDismissAnimation(gateEl, callback) {
       });
       if (blurb) blurb.textContent = _mode === 'market'
         ? 'Records are worth their standing out of 100 — the Discogs community rating, weighted by how many people gave it.'
-        : 'Records are worth their total Spotify streams. One is usually worth more than the other four together.';
+        : 'Records are worth their total Spotify streams.';
     }
     if (wm) wm.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-war-mode]');
@@ -24991,7 +25203,7 @@ window.renderAdminStats = renderAdminStats;
          the cached copy is right virtually always, and when it is not the
          repaint below is one frame. */
       if (_mine && _mine.length) paintShelf(_mine);
-      else body.innerHTML = '<p class="reco-note">Loading your shelf…</p>';
+      else body.innerHTML = '<p class="reco-note loading-dots">loading</p>';
       var mine = await loadMine(!_mine);
       if (stale()) return;
       // One call for the whole shelf before any card is built.
@@ -25013,7 +25225,7 @@ window.renderAdminStats = renderAdminStats;
 
     if (tab === 'market') {
       el('col-search').style.display = '';
-      if (!_results && !_market) body.innerHTML = '<p class="reco-note">Reading the crate…</p>';
+      if (!_results && !_market) body.innerHTML = '<p class="reco-note loading-dots">loading</p>';
       var items = _results || await loadMarket(!_market);
       if (stale()) return;
       var mineNow = await loadMine();
@@ -25037,6 +25249,17 @@ window.renderAdminStats = renderAdminStats;
          card would render correctly and then GROW a pick button a second later
          when the sweep answered, which is the worse version of the bug. */
       items.forEach(function (a) { if (own.has(a)) owned[a.album_id] = true; });
+      /* Ranked-and-not-yet-bought leads the market, bought sits underneath —
+         so the market keeps answering "which of these could I actually buy
+         right now" rather than mixing in a shelf you can already see under
+         Yours. A stable sort, so within each group the crate's own order
+         (already-priced, most-rated-first — whatever loadMarket handed back)
+         is untouched; only ownership moves a row. Recomputed on every render,
+         so a purchase pushes its row down the moment `own` next reflects it. */
+      items = items.slice().sort(function (a, b) {
+        function rank(x) { return own.has(x) ? 2 : (isRatedForMarket(x.album_id, x.name, x.artist) ? 0 : 1); }
+        return rank(a) - rank(b);
+      });
       body.innerHTML =
         (picks > 0
           ? '<div class="col-picks-box"><b>' + picks + ' album pick' + (picks === 1 ? '' : 's') + '</b></div>'
@@ -25177,6 +25400,19 @@ window.renderAdminStats = renderAdminStats;
     body.querySelectorAll('[data-sell]').forEach(function (b) {
       b.addEventListener('click', function () { sell(b, b.dataset.sell); });
     });
+    // The cover opens the record's own page — Buy/Sell/Pick and the
+    // never-rated line keep their own clicks, so the card is not one control
+    // pretending to be two.
+    body.querySelectorAll('.col-rec[data-rec]').forEach(function (rec) {
+      rec.addEventListener('click', function (ev) {
+        if (ev.target.closest('button, a, [data-rate-own]')) return;
+        if (!window.openAlbum) return;
+        var id = rec.dataset.rec;
+        var all = (_results || []).concat(_market || []).concat(_mine || []);
+        var row = all.filter(function (x) { return x.album_id === id; })[0];
+        if (row) openAlbum({ id: row.album_id, name: row.name, artist: row.artist, art: row.art });
+      });
+    });
   }
 
   async function buy(btn, albumId, usePick) {
@@ -25259,7 +25495,7 @@ window.renderAdminStats = renderAdminStats;
       // page, and not a button that still says Buy.
       btn.className = 'btn-mini col-bought';
       btn.disabled = true;
-      btn.innerHTML = '<span class="colb-tick" aria-hidden="true"></span>Purchased';
+      btn.innerHTML = '<svg class="colb-tick" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M5 8.2 l2.2 2.2 l4 -4.4"/></svg>Purchased';
       // A record bought with a pick can never be sold, so it must not grow a
       // Sell button a moment later.
       var pickBtn = rec.querySelector('[data-pick]');
@@ -25369,6 +25605,10 @@ window.renderAdminStats = renderAdminStats;
     render();
   };
   window.renderCollection = render;
+  // Fetched once in the background after login rather than only when the tab
+  // is opened, so the common case is an already-warm cache and no loading
+  // text at all — same idea as the For You feed's warm build.
+  window.warmCollection = function () { loadMine(); loadMarket(); };
 })();
 </script>
 
@@ -29743,7 +29983,7 @@ window.track = function (name, props) {
     { id: 'skip-annoyed', tone: 'stance', kinds: ['album','song'], text: 'Would you be annoyed if someone skipped this?',
       opts: ['Yes', 'A little', 'Not at all'] },
     { id: 'playlist-find', tone: 'stance', kinds: ['album','song'], text: 'You find this on someone’s playlist.',
-      opts: ['Steal it', 'Like it', 'Keep scrolling'] },
+      opts: ['Adding it to mine', 'Fair enough', 'Not for me'] },
     { id: 'their-favourite', tone: 'stance', kinds: ['album','song'], text: 'One person says this is their favourite.',
       opts: ['Respect', 'Interesting choice', 'Basic', 'I’m judging them'] },
     { id: 'defend-one', tone: 'stance', kinds: ['album','song'], text: 'You can only defend one thing about this.',
@@ -31069,7 +31309,9 @@ window.track = function (name, props) {
       return;
     }
     var ms = r.data.missions || [];
-    panel.innerHTML = '<div class="dm-title">Daily Missions</div>' +
+    var claimedCount = ms.filter(function (m) { return m.claimed; }).length;
+    panel.innerHTML = '<div class="dm-head"><div class="dm-title">Daily Missions</div>' +
+      '<div class="dm-today">' + claimedCount + '/' + ms.length + '</div></div>' +
       ms.map(function (m) {
         return '<div class="dm-row' + (m.claimed ? ' dm-claimed' : '') + '" data-dm-row="' + esc2(m.key) + '">' +
           '<div class="dm-nm">' + esc2(m.label) + '</div>' +
@@ -31079,10 +31321,13 @@ window.track = function (name, props) {
             : '<button class="btn-mini" data-dm-claim="' + esc2(m.key) + '"' + (m.done ? '' : ' disabled') + '>' + n(m.reward) + '</button>') +
         '</div>';
       }).join('');
-    // A gold dot on the toggle whenever something is ready to claim — the
-    // reason to open the dropdown, spotted before you do.
+    // A gold dot and a slow glow on the toggle whenever something is ready to
+    // claim — the reason to open the dropdown, spotted before you do rather
+    // than after. Neither runs at all when nothing is claimable, so seeing it
+    // still means something.
     var ready = ms.some(function (m) { return m.done && !m.claimed; });
     if (badge) badge.style.display = ready ? '' : 'none';
+    toggle.classList.toggle('ready', ready);
 
     panel.querySelectorAll('[data-dm-claim]').forEach(function (b) {
       b.addEventListener('click', async function (ev) {
@@ -32313,6 +32558,7 @@ window.track = function (name, props) {
   var CLIP_S = 30;
 
   var _built = false, _busy = false, _topping = false;
+  var _leftAt = 0;   // when leave() last ran — see render()'s 10s rule
   /* TWO TOKENS, AND THEY WERE ONE — WHICH IS WHY THE FEED WAS NOT INFINITE.
 
      `_tok` guarded three things: the playback of a card, a rebuild, and a
@@ -33582,6 +33828,14 @@ window.track = function (name, props) {
   function render(force) {
     var host = el('fy-feed');
     if (!host) return;
+    /* Away for a moment (checked a rating, glanced at a notification) comes
+       straight back to the exact card and scroll position — nothing here
+       tears that down. Away for more than 10s is long enough that "for you"
+       should mean something fresher, so that visit gets a real rebuild
+       instead. The threshold is measured from when leave() actually ran, not
+       from anything guessed at render time. */
+    if (!force && _leftAt && (Date.now() - _leftAt > 10000)) force = true;
+    _leftAt = 0;
     if (!_built) { build(force); return; }
     // Re-measured on every entry: the header is a different height logged in
     // and logged out, and the banner appears and disappears above it.
@@ -33603,7 +33857,7 @@ window.track = function (name, props) {
 
   // Leaving the tab must silence it: setMode only changes `display`, and an
   // <audio> element does not care that the card holding it is hidden.
-  function leave() { stopAll(); if (_io) { _io.disconnect(); _io = null; } }
+  function leave() { stopAll(); if (_io) { _io.disconnect(); _io = null; } _leftAt = Date.now(); }
 
   /* ---- the tabs, and pushing a record -----------------------------------
      `setFeed` rebuilds rather than filtering: the two feeds have different
@@ -33710,6 +33964,15 @@ window.track = function (name, props) {
     });
     var pb = el('fy-push');
     if (pb) pb.addEventListener('click', pushFlow);
+    var rb = el('fy-refresh');
+    if (rb) rb.addEventListener('click', function () {
+      if (rb.disabled) return;
+      rb.disabled = true;
+      rb.classList.remove('spin'); void rb.offsetWidth; rb.classList.add('spin');
+      if (window.buzz) buzz('tap');
+      build(true);
+      setTimeout(function () { rb.disabled = false; }, 500);
+    });
     document.addEventListener('visibilitychange', function () { if (document.hidden) stopAll(); });
     // The clip runs out on its own and the card has to stop saying it plays.
     try { VinalAudio.on('end', function () { stopAll(); }); } catch (e) {}
@@ -33940,7 +34203,6 @@ window.track = function (name, props) {
       '<div class="onb-hero">' +
         '<div class="onb-disc" aria-hidden="true"></div>' +
         '<div class="onb-word">VINALL</div>' +
-        '<p class="onb-lede">Welcome to VINALL. Let’s get started.</p>' +
       '</div>',
       cta('Begin')
     );
