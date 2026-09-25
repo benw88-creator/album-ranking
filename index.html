@@ -5805,11 +5805,13 @@ html[data-motion="none"] .games-grid > .game-card .gc-emoji { animation: none; }
 }
 .td-info-btn:hover, .td-info-btn:active { color: var(--text); }
 
-.today-info-panel { max-width: 340px; text-align: center; padding: 26px 22px; }
-.today-info-text {
-  font-size: 15px; line-height: 1.55; color: #fff;
-  text-shadow: 0 0 18px rgba(255,255,255,.5), 0 0 3px rgba(255,255,255,.7);
+.today-info-pop {
+  position: fixed; z-index: 500; max-width: 240px;
+  background: var(--surface2, #1c1a18); border: 1px solid var(--border, #333);
+  border-radius: 10px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  font-size: 13px; line-height: 1.4; color: var(--text); display: none;
 }
+.today-info-pop.open { display: block; }
 
 .td-q { font-family: var(--font-display); font-size: 19px; font-weight: 600; line-height: 1.35; margin-bottom: 14px; }
 .td-opts { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -7444,6 +7446,31 @@ body.is-sorting, body.is-sorting * {
   }
 }
 
+.dm-box { margin: 14px 0; }
+.dm-title { font-size: 13px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+.dm-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); font-size: 13px; }
+.dm-row:first-of-type { border-top: none; }
+.dm-nm { flex: 1; min-width: 0; }
+.dm-prog { color: var(--text-faint); font-size: 12px; }
+.dm-claimed { opacity: .5; }
+.dm-done { color: var(--c-lime, #7dff8a); }
+.tourn-progress { text-align: center; color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
+.tourn-pair { display: flex; gap: 12px; }
+.tourn-card { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px; text-align: center; cursor: pointer; }
+.tourn-card:hover, .tourn-card:active { border-color: var(--gold-dim); }
+.tourn-card img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; margin-bottom: 8px; }
+.tourn-card .tc-nm { font-size: 13px; font-weight: 600; }
+.tourn-card .tc-ar { font-size: 12px; color: var(--text-dim); }
+.tourn-vs { align-self: center; color: var(--text-faint); font-size: 12px; }
+.fy-like {
+  position: absolute; top: calc(var(--s5) + 8px); right: calc(var(--gutter) + 8px);
+  z-index: 3; width: 40px; height: 40px; border-radius: 50%; border: none;
+  background: rgba(0,0,0,.35); color: rgba(255,255,255,.7);
+  font-size: 19px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.fy-like.liked { color: var(--c-pink, #ff5fa0); }
 .fy-card {
   scroll-snap-align: center;
   scroll-snap-stop: always;      /* one song per flick, never two */
@@ -7503,7 +7530,7 @@ body.is-sorting, body.is-sorting * {
   background: rgba(10,9,8,.55); backdrop-filter: blur(8px);
   border: 1.5px solid rgba(255,245,235,.4);
   display: grid; place-items: center;
-  opacity: 1; transform: scale(1);
+  opacity: 0; transform: scale(.8);
   transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 .fy-cue::after {
@@ -7511,10 +7538,7 @@ body.is-sorting, body.is-sorting * {
   border-left: 21px solid #fff;
   border-top: 13px solid transparent; border-bottom: 13px solid transparent;
 }
-/* Every card is paused until tapped now, so the cue is the resting state and
-   playing is what hides it — see activateCard(). */
-.fy-card.is-playing .fy-cue, .fy-card.is-loading .fy-cue { opacity: 0; transform: scale(.8); }
-.fy-card.needs-tap .fy-cue { animation: fyTap 1.6s ease-in-out infinite; }
+.fy-card.needs-tap .fy-cue { opacity: 1; transform: none; animation: fyTap 1.6s ease-in-out infinite; }
 @keyframes fyTap { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 .fy-card.no-clip .fy-art::after {
   content: 'No preview for this one';
@@ -9621,12 +9645,7 @@ window.discAmt = function (n) {
   </div>
 </div>
 
-<div class="modal" id="today-info-modal">
-  <div class="modal-panel today-info-panel">
-    <button class="modal-close" id="today-info-close" aria-label="Close">&times;</button>
-    <p class="today-info-text" id="today-info-text"></p>
-  </div>
-</div>
+<div class="today-info-pop" id="today-info-modal"><p id="today-info-text"></p></div>
 
 <div class="modal" id="shop-modal">
   <div class="modal-panel" style="max-width:520px;">
@@ -9670,6 +9689,14 @@ window.discAmt = function (n) {
           <button data-motion-set="full">Full</button>
           <button data-motion-set="none">Reduced</button>
         </div>
+      </div>
+    </div>
+
+    <div class="set-group" id="set-likes-group" style="display:none;">
+      <div class="shop-section-title">Liked songs</div>
+      <div class="set-row">
+        <div class="set-copy"><div class="set-name">Show on my profile</div></div>
+        <input type="checkbox" id="set-likes-public">
       </div>
     </div>
 
@@ -9832,6 +9859,14 @@ window.discAmt = function (n) {
     <button class="btn-primary g-btn-full" id="list-save-btn" style="margin-top:16px;">Save list</button>
     <button class="btn-ghost g-btn-full" id="list-del-btn" style="margin-top:8px; display:none; color:var(--red);">Delete list</button>
     <div class="g-error" id="list-error"></div>
+  </div>
+</div>
+
+<div class="modal" id="tournament-modal">
+  <div class="modal-panel" style="max-width:420px;">
+    <button class="modal-close" id="tournament-close" aria-label="Close">&times;</button>
+    <div class="tourn-progress" id="tourn-progress"></div>
+    <div class="tourn-pair" id="tourn-pair"></div>
   </div>
 </div>
 
@@ -10857,6 +10892,32 @@ window.shortlistAdd = shortlistAdd;
 window.shortlistRemove = shortlistRemove;
 window.shortlistHas = shortlistHas;
 window.shortlistCount = shortlistCount;
+
+/* Liked songs — a private heart on For You, same shape as the shortlist:
+   local, in SYNC_KEYS, merged per-item. Visible on your own profile always;
+   on somebody else's only if they have switched likes_public on, which is a
+   server call (Cloud.setLikesPublic) because that is what other people's
+   clients actually check. */
+const LIKED_SONGS_KEY = 'crate_liked_songs_v1';
+function loadLikedSongs() { try { return JSON.parse(localStorage.getItem(LIKED_SONGS_KEY)) || {}; } catch (e) { return {}; } }
+function likedSongHas(id) { return !!loadLikedSongs()[id]; }
+function toggleLikedSong(meta) {
+  if (!meta || !meta.id) return false;
+  const list = loadLikedSongs();
+  if (list[meta.id]) {
+    delete list[meta.id];
+    persist(LIKED_SONGS_KEY, list);
+    if (window.Cloud) Cloud.unlikeSong(meta.id);
+    return false;
+  }
+  list[meta.id] = { id: meta.id, name: meta.name || '', artist: meta.artist || '', art: meta.art || '', savedAt: Date.now() };
+  persist(LIKED_SONGS_KEY, list);
+  if (window.Cloud) Cloud.likeSong(list[meta.id]);
+  return true;
+}
+window.loadLikedSongs = loadLikedSongs;
+window.likedSongHas = likedSongHas;
+window.toggleLikedSong = toggleLikedSong;
 
 const SCORE_HISTORY_MAX = 24;
 function pushScoreHistory(prev, score, now) {
@@ -12137,6 +12198,7 @@ function setMode(mode, fromCode) {
   if (mode !== 'foryou' && window.ForYou) window.ForYou.leave();
   // Same rule as the feed: `display:none` does not stop an <audio> element.
   if (mode !== 'songs' && window.CratePreview) window.CratePreview.stop();
+  if (mode !== 'home' && window.TodayPreview) window.TodayPreview.stop();
   if (mode === 'games' && window.renderGameBests) window.renderGameBests();
   // Repaint on entry so a gate passed while rating is announced the next time
   // you look at the grid, rather than silently being open.
@@ -12450,6 +12512,63 @@ function renderAlbums(){
 
   // The clip runs out on its own, and the button has to stop saying it is
   // playing when it does.
+  document.addEventListener('DOMContentLoaded', function () {
+    try { VinalAudio.on('end', function () { _id = null; paint(); }); } catch (e) {}
+  });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); });
+})();
+
+/* Same shape as CratePreview, for the album art on Today's cards: tap the
+   cover to play a 30s preview, tap again to pause. A new card (advance,
+   undo, refresh) always mounts paused — mountCard() calls stop() before it
+   builds the next one, so switching cards can never leave the old one
+   sounding under the new one. */
+(function () {
+  'use strict';
+  var _id = null, _tok = 0;
+
+  function paint() {
+    document.querySelectorAll('.td-art-play').forEach(function (b) {
+      b.classList.toggle('is-playing', b.dataset.todayplay === _id);
+      b.classList.remove('is-loading');
+    });
+  }
+  function stop() {
+    _tok++;
+    try { if (window.VinalAudio) VinalAudio.stop(); } catch (e) {}
+    _id = null; paint();
+  }
+  window.TodayPreview = { stop: stop, playing: function () { return _id; } };
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.td-art-play');
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    var id = b.dataset.todayplay;
+    if (_id === id) { stop(); return; }
+    var name = b.dataset.name || '', artist = b.dataset.artist || '';
+    if (!name) return;
+    stop();
+    _id = id;
+    b.classList.add('is-loading');
+    var mine = ++_tok;
+    if (window.buzz) buzz('tap');
+    Promise.resolve()
+      .then(function () { VinalAudio.prime(); return VinalAudio.play({ artist: artist, title: name }, 30); })
+      .then(function (ok) {
+        if (mine !== _tok) return;
+        b.classList.remove('is-loading');
+        if (!ok || ok === 'blocked') {
+          _id = null; paint();
+          b.classList.add(ok === 'blocked' ? 'needs-tap' : 'no-clip');
+          setTimeout(function () { b.classList.remove('no-clip', 'needs-tap'); }, 2600);
+          return;
+        }
+        paint();
+      })
+      .catch(function () { if (mine === _tok) { _id = null; paint(); } });
+  });
+
   document.addEventListener('DOMContentLoaded', function () {
     try { VinalAudio.on('end', function () { _id = null; paint(); }); } catch (e) {}
   });
@@ -14105,7 +14224,7 @@ const Cloud=(function(){
     return foreign;
   }
 
-  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best','crate_foryou_songs','crate_foryou_seen','crate_onboard_v1'];
+  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best','crate_foryou_songs','crate_foryou_seen','crate_onboard_v1','crate_liked_songs_v1'];
   const pending={};
   function isOn(){return!!(sb&&user);}
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
@@ -14177,6 +14296,7 @@ const Cloud=(function(){
     // The shortlist is keyed by album id and carries savedAt, so it merges with
     // the same per-item rule the ratings use.
     lsSetRaw('crate_shortlist_v1',mergeItemMap(lsGet('crate_shortlist_v1')||{},cloud['crate_shortlist_v1']||{}));
+    lsSetRaw('crate_liked_songs_v1',mergeItemMap(lsGet('crate_liked_songs_v1')||{},cloud['crate_liked_songs_v1']||{}));
     ['crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_blitz_best'].forEach(function(k){const a=lsGet(k)||0,b=cloud[k]||0;if(Math.max(a,b))lsSetRaw(k,Math.max(a,b));});
     const mHl=maxByKey(lsGet('crate_hl_best'),cloud['crate_hl_best']);
     if(Object.keys(mHl).length)lsSetRaw('crate_hl_best',mHl);
@@ -14724,6 +14844,11 @@ const Cloud=(function(){
   async function fetchProfile(uid){if(!sb)return null;try{const res=await sb.from('profiles').select('*').eq('id',uid).single();return res.data||null;}catch(e){return null;}}
   async function saveProfile(fields){if(!isOn())return{error:'not logged in'};try{const row=Object.assign({id:user.id,updated_at:new Date().toISOString()},fields);const res=await sb.from('profiles').upsert(row).select().single();return res.error?{error:res.error.message}:{data:res.data};}catch(e){return{error:String(e&&e.message||e)};}}
   async function uploadAvatar(file){if(!isOn())return{error:'not logged in'};try{const ext=(file.name.split('.').pop()||'jpg').toLowerCase();const path=user.id+'/avatar.'+ext;const up=await sb.storage.from('avatars').upload(path,file,{upsert:true,cacheControl:'3600'});if(up.error)return{error:up.error.message};const pub=sb.storage.from('avatars').getPublicUrl(path);const url=(pub.data&&pub.data.publicUrl)?pub.data.publicUrl+'?t='+Date.now():'';return{url:url};}catch(e){return{error:String(e&&e.message||e)};}}
+  async function likeSong(rec){if(!isOn())return;try{await sb.from('liked_songs').upsert({user_id:user.id,track_key:rec.id,name:rec.name,artist:rec.artist,art:rec.art},{onConflict:'user_id,track_key'});}catch(e){}}
+  async function unlikeSong(id){if(!isOn())return;try{await sb.from('liked_songs').delete().eq('user_id',user.id).eq('track_key',id);}catch(e){}}
+  // Own rows always readable; somebody else's only when their profile has
+  // likes_public on, which is what the RLS policy on this table checks.
+  async function fetchLikedSongs(uid){if(!sb)return[];try{const res=await sb.from('liked_songs').select('track_key,name,artist,art').eq('user_id',uid).order('created_at',{ascending:false});return res.data||[];}catch(e){return[];}}
   async function findByUsername(uname){if(!sb)return null;try{const res=await sb.rpc('find_user_by_username',{uname:uname});return(res.data&&res.data[0])||null;}catch(e){return null;}}
   async function follow(targetId){if(!isOn())return{error:'not logged in'};if(targetId===user.id)return{error:'cannot follow yourself'};try{const res=await sb.from('follows').insert({follower_id:user.id,following_id:targetId});if(!res.error){let me=null;try{me=await fetchProfile(user.id);}catch(e){}try{await sb.from('notifications').insert({user_id:targetId,actor_id:user.id,type:'follow',data:{username:(me&&me.username)||'someone',avatar_url:(me&&me.avatar_url)||''}});}catch(e){}}return res.error?{error:res.error.message}:{ok:true};}catch(e){return{error:String(e&&e.message||e)};}}
   async function unfollow(targetId){if(!isOn())return{error:'not logged in'};try{const res=await sb.from('follows').delete().eq('follower_id',user.id).eq('following_id',targetId);return res.error?{error:res.error.message}:{ok:true};}catch(e){return{error:String(e&&e.message||e)};}}
@@ -14841,7 +14966,8 @@ const Cloud=(function(){
     if(!isOn())return null;
     try{
       const r=await sb.rpc('recall_submit',{p_day:o.day,p_mode:o.mode||'daily',p_guess:o.guess||'',
-        p_step:o.step,p_attempts:o.attempts,p_claim:o.claim||'',p_correct:!!o.correct});
+        p_step:o.step,p_attempts:o.attempts,p_claim:o.claim||'',p_correct:!!o.correct,
+        p_elapsed_ms:(o.elapsedMs==null?null:Math.round(o.elapsedMs))});
       return r.error?null:r.data;
     }catch(e){return null;}
   }
@@ -15121,7 +15247,8 @@ const Cloud=(function(){
          postToFeed:postToFeed,removeFromFeed:removeFromFeed,fetchFeed:fetchFeed,fetchTrending:fetchTrending,
          toggleLike:toggleLike,fetchLikes:fetchLikes,fetchAlbumScores:fetchAlbumScores,
          fetchScoresByUsers:fetchScoresByUsers,addComment:addComment,fetchComments:fetchComments,
-         fetchAlbumPageRatings:fetchAlbumPageRatings};
+         fetchAlbumPageRatings:fetchAlbumPageRatings,
+         likeSong:likeSong,unlikeSong:unlikeSong,fetchLikedSongs:fetchLikedSongs};
 })();
 window.Cloud=Cloud;
 
@@ -15301,13 +15428,16 @@ async function drawProfile(host,prof,isOwner){
     safe(Cloud.client().rpc('collection_net_worth',{p_user:prof.id}),null),
     (isOwner&&window.Wallet&&Wallet.loadClaims)?safe(Wallet.loadClaims(),null):Promise.resolve(null),
     (!isOwner&&me)?safe(Cloud.isFollowing(prof.id),false):Promise.resolve(false),
-    safe(Cloud.fetchLists(prof.id),[])
+    safe(Cloud.fetchLists(prof.id),[]),
+    isOwner?Promise.resolve(Object.values(window.loadLikedSongs?loadLikedSongs():{}))
+           :(prof.likes_public?safe(Cloud.fetchLikedSongs(prof.id),[]):Promise.resolve(null))
   ]);
   const albumsObj=jobs[0].albums||{},songsObj=jobs[0].songs||{};
   const counts=jobs[1]||{followers:0,following:0};
   const netWorth=(jobs[2]&&jobs[2].data&&Number(jobs[2].data.net_worth))||0;
   const following=!!jobs[4];
   const lists=jobs[5]||[];
+  const likedSongs=(jobs[6]||[]).map(function(r){return{name:r.name,artist:r.artist,art:r.art};});
   const albumsArr=Object.values(albumsObj);
   const nAlbums=albumsArr.length,nSongs=Object.keys(songsObj).length;
   const top3=(prof.top3||[]);const topAll=(prof.top_songs_all||[]);const topNow=(prof.top_songs_now||[]);
@@ -15552,6 +15682,7 @@ async function drawProfile(host,prof,isOwner){
     '<div class="top3" id="prof-top3">'+slots+'</div>'+
     ((topNow.length||isOwner)?'<div class="prof-section-title">Top 5 songs right now</div>'+songRows(topNow,isOwner?'Pick your current rotation in Edit profile.':'Nothing here yet.','prof-songs-now',isOwner):'')+
     ((topAll.length||isOwner)?'<div class="prof-section-title">Top 10 songs of all time</div>'+songRows(topAll,isOwner?'Set your all-timers in Edit profile.':'Nothing here yet.','prof-songs-all',isOwner):'')+
+    (likedSongs.length?'<div class="prof-section-title">Liked songs'+(isOwner?' <span class="reco-note" style="display:inline">('+(prof.likes_public?'public':'private')+')</span>':'')+'</div>'+songRows(likedSongs,'','prof-liked-songs',false):'')+
     listsHtml+
     (!isOwner?'<div class="prof-section-title">'+esc(prof.username)+'\u2019s ranked albums</div>'+
       (nAlbums?'<div class="grid" id="prof-rankings"></div>':
@@ -16144,6 +16275,68 @@ function closeListEditor(){document.getElementById('list-modal').classList.remov
    The drop target is worked out from the POINTER against each row's midpoint,
    not from what is under the finger: the row being dragged is under the finger
    the whole time. */
+/* TOURNAMENT — a head-to-head sort, not a shuffle.
+   Merge sort with the comparator resolved by a tap: O(n log n) comparisons,
+   run one at a time so the same two records are never asked about twice, and
+   lower positions come out of the same merges that decide the top — a loser
+   from one matchup is still compared against losers from another whenever the
+   merge step needs to place it, so the tail of the list is ordered by the same
+   process as the head rather than left in whatever order it arrived. */
+function mergeSortAsync(list,cmp){
+  if(list.length<=1)return Promise.resolve(list.slice());
+  var mid=Math.floor(list.length/2);
+  return mergeSortAsync(list.slice(0,mid),cmp).then(function(left){
+    return mergeSortAsync(list.slice(mid),cmp).then(function(right){
+      return mergeAsync(left,right,cmp);
+    });
+  });
+}
+function mergeAsync(a,b,cmp){
+  a=a.slice();b=b.slice();var out=[];
+  function step(){
+    if(!a.length)return Promise.resolve(out.concat(b));
+    if(!b.length)return Promise.resolve(out.concat(a));
+    return cmp(a[0],b[0]).then(function(aWins){
+      out.push(aWins?a.shift():b.shift());
+      return step();
+    });
+  }
+  return step();
+}
+function runTournament(arr){
+  if(!arr||arr.length<2)return;
+  var modal=document.getElementById('tournament-modal'),pair=document.getElementById('tourn-pair'),
+      prog=document.getElementById('tourn-progress');
+  var total=arr.length,estCmps=Math.max(1,Math.ceil(total*Math.log2(total))),done=0;
+  var closeBtn=document.getElementById('tournament-close');
+  var cancelled=false;
+  function close(){cancelled=true;modal.classList.remove('open');}
+  closeBtn.onclick=close;
+  modal.addEventListener('click',function h(e){if(e.target===modal)close();});
+  modal.classList.add('open');
+  function cmp(x,y){
+    return new Promise(function(resolve){
+      if(cancelled){resolve(true);return;}
+      done++;
+      prog.textContent='Pick the one you prefer — '+Math.min(done,estCmps)+' of ~'+estCmps;
+      pair.innerHTML=
+        '<div class="tourn-card" data-pick="a"><img src="'+esc(x.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+          '<div class="tc-nm">'+esc(x.name)+'</div><div class="tc-ar">'+esc(x.artist||'')+'</div></div>'+
+        '<div class="tourn-vs">vs</div>'+
+        '<div class="tourn-card" data-pick="b"><img src="'+esc(y.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+          '<div class="tc-nm">'+esc(y.name)+'</div><div class="tc-ar">'+esc(y.artist||'')+'</div></div>';
+      pair.querySelector('[data-pick="a"]').onclick=function(){resolve(true);};
+      pair.querySelector('[data-pick="b"]').onclick=function(){resolve(false);};
+    });
+  }
+  mergeSortAsync(arr,cmp).then(function(sorted){
+    if(cancelled)return;
+    arr.length=0;Array.prototype.push.apply(arr,sorted);
+    modal.classList.remove('open');
+    drawListItems();
+  });
+}
+
 function drawListItems(){
   const host=document.getElementById('list-items');
   const arr=_listEditing.items;
@@ -16158,7 +16351,9 @@ function drawListItems(){
   }).join('');
   html+='<div class="list-add-row">'+
     '<button class="btn-mini" data-add="1">+ Add '+(_listEditing.kind==='song'?'song':'album')+'</button>'+
-    '<button class="btn-mini" data-fill="1">Fill from an artist</button></div>'+
+    '<button class="btn-mini" data-fill="1">Fill from an artist</button>'+
+    (arr.length>=2?'<button class="btn-mini" data-tourn="1">'+(_listEditing.kind==='song'?'Song':'Album')+' Tournament</button>':'')+
+    '</div>'+
     '<div class="list-fill-note" id="list-fill-note"></div>';
   host.innerHTML=html;
   host.querySelectorAll('[data-rm]').forEach(function(b){
@@ -16168,6 +16363,8 @@ function drawListItems(){
     openPicker(_listEditing.kind,function(item){arr.push(item);drawListItems();});
   });
   host.querySelector('[data-fill]').addEventListener('click',fillListFromArtist);
+  var tb=host.querySelector('[data-tourn]');
+  if(tb)tb.addEventListener('click',function(){runTournament(arr);});
   /* Reads _listEditing.items rather than the `arr` in scope: makeSortable
      wires the host ONCE and the host outlives the list, so a closure over the
      array would reorder the previous list after this one was opened. */
@@ -19701,6 +19898,16 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       const u = Cloud.getUser();
       em.textContent = (u && u.email) || 'Signed in';
     }
+    const likesGroup = document.getElementById('set-likes-group');
+    if (likesGroup) {
+      likesGroup.style.display = signedIn ? '' : 'none';
+      if (signedIn) {
+        Cloud.fetchProfile(Cloud.getUser().id).then(function (p) {
+          const cb = document.getElementById('set-likes-public');
+          if (cb) cb.checked = !!(p && p.likes_public);
+        });
+      }
+    }
     document.getElementById('settings-modal').classList.add('open');
   };
 
@@ -19711,6 +19918,12 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     const closeBtn = document.getElementById('settings-close');
     if (closeBtn) closeBtn.addEventListener('click', close);
     modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+
+    // ---- Liked songs privacy ---------------------------------------------
+    const likesCb = document.getElementById('set-likes-public');
+    if (likesCb) likesCb.addEventListener('change', function () {
+      if (window.Cloud) Cloud.saveProfile({ likes_public: likesCb.checked });
+    });
 
     // ---- Motion setting -------------------------------------------------
     const choice = document.getElementById('motion-choice');
@@ -23646,6 +23859,27 @@ window.renderAdminStats = renderAdminStats;
   var tab = 'mine';
   var busy = false;
   var _mine = null, _market = null;
+  // The Market must only sell what you have already ranked. Matched by id or
+  // by folded name+artist, same fallback the one-copy-per-record dedup uses —
+  // a record rated before the catalogue moved carries a different id than the
+  // Market lists it under.
+  var _ratedIdx = null;
+  function ratedKey(name, artist) {
+    function f(x) { return String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/[^a-z0-9]+/g, ''); }
+    return f(name) + '|' + f(artist);
+  }
+  function isRatedForMarket(albumId, name, artist) {
+    var all = window.loadAlbums ? loadAlbums() : {};
+    if (all[albumId] && typeof all[albumId].score === 'number') return true;
+    if (!_ratedIdx) {
+      _ratedIdx = {};
+      Object.keys(all).forEach(function (k) {
+        var a = all[k];
+        if (a && typeof a.score === 'number') _ratedIdx[ratedKey(a.name, a.artist)] = true;
+      });
+    }
+    return !!_ratedIdx[ratedKey(name, artist)];
+  }
   /* A render token, not a flag. `render()` is async and every tab does at least
      one await, so flicking between Yours and the Market puts two renders in
      flight and the SLOWER one lands last and wins — you end up looking at the
@@ -24008,15 +24242,21 @@ window.renderAdminStats = renderAdminStats;
 
          Disabled rather than absent, so the card keeps its height and the
          grid does not reflow under the cursor as each price lands. */
-      action = a.price == null
+      // Server-enforced too (collection_buy_from), but hiding the live button
+      // is what stops somebody reaching for a record they cannot actually buy.
+      var rated = isRatedForMarket(a.album_id, a.name, a.artist);
+      action = !rated
+        ? '<span class="btn-mini col-buy" title="Rate this record first">Rate to unlock</span>'
+        : a.price == null
         ? '<button class="btn-mini col-buy col-pricing" data-buy="' + esc(a.album_id) + '" disabled>Pricing…</button>'
         : '<button class="' + (afford === false ? 'btn-mini' : 'btn-primary') + ' col-buy" data-buy="' + esc(a.album_id) + '"' +
           (afford === false ? ' disabled title="Not enough Discs"' : '') + '>Buy</button>';
       action +=
         // The pick button only exists while you hold one, and it is offered
         // even on a record you could afford — spending a pick on something
-        // cheap is your call to make badly.
-        (opts.picks ? '<button class="btn-mini col-pick" data-pick="' + esc(a.album_id) + '">Use a pick</button>' : '');
+        // cheap is your call to make badly. Still gated on being rated, same
+        // as Buy — collection_claim_pick_from checks it either way.
+        (opts.picks && rated ? '<button class="btn-mini col-pick" data-pick="' + esc(a.album_id) + '">Use a pick</button>' : '');
     }
     /* The art goes through Cert.art() whatever state it is in, so a finish
        bought on the album page shows here with no second implementation to
@@ -24079,6 +24319,7 @@ window.renderAdminStats = renderAdminStats;
     if (!body) return;
     var rev = ++_rev;
     function stale() { return rev !== _rev; }
+    _ratedIdx = null;   // ratings can have changed since the last render
 
     if (!on()) {
       body.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.disc +
@@ -24978,6 +25219,41 @@ window.renderAdminStats = renderAdminStats;
   function payFor(day) { return LADDER[day - 1]; }
   function n(v) { return (Number(v) || 0).toLocaleString('en-GB'); }
 
+  /* Daily Missions — six small ones, 10,000 Discs total, reset at UTC
+     midnight like everything else here. Progress is computed server-side on
+     every call (never a client counter), so a refresh cannot move it and a
+     claim re-checks the same query rather than trusting what status handed
+     back a moment ago — same posture as wallet_buy taking a key, not a price. */
+  async function renderMissions() {
+    var box = document.getElementById('dm-box');
+    if (!box || !window.Cloud || !Cloud.client) return;
+    var r = await Cloud.client().rpc('daily_missions_status');
+    if (r.error || !r.data) { box.innerHTML = ''; return; }
+    var ms = r.data.missions || [];
+    box.innerHTML = '<div class="dm-title">Daily Missions</div>' +
+      ms.map(function (m) {
+        return '<div class="dm-row' + (m.claimed ? ' dm-claimed' : '') + '">' +
+          '<div class="dm-nm">' + esc(m.label) + '</div>' +
+          '<div class="dm-prog">' + m.progress + '/' + m.target + '</div>' +
+          (m.claimed
+            ? '<span class="dm-done">✓</span>'
+            : '<button class="btn-mini" data-dm-claim="' + esc(m.key) + '"' + (m.done ? '' : ' disabled') + '>' + n(m.reward) + '</button>') +
+        '</div>';
+      }).join('');
+    box.querySelectorAll('[data-dm-claim]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        if (b.disabled) return;
+        b.disabled = true;
+        var res = await Cloud.client().rpc('daily_missions_claim', { p_key: b.dataset.dmClaim });
+        if (res.error) { b.disabled = false; return; }
+        if (window.buzz) buzz('good');
+        if (window.burst) burst(b, { count: 16, spread: 100 });
+        if (window.Wallet && Wallet.load) await Wallet.load();
+        renderRewards();
+      });
+    });
+  }
+
   async function renderRewards() {
     var host = document.getElementById('rewards-body');
     if (!host) return;
@@ -25062,6 +25338,7 @@ window.renderAdminStats = renderAdminStats;
        balance, a tile and two doors. */
     host.innerHTML =
       '<div class="rw-ladder">' + days + '</div>' +
+      '<div class="dm-box" id="dm-box"><div class="dm-loading">Missions…</div></div>' +
       (st.album_picks > 0
         ? '<div class="rw-picks"><b>' + st.album_picks + ' free record' + (st.album_picks === 1 ? '' : 's') +
           '</b> waiting' +
@@ -25078,6 +25355,7 @@ window.renderAdminStats = renderAdminStats;
     // The reel is a sibling of this element, so it renders itself rather than
     // being part of the innerHTML above.
     if (window.renderDrawTab) window.renderDrawTab();
+    renderMissions();
 
     /* Claiming from the tile. It stays pressed and says so rather than
        disappearing, because the tile is also the thing that tells you what you
@@ -27293,7 +27571,17 @@ window.renderAdminStats = renderAdminStats;
   }
 
   /* ---- scoring ------------------------------------------------------- */
-  function points(step) { return SCORES[step] || 0; }
+  // Continuous, deterministic: the whole window is STEPS[last] seconds, and
+  // score slides from SCORES[0] at 0s down to SCORES[last] at the window's
+  // end — so two guesses in the same reveal step are not worth the same
+  // amount, and the sooner one always outscores the later one.
+  var WINDOW_MS = STEPS[STEPS.length - 1] * 1000;
+  function points(step, elapsedMs) {
+    if (elapsedMs == null) return SCORES[step] || 0;   // back-compat, e.g. no-audio path
+    var t = Math.max(0, Math.min(WINDOW_MS, elapsedMs));
+    var hi = SCORES[0], lo = SCORES[SCORES.length - 1];
+    return Math.round(lo + (hi - lo) * (1 - t / WINDOW_MS));
+  }
   // Kept to one line on purpose. A scoring system people cannot do in their
   // head is a scoring system nobody feels.
   function streakBonus(streak) { return Math.min(Math.max(streak - 1, 0), STREAK_MAX / STREAK_STEP) * STREAK_STEP; }
@@ -27364,12 +27652,12 @@ window.renderAdminStats = renderAdminStats;
   }
   // The round is scored here rather than on the screen so a new mode gets the
   // ladder, the streak and the stats for nothing.
-  function settle(session, track, step, attempts, correct) {
+  function settle(session, track, step, attempts, correct, elapsedMs) {
     session.played++;
     session.used[track.i] = 1;
     var gained = 0, bonus = 0;
     if (correct) {
-      gained = points(step);
+      gained = points(step, elapsedMs);
       session.streak++;
       if (session.streak > session.bestStreak) session.bestStreak = session.streak;
       if (session.m.bonus) bonus = streakBonus(session.streak);
@@ -27463,7 +27751,7 @@ window.renderAdminStats = renderAdminStats;
 
   var STEPS = Recall.STEPS;
   var sess = null, cands = [], candAt = 0, song = null, clip = null;
-  var step = 0, attempts = 0, revealed = false, roundTok = 0, busy = false;
+  var step = 0, attempts = 0, revealed = false, roundTok = 0, busy = false, heardAt = 0, lastElapsedMs = null;
   var countdown = null, serverState = null;
 
   function el(id) { return document.getElementById(id); }
@@ -27574,7 +27862,7 @@ window.renderAdminStats = renderAdminStats;
 
   function nextRound() {
     if (!sess) return;
-    revealed = false; step = 0; attempts = 0; clip = null;
+    revealed = false; step = 0; attempts = 0; clip = null; heardAt = 0;
     var r = el('recall-reveal'); if (r) { r.innerHTML = ''; r.classList.remove('on'); }
     var a = el('recall-art'); if (a) a.classList.remove('open');
     var pane = el('recall-play'); if (pane) pane.classList.remove('revealed');
@@ -27630,6 +27918,7 @@ window.renderAdminStats = renderAdminStats;
   /* ---------- playing ---------- */
   function hear() {
     if (!song || revealed) return;
+    if (step === 0 && !heardAt) heardAt = Date.now();
     VinalAudio.prime();
     var b = el('recall-hear');
     if (b) b.classList.add('on');
@@ -27680,7 +27969,9 @@ window.renderAdminStats = renderAdminStats;
     revealed = true;
     VinalAudio.stop();
     movePlayhead(0);
-    var got = Recall.settle(sess, song, step, attempts, correct);
+    var elapsedMs = heardAt ? (Date.now() - heardAt) : null;
+    lastElapsedMs = elapsedMs;
+    var got = Recall.settle(sess, song, step, attempts, correct, elapsedMs);
     Recall.setBest(sess.mode, sess.score);
     closeSuggest();
     paintHud();
@@ -27764,7 +28055,7 @@ window.renderAdminStats = renderAdminStats;
       var r = await Cloud.recallSubmit({
         day: Recall.dayNo(), mode: 'daily',
         guess: correct ? song.title : '', step: step, attempts: attempts,
-        claim: song.title, correct: !!correct
+        claim: song.title, correct: !!correct, elapsedMs: lastElapsedMs
       });
       if (r) {
         if (r.drift && window.reportIssue) {
@@ -29479,8 +29770,21 @@ window.track = function (name, props) {
   }
 
   function itemStrip(item, note) {
+    var art = artOf(item);
+    // Tap the cover to hear it — same 30s preview and the same play/pause
+    // shape as CratePreview on a song row. Only wrapped when there is
+    // something to show; an album's own name rarely resolves to a single
+    // track, so that just falls into the ordinary "no preview" state.
+    var cover = art
+      ? '<button type="button" class="td-art-play" data-todayplay="' + esc2(item.id || '') +
+          '" data-name="' + esc2(item.name || '') + '" data-artist="' + esc2(item.artist || '') +
+          '" aria-label="Play ' + esc2(item.name || '') + '">' +
+          '<img src="' + esc2(art) + '" alt="" loading="lazy">' +
+          '<span class="td-play-ico"><span class="td-tri"></span><span class="td-bars"></span></span>' +
+        '</button>'
+      : '';
     return '<div class="td-item' + (note ? ' td-item-lg' : '') + '">' +
-      (artOf(item) ? '<img src="' + esc2(artOf(item)) + '" alt="" loading="lazy">' : '') +
+      cover +
       '<div class="td-item-meta"><div class="td-item-nm">' + esc2(item.name) +
         (note ? ' <button type="button" class="td-info-btn" data-note="' + esc2(note) + '" aria-label="Why this">ⓘ</button>' : '') +
       '</div>' +
@@ -29589,6 +29893,9 @@ window.track = function (name, props) {
   function mountCard(html, animate) {
     var host = stackEl();
     if (!host) return null;
+    // A new card is always presented paused, whatever the last one was
+    // doing — the same rule the equivalent feeds already keep.
+    if (window.TodayPreview) TodayPreview.stop();
     var old = host.querySelector('.td-live');
     var el = document.createElement('div');
     el.className = 'td-slot td-live' + (animate ? ' td-enter' : '');
@@ -29705,7 +30012,7 @@ window.track = function (name, props) {
     var infoBtn = slot.querySelector('.td-info-btn');
     if (infoBtn) infoBtn.addEventListener('click', function (ev) {
       ev.stopPropagation();
-      showTodayInfo(infoBtn.dataset.note);
+      showTodayInfo(infoBtn.dataset.note, infoBtn);
     });
 
     var go = slot.querySelector('.td-go');
@@ -30029,19 +30336,27 @@ window.track = function (name, props) {
       ab.addEventListener('change', function () { setAuto(ab.checked); });
     }
 
-    var infoModal = document.getElementById('today-info-modal');
-    var infoClose = document.getElementById('today-info-close');
-    if (infoClose) infoClose.addEventListener('click', function () { infoModal.classList.remove('open'); });
-    if (infoModal) infoModal.addEventListener('click', function (ev) {
-      if (ev.target === infoModal) infoModal.classList.remove('open');
+    document.addEventListener('click', function (ev) {
+      var modal = document.getElementById('today-info-modal');
+      if (modal && modal.classList.contains('open') && !modal.contains(ev.target) && !ev.target.closest('.td-info-btn')) {
+        modal.classList.remove('open');
+      }
     });
   }
-  window.showTodayInfo = function (text) {
+  window.showTodayInfo = function (text, btn) {
     var modal = document.getElementById('today-info-modal');
     var t = document.getElementById('today-info-text');
     if (!modal || !t) return;
+    if (modal.classList.contains('open')) { modal.classList.remove('open'); return; }
     t.textContent = text || '';
     modal.classList.add('open');
+    var r = btn && btn.getBoundingClientRect ? btn.getBoundingClientRect() : null;
+    if (r) {
+      var top = r.bottom + 6;
+      var left = Math.min(Math.max(8, r.left - 100), window.innerWidth - 248);
+      modal.style.top = top + 'px';
+      modal.style.left = left + 'px';
+    }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireLore);
   else wireLore();
@@ -31269,10 +31584,6 @@ window.track = function (name, props) {
      in it. Playback and the feed are unrelated concerns and now have a token
      each. */
   var _items = [], _tok = 0, _feedTok = 0, _unlocked = false, _playing = null, _io = null;
-  // Which card the feed has arrived at, as distinct from which one is
-  // actually sounding — arriving at a card no longer starts it playing, it
-  // only stops whatever the previous card was doing.
-  var _current = -1;
   var _settle = 0, _scrollWired = false;
   var _pools = { partial: [], yours: [], shortlist: [], discovery: [], pushed: [], wander: [] };
   var _widen = 0;          // how far out expand() has already reached
@@ -32020,6 +32331,7 @@ window.track = function (name, props) {
         (art ? '<img class="fy-main" src="' + art + '" alt="">' : '') +
         '<span class="fy-cue"></span>' +
       '</button>' +
+      '<button class="fy-like' + (window.likedSongHas && likedSongHas(c.key) ? ' liked' : '') + '" data-like="' + i + '" aria-label="Like">♥</button>' +
       '<div class="fy-meta">' +
         '<div class="fy-why">' + esc(c.why || '') + '</div>' +
         '<div class="fy-head">' +
@@ -32075,17 +32387,6 @@ window.track = function (name, props) {
     }
     _unlocked = true;
     if (card) card.classList.add('is-playing');
-  }
-
-  /* Arriving at a card, by scroll rather than by tap. It used to call
-     playCard() directly, which is autoplay — every card after the first
-     started sounding the moment it was 60% on screen. Now arriving only
-     stops whatever the card scrolled away from; the new card sits paused
-     until it is tapped, same as the first card always had to. */
-  function activateCard(i) {
-    if (_current === i) return;
-    _current = i;
-    stopAll();
   }
 
   function stopAll() {
@@ -32191,7 +32492,7 @@ window.track = function (name, props) {
       var r = n.getBoundingClientRect(), d = Math.abs((r.top + r.height / 2) - mid);
       if (d < bd) { bd = d; best = i; }
     });
-    if (best >= 0 && best !== _current) activateCard(best);
+    if (best >= 0 && best !== _playing) playCard(best);
   }
 
   function observe(host) {
@@ -32214,10 +32515,18 @@ window.track = function (name, props) {
         // The end card. Reaching it asks once more rather than being final.
         if (i < 0) { topUp(); return; }
         if (i >= _items.length - LOOKAHEAD) topUp();
-        /* Arriving no longer plays anything — every card is paused until it
-           is tapped, so scrolling past a record never leaves it sounding
-           behind whatever is on screen now. See activateCard(). */
-        activateCard(i);
+        /* IT TRIES. This used to be `if (!_unlocked) return;`, so nothing in
+           the feed played until somebody had guessed that the sleeve was a
+           play button — which is the reported "playback sometimes requires
+           manually pressing play", and on any browser that would have allowed
+           autoplay it was a silent feed for no reason at all.
+
+           The browser is the only thing that knows whether a gesture is
+           required, so it is asked rather than guessed at: play(), and a
+           NotAllowedError comes back as 'blocked' and lights the cue. Once one
+           card has played, `_unlocked` is true and the rest of the session
+           needs nothing. The cost of being wrong is a rejected promise. */
+        playCard(i);
       });
     }, { threshold: 0.6 });
     host.querySelectorAll('.fy-card').forEach(function (n) { _io.observe(n); });
@@ -32336,8 +32645,17 @@ window.track = function (name, props) {
 
   function wire(host) {
     host.addEventListener('click', function (e) {
-      var t = e.target.closest('[data-play],[data-open],[data-save],[data-push],[data-suggest]');
+      var t = e.target.closest('[data-play],[data-open],[data-save],[data-push],[data-suggest],[data-like]');
       if (!t) return;
+
+      if (t.dataset.like != null) {
+        var li = +t.dataset.like, lc = _items[li];
+        if (!lc) return;
+        var on = window.toggleLikedSong && toggleLikedSong({ id: lc.key, name: lc.title, artist: lc.artist, art: lc.art });
+        t.classList.toggle('liked', !!on);
+        if (window.buzz) buzz('tap');
+        return;
+      }
 
       if (t.dataset.suggest != null) {
         // The feed keeps playing underneath — the modal is a sheet over it,
@@ -32377,7 +32695,6 @@ window.track = function (name, props) {
         // A real gesture. Whatever the browser refused before, it will not
         // refuse inside this.
         _unlocked = true;
-        _current = pi;
         if (_playing === pi) { stopAll(); return; }
         playCard(pi);
         return;
@@ -32463,7 +32780,7 @@ window.track = function (name, props) {
     var mine = ++_feedTok;
     host.innerHTML = '<div class="fy-loading">Finding songs for you&hellip;</div>';
     try {
-      _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0; _current = -1;
+      _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0;
       _ctx = buildContext();
       _pools = localPools(_ctx);
 
@@ -32538,7 +32855,7 @@ window.track = function (name, props) {
 
   // Leaving the tab must silence it: setMode only changes `display`, and an
   // <audio> element does not care that the card holding it is hidden.
-  function leave() { stopAll(); _current = -1; if (_io) { _io.disconnect(); _io = null; } }
+  function leave() { stopAll(); if (_io) { _io.disconnect(); _io = null; } }
 
   /* ---- the tabs, and pushing a record -----------------------------------
      `setFeed` rebuilds rather than filtering: the two feeds have different
