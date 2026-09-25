@@ -7696,8 +7696,10 @@ body[data-section="foryou"] .fy-tabs {
 .dm-wrap { position: absolute; top: 0; right: 0; z-index: 20; }
 .dm-toggle {
   position: relative;
-  transition: transform .12s var(--ease), border-color .18s var(--ease), color .18s var(--ease);
+  background: var(--surface2);
+  transition: transform .12s var(--ease), border-color .18s var(--ease), color .18s var(--ease), background .18s var(--ease);
 }
+.dm-toggle:hover { background: var(--surface-2); }
 .dm-toggle:active { transform: scale(.94); }
 /* A mission ready to claim gets a slow breathing glow on the button itself —
    noticeable at rest, not just a dot you have to spot — plus the dot. Nothing
