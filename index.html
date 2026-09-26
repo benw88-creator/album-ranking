@@ -3016,6 +3016,43 @@ html[data-motion="none"] .gc-emoji svg * { animation: none !important; }
   position: absolute; inset: 0; width: 100%; height: 100%;
   pointer-events: none;
 }
+/* Sign in with Apple / Google — web only, see wireSocialAuth(). Stacked
+   full-width pills above the email form, not styled as the app's own
+   btn-primary: these are identity buttons and read as more trustworthy kept
+   close to each provider's own neutral black/white convention. */
+#auth-social { display: flex; flex-direction: column; gap: 10px; }
+.btn-social {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; height: 46px; border-radius: 12px;
+  background: #fff; color: #1a1a1a; border: 1px solid var(--border-strong);
+  font: 700 14px/1 var(--font-body); cursor: pointer;
+}
+.btn-social:active { transform: scale(.98); }
+.btn-social:disabled { opacity: .6; cursor: default; }
+
+/* ---- MESSAGES ------------------------------------------------------------ */
+.dm-conv-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 4px;
+  border-top: 1px solid var(--border); cursor: pointer;
+}
+.dm-conv-row:first-child { border-top: none; }
+.dm-conv-row img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
+.dm-conv-name { font-weight: 700; font-size: 14px; }
+.dm-conv-prev { font-size: 13px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-conv-row.unread .dm-conv-name::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); margin-left: 6px; vertical-align: middle; }
+.dm-back { background: none; border: none; color: var(--text); font-size: 18px; padding: 0 10px 0 0; cursor: pointer; }
+.dm-thread-list {
+  max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+  padding: 4px 2px 10px;
+}
+.dm-bubble {
+  max-width: 78%; padding: 9px 13px; border-radius: 16px; font-size: 14px; line-height: 1.4;
+  word-wrap: break-word;
+}
+.dm-bubble.me { align-self: flex-end; background: var(--gold-dim); color: var(--text); border-bottom-right-radius: 4px; }
+.dm-bubble.them { align-self: flex-start; background: var(--surface-3); border-bottom-left-radius: 4px; }
+.dm-compose { display: flex; gap: 8px; margin-top: 8px; }
+.dm-compose .g-input { flex: 1; }
 /* ---- SHEETS -------------------------------------------------------------
    A centred dialog floating in the middle of a phone is a website's idea of a
    modal. Every one of these becomes a sheet instead: anchored to the bottom
@@ -10353,6 +10390,20 @@ window.discAmt = function (n) {
     <div id="auth-view-main">
       <div class="modal-head"><span class="mh-emoji" data-icon="person"></span>
         <div><h2 id="auth-title">Log in to VINALL</h2><p id="auth-sub">Save your rankings &amp; sync across devices.</p></div></div>
+      <!-- Web only — see the comment beside wireSocialAuth() for why these
+           are hidden inside the app. Apple sits first per Apple's own
+           guidance for an iOS-adjacent product, Google beside it. -->
+      <div id="auth-social" style="display:none;">
+        <button class="btn-social" id="auth-apple" type="button" data-provider="apple">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor"><path d="M11.2 2.4c.5-.6.8-1.4.7-2.2-.7 0-1.6.5-2.1 1.1-.5.5-.9 1.3-.8 2.1.8.1 1.6-.4 2.2-1zM13.4 11.2c-.3.7-.5 1-.9 1.6-.5.8-1.3 1.9-2.2 1.9-.8 0-1-.5-2.1-.5s-1.4.5-2.2.5c-.9 0-1.6-1-2.1-1.8-1.5-2.2-1.6-4.8-.7-6.2.6-1 1.6-1.6 2.6-1.6.9 0 1.5.6 2.2.6.7 0 1.1-.6 2.2-.6.8 0 1.7.5 2.3 1.3-2 1.1-1.7 4 .1 4.8z"/></svg>
+          Continue with Apple
+        </button>
+        <button class="btn-social" id="auth-google" type="button" data-provider="google">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="#4285F4" d="M15.5 8.2c0-.6-.1-1.1-.2-1.6H8v3h4.2c-.2 1-.7 1.8-1.6 2.4v2h2.6c1.5-1.4 2.3-3.4 2.3-5.8z"/><path fill="#34A853" d="M8 16c2.2 0 4-.7 5.3-2l-2.6-2c-.7.5-1.6.8-2.7.8-2.1 0-3.8-1.4-4.4-3.3H.9v2.1C2.3 14.2 5 16 8 16z"/><path fill="#FBBC05" d="M3.6 9.5c-.2-.5-.2-1-.2-1.5s.1-1 .2-1.5V4.4H.9C.3 5.5 0 6.7 0 8s.3 2.5.9 3.6l2.7-2.1z"/><path fill="#EA4335" d="M8 3.2c1.2 0 2.3.4 3.1 1.2l2.3-2.3C12 .8 10.2 0 8 0 5 0 2.3 1.8.9 4.4l2.7 2.1C4.2 4.6 5.9 3.2 8 3.2z"/></svg>
+          Continue with Google
+        </button>
+      </div>
+      <div id="auth-social-divider" style="display:none; text-align:center; font-size:12px; color:var(--text-faint); margin:14px 0; text-transform:uppercase; letter-spacing:.05em;">or</div>
       <label class="g-label" style="text-align:left;" for="auth-email">Email</label>
       <input id="auth-email" class="g-input" type="email" placeholder="you@example.com" autocomplete="email" style="margin-bottom:12px;">
       <label class="g-label" style="text-align:left;" for="auth-pass">Password</label>
@@ -10394,6 +10445,34 @@ window.discAmt = function (n) {
       <input id="auth-newpass2" class="g-input" type="password" placeholder="Type it again" autocomplete="new-password">
       <button class="btn-primary g-btn-full" id="auth-newpass-submit" style="margin-top:16px;">Set new password</button>
       <div class="g-error" id="auth-newpass-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ MESSAGES ============================ -->
+<div class="modal" id="dm-modal">
+  <div class="modal-panel" style="max-width:420px;">
+    <button class="modal-close" id="dm-close" aria-label="Close">&times;</button>
+
+    <!-- Inbox view -->
+    <div id="dm-view-inbox">
+      <div class="modal-head"><span class="mh-emoji" data-icon="person"></span>
+        <div><h2>Messages</h2></div></div>
+      <div id="dm-inbox-list"></div>
+    </div>
+
+    <!-- Thread view -->
+    <div id="dm-view-thread" style="display:none;">
+      <div class="modal-head">
+        <button class="dm-back" id="dm-back" aria-label="Back to inbox">&larr;</button>
+        <div><h2 id="dm-thread-name"></h2></div>
+      </div>
+      <div id="dm-thread-list" class="dm-thread-list"></div>
+      <div class="dm-compose">
+        <input id="dm-input" class="g-input" type="text" maxlength="1000" placeholder="Message&hellip;" autocomplete="off">
+        <button class="btn-primary" id="dm-send">Send</button>
+      </div>
+      <div class="g-error" id="dm-error"></div>
     </div>
   </div>
 </div>
@@ -15104,6 +15183,7 @@ const Cloud=(function(){
              no room for it — so this is the only way in there, not a second
              one. */
           '<button class="acct-menu-item" id="acct-activity">'+ICONS.stopwatch+' Recent activity</button>'+
+          '<button class="acct-menu-item" id="acct-messages">'+ICONS.person+' Messages</button>'+
           '<button class="acct-menu-item" data-go="people">'+ICONS.people+' People</button>'+
           '<button class="acct-menu-item" data-go="grooves">'+ICONS.groove+' Grooves</button>'+
 
@@ -15127,6 +15207,12 @@ const Cloud=(function(){
       e.stopPropagation();
       const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');
       if(window.openSettings)openSettings();
+    });
+    const msgs=document.getElementById('acct-messages');
+    if(msgs)msgs.addEventListener('click',function(e){
+      e.stopPropagation();
+      const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');
+      if(window.Messages)Messages.open();
     });
     /* Opens the same drawer the top-bar button does, by pressing that button
        rather than reaching into the drawer itself — one way in, so whatever
@@ -15335,6 +15421,48 @@ const Cloud=(function(){
     btn.disabled=false;btn.textContent=(mode==='login'?'Log in':'Sign up');
   }
 
+  /* Sign in with Apple / Google — WEB ONLY, and deliberately so.
+     supabase.auth.signInWithOAuth() redirects the current page to the
+     provider and back; that is a real browser navigation, which is exactly
+     what the native app cannot offer a way back from. There is no deep-link
+     handling anywhere in this app (a decision already made and stated
+     elsewhere in this file) — without it, finishing the OAuth flow would
+     hand the person back to Safari, not to the app they started in. Google
+     additionally refuses to complete OAuth inside an embedded webview at
+     all (it answers `disallowed_useragent`), so even ignoring the deep-link
+     gap, Google's button would simply fail inside Capacitor's WKWebView.
+     So: shown on the web, hidden in the app, rather than shipped broken.
+     Wiring the native side properly needs a Capacitor plugin for each
+     provider's real native sign-in flow, plus a registered URL scheme and an
+     appUrlOpen listener — a native project change, not a page change, and
+     out of reach without Xcode/Android Studio in front of it. */
+  function wireSocialAuth(){
+    if(window.Native && Native.on)return;      // stay hidden; see above
+    var wrap=document.getElementById('auth-social');
+    var divider=document.getElementById('auth-social-divider');
+    if(!wrap)return;
+    wrap.style.display='';
+    if(divider)divider.style.display='';
+    function redirectTo(){
+      return location.origin+location.pathname;   // web only reaches here
+    }
+    ['apple','google'].forEach(function(p){
+      var btn=document.getElementById('auth-'+p);
+      if(!btn)return;
+      btn.addEventListener('click',async function(){
+        btn.disabled=true;
+        var errEl=document.getElementById('auth-error');
+        if(errEl)errEl.textContent='';
+        try{
+          var res=await sb.auth.signInWithOAuth({provider:p,options:{redirectTo:redirectTo()}});
+          // A successful call navigates the page away — nothing left to do.
+          // Only a rejection or an inline error means it never left.
+          if(res && res.error){ if(errEl)errEl.textContent=res.error.message; btn.disabled=false; }
+        }catch(e){ if(errEl)errEl.textContent='Could not start that sign-in.'; btn.disabled=false; }
+      });
+    });
+  }
+
   /* WHEN IS THE APP ACTUALLY LOGGED IN.
 
      init() is async and onAuthed() awaits the merge and the wallet, so for a
@@ -15359,6 +15487,7 @@ const Cloud=(function(){
     document.getElementById('auth-toggle').addEventListener('click',function(){setMode(mode==='login'?'signup':'login');});
     document.getElementById('auth-submit').addEventListener('click',submit);
     document.getElementById('auth-pass').addEventListener('keydown',function(e){if(e.key==='Enter')submit();});
+    wireSocialAuth();
     // Forgot password flow
     document.getElementById('auth-forgot-link').addEventListener('click',function(){showAuthView('forgot');});
     document.getElementById('auth-back-login').addEventListener('click',function(){showAuthView('main');});
@@ -16421,7 +16550,7 @@ async function drawProfile(host,prof,isOwner){
   const shareUrl=Native.site+'?u='+prof.id;
   let actionBtn='';
   if(isOwner){actionBtn='<div style="display:flex;flex-direction:column;gap:8px;"><button class="btn-primary" id="prof-edit">Edit profile</button><button class="btn-mini" id="prof-share">'+(Native.on?'Share profile':'Copy share link')+'</button></div>';}
-  else if(me){actionBtn='<button class="'+(following?'btn-mini':'btn-primary')+'" id="prof-follow">'+(following?'Following \u2713':'+ Follow')+'</button>';}
+  else if(me){actionBtn='<div style="display:flex;gap:8px;"><button class="'+(following?'btn-mini':'btn-primary')+'" id="prof-follow">'+(following?'Following \u2713':'+ Follow')+'</button><button class="btn-mini" id="prof-message" data-uid="'+esc(prof.id)+'" data-uname="'+esc(prof.username||'')+'">Message</button></div>';}
   else{actionBtn='<button class="btn-primary" id="prof-follow-login">Log in to follow</button>';}
   let listsHtml='';
   if(lists.length||isOwner){
@@ -16569,6 +16698,8 @@ async function drawProfile(host,prof,isOwner){
     const fb=document.getElementById('prof-follow');
     if(fb)fb.addEventListener('click',async function(){fb.disabled=true;if(following){await Cloud.unfollow(prof.id);}else{await Cloud.follow(prof.id);}renderProfile();});
     const fl=document.getElementById('prof-follow-login');if(fl)fl.addEventListener('click',function(){Cloud.openAuth();});
+    const pm=document.getElementById('prof-message');
+    if(pm)pm.addEventListener('click',function(){if(window.Messages)Messages.openThread(pm.dataset.uid,pm.dataset.uname);});
     host.querySelectorAll('.top3-slot').forEach(function(el){el.addEventListener('click',function(){const t=top3[+el.dataset.slot];if(t&&t.id)openAlbum(t);});});
     const grid=document.getElementById('prof-rankings');
     if(grid){
@@ -31519,6 +31650,165 @@ window.track = function (name, props) {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDot);
   else initDot();
   window.renderMissionsDot = render;
+})();
+
+/* ================================================================
+   MESSAGES — a thread between two people, and an inbox of them.
+
+   The social layer had follows, comments, reactions and Groove membership,
+   with nothing for "message this specific person" — the obvious next thing
+   somebody reaches for after comparing taste with a stranger and not
+   finding. Deliberately small: a thread and an inbox, one read marker, no
+   typing indicators, no push, no editing.
+
+   RLS does the real work (see the migration) — blocked pairs simply cannot
+   insert a row in either direction, so nothing here re-checks that; it
+   already can't happen.
+   ================================================================ */
+(function () {
+  'use strict';
+  var el = function (id) { return document.getElementById(id); };
+  var modal, inboxView, threadView, threadList, inboxList;
+  var _otherId = null, _otherName = null, _thread = null, _threadTok = 0;
+
+  function esc2(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  }); }
+
+  function sb() { return (window.Cloud && Cloud.client) ? Cloud.client() : null; }
+  function me() { return (window.Cloud && Cloud.getUser) ? Cloud.getUser() : null; }
+
+  function showInbox() { inboxView.style.display = ''; threadView.style.display = 'none'; }
+  function showThread() { inboxView.style.display = 'none'; threadView.style.display = ''; }
+
+  function open() {
+    if (!modal) return;
+    modal.classList.add('open');
+    showInbox();
+    renderInbox();
+  }
+  function close() { if (modal) modal.classList.remove('open'); }
+
+  async function renderInbox() {
+    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) {
+      inboxList.innerHTML = '<div class="reco-note">Log in to send messages.</div>';
+      return;
+    }
+    inboxList.innerHTML = '<p class="reco-note loading-dots">loading</p>';
+    var client = sb();
+    var r = client ? await client.rpc('my_conversations') : { error: true };
+    if (r.error || !Array.isArray(r.data)) {
+      inboxList.innerHTML = '<div class="reco-note">Could not load your messages right now.</div>';
+      return;
+    }
+    if (!r.data.length) {
+      inboxList.innerHTML = '<div class="reco-note">No conversations yet — message someone from their profile.</div>';
+      return;
+    }
+    // Names/avatars are a second lookup — my_conversations only knows ids,
+    // the same split fetchProfile/fetchScoresByUsers already keep elsewhere
+    // in this file rather than duplicating a profile join into every RPC.
+    var ids = r.data.map(function (c) { return c.other_id; });
+    var profiles = {};
+    try {
+      var pr = await client.from('profiles').select('id,username,avatar_url').in('id', ids);
+      (pr.data || []).forEach(function (p) { profiles[p.id] = p; });
+    } catch (e) {}
+    inboxList.innerHTML = r.data.map(function (c) {
+      var p = profiles[c.other_id] || {};
+      var name = p.username || 'Someone';
+      var prefix = c.last_from_me ? 'You: ' : '';
+      return '<div class="dm-conv-row' + (c.unread_count > 0 ? ' unread' : '') + '" data-other="' + esc2(c.other_id) + '" data-name="' + esc2(name) + '">' +
+        '<img src="' + esc2(p.avatar_url || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+        '<div style="flex:1;min-width:0;"><div class="dm-conv-name">' + esc2(name) + '</div>' +
+        '<div class="dm-conv-prev">' + esc2(prefix + c.last_body) + '</div></div></div>';
+    }).join('');
+    inboxList.querySelectorAll('[data-other]').forEach(function (row) {
+      row.addEventListener('click', function () { openThread(row.dataset.other, row.dataset.name); });
+    });
+  }
+
+  async function openThread(otherId, otherName) {
+    _otherId = otherId; _otherName = otherName || 'Conversation';
+    document.getElementById('dm-thread-name').textContent = _otherName;
+    if (!otherName) {
+      try {
+        var client = sb();
+        var pr = await client.from('profiles').select('username').eq('id', otherId).single();
+        if (pr.data && pr.data.username) { _otherName = pr.data.username; document.getElementById('dm-thread-name').textContent = _otherName; }
+      } catch (e) {}
+    }
+    if (!modal.classList.contains('open')) modal.classList.add('open');
+    showThread();
+    await loadThread();
+  }
+
+  async function loadThread() {
+    var mine = ++_threadTok;
+    var m = me();
+    threadList.innerHTML = '<p class="reco-note loading-dots">loading</p>';
+    var client = sb();
+    if (!client || !m) { threadList.innerHTML = ''; return; }
+    var r = await client.from('messages').select('id,sender_id,recipient_id,body,created_at,read_at')
+      .or('and(sender_id.eq.' + m.id + ',recipient_id.eq.' + _otherId + '),and(sender_id.eq.' + _otherId + ',recipient_id.eq.' + m.id + ')')
+      .order('created_at', { ascending: true });
+    if (mine !== _threadTok) return;   // moved on to a different thread
+    _thread = r.data || [];
+    paintThread();
+    // Mark anything the other person sent as read, one at a time — there is
+    // no bulk RPC because a thread is short by construction (no pagination
+    // here yet) and this only ever runs once per open, not per message.
+    _thread.filter(function (x) { return x.sender_id === _otherId && !x.read_at; })
+      .forEach(function (x) { client.rpc('mark_message_read', { p_message_id: x.id }).catch(function () {}); });
+  }
+
+  function paintThread() {
+    var m = me();
+    threadList.innerHTML = (_thread || []).map(function (x) {
+      return '<div class="dm-bubble ' + (x.sender_id === (m && m.id) ? 'me' : 'them') + '">' + esc2(x.body) + '</div>';
+    }).join('');
+    threadList.scrollTop = threadList.scrollHeight;
+  }
+
+  async function send() {
+    var input = el('dm-input'), btn = el('dm-send'), err = el('dm-error');
+    var body = input.value.trim();
+    if (!body) return;
+    var m = me();
+    if (!m) { err.textContent = 'Log in to send messages.'; return; }
+    err.textContent = '';
+    btn.disabled = true;
+    var client = sb();
+    var r = await client.from('messages').insert({ sender_id: m.id, recipient_id: _otherId, body: body }).select().single();
+    btn.disabled = false;
+    if (r.error) {
+      // A blocked pair fails the insert policy rather than the app checking
+      // first — see the migration. Either party being blocked reads the
+      // same generically, which is the honest answer: neither side is told
+      // which of them did the blocking.
+      err.textContent = 'Could not send that message.';
+      return;
+    }
+    input.value = '';
+    _thread = (_thread || []).concat([r.data]);
+    paintThread();
+  }
+
+  function init() {
+    modal = el('dm-modal');
+    if (!modal) return;
+    inboxView = el('dm-view-inbox'); threadView = el('dm-view-thread');
+    threadList = el('dm-thread-list'); inboxList = el('dm-inbox-list');
+    el('dm-close').addEventListener('click', close);
+    modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+    el('dm-back').addEventListener('click', function () { showInbox(); renderInbox(); });
+    el('dm-send').addEventListener('click', send);
+    el('dm-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') send(); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+
+  window.Messages = { open: open, openThread: openThread };
 })();
 
 /* ================================================================
