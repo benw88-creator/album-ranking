@@ -5,12 +5,46 @@
 
 let cached = { token: null, exp: 0 };
 
+// This route hands a real, working Spotify bearer token to WHOEVER calls it —
+// no auth, because guest browsing needs that. A browser calling it through
+// the app is indistinguishable from a script calling the URL directly, so a
+// rate limit is the only lever available short of closing guest mode.
+//
+// Per-IP, fixed 60s window, in-memory. ponytail: this resets on every cold
+// start and is per warm instance, not global across Vercel's fleet — a
+// determined caller spread across enough function instances or IPs is not
+// stopped by it. It stops the actual cost here, which is casual scraping and
+// a single caller looping this endpoint, not a coordinated attacker; that
+// ceiling is the honest one for a route with no user identity to key on.
+// Upgrade path if this route is ever actually abused: a shared store
+// (Upstash/Vercel KV) keyed the same way.
+const RATE = new Map();
+const RATE_WINDOW_MS = 60000;
+const RATE_MAX = 20;
+function limited(req) {
+  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim() || 'unknown';
+  const now = Date.now();
+  const row = RATE.get(ip);
+  if (!row || now > row.reset) { RATE.set(ip, { count: 1, reset: now + RATE_WINDOW_MS }); return false; }
+  row.count++;
+  return row.count > RATE_MAX;
+}
+// The map only grows if nothing ever prunes it. Swept opportunistically
+// rather than on a timer — no timer to leak across cold starts, and this
+// route is called often enough that a sweep is never far away.
+function sweep(now) {
+  for (const [ip, row] of RATE) if (now > row.reset) RATE.delete(ip);
+}
+
 import { cors } from './_cors.js';
 
 export default async function handler(req, res) {
   // Answers the preflight and stops. Must be first: the method checks below
   // would 405 an OPTIONS, and three of these routes have one.
   if (cors(req, res)) return;
+  const now = Date.now();
+  if (RATE.size > 500) sweep(now);
+  if (limited(req)) { res.status(429).json({ error: 'Too many requests' }); return; }
   try {
     const id = process.env.SPOTIFY_CLIENT_ID;
     const secret = process.env.SPOTIFY_CLIENT_SECRET;
