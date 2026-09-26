@@ -2914,24 +2914,12 @@ html[data-motion="none"] .game-card.gc-lead::after { animation: none; }
 }
 @keyframes flameGlowFast { 0%, 100% { filter: drop-shadow(0 0 1px var(--g)); } 50% { filter: drop-shadow(0 0 4px var(--g)); } }
 
-/* Higher or Lower — the same two-layer flame, but rising and settling rather
-   than flickering side to side: height and glow both peak once per cycle,
-   which is tension building rather than a fire animation. */
-#hl-card .gc-emoji .fl-out { animation: flameRise 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
-#hl-card .gc-emoji .fl-in { animation: flameRiseIn 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
-#hl-card .gc-emoji svg { animation: flameGlowRise 2.6s ease-in-out infinite; }
-@keyframes flameRise {
-  0%, 100% { transform: translateY(0) scaleY(1); }
-  55% { transform: translateY(-.3px) scaleY(1.02); }
-  78% { transform: translateY(-1.6px) scaleY(1.18); }
-  92% { transform: translateY(-.6px) scaleY(1.06); }
-}
-@keyframes flameRiseIn {
-  0%, 100% { transform: translateY(0) scaleY(1); opacity: .55; }
-  78% { transform: translateY(-1.2px) scaleY(1.2); opacity: .8; }
-  92% { transform: translateY(-.4px) scaleY(1.05); opacity: .6; }
-}
-@keyframes flameGlowRise { 0%, 55% { filter: drop-shadow(0 0 1px var(--g)); } 78% { filter: drop-shadow(0 0 5px var(--g)); } 100% { filter: drop-shadow(0 0 1px var(--g)); } }
+/* Higher or Lower — the icon is the question: two arrows, each drifting on
+   its own timing so neither reads as "winning" at rest, just alive. */
+.gc-updown .arr-up { animation: arrUp 2.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.gc-updown .arr-down { animation: arrDown 2.6s ease-in-out infinite .4s; transform-box: fill-box; transform-origin: center; }
+@keyframes arrUp { 0%, 100% { transform: translateY(0); opacity: .85; } 50% { transform: translateY(-1.6px); opacity: 1; } }
+@keyframes arrDown { 0%, 100% { transform: translateY(0); opacity: .85; } 50% { transform: translateY(1.6px); opacity: 1; } }
 
 /* Guess from Tracklist — the icon is already two notes; they drift up and
    settle on different periods and a half-second offset, which is what makes
@@ -2963,23 +2951,20 @@ html[data-motion="none"] .game-card.gc-lead::after { animation: none; }
   90% { transform: rotate(8deg); opacity: .4; }
 }
 
-/* Cover Fire — the same trophy as Bid Wars, faster and paired with its own
-   flame-coloured glow underneath so the two never move in sync — more
-   energetic than the rest of the grid, on purpose, for the game that is ten
-   sleeves in a minute. */
-#blitz-card .gc-emoji svg { animation: trophyLiftFast 2.4s var(--ease) infinite; transform-origin: 50% 90%; }
-@keyframes trophyLiftFast {
-  0%, 55%, 100% { transform: translateY(0) rotate(0deg); }
-  62% { transform: translateY(-1.8px) rotate(-4deg); }
-  70% { transform: translateY(-1px) rotate(3deg); }
+/* Cover Fire — a small recoil kick on the whole pistol, infrequent enough to
+   read as an event, plus the hammer cocking back a moment before on its own
+   timing so the two parts never move as one rigid unit. */
+.gc-pistol { animation: pistolKick 2.6s var(--ease) infinite; transform-origin: 70% 60%; }
+@keyframes pistolKick {
+  0%, 82%, 100% { transform: translateX(0) rotate(0deg); }
+  88% { transform: translateX(-1.4px) rotate(-3deg); }
+  94% { transform: translateX(.4px) rotate(1deg); }
 }
-#blitz-card .gc-emoji::after {
-  left: 0; right: 0; bottom: 2px; margin: auto; width: 20px; height: 10px;
-  background: radial-gradient(ellipse at center, var(--c-pink) 0%, transparent 70%);
-  opacity: .25; filter: blur(2px);
-  animation: fireGlowPulse 1.7s ease-in-out infinite;
+.gc-pistol .pistol-hammer { animation: hammerCock 2.6s var(--ease) infinite; transform-box: fill-box; transform-origin: 100% 100%; }
+@keyframes hammerCock {
+  0%, 78%, 100% { transform: rotate(0deg); }
+  84% { transform: rotate(-16deg); }
 }
-@keyframes fireGlowPulse { 0%, 100% { opacity: .25; transform: scaleY(1); } 50% { opacity: .5; transform: scaleY(1.3); } }
 
 @media (prefers-reduced-motion: reduce) {
   html:not([data-motion="full"]) .gc-emoji,
@@ -9167,6 +9152,20 @@ window.ICONS = {
   edit: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M10.6 2.4 13.6 5.4 5.6 13.4 2 14l.6-3.6Z"/><path d="M9.2 3.8 12.2 6.8"/></svg>',
   groove: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="4"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>',
   mic: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="5.8" y="1.6" width="4.4" height="7.4" rx="2.2"/><path d="M3.6 7.6a4.4 4.4 0 0 0 8.8 0M8 12v2.4M6 14.4h4"/></svg>',
+  // Two arrows, two paths — Higher or Lower asks which of two things is
+  // more, so the icon is the question rather than a generic stat glyph.
+  // Separate paths so each arrow can move on its own timing.
+  updown: '<svg class="ui-icon gc-updown" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<path class="arr-up" d="M8 7V2.2M5.3 4.7 8 2l2.7 2.7"/>'
+    + '<path class="arr-down" d="M8 9v4.8M5.3 11.3 8 14l2.7-2.7"/>'
+    + '</svg>',
+  // A side-on pistol silhouette for Cover Fire, in the same stroke language
+  // as everything else — slide/barrel/grip as one body, the hammer as its
+  // own small piece so it can cock back independently of the recoil.
+  pistol: '<svg class="ui-icon gc-pistol" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<path class="pistol-body" d="M2.4 8.4h7.4V6.6a1 1 0 0 1 1-1h1.8a.8.8 0 0 1 .8.8v1.6a.8.8 0 0 1-.8.8H12v1a1 1 0 0 1-1 1H6.6l-1.4 2.6H3.6v-2.6H3a.8.8 0 0 1-.8-.8Z"/>'
+    + '<path class="pistol-hammer" d="M9.6 5.6c.3-.6.9-1 1.6-1"/>'
+    + '</svg>',
   star: '<svg class="ui-icon" viewBox="0 0 16 16" fill="currentColor" stroke="none" aria-hidden="true"><path d="M8 1.4l1.9 4.3 4.7.5-3.5 3.2.9 4.6L8 11.7 3.9 14l.9-4.6-3.5-3.2 4.7-.5Z"/></svg>',
   beaker: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M6.2 1.8h3.6M6.8 1.8v4.3L3.4 12a1.4 1.4 0 0 0 1.2 2.2h6.8a1.4 1.4 0 0 0 1.2-2.2L9.2 6.1V1.8"/><path d="M5 10.4h6"/></svg>',
   check: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 8.4 6.3 11.6 13 4.4"/></svg>',
@@ -9619,14 +9618,14 @@ window.discAmt = function (n) {
       <!-- The Draw's card was here. It lives on the Discs page only now: it
            is not a minigame, it is the currency's other half. -->
       <div class="game-card" id="blitz-card">
-        <div class="gc-emoji" data-icon="trophy"></div>
+        <div class="gc-emoji" data-icon="pistol"></div>
         <h3>Cover Fire</h3>
         <p>Ten sleeves, one minute, vs a mate.</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" id="blitz-card-status"></div>
       </div>
       <div class="game-card" id="hl-card">
-        <div class="gc-emoji" data-icon="fire"></div>
+        <div class="gc-emoji" data-icon="updown"></div>
         <h3>Higher or Lower</h3>
         <p>Your own records, head to head.</p>
         <div class="gc-go">Play &rarr;</div>
@@ -33932,6 +33931,11 @@ window.track = function (name, props) {
     var host = el('fy-feed');
     if (!host || _busy) return;
     if (_built && !force) return;
+    // stopAll() pauses VinalAudio and clears _playing/_tok; wiping the DOM
+    // below does neither by itself, since the audio element is not scoped to
+    // this feed's markup — it kept playing under the fresh cards, which is
+    // what a manual refresh or the >10s rebuild both looked like.
+    stopAll();
     _busy = true;
     var mine = ++_feedTok;
     host.innerHTML = '<div class="fy-loading">Finding songs for you&hellip;</div>';
