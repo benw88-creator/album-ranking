@@ -763,7 +763,10 @@ nav.modes {
   }
 }
 .nav-indicator {
-  position: absolute; top: 6px; bottom: 6px; left: 0;
+  /* Matches nav.modes's own padding (5px) exactly — it was 6px, a pixel
+     tighter than the button's actual padding box on every side at once,
+     which is the "ring is slightly off" a tight screenshot crop would show. */
+  position: absolute; top: 5px; bottom: 5px; left: 0;
   width: 0; border-radius: 999px;
   /* --nav-ind is written by positionNavIndicator off the active button's own
      hue. Falls back to the section colour, so a build where that JS has not
@@ -2027,7 +2030,7 @@ html[data-motion="none"] .card { animation: none; }
 }
 .top-add-menu button {
   padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
-  background: var(--surface2); border: 1px solid var(--border-strong); color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--border-strong); color: var(--text);
 }
 .top-add-menu button:hover { border-color: var(--gold); color: var(--gold); }
 
@@ -2619,7 +2622,7 @@ select.ctrl-select:focus { outline: none; border-color: var(--gold); }
 .lb-bar {
   width: 100%; display: flex; align-items: center; gap: 12px;
   padding: 12px 16px; border-radius: var(--radius);
-  background: linear-gradient(100deg, var(--surface2), var(--surface));
+  background: linear-gradient(100deg, var(--surface-2), var(--surface));
   border: 1px solid var(--border-strong); cursor: pointer; text-align: left;
   color: var(--text);
 }
@@ -2771,136 +2774,225 @@ html[data-motion="none"] .game-card.gc-lead::after { animation: none; }
 }
 .gc-emoji .ui-icon, .gc-emoji svg { width: 24px; height: 24px; position: relative; z-index: 1; }
 
-/* ---- ONE ANIMATION PER GAME, EACH ITS OWN --------------------------------
-   Behind the icon rather than moved onto it, so the glyph itself stays put
-   and legible while the well underneath does the work. Every one is
-   transform/opacity/background-position only — no layout thrash, all ten
-   can run at once on a phone without cost. Each is a small gesture toward
-   what that game actually does, not a shared effect recoloured ten times,
-   and each stops dead under prefers-reduced-motion with everything else
-   in this file. */
-.gc-emoji::before { content: ''; position: absolute; inset: 0; pointer-events: none; }
+/* ---- ONE AMBIENT ANIMATION PER GAME, ON THE ICON ITSELF ------------------
+   Second version of this system. The first animated a decorative shape
+   BEHIND a static glyph (a dot pulsing, a caret blinking) — which is exactly
+   the "generic UI decoration" this replaces. Every animation below moves a
+   real piece of the icon: the wave's own bars, the flame's own two layers,
+   the camera's own lens. Nothing here touches the card, only the svg inside
+   `.gc-emoji` and, where the icon has no separate element for something the
+   brief asks for (a shimmer, an expanding ring, a sound wave), a pseudo-
+   element scoped to sit behind or beside it rather than replacing it.
+   transform/opacity/filter only — no layout thrash — and every duration is
+   deliberately not a multiple of its neighbours so ten cards never fall into
+   step. All of it stops under reduced motion, same as everything else here. */
+.gc-emoji::before, .gc-emoji::after { content: ''; position: absolute; pointer-events: none; }
+.gc-emoji::before { inset: 0; }
 
-/* Recall — a sound pulse expanding outward, like a note landing. */
-#recall-card .gc-emoji::before {
-  border-radius: 50%; border: 1.5px solid var(--g);
-  animation: gcPulseRing 2.6s var(--ease) infinite;
-}
-@keyframes gcPulseRing {
-  0% { transform: scale(.35); opacity: .8; }
-  70%, 100% { transform: scale(1.15); opacity: 0; }
-}
+/* Recall — the icon IS six bars; this makes them move like six bars, each on
+   its own period and phase so a "wave travelling through" emerges from the
+   drift between them rather than being scripted. wb3 (centre, tallest) gets
+   an irregular double-peak — the "occasionally more energetic" bar. */
+.gc-wave .wb1 { animation: wb1 1.6s ease-in-out infinite; }
+.gc-wave .wb2 { animation: wb2 1.9s ease-in-out infinite .15s; }
+.gc-wave .wb3 { animation: wb3 2.6s ease-in-out infinite .3s; }
+.gc-wave .wb4 { animation: wb4 1.7s ease-in-out infinite .45s; }
+.gc-wave .wb5 { animation: wb5 2.1s ease-in-out infinite .6s; }
+.gc-wave .wb6 { animation: wb6 1.5s ease-in-out infinite .75s; }
+.gc-wave .wb { transform-box: fill-box; transform-origin: center; }
+@keyframes wb1 { 0%, 100% { transform: scaleY(.85); } 50% { transform: scaleY(1.2); } }
+@keyframes wb2 { 0%, 100% { transform: scaleY(.75); } 50% { transform: scaleY(1.3); } }
+@keyframes wb3 { 0%, 45%, 100% { transform: scaleY(.8); } 22% { transform: scaleY(1.3); } 68% { transform: scaleY(1.55); } }
+@keyframes wb4 { 0%, 100% { transform: scaleY(.8); } 50% { transform: scaleY(1.25); } }
+@keyframes wb5 { 0%, 100% { transform: scaleY(.85); } 50% { transform: scaleY(1.2); } }
+@keyframes wb6 { 0%, 100% { transform: scaleY(.9); } 50% { transform: scaleY(1.15); } }
+#recall-card .gc-emoji svg { animation: waveGlow 4.4s ease-in-out infinite; }
+@keyframes waveGlow { 0%, 100% { filter: drop-shadow(0 0 0 transparent); } 50% { filter: drop-shadow(0 0 2.5px var(--g)); } }
 
-/* Bid Wars — a glint sweeping once then pausing, like light catching a coin
-   mid-flip. The pause is the anticipation; a constant sweep would just be
-   noise. */
-#war-card .gc-emoji::before {
-  background: linear-gradient(115deg, transparent 20%, color-mix(in srgb, var(--g) 55%, transparent) 48%, transparent 76%);
-  background-size: 260% 260%;
-  animation: gcCoinFlip 3.6s cubic-bezier(.3,.7,.2,1) infinite;
+/* Bid Wars — mostly still, then a small lift and tilt, like a trophy that has
+   just been handed over, with a shimmer that only sometimes lands alongside
+   it rather than every time — the pause is what makes either read as an
+   event rather than a loop. */
+#war-card .gc-emoji svg { animation: trophyLift 4.2s var(--ease) infinite; transform-origin: 50% 90%; }
+@keyframes trophyLift {
+  0%, 78%, 100% { transform: translateY(0) rotate(0deg); }
+  84% { transform: translateY(-1.6px) rotate(-3deg); }
+  90% { transform: translateY(-1px) rotate(3deg); }
+  95% { transform: translateY(0) rotate(0deg); }
 }
-@keyframes gcCoinFlip {
-  0%, 55%, 100% { background-position: 130% 0%; }
-  22% { background-position: -30% 0%; }
+#war-card .gc-emoji::after {
+  inset: 0;
+  background: linear-gradient(115deg, transparent 42%, color-mix(in srgb, var(--g) 65%, white 25%) 50%, transparent 58%);
+  background-size: 240% 240%; opacity: 0;
+  animation: warShimmer 8.4s var(--ease) infinite;
 }
-
-/* Daily Drop — a dot falling and settling, one drop per loop. */
-#drop-card .gc-emoji::before {
-  background: radial-gradient(circle 3.5px at 50% 0%, var(--g) 99%, transparent 100%);
-  animation: gcDrop 2.2s cubic-bezier(.5,0,.7,1) infinite;
-}
-@keyframes gcDrop {
-  0% { background-position: 0 -10px; opacity: 0; }
-  35% { opacity: 1; }
-  55% { background-position: 0 26px; opacity: 1; }
-  62% { background-position: 0 22px; }
-  70%, 100% { background-position: 0 26px; opacity: 0; }
-}
-
-/* Earworm — a text cursor blinking, because the game is spelling something
-   out letter by letter. A soft fade rather than a hard on/off cut, which read
-   as broken rather than as a cursor. */
-#ew-card .gc-emoji::before {
-  left: auto; right: 9px; top: 50%; width: 2px; height: 16px;
-  margin-top: -8px; background: var(--g);
-  animation: gcCaret 1.4s ease-in-out infinite;
-}
-@keyframes gcCaret { 0%, 100% { opacity: 1; } 50% { opacity: .12; } }
-
-/* Guess the Cover — an aperture breathing open and shut, the way a camera
-   actually confirms a shot. Never fully gone: it used to sit invisible for
-   most of the loop and then burst, which read as a blank card that suddenly
-   glitched rather than an animation. */
-[data-game="cover"] .gc-emoji::before {
-  border-radius: 50%; background: var(--g);
-  animation: gcShutter 2.4s var(--ease) infinite;
-}
-@keyframes gcShutter {
-  0%, 100% { transform: scale(.55); opacity: .28; }
-  50% { transform: scale(1); opacity: .55; }
+@keyframes warShimmer {
+  0%, 82% { background-position: 140% 0%; opacity: 0; }
+  90% { opacity: .6; }
+  96%, 100% { background-position: -40% 0%; opacity: 0; }
 }
 
-/* Cover EXTREME — the same aperture, tighter and quicker, because this mode
-   is the brutal one. Intensity comes from tempo, not from a literal flicker —
-   a strobing icon well is what "buggy" looks like, not "extreme". */
-[data-game="coverx"] .gc-emoji::before {
-  border-radius: 50%; background: var(--g);
-  animation: gcShutter .9s var(--ease) infinite;
+/* Daily Drop — the disc drops and settles on its own cycle; the expanding
+   ring only fires every OTHER drop, timed to land the moment it touches
+   down, rather than on every single loop. */
+#drop-card .gc-emoji svg { animation: discDrop 3.6s cubic-bezier(.5,0,.7,1) infinite; transform-origin: 50% 100%; }
+@keyframes discDrop {
+  0%, 55%, 100% { transform: translateY(0) scaleY(1); }
+  62% { transform: translateY(2.2px) scaleY(1); }
+  68% { transform: translateY(1.4px) scaleY(.88); }
+  76% { transform: translateY(0) scaleY(1.04); }
+  84% { transform: translateY(0) scaleY(1); }
+}
+#drop-card .gc-emoji::after {
+  inset: 0; margin: auto; width: 26px; height: 26px;
+  border-radius: 50%; border: 1.5px solid var(--g); opacity: 0;
+  animation: discRing 7.2s var(--ease) infinite;
+}
+@keyframes discRing {
+  0%, 60% { transform: scale(.5); opacity: 0; }
+  68% { opacity: .5; }
+  86%, 100% { transform: scale(1.25); opacity: 0; }
 }
 
-/* Guess from Tracklist — thin rows scrolling past, like a tracklist
-   scrolling under a finger. */
-[data-game="tracklist"] .gc-emoji::before {
-  background: repeating-linear-gradient(to bottom, var(--g) 0 2px, transparent 2px 9px);
-  background-size: 100% 36px;
-  opacity: .5;
-  animation: gcScroll 2.4s linear infinite;
+/* Earworm — the mic itself pulses and tilts by a pixel or two, like it is
+   registering something, and two small pulses either side stand in for a
+   sound wave without inventing a literal one inside the glyph. */
+#ew-card .gc-emoji svg { animation: micPulse 2.1s var(--ease) infinite; transform-origin: 50% 60%; }
+@keyframes micPulse {
+  0%, 100% { transform: translateY(0) scale(1) rotate(0deg); }
+  45% { transform: translateY(-1.4px) scale(1.05) rotate(-2deg); }
+  70% { transform: translateY(-.6px) scale(1.02) rotate(1deg); }
 }
-@keyframes gcScroll { from { background-position: 0 0; } to { background-position: 0 -36px; } }
+#ew-card .gc-emoji::before, #ew-card .gc-emoji::after {
+  top: 50%; width: 4px; height: 4px; margin-top: -2px;
+  border-radius: 50%; background: var(--g); opacity: 0;
+}
+#ew-card .gc-emoji::before { left: 10px; animation: ewWave 2.1s var(--ease) infinite; }
+#ew-card .gc-emoji::after { right: 10px; left: auto; animation: ewWave 2.1s var(--ease) .35s infinite; }
+@keyframes ewWave { 0%, 55%, 100% { opacity: 0; transform: scale(.4); } 75% { opacity: .6; transform: scale(1.3); } }
 
-/* Guess the Year — a page turning corner-first, like a calendar flipping. */
-[data-game="year"] .gc-emoji::before {
-  left: auto; right: 0; top: 0; width: 16px; height: 16px;
+/* Guess the Cover — the lens itself racks focus (contract, overshoot,
+   settle) rather than the whole card breathing, plus one soft glint sweeping
+   across on a slower, separate cycle so the two never line up. */
+[data-game="cover"] .gc-emoji svg circle { animation: lensFocus 2.6s var(--ease) infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes lensFocus {
+  0%, 60%, 100% { transform: scale(1); }
+  68% { transform: scale(.82); }
+  76% { transform: scale(1.06); }
+  84% { transform: scale(.94); }
+  90% { transform: scale(1); }
+}
+[data-game="cover"] .gc-emoji::after {
+  inset: 0;
+  background: linear-gradient(115deg, transparent 42%, color-mix(in srgb, var(--g) 70%, white 20%) 50%, transparent 58%);
+  background-size: 220% 220%; opacity: 0;
+  animation: coverGlint 5.2s var(--ease) infinite;
+}
+@keyframes coverGlint {
+  0%, 70% { background-position: 130% 0%; opacity: 0; }
+  78% { opacity: .5; }
+  86%, 100% { background-position: -30% 0%; opacity: 0; }
+}
+
+/* Cover EXTREME — the two flame layers flicker independently and fast, the
+   glow brightening as the flame's height changes rather than on a fixed
+   beat. Same icon as Higher or Lower; a different tempo and shape is what
+   keeps the two from reading as the same animation recoloured. */
+[data-game="coverx"] .gc-emoji .fl-out { animation: flameOutFast 1.5s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+[data-game="coverx"] .gc-emoji .fl-in { animation: flameInFast 1.1s ease-in-out infinite .18s; transform-box: fill-box; transform-origin: 50% 100%; }
+[data-game="coverx"] .gc-emoji svg { animation: flameGlowFast 1.5s ease-in-out infinite; }
+@keyframes flameOutFast {
+  0%, 100% { transform: translateX(0) scaleY(1); }
+  25% { transform: translateX(-.4px) scaleY(1.05); }
+  50% { transform: translateX(.3px) scaleY(.95); }
+  75% { transform: translateX(-.2px) scaleY(1.08); }
+}
+@keyframes flameInFast {
+  0%, 100% { transform: translateY(0) scaleY(1); opacity: .55; }
+  40% { transform: translateY(-.5px) scaleY(1.12); opacity: .75; }
+  70% { transform: translateY(.2px) scaleY(.9); opacity: .5; }
+}
+@keyframes flameGlowFast { 0%, 100% { filter: drop-shadow(0 0 1px var(--g)); } 50% { filter: drop-shadow(0 0 4px var(--g)); } }
+
+/* Higher or Lower — the same two-layer flame, but rising and settling rather
+   than flickering side to side: height and glow both peak once per cycle,
+   which is tension building rather than a fire animation. */
+#hl-card .gc-emoji .fl-out { animation: flameRise 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+#hl-card .gc-emoji .fl-in { animation: flameRiseIn 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+#hl-card .gc-emoji svg { animation: flameGlowRise 2.6s ease-in-out infinite; }
+@keyframes flameRise {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  55% { transform: translateY(-.3px) scaleY(1.02); }
+  78% { transform: translateY(-1.6px) scaleY(1.18); }
+  92% { transform: translateY(-.6px) scaleY(1.06); }
+}
+@keyframes flameRiseIn {
+  0%, 100% { transform: translateY(0) scaleY(1); opacity: .55; }
+  78% { transform: translateY(-1.2px) scaleY(1.2); opacity: .8; }
+  92% { transform: translateY(-.4px) scaleY(1.05); opacity: .6; }
+}
+@keyframes flameGlowRise { 0%, 55% { filter: drop-shadow(0 0 1px var(--g)); } 78% { filter: drop-shadow(0 0 5px var(--g)); } 100% { filter: drop-shadow(0 0 1px var(--g)); } }
+
+/* Guess from Tracklist — the icon is already two notes; they drift up and
+   settle on different periods and a half-second offset, which is what makes
+   one move before the other rather than in lockstep. */
+[data-game="tracklist"] .gc-emoji svg path:nth-of-type(1) { animation: noteDrift1 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+[data-game="tracklist"] .gc-emoji svg path:nth-of-type(2) { animation: noteDrift2 1.9s ease-in-out infinite .5s; transform-box: fill-box; transform-origin: center; }
+@keyframes noteDrift1 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.4px); } }
+@keyframes noteDrift2 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.1px); } }
+
+/* Guess the Year — a slow rock rather than a flip, with the corner detail
+   catching the same movement rather than animating on its own unrelated
+   cycle, so it reads as one calendar shifting rather than two effects
+   layered on top of each other. */
+[data-game="year"] .gc-emoji svg { animation: calTilt 4.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 15%; }
+@keyframes calTilt {
+  0%, 70%, 100% { transform: rotate(0deg); }
+  80% { transform: rotate(-3deg); }
+  90% { transform: rotate(2deg); }
+}
+[data-game="year"] .gc-emoji::after {
+  right: 9px; top: 9px; width: 9px; height: 9px;
   background: linear-gradient(135deg, transparent 50%, var(--g) 50%);
-  transform-origin: top right;
-  animation: gcFlip 3s var(--ease) infinite;
+  opacity: .3; transform-origin: top right;
+  animation: calCorner 4.6s ease-in-out infinite;
 }
-@keyframes gcFlip {
-  0%, 60% { transform: rotate(0deg); opacity: .5; }
-  80% { transform: rotate(-25deg); opacity: .8; }
-  100% { transform: rotate(0deg); opacity: .5; }
-}
-
-/* Cover Fire — three quick pulses then a breath, a burst rather than a
-   steady beat, for the game that is ten sleeves in sixty seconds. Eased in
-   and out rather than snapped on and off, and never below .25 opacity, so
-   it reads as rapid-fire rather than as a strobe cutting out. */
-#blitz-card .gc-emoji::before {
-  border-radius: 50%; background: var(--g);
-  animation: gcBurst 2.2s var(--ease) infinite;
-}
-@keyframes gcBurst {
-  0%, 100%      { transform: scale(.68); opacity: .25; }
-  14%, 34%, 54% { transform: scale(1.06); opacity: .8; }
-  24%, 44%      { transform: scale(.68); opacity: .25; }
+@keyframes calCorner {
+  0%, 70%, 100% { transform: rotate(0deg); opacity: .3; }
+  80% { transform: rotate(-18deg); opacity: .6; }
+  90% { transform: rotate(8deg); opacity: .4; }
 }
 
-/* Higher or Lower — a straight bob between the two answers, up then down,
-   never settling. The full rotation this had before flipped the arrow
-   upside down at the midpoint, which read as a jump rather than motion. */
-#hl-card .gc-emoji::before {
-  left: 50%; top: 50%; width: 0; height: 0; margin: -8px 0 0 -5px;
-  border-left: 5px solid transparent; border-right: 5px solid transparent;
-  border-bottom: 8px solid var(--g);
-  animation: gcSeesaw 1.8s var(--ease) infinite;
+/* Cover Fire — the same trophy as Bid Wars, faster and paired with its own
+   flame-coloured glow underneath so the two never move in sync — more
+   energetic than the rest of the grid, on purpose, for the game that is ten
+   sleeves in a minute. */
+#blitz-card .gc-emoji svg { animation: trophyLiftFast 2.4s var(--ease) infinite; transform-origin: 50% 90%; }
+@keyframes trophyLiftFast {
+  0%, 55%, 100% { transform: translateY(0) rotate(0deg); }
+  62% { transform: translateY(-1.8px) rotate(-4deg); }
+  70% { transform: translateY(-1px) rotate(3deg); }
 }
-@keyframes gcSeesaw {
-  0%, 100% { transform: translateY(-4px); }
-  50% { transform: translateY(4px); }
+#blitz-card .gc-emoji::after {
+  left: 0; right: 0; bottom: 2px; margin: auto; width: 20px; height: 10px;
+  background: radial-gradient(ellipse at center, var(--c-pink) 0%, transparent 70%);
+  opacity: .25; filter: blur(2px);
+  animation: fireGlowPulse 1.7s ease-in-out infinite;
 }
+@keyframes fireGlowPulse { 0%, 100% { opacity: .25; transform: scaleY(1); } 50% { opacity: .5; transform: scaleY(1.3); } }
 
-@media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) .gc-emoji::before { animation: none !important; } }
-html[data-motion="none"] .gc-emoji::before { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .gc-emoji,
+  html:not([data-motion="full"]) .gc-emoji::before,
+  html:not([data-motion="full"]) .gc-emoji::after,
+  html:not([data-motion="full"]) .gc-emoji svg,
+  html:not([data-motion="full"]) .gc-emoji svg * { animation: none !important; }
+}
+html[data-motion="none"] .gc-emoji,
+html[data-motion="none"] .gc-emoji::before,
+html[data-motion="none"] .gc-emoji::after,
+html[data-motion="none"] .gc-emoji svg,
+html[data-motion="none"] .gc-emoji svg * { animation: none !important; }
 .game-card h3 { font-family: var(--font-display); font-size: 17px; font-weight: 700; margin: var(--s3) 0 5px; letter-spacing: -0.015em; }
 .game-card p {
   font-size: var(--t-sm); color: var(--text-dim); line-height: 1.45;
@@ -2958,6 +3050,14 @@ html[data-motion="none"] .gc-emoji::before { animation: none !important; }
        visualViewport handler and is 0 whenever no keyboard is up, so this is
        exactly the old rule until there is one. */
     max-height: calc(88vh - var(--kb, 0px));
+    /* --kb can land in more than one jump as the keyboard animates in (the
+       comment above already says so), and with no transition each jump was
+       an instant snap — max-height cutting to its new value one frame after
+       the keyboard's own smooth slide, which is what read as a flash rather
+       than a resize. This does not change WHEN --kb updates, only how the
+       sheet responds to it, so it cannot make the input land somewhere
+       wrong the way scrolling on focus would. */
+    transition: max-height .16s var(--ease);
     padding: var(--s6) var(--s4) calc(var(--s5) + env(safe-area-inset-bottom, 0px));
     animation: sheetUp var(--dur) var(--ease) both;
   }
@@ -5112,9 +5212,10 @@ body.entering-done #artist-hero {
 .today-head-right { display: flex; align-items: center; gap: 10px; }
 .today-hint { font-size: 12px; color: var(--text-faint); }
 .today-count {
-  font: 700 11px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
+  font: 700 11px/1 var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase;
   background: var(--gold-dim); color: var(--gold);
-  border-radius: 999px; padding: 7px 11px; display: inline-block;
+  border-radius: 999px; padding: 7px 12px; display: inline-flex;
+  align-items: center; gap: 4px; white-space: nowrap;
 }
 .today-count.bump { animation: tdBump 0.42s var(--ease); }
 @keyframes tdBump {
@@ -6026,7 +6127,7 @@ html[data-motion="none"] .games-grid > .game-card .gc-emoji { animation: none; }
 
 .today-info-pop {
   position: fixed; z-index: 500; max-width: 240px;
-  background: var(--surface2, #1c1a18); border: 1px solid var(--border, #333);
+  background: var(--surface-2, #1c1a18); border: 1px solid var(--border, #333);
   border-radius: 10px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,.4);
   font-size: 13px; line-height: 1.4; color: var(--text); display: none;
 }
@@ -7696,7 +7797,7 @@ body[data-section="foryou"] .fy-tabs {
 .dm-wrap { position: absolute; top: 0; right: 0; z-index: 20; }
 .dm-toggle {
   position: relative;
-  background: var(--surface2);
+  background: var(--surface-2);
   transition: transform .12s var(--ease), border-color .18s var(--ease), color .18s var(--ease), background .18s var(--ease);
 }
 .dm-toggle:hover { background: var(--surface-2); }
@@ -7723,7 +7824,7 @@ body[data-section="foryou"] .fy-tabs {
 .dm-panel {
   display: none; position: absolute; top: calc(100% + 8px); right: 0;
   z-index: 40; width: 268px; max-width: calc(100vw - 32px);
-  background: var(--surface2); border: 1px solid var(--border-strong);
+  background: var(--surface-2); border: 1px solid var(--border-strong);
   border-radius: var(--radius); box-shadow: 0 16px 40px rgba(0,0,0,.45);
   padding: 12px 14px;
   transform-origin: top right;
@@ -7762,7 +7863,7 @@ html[data-motion="none"] .dm-toggle.ready, html[data-motion="none"] .dm-badge { 
 .list-tourn-btn {
   position: relative; overflow: hidden; width: 100%;
   padding: 13px 16px; border-radius: 12px; text-align: center;
-  background: linear-gradient(150deg, var(--gold-dim), var(--surface2) 70%);
+  background: linear-gradient(150deg, var(--gold-dim), var(--surface-2) 70%);
   border: 1px solid var(--gold-dim);
   animation: ltbPulse 2.6s ease-in-out infinite;
 }
@@ -7784,7 +7885,7 @@ html[data-motion="none"] .dm-toggle.ready, html[data-motion="none"] .dm-badge { 
 .list-fill-btn {
   position: relative; overflow: hidden; width: 100%;
   padding: 11px 16px; border-radius: 12px; text-align: center;
-  background: var(--surface2); border: 1px solid var(--border-strong);
+  background: var(--surface-2); border: 1px solid var(--border-strong);
 }
 .lfb-label { position: relative; z-index: 1; font-size: 13px; font-weight: 600; color: var(--text); }
 .lfb-shimmer {
@@ -7798,7 +7899,7 @@ html[data-motion="none"] .dm-toggle.ready, html[data-motion="none"] .dm-badge { 
 }
 .tourn-progress { text-align: center; color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
 .tourn-pair { display: flex; gap: 12px; }
-.tourn-card { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+.tourn-card { flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
   padding: 12px; text-align: center; cursor: pointer; }
 .tourn-card:hover, .tourn-card:active { border-color: var(--gold-dim); }
 .tourn-card { transition: transform .22s var(--ease), opacity .22s var(--ease), border-color .22s var(--ease); }
@@ -9022,7 +9123,15 @@ window.ICONS = {
   // stays the currency's own colour wherever it lands — including inside a
   // section-tinted price line, which is what turned a filled coin pink.
   coin: '<svg class="ui-icon disc-coin" viewBox="0 0 16 16" fill="none" stroke="var(--gold)" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="var(--gold)" stroke="none"/></svg>',
-  fire: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 1.8c.6 1.7-.3 2.6-1 3.4-1 1.1-1.7 2-1.7 3.4a2.7 2.7 0 0 0 5.4 0c0-.7-.2-1.2-.5-1.7.9.5 1.5 1.4 1.5 2.6a4 4 0 1 1-8 0c0-3 2.3-4 2.6-6.4.4.4.7 1 .7 1.7 0-1.3.5-2.3 1-3Z"/></svg>',
+  // Outer silhouette unchanged; an inner tongue added (filled, not stroked —
+  // the same "outline plus filled accent" language ICONS.disc already uses
+  // for its centre dot) so the two layers can flicker on different timings.
+  // A single path can only be animated as one rigid shape, and "the outer
+  // flame flickers one way while the inner moves independently" needs two.
+  fire: '<svg class="ui-icon gc-flame" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">'
+    + '<path class="fl-out" d="M8 1.8c.6 1.7-.3 2.6-1 3.4-1 1.1-1.7 2-1.7 3.4a2.7 2.7 0 0 0 5.4 0c0-.7-.2-1.2-.5-1.7.9.5 1.5 1.4 1.5 2.6a4 4 0 1 1-8 0c0-3 2.3-4 2.6-6.4.4.4.7 1 .7 1.7 0-1.3.5-2.3 1-3Z"/>'
+    + '<path class="fl-in" fill="currentColor" stroke="none" opacity=".55" d="M8.1 5.6c.25.8-.15 1.3-.5 1.7-.45.55-.8 1.05-.8 1.7a1.35 1.35 0 0 0 2.7 0c0-.35-.1-.55-.25-.8.45.3.75.7.75 1.2a1.9 1.9 0 1 1-3.8 0c0-1.35 1.05-1.9 1.25-3 .2.2.35.45.4.8-.05-.55.1-1.1.25-1.6Z"/>'
+    + '</svg>',
   person: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="5.2" r="2.6"/><path d="M2.8 14c.6-2.8 2.6-4.3 5.2-4.3S13.6 11.2 14.2 14"/></svg>',
   people: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="5.8" cy="5" r="2.1"/><circle cx="11.2" cy="6" r="1.7"/><path d="M1.6 13.6c.5-2.4 2-3.6 4.2-3.6s3.7 1.2 4.2 3.6M10 10.4c1.7.1 2.9 1.2 3.3 3.2"/></svg>',
   trash: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M3 4.4h10M6.2 4.4V3a1 1 0 0 1 1-1h1.6a1 1 0 0 1 1 1v1.4M4.4 4.4l.5 8.6a1.4 1.4 0 0 0 1.4 1.3h3.4a1.4 1.4 0 0 0 1.4-1.3l.5-8.6"/></svg>',
@@ -9035,7 +9144,19 @@ window.ICONS = {
   crown: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 12.4 1.6 5l3.2 2.2L8 3l3.2 4.2L14.4 5l-.8 7.4Z"/><path d="M2.4 12.4h11.2"/></svg>',
   // Recall's. A sound wave rather than a note: the game is about hearing a
   // second of something, and every other music glyph here is taken.
-  wave: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M1.6 7.4v1.2M4.3 5.2v5.6M7 2.6v10.8M9.7 4.6v6.8M12.4 6.4v3.2M15.1 7.5v1"/></svg>',
+  // Six separate <line>s rather than one multi-segment path — a shared path
+  // can only be animated as one object, and a waveform bar has to move on
+  // its own timing from its neighbours. Same six coordinates as before, so
+  // the icon is pixel-identical at rest; only the ability to move
+  // independently is new.
+  wave: '<svg class="ui-icon gc-wave" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">'
+    + '<line class="wb wb1" x1="1.6" y1="7.4" x2="1.6" y2="8.6"/>'
+    + '<line class="wb wb2" x1="4.3" y1="5.2" x2="4.3" y2="10.8"/>'
+    + '<line class="wb wb3" x1="7" y1="2.6" x2="7" y2="13.4"/>'
+    + '<line class="wb wb4" x1="9.7" y1="4.6" x2="9.7" y2="11.4"/>'
+    + '<line class="wb wb5" x1="12.4" y1="6.4" x2="12.4" y2="9.6"/>'
+    + '<line class="wb wb6" x1="15.1" y1="7.5" x2="15.1" y2="8.5"/>'
+    + '</svg>',
   note: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M6 12.4a1.8 1.8 0 1 1-1.2-1.7M6 12.4V3.4l6-1.2v7.4"/><path d="M12 9.6a1.8 1.8 0 1 1-1.2-1.7"/></svg>',
   search: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.3"/><path d="M13.4 13.4 10 10"/></svg>',
   share: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M2 13V7.6L8 2l6 5.6V13a1 1 0 0 1-1 1h-3v-4.4H6V14H3a1 1 0 0 1-1-1Z"/></svg>',
@@ -25232,6 +25353,30 @@ window.renderAdminStats = renderAdminStats;
       if (stale()) return;
       var mineNow = await loadMine();
       if (stale()) return;
+      /* /api/collection-prices' default listing is bid_war_pool — the top 40
+         records by COMMUNITY rating count, not "everything buyable". A record
+         you rated that nobody else has never made that pool, so it was
+         invisible here even though isRatedForMarket already says you may buy
+         it — the only way in was Search, which hits the catalogue directly
+         rather than the pool. That is the actual bug: not a sorting problem,
+         a candidate-set problem. Search results are left alone; this only
+         backfills the default (unsearched) listing. */
+      if (!_results) {
+        var have = {};
+        items.forEach(function (a) { have[a.album_id] = true; var k = colKey(a.name, a.artist); if (k) have[k] = true; });
+        var mineRated = [];
+        try {
+          var myAlbums = window.loadAlbums ? loadAlbums() : {};
+          Object.keys(myAlbums).forEach(function (k) {
+            var r = myAlbums[k];
+            if (!r || typeof r.score !== 'number') return;
+            var key = colKey(r.name, r.artist);
+            if (have[r.id] || (key && have[key])) return;
+            mineRated.push({ album_id: r.id, name: r.name, artist: r.artist, art: r.art, price: null });
+          });
+        } catch (e) {}
+        if (mineRated.length) items = items.concat(mineRated);
+      }
       /* Indexed by id AND by name, so a record bought under a legacy Spotify
          id is recognised when the Market offers it under a Deezer one. The
          row comes back too, because the Sell button has to print 70% of what
@@ -30403,7 +30548,10 @@ window.track = function (name, props) {
     if (!n) { el.style.display = 'none'; return; }
     el.style.display = '';
     // A run is worth naming. Three is where a session stops being a glance.
-    el.textContent = (n >= 3 ? '🔥 ' : '') + n + ' today';
+    // The emoji is its own span so the container's flex `gap` actually
+    // separates it from the digits — squashed into one text string, letter-
+    // spacing and the mono font kerned the flame right up against the "1".
+    el.innerHTML = (n >= 3 ? '<span aria-hidden="true">🔥</span>' : '') + n + ' today';
     if (bump) {
       // Every fifth answer gets the heavier beat. The same small bump forever
       // stops registering after about four of them, and the whole number that
@@ -31283,14 +31431,25 @@ window.track = function (name, props) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
   }); }
 
+  // A real flag rather than reading the class mid-transition: `close()`
+  // leaves the `open` class on for 150ms so the fade-out can play, and a
+  // second tap landing inside that window used to read `open` as still true
+  // and close it straight back — the "doesn't open/close reliably" bug.
+  var _open = false;
+  var _closeTimer = null;
+
   function close() {
+    _open = false;
+    clearTimeout(_closeTimer);
     panel.classList.remove('in');
-    setTimeout(function () { panel.classList.remove('open'); }, 150);
+    _closeTimer = setTimeout(function () { panel.classList.remove('open'); }, 150);
     toggle.setAttribute('aria-expanded', 'false');
   }
 
   async function open() {
-    if (panel.classList.contains('open')) { close(); return; }
+    if (_open) { close(); return; }
+    _open = true;
+    clearTimeout(_closeTimer);
     panel.classList.add('open');
     void panel.offsetWidth;
     panel.classList.add('in');
@@ -31343,16 +31502,17 @@ window.track = function (name, props) {
         var row = panel.querySelector('[data-dm-row="' + b.dataset.dmClaim + '"]');
         if (row) row.classList.add('dm-claiming');
         if (window.Wallet && Wallet.load) await Wallet.load();
-        // Re-render after the pop has had a moment to play, not before —
-        // swapping the row's content mid-animation is what "glitches".
-        setTimeout(render, 320);
+        // dmClaim runs 420ms — this used to fire at 320, wiping the row's
+        // HTML while its own claim animation was still playing. That's the
+        // actual "glitch": the pop got cut off mid-play, not a bad animation.
+        setTimeout(render, 460);
       });
     });
   }
 
   toggle.addEventListener('click', function (ev) { ev.stopPropagation(); open(); });
   document.addEventListener('click', function (ev) {
-    if (panel.classList.contains('open') && !panel.contains(ev.target) && ev.target !== toggle) close();
+    if (_open && !panel.contains(ev.target) && ev.target !== toggle) close();
   });
   // Refresh the ready-dot once signed in, so the badge is right before
   // anybody has thought to open the dropdown.
