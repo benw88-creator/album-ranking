@@ -34074,7 +34074,7 @@ window.track = function (name, props) {
   function discs() { try { return (window.Wallet && Wallet.get && Wallet.get().discs) || 0; } catch (e) { return 0; } }
 
   /* ---- chrome --------------------------------------------------------- */
-  var STEPS = ['welcome', 'username', 'first', 'artists', 'albums', 'game', 'shop'];
+  var STEPS = ['welcome', 'username', 'first', 'artists', 'albums', 'game', 'shop', 'age'];
   /* NO "SKIP THE REST". The way out of a record you cannot score is "Don't
      know it." on the card itself, which is a smaller, more honest offer: it
      costs one album rather than the whole flow, and it means nobody is ever
@@ -34654,9 +34654,36 @@ window.track = function (name, props) {
     onCta(next);
   }
 
+  /* ---- 8. age ------------------------------------------------------------
+     One number, asked once, never verified — the same bar every app in the
+     stores holds itself to. It exists so there is an answer on record rather
+     than nothing, which is what "likely to be accessed by children" actually
+     asks a service to have. Not a gate: nothing here blocks continuing on any
+     answer, and it saves best-effort exactly like the fav_artist write below
+     it in the file — a missing column degrades to "not asked" rather than
+     stalling the last beat of the tutorial. */
+  function age() {
+    var thisYear = new Date().getFullYear();
+    show(
+      '<h2 class="onb-h">What year were you born?</h2>' +
+      '<input class="g-input onb-user" id="onb-year" type="number" inputmode="numeric" ' +
+        'maxlength="4" placeholder="e.g. ' + (thisYear - 20) + '">' +
+      '<div class="onb-err" id="onb-yerr"></div>',
+      cta('Done')
+    );
+    var inp = el('onb-year'), err = el('onb-yerr');
+    setTimeout(function () { try { inp.focus(); } catch (e) {} }, 240);
+    onCta(async function () {
+      var y = parseInt(inp.value, 10);
+      if (!y || y < thisYear - 110 || y > thisYear) { err.textContent = 'That doesn’t look right.'; return; }
+      try { await Cloud.saveProfile({ birth_year: y }); } catch (e) {}
+      next();
+    });
+  }
+
   /* ---- the driver ------------------------------------------------------ */
   var DRAW = { welcome: welcome, username: username, first: first,
-               artists: artists, albums: albums, game: game, shop: shop };
+               artists: artists, albums: albums, game: game, shop: shop, age: age };
   function draw() {
     var name = STEPS[S.step];
     if (!name) { finish(false); return; }
