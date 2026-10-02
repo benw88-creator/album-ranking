@@ -4523,7 +4523,11 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   .splash-word {
     color: transparent; text-shadow: none;
-    background: linear-gradient(180deg, #fffdf7 0%, #f6f0e4 40%, #e2d8c6 56%, #efe7d8 78%, #fbf6ec 100%);
+    /* Colour from the GO button's own two stops, not new ones: cream at the
+       top warming through champagne to a soft apricot at the foot, so the
+       word and the button read as one palette. Kept pale enough that the
+       word stays the brightest thing on the screen. */
+    background: linear-gradient(172deg, #fffaf0 0%, #fbeccb 34%, #f3d79a 52%, #f6c9a0 74%, #f2a98a 100%);
     -webkit-background-clip: text; background-clip: text;
     filter: drop-shadow(0 10px 36px rgba(0,0,0,0.55));
   }
