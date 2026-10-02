@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('vinall_theme');if(t&&/^[a-z0-9-]{1,24}$/.test(t))document.documentElement.dataset.theme=t;}catch(e){}</script>
 <!-- viewport-fit=cover lets the page paint under the notch and home
      indicator; the safe-area insets further down put the content back
      inside them. Without cover, iOS letterboxes the page in black. -->
@@ -4549,6 +4550,39 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
     animation: liquidLight 23s linear infinite;
   }
 }
+/* UNDER A THEME the liquid is that theme's own two accents rather than gold.
+   The glass is the theme's text colour lifted toward white with a breath of
+   its accent, and the pooling is --gold into --accent-2 seen through the same
+   turbulence field as an alpha mask — same seed, same places, same drift, so
+   only the colour changes. Normal blend at lower strength rather than
+   multiply: multiply turned neon accents to mud on a pale base. No theme,
+   or 'classic', keeps the gold above exactly as it was. */
+@supports ((-webkit-mask-image: none) or (mask-image: none)) {
+  html[data-theme]:not([data-theme=""]) .splash-word {
+    background: linear-gradient(172deg,
+      color-mix(in srgb, var(--text) 82%, #fff) 0%,
+      color-mix(in srgb, var(--gold) 14%, color-mix(in srgb, var(--text) 85%, #fff)) 36%,
+      color-mix(in srgb, var(--gold) 34%, var(--text)) 54%,
+      color-mix(in srgb, var(--accent-2) 26%, var(--text)) 78%,
+      color-mix(in srgb, var(--accent-2) 42%, var(--text)) 100%);
+    -webkit-background-clip: text; background-clip: text;
+  }
+  html[data-theme]:not([data-theme=""]) .splash-word::before {
+    background-image: linear-gradient(115deg, var(--gold), var(--accent-2));
+    background-size: 100% 100%;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='300'%3E %3Cfilter id='m' x='0' y='0' width='100%' height='100%'%3E %3CfeTurbulence type='fractalNoise' baseFrequency='.0055 .011' numOctaves='2' seed='4' stitchTiles='stitch'/%3E %3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 3.4 0 0 0 -1.55'/%3E %3C/filter%3E%3Crect width='600' height='300' filter='url(%23m)'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='300'%3E %3Cfilter id='m' x='0' y='0' width='100%' height='100%'%3E %3CfeTurbulence type='fractalNoise' baseFrequency='.0055 .011' numOctaves='2' seed='4' stitchTiles='stitch'/%3E %3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 3.4 0 0 0 -1.55'/%3E %3C/filter%3E%3Crect width='600' height='300' filter='url(%23m)'/%3E%3C/svg%3E");
+    -webkit-mask-size: 6em 3em; mask-size: 6em 3em;
+    -webkit-mask-repeat: repeat; mask-repeat: repeat;
+    mix-blend-mode: normal; opacity: .5;
+    animation: liquidTheme 34s linear infinite;
+  }
+}
+@keyframes liquidTheme { from { -webkit-mask-position: 0 0; mask-position: 0 0; } to { -webkit-mask-position: -6em 3em; mask-position: -6em 3em; } }
+/* The themed rule outranks the motion switches above, so it restates them. */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"])[data-theme] .splash-word::before { animation: none; }
+}
+html[data-motion="none"][data-theme] .splash-word::before { animation: none; }
 @keyframes liquidGold { from { background-position: 0 0; } to { background-position: -6em 3em; } }
 @keyframes liquidLight { from { background-position: 0 0; } to { background-position: 6em 3em; } }
 @media (prefers-reduced-motion: reduce) {
@@ -20350,6 +20384,11 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   function applyTheme() {
     document.documentElement.dataset.theme = (state.active_theme && state.active_theme !== 'classic') ? state.active_theme : '';
+    // Read back by the first script in <head>, so the splash wordmark is in
+    // the right colours on its first frame rather than turning gold-then-pink
+    // once the profile lands. reset() comes through here too, so signing out
+    // clears it.
+    try { localStorage.setItem('vinall_theme', document.documentElement.dataset.theme || ''); } catch (e) {}
     /* Everything else on the page reskins for free, because everything else is
        painted from the tokens this line swaps. The artist hero is the one
        surface that is not CSS — it is a canvas of dots inked once, so it keeps
