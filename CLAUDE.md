@@ -2412,6 +2412,37 @@ trade table above.
   Completion list can include one.
 
 
+## Community Choice
+
+`view-choice`, the fourth Crate sub-tab (mode `choice`, in `views`, `CRATE_GROUP` and the setMode
+render/silence hooks). Somebody picks the best stretch of a song in one of four categories —
+Verse, Feature, Hook, Beat switch, each on its own fixed hue — and everybody else hears exactly
+that stretch and agrees. `..._20261002120000_community_choice.sql`, **apply it by hand**; until
+then the tab says "Not switched on yet" and reports once to `client_errors`.
+
+- **A moment is a window inside Deezer's 30-second preview, not inside the song.** That clip is
+  the only audio VINALL can play. `start_ms` is an offset into the clip of one exact Deezer track
+  id, and the clip is re-fetched by that id at play time via `/api/catalogue?path=track` (signed
+  urls die in ~10 minutes — never store one). A search by name could return another pressing
+  with a different clip, and the offset would land on somebody else's thirty seconds. Windows
+  are 10/15/20/30s; 30s is the whole preview. A verse or feature that is not inside the preview
+  cannot be picked — that is the ceiling, and the picker says so in one line.
+- `VinalAudio.play(track, seconds, { from })` plays `[from, from + seconds]`. Ticks and the stop
+  line are in clip time. Every other caller passes no `from` and still gets `[0, seconds]`.
+- **Agree opens after hearing 80% of the pick**; tapping it earlier plays it. Same argument that
+  took the heart off the Crate: a vote here should come from somebody who heard the thing.
+  Browser-side only — a statement, not a defence. Agreeing with your own pick is refused by policy.
+- `likes` is the ranking and only the `moment_likes` trigger moves it. **No UPDATE policy on
+  `moments`**, and the migration raises if one ever appears. Inserts are stamped and zeroed by a
+  trigger and capped at 20 a day. Both tables cascade from `auth.users`, so no
+  `delete_my_data()` entry.
+- **The waveform is real**: decoded in the picker's browser (Deezer's preview CDN sends
+  `Access-Control-Allow-Origin: *`), RMS per bar spread between the clip's own quietest and
+  loudest bars, stored as 64 base-36 chars in `peaks`. The feed draws it without downloading a
+  clip per card. No peaks means an even dim row, never an invented shape.
+- Featured artists come from Deezer `contributors`, then `(feat. …)` in the title, then a typed
+  name. Contributors are incomplete (SICKO MODE credits Travis Scott alone).
+
 ## Settings
 
 A modal off the account menu (`openSettings`), holding **Motion**, a **clear-cached-data**

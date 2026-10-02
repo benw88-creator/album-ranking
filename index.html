@@ -396,6 +396,7 @@ body[data-section="crate"]        { --section: var(--c-cyan);    --section-dim: 
    nav button, one colour. */
 body[data-section="albums"]       { --section: var(--c-cyan);    --section-dim: var(--c-cyan-dim); }
 body[data-section="songs"]        { --section: var(--c-cyan);    --section-dim: var(--c-cyan-dim); }
+body[data-section="choice"]       { --section: var(--c-cyan);    --section-dim: var(--c-cyan-dim); }
 /* Each of these MATCHES its nav button's hue above. The bar says where you
    are and the page's temperature agrees with it; two destinations painted the
    same colour, or one painted differently from the button you pressed, and
@@ -2929,41 +2930,55 @@ html[data-motion="none"] .game-card.gc-lead::after { animation: none; }
 @keyframes noteDrift1 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.4px); } }
 @keyframes noteDrift2 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.1px); } }
 
-/* Guess the Year — a slow rock rather than a flip, with the corner detail
-   catching the same movement rather than animating on its own unrelated
-   cycle, so it reads as one calendar shifting rather than two effects
-   layered on top of each other. */
-[data-game="year"] .gc-emoji svg { animation: calTilt 4.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 15%; }
-@keyframes calTilt {
-  0%, 70%, 100% { transform: rotate(0deg); }
-  80% { transform: rotate(-3deg); }
-  90% { transform: rotate(2deg); }
+/* Guess the Year — the reel spins through five years, decelerates and lands
+   (with a hair of overshoot, which is what makes it read as a physical reel
+   rather than a slide), and the calendar takes the landing as a small bump
+   with its two binder rings jolting a beat later. Spin, land, hold: the hold
+   is most of the cycle so the landed year is something you can read. */
+.gc-year { overflow: visible; }
+.gc-year .yr-reel { font: 800 5.4px var(--font-display); letter-spacing: -.02em; animation: yrSpin 4.8s infinite; }
+@keyframes yrSpin {
+  0%, 52% { transform: translateY(0); animation-timing-function: cubic-bezier(.45,.05,.2,1); }
+  80% { transform: translateY(-35.9px); animation-timing-function: ease-out; }
+  86%, 100% { transform: translateY(-35px); }
 }
-[data-game="year"] .gc-emoji::after {
-  right: 9px; top: 9px; width: 9px; height: 9px;
-  background: linear-gradient(135deg, transparent 50%, var(--g) 50%);
-  opacity: .3; transform-origin: top right;
-  animation: calCorner 4.6s ease-in-out infinite;
+.gc-year .yr-cal { animation: yrLand 4.8s var(--ease) infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes yrLand {
+  0%, 78%, 100% { transform: scale(1); }
+  82% { transform: scale(1.07, .95); }
+  88% { transform: scale(.98, 1.02); }
 }
-@keyframes calCorner {
-  0%, 70%, 100% { transform: rotate(0deg); opacity: .3; }
-  80% { transform: rotate(-18deg); opacity: .6; }
-  90% { transform: rotate(8deg); opacity: .4; }
+.gc-year .yr-ring { animation: yrRing 4.8s var(--ease) infinite; }
+@keyframes yrRing {
+  0%, 80%, 100% { transform: translateY(0); }
+  84% { transform: translateY(-.8px); }
 }
+#games-grid [data-game="year"] .gc-emoji > svg { animation: yrGlow 4.8s ease-out infinite; }
+@keyframes yrGlow { 0%, 78%, 100% { filter: none; } 84% { filter: drop-shadow(0 0 3px var(--g)); } }
 
-/* Cover Fire — a small recoil kick on the whole pistol, infrequent enough to
-   read as an event, plus the hammer cocking back a moment before on its own
-   timing so the two parts never move as one rigid unit. */
-.gc-pistol { animation: pistolKick 2.6s var(--ease) infinite; transform-origin: 70% 60%; }
+/* Cover Fire — the hammer cocks, then the whole pistol kicks: back and
+   muzzle-up about the grip, which is where a real recoil pivots, with the
+   flash appearing for one beat at the muzzle and the trigger pulled. The
+   pause between shots is long enough that each one reads as an event. */
+.gc-pistol { overflow: visible; animation: pistolKick 2.8s var(--ease) infinite; transform-origin: 25% 75%; }
 @keyframes pistolKick {
-  0%, 82%, 100% { transform: translateX(0) rotate(0deg); }
-  88% { transform: translateX(-1.4px) rotate(-3deg); }
-  94% { transform: translateX(.4px) rotate(1deg); }
+  0%, 80%, 100% { transform: translateX(0) rotate(0deg); }
+  84% { transform: translateX(-1.6px) rotate(-9deg); }
+  92% { transform: translateX(.3px) rotate(1deg); }
 }
-.gc-pistol .pistol-hammer { animation: hammerCock 2.6s var(--ease) infinite; transform-box: fill-box; transform-origin: 100% 100%; }
+.gc-pistol .pistol-hammer { animation: hammerCock 2.8s var(--ease) infinite; transform-box: fill-box; transform-origin: 100% 100%; }
 @keyframes hammerCock {
-  0%, 78%, 100% { transform: rotate(0deg); }
-  84% { transform: rotate(-16deg); }
+  0%, 62%, 100% { transform: rotate(0deg); }
+  72%, 80% { transform: rotate(-28deg); }
+  83% { transform: rotate(0deg); }
+}
+.gc-pistol .pistol-trigger { animation: triggerPull 2.8s var(--ease) infinite; transform-box: fill-box; transform-origin: 50% 0%; }
+@keyframes triggerPull { 0%, 78%, 100% { transform: rotate(0deg); } 81%, 84% { transform: rotate(-22deg); } }
+.gc-pistol .pistol-flash { opacity: 0; animation: muzzleFlash 2.8s linear infinite; transform-box: fill-box; transform-origin: 0% 50%; }
+@keyframes muzzleFlash {
+  0%, 80.5%, 100% { opacity: 0; transform: scale(.4); }
+  82% { opacity: 1; transform: scale(1.15); }
+  88% { opacity: 0; transform: scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4481,7 +4496,63 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   font-size: clamp(56px, 13vw, 148px); letter-spacing: -0.03em; line-height: 0.88;
   color: var(--text);
   text-shadow: 0 10px 50px rgba(0,0,0,0.55);
+  position: relative;
 }
+/* THE LIQUID IS INSIDE THE LETTERS AND NEVER AT THEIR EDGES. Three layers of
+   the same word, each clipped to the glyphs by background-clip, so the outline
+   stays exactly the typeface and the readability with it — the effect is what
+   happens within the shape, which is the line between glass and a blob.
+
+     base     cream, lighter above a soft horizon and shaded below it: glass
+     ::before warm gold pooling through it (a turbulence field)
+     ::after  thin contour lines through a second field, a bright one with a
+              dark rim beside it — the caustics, and the depth behind them
+
+   Both fields are SVG feTurbulence rendered ONCE as a background image, so no
+   filter runs per frame: the motion is only background-position, which is a
+   repaint of one word. Each tile is stitched and travels exactly one tile per
+   loop in em, the same rule as every scrolling gradient in this file — a
+   travel unrelated to the tile size is the snap-back glitch, and em keeps the
+   tile and the travel locked together at every clamp() size. The two layers
+   drift in different directions at unrelated speeds, so the interference
+   between them is what reads as flow; neither moves fast enough to notice
+   on its own.
+
+   The drop shadow moves to filter: a text-shadow under background-clip:text
+   paints OVER the clipped fill and would hide the whole effect. */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .splash-word {
+    color: transparent; text-shadow: none;
+    background: linear-gradient(180deg, #fffdf7 0%, #f6f0e4 40%, #e2d8c6 56%, #efe7d8 78%, #fbf6ec 100%);
+    -webkit-background-clip: text; background-clip: text;
+    filter: drop-shadow(0 10px 36px rgba(0,0,0,0.55));
+  }
+  .splash-word::before, .splash-word::after {
+    content: attr(data-text);
+    position: absolute; inset: 0; pointer-events: none;
+    color: transparent;
+    -webkit-background-clip: text; background-clip: text;
+    background-repeat: repeat; background-size: 6em 3em;
+  }
+  .splash-word::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='300'%3E %3Cfilter id='g' x='0' y='0' width='100%' height='100%'%3E %3CfeTurbulence type='fractalNoise' baseFrequency='.0055 .011' numOctaves='2' seed='4' stitchTiles='stitch'/%3E %3CfeColorMatrix values='0 0 0 0 .97 0 0 0 0 .74 0 0 0 0 .22 3.4 0 0 0 -1.55'/%3E %3C/filter%3E%3Crect width='600' height='300' filter='url(%23g)'/%3E%3C/svg%3E");
+    opacity: .62; mix-blend-mode: multiply;
+    animation: liquidGold 34s linear infinite;
+  }
+  .splash-word::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='300'%3E %3Cfilter id='l' x='0' y='0' width='100%' height='100%'%3E %3CfeTurbulence type='fractalNoise' baseFrequency='.0045 .009' numOctaves='2' seed='11' stitchTiles='stitch'/%3E %3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0' result='a'/%3E %3CfeComponentTransfer in='a' result='d'%3E%3CfeFuncA type='table' tableValues='0 0 0 0 .34 0 0 0 .22 0 0 0'/%3E%3C/feComponentTransfer%3E %3CfeComponentTransfer in='a' result='w'%3E%3CfeFuncA type='table' tableValues='0 0 0 0 0 .95 0 .8 0 0 0 0'/%3E%3C/feComponentTransfer%3E %3CfeFlood flood-color='%234a300a'/%3E%3CfeComposite in2='d' operator='in' result='dk'/%3E %3CfeFlood flood-color='%23ffffff'/%3E%3CfeComposite in2='w' operator='in' result='wh'/%3E %3CfeMerge%3E%3CfeMergeNode in='dk'/%3E%3CfeMergeNode in='wh'/%3E%3C/feMerge%3E %3C/filter%3E%3Crect width='600' height='300' filter='url(%23l)'/%3E%3C/svg%3E");
+    opacity: .85;
+    animation: liquidLight 23s linear infinite;
+  }
+}
+@keyframes liquidGold { from { background-position: 0 0; } to { background-position: -6em 3em; } }
+@keyframes liquidLight { from { background-position: 0 0; } to { background-position: 6em 3em; } }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .splash-word::before,
+  html:not([data-motion="full"]) .splash-word::after { animation: none; }
+}
+html[data-motion="none"] .splash-word::before,
+html[data-motion="none"] .splash-word::after { animation: none; }
 .splash-tag {
   font-size: clamp(14px, 2vw, 18px); color: var(--text-dim); max-width: 38ch;
   text-shadow: 0 2px 12px rgba(0,0,0,0.6);
@@ -5324,6 +5395,252 @@ body.entering-done #artist-hero {
   transition: background .16s, color .16s;
 }
 .crate-tabs button.active, .col-tabs button.active { background: var(--section); color: #10140a; }
+
+/* ---- COMMUNITY CHOICE ----------------------------------------------------
+   One card per pick, and the card is built around the listen: the sleeve is
+   the play button, the waveform is the clip with the picked stretch boxed in
+   the category's own hue, and agreeing sits at the end of the same row the eye
+   finishes on. The four categories take four of the fixed hues — identity,
+   which is what those hues are for — so a feed of mixed picks reads as mixed
+   at a glance and a filtered one is visibly one colour. */
+.cc-intro { color: var(--text-dim); font-size: var(--t-sm); margin: -8px 0 18px; max-width: 60ch; }
+.cc-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 18px; }
+.cc-cats { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1 1 320px; min-width: 0; padding: 2px 0; }
+.cc-cats::-webkit-scrollbar { display: none; }
+.cc-chip {
+  --cc: var(--section);
+  flex: none; display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--border-strong); background: transparent; color: var(--text-dim);
+  font: 600 13px var(--font-body); padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  transition: background .16s, color .16s, border-color .16s;
+}
+.cc-chip[data-cat]:not([data-cat="all"])::before, .cc-chip[data-ed-cat]::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--cc); }
+.cc-chip:hover { color: var(--text); }
+.cc-chip.is-on {
+  color: var(--text);
+  background: color-mix(in srgb, var(--cc) 16%, transparent);
+  border-color: color-mix(in srgb, var(--cc) 55%, transparent);
+}
+.cc-sort { display: inline-flex; background: var(--surface-2); border-radius: 999px; padding: 3px; flex: none; }
+.cc-sort button {
+  border: none; background: none; color: var(--text-dim); cursor: pointer;
+  font: 600 12.5px var(--font-body); padding: 6px 13px; border-radius: 999px;
+  transition: background .16s, color .16s;
+}
+.cc-sort button.is-on { background: var(--surface-4); color: var(--text); }
+.cc-playall { display: inline-flex; align-items: center; gap: 7px; flex: none; }
+.cc-playall svg { width: 12px; height: 12px; }
+.cc-playall .cc-ic-stop { display: none; }
+.cc-playall.is-on { border-color: var(--section); color: var(--section); }
+.cc-playall.is-on .cc-ic-play { display: none; }
+.cc-playall.is-on .cc-ic-stop { display: inline; }
+
+.cc-feed { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }
+.cc-card {
+  --cc: var(--c-cyan);
+  position: relative; display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-areas: "art head" "wave wave" "foot foot";
+  gap: 14px 14px; padding: 14px 14px 12px; border-radius: var(--radius);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--cc) 8%, var(--surface)) 0%, var(--surface) 60%);
+  border: 1px solid var(--border);
+  transition: border-color .25s, box-shadow .35s var(--ease);
+  animation: ccIn .5s var(--ease) both;
+}
+@keyframes ccIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.cc-card.is-playing {
+  border-color: color-mix(in srgb, var(--cc) 55%, transparent);
+  box-shadow: 0 22px 54px -26px var(--cc);
+}
+.cc-card.is-new { box-shadow: 0 0 0 2px var(--cc), 0 22px 54px -26px var(--cc); }
+.cc-rank {
+  position: absolute; top: 12px; right: 14px;
+  font: 800 13px var(--font-display); color: var(--text-faint); font-variant-numeric: tabular-nums;
+}
+.cc-rank.top { color: var(--cc); }
+.cc-art {
+  grid-area: art; position: relative; width: 76px; height: 76px; padding: 0;
+  border: none; border-radius: 12px; overflow: hidden; cursor: pointer;
+  background: var(--surface-3); box-shadow: 0 10px 24px -12px rgba(0,0,0,.8);
+}
+.cc-art img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s var(--ease); }
+.cc-art:hover img { transform: scale(1.05); }
+.cc-art-btn {
+  position: absolute; right: 6px; bottom: 6px; width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center; color: #fff;
+  background: rgba(10,9,8,.72); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  transition: transform .2s var(--ease), background .2s, color .2s;
+}
+.cc-art:hover .cc-art-btn { transform: scale(1.08); }
+.cc-art-btn svg { width: 13px; height: 13px; grid-area: 1 / 1; }
+.cc-art-btn .cc-ic-pause { display: none; }
+.is-playing .cc-art-btn { background: var(--cc); color: #0a0908; }
+.is-playing .cc-art-btn .cc-ic-play { display: none; }
+.is-playing .cc-art-btn .cc-ic-pause { display: block; }
+.is-loading .cc-art-btn { animation: ccLoad 1s ease-in-out infinite; }
+@keyframes ccLoad { 50% { opacity: .45; } }
+.cc-head { grid-area: head; min-width: 0; align-self: center; padding-right: 24px; }
+.cc-cat {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%;
+  font: 700 10.5px/1.2 var(--font-body); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--cc); background: color-mix(in srgb, var(--cc) 13%, transparent);
+  padding: 4px 9px; border-radius: 999px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cc-cat b { color: var(--text); font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+.cc-title {
+  font: 700 17px/1.2 var(--font-display); letter-spacing: -.015em; margin-top: 8px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cc-artist { color: var(--text-dim); font-size: 13.5px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* The waveform. Bars are the clip's real loudness when the picker's browser
+   could decode it, and an even dim row when not — a made-up shape would be a
+   chart of nothing. The box is the stretch that plays. */
+.cc-wave-wrap { grid-area: wave; position: relative; height: 54px; cursor: pointer; }
+.cc-wave { position: absolute; inset: 7px 0; display: flex; align-items: center; gap: 2px; }
+.cc-wave i {
+  flex: 1 1 0; min-width: 1px; border-radius: 2px;
+  background: var(--text-faint); opacity: .5;
+  transition: background .12s, opacity .12s;
+}
+.cc-wave i.in { background: color-mix(in srgb, var(--cc) 45%, var(--text-dim)); opacity: 1; }
+.cc-wave i.in.on { background: var(--cc); }
+/* While it plays, what is still to come drops back so the played part reads as a fill. */
+.cc-card.is-playing .cc-wave i.in:not(.on) { opacity: .4; }
+.cc-win {
+  position: absolute; top: 0; bottom: 0; pointer-events: none;
+  border: 1.5px solid color-mix(in srgb, var(--cc) 80%, transparent); border-radius: 10px;
+  background: color-mix(in srgb, var(--cc) 9%, transparent);
+}
+.is-playing .cc-win { box-shadow: 0 0 24px -6px var(--cc); }
+.cc-win-len {
+  position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+  font: 700 10.5px/1 var(--font-body); padding: 3px 8px; border-radius: 999px;
+  background: var(--cc); color: #0a0908; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.cc-foot { grid-area: foot; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.cc-by {
+  display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0;
+  background: none; border: none; color: var(--text-dim); cursor: pointer; text-align: left;
+  font: 500 12.5px var(--font-body);
+}
+.cc-by img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex: none; background: var(--surface-3); }
+.cc-by span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cc-by b { color: var(--text); font-weight: 600; }
+.cc-by:hover b { color: var(--cc); }
+.cc-agree {
+  flex: none; display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--cc) 45%, transparent);
+  background: color-mix(in srgb, var(--cc) 11%, transparent); color: var(--text);
+  font: 600 13px var(--font-body); padding: 7px 14px 7px 11px; border-radius: 999px;
+  transition: background .18s, border-color .18s, color .18s, transform .18s var(--ease), opacity .18s;
+}
+.cc-agree:active { transform: scale(.95); }
+.cc-agree svg { width: 15px; height: 15px; color: var(--cc); flex: none; }
+.cc-agree b { font: 800 14px var(--font-display); font-variant-numeric: tabular-nums; }
+.cc-agree.is-on { background: var(--cc); border-color: var(--cc); color: #0a0908; }
+.cc-agree.is-on svg { color: #0a0908; }
+.cc-agree.is-locked { background: transparent; border-color: var(--border-strong); color: var(--text-dim); }
+.cc-agree.is-locked svg { color: var(--text-faint); }
+.cc-agree.unlocked { animation: ccUnlock .9s var(--ease); }
+@keyframes ccUnlock { 0% { box-shadow: 0 0 0 0 var(--cc); } 40% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--cc) 30%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+.cc-agree.is-mine { cursor: default; background: transparent; border-color: var(--border); color: var(--text-dim); }
+.cc-del { display: inline-flex; padding: 0 0 0 4px; margin-left: 2px; background: none; border: none; color: var(--text-faint); cursor: pointer; }
+.cc-del:hover { color: var(--red); }
+.cc-del svg { width: 14px; height: 14px; color: inherit; }
+
+/* Number one gets the whole row and a bigger sleeve. A chart where first and
+   fortieth look identical is a list. */
+.cc-card.cc-lead { grid-column: 1 / -1; grid-template-columns: 128px minmax(0, 1fr); gap: 16px 18px; padding: 18px 18px 14px; }
+.cc-lead .cc-art { width: 128px; height: 128px; border-radius: 14px; }
+.cc-lead .cc-art-btn { width: 40px; height: 40px; right: 8px; bottom: 8px; }
+.cc-lead .cc-art-btn svg { width: 16px; height: 16px; }
+.cc-lead .cc-title { font-size: 25px; margin-top: 10px; }
+.cc-lead .cc-artist { font-size: 15px; }
+.cc-lead .cc-wave-wrap { height: 70px; }
+.cc-lead .cc-rank { font-size: 15px; top: 16px; right: 18px; }
+@media (max-width: 560px) {
+  .cc-card.cc-lead { grid-template-columns: 96px minmax(0, 1fr); padding: 14px 14px 12px; }
+  .cc-lead .cc-art { width: 96px; height: 96px; }
+  .cc-lead .cc-title { font-size: 20px; }
+  .cc-lead .cc-wave-wrap { height: 60px; }
+}
+.cc-skel { height: 168px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); animation: ccLoad 1.4s ease-in-out infinite; }
+.cc-state { text-align: center; padding: 48px 20px; color: var(--text-dim); grid-column: 1 / -1; }
+.cc-state h3 { font: 700 20px var(--font-display); color: var(--text); margin: 0 0 6px; }
+.cc-state p { margin: 0 auto 16px; max-width: 42ch; font-size: var(--t-sm); }
+
+/* ---- the picker --------------------------------------------------------- */
+.cc-panel { --cc: var(--section); max-width: 540px; }
+.cc-track { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 14px; background: var(--surface-2); margin: 2px 0 16px; }
+.cc-track img { width: 52px; height: 52px; border-radius: 9px; object-fit: cover; flex: none; background: var(--surface-3); }
+.cc-track > div { min-width: 0; flex: 1; }
+.cc-track .nm { font: 700 15px var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cc-track .ar { color: var(--text-dim); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cc-ed { position: relative; padding: 28px 14px 12px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--border); }
+.cc-ed-wave { position: relative; height: 84px; touch-action: pan-y; cursor: pointer; user-select: none; -webkit-user-select: none; border-radius: 12px; outline: none; }
+.cc-ed-wave:focus-visible { box-shadow: 0 0 0 2px var(--cc); }
+.cc-ed-wave .cc-wave { inset: 8px 0; }
+.cc-ed-wave.is-loading .cc-wave i { animation: ccLoad 1.2s ease-in-out infinite; }
+.cc-sel {
+  position: absolute; top: 0; bottom: 0; cursor: grab;
+  border: 2px solid var(--cc); border-radius: 12px;
+  background: color-mix(in srgb, var(--cc) 15%, transparent);
+  box-shadow: 0 0 30px -8px var(--cc);
+  transition: left .18s var(--ease), width .18s var(--ease);
+}
+.cc-ed-wave.is-dragging .cc-sel { transition: none; cursor: grabbing; }
+.cc-sel::before, .cc-sel::after {
+  content: ''; position: absolute; top: 50%; width: 4px; height: 22px; margin-top: -11px;
+  border-radius: 3px; background: #fff; box-shadow: 0 0 0 2px var(--cc);
+}
+.cc-sel::before { left: -3px; }
+.cc-sel::after { right: -3px; }
+.cc-sel-badge {
+  position: absolute; top: -24px; left: 50%; transform: translateX(-50%);
+  font: 700 12px/1 var(--font-body); padding: 5px 10px; border-radius: 999px;
+  background: var(--cc); color: #0a0908; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.cc-playhead { position: absolute; top: 6px; bottom: 6px; width: 2px; margin-left: -1px; border-radius: 2px; background: #fff; box-shadow: 0 0 8px #fff; display: none; pointer-events: none; }
+.cc-ed.is-playing .cc-playhead { display: block; }
+.cc-ed-times { display: flex; justify-content: space-between; margin-top: 8px; font: 500 11.5px var(--font-mono); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.cc-ed-times .mid { color: var(--text); }
+.cc-ed-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.cc-hear {
+  width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer; flex: none;
+  display: grid; place-items: center; background: var(--cc); color: #0a0908;
+  box-shadow: 0 8px 24px -10px var(--cc); transition: transform .18s var(--ease);
+}
+.cc-hear:active { transform: scale(.92); }
+.cc-hear svg { width: 15px; height: 15px; grid-area: 1 / 1; }
+.cc-hear .cc-ic-pause { display: none; }
+.cc-ed.is-playing .cc-hear .cc-ic-play { display: none; }
+.cc-ed.is-playing .cc-hear .cc-ic-pause { display: block; }
+.cc-hear:disabled { opacity: .4; cursor: default; }
+.cc-ed-hint { font-size: 12.5px; color: var(--text-dim); line-height: 1.4; }
+.cc-lens { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+.cc-lens button {
+  border: 1px solid var(--border-strong); background: transparent; color: var(--text-dim);
+  font: 600 14px var(--font-body); padding: 10px 0; border-radius: 999px; cursor: pointer;
+  transition: background .16s, color .16s, border-color .16s;
+}
+.cc-lens button.is-on { color: var(--text); border-color: var(--cc); background: color-mix(in srgb, var(--cc) 14%, transparent); }
+.cc-label { font: 700 11px var(--font-body); letter-spacing: .09em; text-transform: uppercase; color: var(--text-dim); margin: 20px 0 9px; }
+.cc-catpick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cc-catpick .cc-chip { justify-content: center; padding: 10px 12px; }
+.cc-featpick { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Whose-part chips wear the chosen category's hue, not the section's. */
+.cc-featpick .cc-chip { --cc: inherit; }
+.cc-featpick .g-input { flex: 1 1 160px; min-width: 0; }
+.cc-note { font-size: 12px; color: var(--text-faint); margin: 16px 0 0; line-height: 1.45; }
+.cc-post { width: 100%; margin-top: 14px; justify-content: center; }
+.cc-post:disabled { opacity: .45; cursor: default; filter: none; box-shadow: none; }
+.cc-noclip { padding: 22px 8px 10px; text-align: center; color: var(--text-dim); font-size: 13.5px; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .cc-card,
+  html:not([data-motion="full"]) .cc-agree.unlocked { animation: none; }
+}
+html[data-motion="none"] .cc-card, html[data-motion="none"] .cc-agree.unlocked { animation: none; }
 
 /* ---- the collection ----------------------------------------------------- */
 .col-tabs { margin: 14px 0 18px; }
@@ -9196,13 +9513,37 @@ window.ICONS = {
     + '<path class="arr-up" d="M8 7V2.2M5.3 4.7 8 2l2.7 2.7"/>'
     + '<path class="arr-down" d="M8 9v4.8M5.3 11.3 8 14l2.7-2.7"/>'
     + '</svg>',
-  // A side-on pistol silhouette for Cover Fire, in the same stroke language
-  // as everything else — slide/barrel/grip as one body, the hammer as its
-  // own small piece so it can cock back independently of the recoil.
+  // Cover Fire. The first pistol was a single wedge with a hook on top and
+  // read as a hairdryer at 18px — nothing on it said "gun". What does is the
+  // three parts everybody draws without thinking: a long slide pointing one
+  // way, a grip raked back underneath it, and a trigger guard between them.
+  // The muzzle flash is its own path so it can fire on the recoil and stay
+  // invisible the rest of the time; overflow is visible on .gc-pistol so the
+  // flash can sit just past the muzzle without being cropped by the viewBox.
   pistol: '<svg class="ui-icon gc-pistol" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-    + '<path class="pistol-body" d="M2.4 8.4h7.4V6.6a1 1 0 0 1 1-1h1.8a.8.8 0 0 1 .8.8v1.6a.8.8 0 0 1-.8.8H12v1a1 1 0 0 1-1 1H6.6l-1.4 2.6H3.6v-2.6H3a.8.8 0 0 1-.8-.8Z"/>'
-    + '<path class="pistol-hammer" d="M9.6 5.6c.3-.6.9-1 1.6-1"/>'
+    + '<path class="pistol-body" d="M2.6 4.2H13.6a.8.8 0 0 1 .8.8v1.6a.8.8 0 0 1-.8.8H6.4l-.9 5a.9.9 0 0 1-.9.75H2.5a.6.6 0 0 1-.58-.75L3.1 7.4h-.5a.8.8 0 0 1-.8-.8V5a.8.8 0 0 1 .8-.8Z"/>'
+    + '<path class="pistol-guard" d="M6.15 8.9H8.6a1 1 0 0 0 1-1v-.5"/>'
+    + '<path class="pistol-trigger" d="M7.3 7.4c0 .5.2.9.5 1.1"/>'
+    + '<path class="pistol-hammer" d="M2.7 4.2 2.1 3.2"/>'
+    + '<path class="pistol-flash" d="M15.2 5.8h.9M15 4.2l.7-.6M15 7.4l.7.6"/>'
     + '</svg>',
+  // Guess the Year. The plain calendar with a pink corner peeling on it said
+  // "date" at best and moved by three degrees. The game is a year you do not
+  // know yet, so the calendar's page is a two-digit reel that spins through
+  // decades and lands — an odometer, the thing a year looks like while it is
+  // being worked out. The last digits repeat the first so the loop's reset is
+  // invisible. The window is a NESTED <svg>, not a clipPath: an inner svg
+  // clips to its own viewport with no id to collide, and a clipPath id
+  // referenced from a copy of this icon inside a display:none view stopped
+  // clipping at all. Its size is inline because .gc-emoji svg sizes every svg
+  // it contains to 24px, nested ones included.
+  yearreel: '<svg class="ui-icon gc-year" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true">'
+    + '<g class="yr-cal"><rect x="2.2" y="3.2" width="11.6" height="10.6" rx="1.6"/><path d="M2.2 6.4h11.6"/>'
+    + '<path class="yr-ring" d="M5.3 1.8v2.6M10.7 1.8v2.6"/></g>'
+    + '<svg class="yr-win" x="2.9" y="6.9" width="10.2" height="6.3" viewBox="2.9 6.9 10.2 6.3" style="width:10.2px;height:6.3px"><g class="yr-reel" fill="currentColor" stroke="none" text-anchor="middle">'
+    + '<text x="8" y="12">84</text><text x="8" y="19">71</text><text x="8" y="26">96</text>'
+    + '<text x="8" y="33">03</text><text x="8" y="40">67</text><text x="8" y="47">84</text>'
+    + '</g></svg></svg>',
   star: '<svg class="ui-icon" viewBox="0 0 16 16" fill="currentColor" stroke="none" aria-hidden="true"><path d="M8 1.4l1.9 4.3 4.7.5-3.5 3.2.9 4.6L8 11.7 3.9 14l.9-4.6-3.5-3.2 4.7-.5Z"/></svg>',
   beaker: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M6.2 1.8h3.6M6.8 1.8v4.3L3.4 12a1.4 1.4 0 0 0 1.2 2.2h6.8a1.4 1.4 0 0 0 1.2-2.2L9.2 6.1V1.8"/><path d="M5 10.4h6"/></svg>',
   check: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 8.4 6.3 11.6 13 4.4"/></svg>',
@@ -9235,7 +9576,7 @@ window.discAmt = function (n) {
   <div class="splash-bloom" aria-hidden="true"></div>
   <div class="splash-scrim" id="splash-scrim"></div>
   <div class="splash-content">
-    <div class="splash-word" id="splash-word">VINALL</div>
+    <div class="splash-word" id="splash-word" data-text="VINALL">VINALL</div>
     <p class="splash-tag">The place for music.</p>
     <button class="splash-cta" id="splash-cta">GO</button>
   </div>
@@ -9575,6 +9916,30 @@ window.discAmt = function (n) {
     </div>
   </section>
 
+  <!-- ============================ COMMUNITY CHOICE ============================
+       The best stretch of a song, picked by one person and agreed with (or not)
+       by everybody who hears it. A fourth Crate sub-tab rather than a nav item:
+       it is the community's opinions about records, which is what the Crate
+       button already stands for, and the bar it would have joined is full.
+       Everything here is drawn by the COMMUNITY CHOICE module. -->
+  <section id="view-choice" class="view" style="display:none;">
+    <div class="section-head">
+      <div><h2 style="font-size:26px; letter-spacing:-0.025em;">Community Choice</h2></div>
+      <button class="btn-primary" id="cc-new" style="margin-left:auto;">Pick a moment</button>
+    </div>
+    <p class="cc-intro">The best thirty seconds of a song, picked by someone who loves it. Hear it, and agree if they got it right.</p>
+    <div class="cc-bar">
+      <div class="cc-cats" id="cc-cats" role="tablist" aria-label="Category"></div>
+      <div class="cc-sort" id="cc-sort" role="tablist" aria-label="Order">
+        <button type="button" data-sort="top" class="is-on">Top</button>
+        <button type="button" data-sort="new">New</button>
+      </div>
+      <button type="button" class="btn-mini cc-playall" id="cc-playall"><svg class="cc-ic-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8Z" fill="currentColor"/></svg><svg class="cc-ic-stop" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1.6" fill="currentColor"/></svg><span>Play all</span></button>
+    </div>
+    <div class="cc-feed" id="cc-feed"></div>
+    <button class="btn-ghost" id="cc-more" style="width:100%; margin-top:16px; display:none;">Load more</button>
+  </section>
+
   <!-- ============================ GAMES ============================ -->
   <section id="view-games" class="view" style="display:none;">
     <button class="lb-bar" id="leaderboard-card">
@@ -9646,7 +10011,7 @@ window.discAmt = function (n) {
         <div class="gc-best" data-best="tracklist"></div>
       </div>
       <div class="game-card" data-game="year">
-        <div class="gc-emoji" data-icon="calendar"></div>
+        <div class="gc-emoji" data-icon="yearreel"></div>
         <h3>Guess the Year</h3>
         <p>Name the year, give or take one.</p>
         <div class="gc-go">Play &rarr;</div>
@@ -10522,6 +10887,16 @@ window.discAmt = function (n) {
     <div class="modal-head"><span class="mh-emoji" data-icon="search"></span><div><h2 id="ptop-title">Search</h2><p>Type to search Deezer.</p></div></div>
     <input id="ptop-search" class="g-input" type="text" placeholder="Search&hellip;" autocomplete="off" style="margin-bottom:12px;">
     <div id="ptop-list" style="max-height:50vh; overflow-y:auto;"></div>
+  </div>
+</div>
+
+<!-- Community Choice: pick a moment. Filled by the COMMUNITY CHOICE module. -->
+<div class="modal" id="cc-modal">
+  <div class="modal-panel cc-panel" id="cc-panel">
+    <button class="modal-close" id="cc-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="wave"></span><div><h2>Pick a moment</h2><p>The part you would play somebody first.</p></div></div>
+    <div class="cc-track" id="cc-track"></div>
+    <div id="cc-body"></div>
   </div>
 </div>
 
@@ -12856,6 +13231,7 @@ const views = {
   crate: document.getElementById('view-crate'),
   albums: document.getElementById('view-albums'),
   songs: document.getElementById('view-songs'),
+  choice: document.getElementById('view-choice'),
   /* `views` is an EXPLICIT map and is not derived from the DOM. A nav button
      added without the matching entry here hides every section and shows a
      blank page — the trap this file has carried a warning about since the
@@ -12891,7 +13267,7 @@ function setMode(mode, fromCode) {
   /* One nav button can stand for several views. The Crate button covers
      albums, songs and the community feed, so it has to stay lit on all three —
      otherwise switching sub-tab visibly unselects the nav item you are inside. */
-  var CRATE_GROUP = ['albums', 'songs', 'crate'];
+  var CRATE_GROUP = ['albums', 'songs', 'crate', 'choice'];
   document.querySelectorAll('#modes button').forEach(function (b) {
     var m = b.dataset.mode;
     var on = m === mode ||
@@ -12914,6 +13290,7 @@ function setMode(mode, fromCode) {
   }
   else { const h = document.getElementById('artist-hero'); if (h) h.style.display = 'none'; }
   if (mode === 'crate' && window.renderCrate) window.renderCrate();
+  if (mode === 'choice' && window.renderChoice) window.renderChoice();
   if (mode === 'albums') renderAlbums();
   if (mode === 'songs') renderSongs();
   if (mode === 'foryou' && window.renderForYou) window.renderForYou();
@@ -12924,6 +13301,7 @@ function setMode(mode, fromCode) {
   // Same rule as the feed: `display:none` does not stop an <audio> element.
   if (mode !== 'songs' && window.CratePreview) window.CratePreview.stop();
   if (mode !== 'home' && window.TodayPreview) window.TodayPreview.stop();
+  if (mode !== 'choice' && window.ChoiceFeed) window.ChoiceFeed.stop();
   if (mode === 'games' && window.renderGameBests) window.renderGameBests();
   // Repaint on entry so a gate passed while rating is announced the next time
   // you look at the grid, rather than silently being open.
@@ -24634,7 +25012,8 @@ window.renderAdminStats = renderAdminStats;
   var TABS = [
     { mode: 'albums', label: 'Albums' },
     { mode: 'songs',  label: 'Songs' },
-    { mode: 'crate',  label: 'Everyone' }
+    { mode: 'crate',  label: 'Everyone' },
+    { mode: 'choice', label: 'Choice' }
   ];
 
   function barHTML(active) {
@@ -24677,6 +25056,806 @@ window.renderAdminStats = renderAdminStats;
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { paintCrateTabs('albums'); });
   } else { paintCrateTabs('albums'); }
+})();
+</script>
+
+<!-- ================================================================
+     COMMUNITY CHOICE
+     ================================================================
+     Somebody picks the best stretch of a song — a verse, a feature, a hook,
+     a beat switch — and everybody else hears exactly that stretch and agrees
+     or does not. The picks with the most agreement rise.
+
+     WHAT "EXACTLY THAT STRETCH" CAN MEAN HERE. VINALL plays Deezer's
+     thirty-second preview and nothing longer; there is no full-track source
+     this app can reach (see "Playing a track" in CLAUDE.md). So a moment is a
+     window INSIDE the preview, stored as an offset into the clip of one exact
+     Deezer track id. The clip is re-fetched by that id at play time — the urls
+     are signed and die in about ten minutes — so the same recording, the same
+     clip and the same offset play for everybody. A name search could return a
+     different pressing with a different clip, and the offset would land on
+     somebody else's thirty seconds.
+
+     AGREEING NEEDS LISTENING. The heart left the Crate because a like can be
+     given by somebody who has never heard the record. Here the thing being
+     judged is thirty seconds long and one tap away, so the Agree button opens
+     once you have heard most of the pick — tapping it before that plays it.
+     It is a browser-side rule and not a defence; it is a statement of what a
+     vote here is supposed to mean.
+
+     The waveform is the clip's real loudness envelope, decoded in the
+     picker's browser and stored with the pick, so the feed draws true shapes
+     without downloading a clip per card. When decoding was not possible the
+     bars are an even dim row: an invented shape would be a chart of nothing.
+
+     Schema: supabase/migrations/20261002120000_community_choice.sql.
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  var CATS = [
+    { k: 'verse',   label: 'Verses',        one: 'Best verse',       hue: '--c-cyan' },
+    { k: 'feature', label: 'Features',      one: 'Best feature',     hue: '--c-violet' },
+    { k: 'hook',    label: 'Hooks',         one: 'Best hook',        hue: '--c-pink' },
+    { k: 'beat',    label: 'Beat switches', one: 'Best beat switch', hue: '--c-lime' }
+  ];
+  var CAT = {}; CATS.forEach(function (c) { CAT[c.k] = c; });
+  var COLS = 'id,user_id,category,track_id,track_name,artist,album,art,featuring,start_ms,len_ms,peaks,likes,created_at';
+  var PAGE = 20, BARS = 64, CLIP_MS = 30000, LENS = [10, 15, 20, 30], TTL = 4 * 60 * 1000;
+  var HEARD_AT = 0.8;              // of the pick, before Agree opens
+  var DZ_ART = /^https:\/\/[a-z0-9-]+\.dzcdn\.net\//;
+
+  var IC_PLAY = '<svg class="cc-ic-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6L13 8Z" fill="currentColor"/></svg>';
+  var IC_PAUSE = '<svg class="cc-ic-pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="2.8" height="10" rx=".8" fill="currentColor"/><rect x="9.2" y="3" width="2.8" height="10" rx=".8" fill="currentColor"/></svg>';
+  var IC_CHECK = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 8.4 6.4 11.4 12.8 4.6"/></svg>';
+
+  var st = { cat: 'all', sort: 'top', items: [], byId: {}, offset: 0, done: false, loading: false,
+             liked: {}, heard: {}, people: {}, off: false, tok: 0, built: false };
+  // One thing plays at a time, owned by the feed or by the picker.
+  var pl = { id: null, owner: null, tok: 0, from: 0, len: 0, lastT: 0, auto: false, bar: -1 };
+
+  function $(id) { return document.getElementById(id); }
+  function sb() { return window.Cloud && Cloud.client ? Cloud.client() : null; }
+  function me() { var u = window.Cloud && Cloud.getUser ? Cloud.getUser() : null; return u ? u.id : null; }
+  function say(msg) { if (window.toast) toast(msg); }
+  function fmt(ms) { var s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function rel(iso) {
+    var s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s / 60) + 'm';
+    if (s < 86400) return Math.floor(s / 3600) + 'h';
+    if (s < 86400 * 30) return Math.floor(s / 86400) + 'd';
+    return new Date(iso).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+  }
+  function hue(k) { return 'var(' + ((CAT[k] || CATS[0]).hue) + ')'; }
+  function missing(err) {
+    var m = String((err && (err.message || err.details)) || '');
+    return !!err && (err.code === '42P01' || err.code === 'PGRST205' || (/moment/.test(m) && /exist|find|schema/.test(m)));
+  }
+  var _reported = false;
+  function reportOnce(msg, extra) {
+    if (_reported) return; _reported = true;
+    try { if (window.reportIssue) reportIssue(msg, extra); } catch (e) {}
+  }
+
+  /* ---- the clip ------------------------------------------------------- */
+  // Memory only and four minutes, the same rule VinalAudio keeps: a signed url
+  // is a credential with an expiry, not metadata.
+  var clips = {};
+  function clipFor(trackId) {
+    var c = clips[trackId];
+    if (c && Date.now() - c.at < TTL) return c.p;
+    var base = (window.Native && Native.api) || '';
+    var p = fetch(base + '/api/catalogue?path=track&id=' + encodeURIComponent(trackId))
+      .then(function (r) { if (!r.ok) throw new Error('track ' + r.status); return r.json(); })
+      .catch(function (e) { delete clips[trackId]; throw e; });
+    clips[trackId] = { at: Date.now(), p: p };
+    return p;
+  }
+
+  /* ---- playback ------------------------------------------------------- */
+  function stop() {
+    pl.tok++;
+    var had = pl.id;
+    pl.id = null; pl.owner = null; pl.bar = -1;
+    if (had) { try { VinalAudio.stop(); } catch (e) {} }
+    paintPlaying();
+  }
+  function setAuto(on) {
+    pl.auto = !!on;
+    var b = $('cc-playall');
+    if (b) { b.classList.toggle('is-on', pl.auto); b.querySelector('span').textContent = pl.auto ? 'Stop' : 'Play all'; }
+  }
+
+  // m: { id, track_id, track_name, artist, start_ms, len_ms }. Called inside
+  // the tap that asked for it, so prime() still has the gesture iOS wants.
+  function playMoment(m, owner) {
+    var tok = ++pl.tok;
+    try { if (window.VinalAudio) VinalAudio.stop(); } catch (e) {}
+    pl.id = m.id; pl.owner = owner; pl.from = m.start_ms / 1000; pl.len = m.len_ms / 1000;
+    pl.lastT = pl.from; pl.bar = -1;
+    try { VinalAudio.prime(); } catch (e) {}
+    paintPlaying(true);
+    if (owner === 'feed' && window.track) track('moment_played', { category: m.category || null });
+    function fail(msg) {
+      if (tok !== pl.tok) return;
+      pl.id = null; pl.owner = null; paintPlaying();
+      if (msg) say(msg);
+    }
+    clipFor(m.track_id).then(function (t) {
+      if (tok !== pl.tok) return;
+      if (!t || !t.preview_url) { fail('Deezer has no clip for this one right now'); return; }
+      return Promise.resolve(VinalAudio.play({ artist: m.artist, title: m.track_name }, pl.len,
+        { clip: { url: t.preview_url }, from: pl.from })).then(function (ok) {
+        if (tok !== pl.tok) return;
+        if (ok === 'blocked') { fail('Tap play again to listen'); return; }
+        if (!ok) { fail('That clip would not play just now'); return; }
+        paintPlaying();
+      });
+    }).catch(function () { fail('Could not reach the clip — check your connection'); });
+  }
+
+  function onTick(t) {
+    if (!pl.id) return;
+    if (pl.owner === 'editor' && !($('cc-modal') && $('cc-modal').classList.contains('open'))) { stop(); return; }
+    pl.lastT = t;
+    var f = Math.min(1, Math.max(0, (t - pl.from) / pl.len));
+    if (pl.owner === 'feed') {
+      if (f >= HEARD_AT) markHeard(pl.id);
+      var card = cardEl(pl.id);
+      if (!card) return;
+      // Bars light as they are played. Only touched when the boundary moves,
+      // which is a few times a second rather than every frame.
+      var m = st.byId[pl.id];
+      var b = Math.floor((m.start_ms + f * m.len_ms) / CLIP_MS * BARS);
+      if (b !== pl.bar) {
+        pl.bar = b;
+        var bars = card.querySelectorAll('.cc-wave i');
+        for (var i = 0; i < bars.length; i++) bars[i].classList.toggle('on', i <= b && bars[i].classList.contains('in'));
+      }
+      var len = card.querySelector('.cc-win-len');
+      if (len) len.textContent = fmt((1 - f) * m.len_ms) + ' left';
+    } else if (pl.owner === 'editor') {
+      var ph = $('cc-playhead');
+      if (ph) ph.style.left = (t * 1000 / ed.clipMs * 100) + '%';
+    }
+  }
+  function onEnd() {
+    if (!pl.id) return;
+    var id = pl.id, owner = pl.owner;
+    // 'end' is emitted for every clip VinalAudio plays, so only an end that
+    // this pick actually reached counts as having heard it.
+    var reached = pl.lastT >= pl.from + pl.len * HEARD_AT;
+    pl.id = null; pl.owner = null; pl.bar = -1;
+    if (owner === 'feed' && reached) markHeard(id);
+    paintPlaying();
+    if (owner === 'feed' && pl.auto && reached) {
+      var i = st.items.findIndex(function (m) { return m.id === id; });
+      var next = st.items[i + 1];
+      if (next) {
+        var el = cardEl(next.id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        playMoment(next, 'feed');
+      } else setAuto(false);
+    }
+  }
+
+  function cardEl(id) { var f = $('cc-feed'); return f ? f.querySelector('[data-mid="' + id + '"]') : null; }
+  function paintPlaying(loading) {
+    var feed = $('cc-feed');
+    if (feed) feed.querySelectorAll('.cc-card').forEach(function (c) {
+      var on = pl.owner === 'feed' && c.dataset.mid === pl.id;
+      c.classList.toggle('is-playing', on);
+      c.classList.toggle('is-loading', !!(on && loading));
+      if (!on) {
+        c.querySelectorAll('.cc-wave i.on').forEach(function (i) { i.classList.remove('on'); });
+        var m = st.byId[c.dataset.mid], len = c.querySelector('.cc-win-len');
+        if (m && len) len.textContent = Math.round(m.len_ms / 1000) + 's';
+      }
+    });
+    var edEl = $('cc-ed');
+    if (edEl) edEl.classList.toggle('is-playing', pl.owner === 'editor');
+  }
+  function markHeard(id) {
+    if (st.heard[id]) return;
+    st.heard[id] = true;
+    var card = cardEl(id), btn = card && card.querySelector('.cc-agree.is-locked');
+    if (btn) {
+      btn.classList.remove('is-locked'); btn.removeAttribute('title');
+      btn.classList.add('unlocked');
+      setTimeout(function () { btn.classList.remove('unlocked'); }, 950);
+    }
+  }
+
+  /* ---- the waveform --------------------------------------------------- */
+  function heights(peaks) {
+    var out = [], i;
+    if (Array.isArray(peaks)) { for (i = 0; i < BARS; i++) out.push(peaks[Math.floor(i * peaks.length / BARS)]); return out; }
+    if (typeof peaks === 'string' && peaks.length >= 16) {
+      for (i = 0; i < BARS; i++) out.push(parseInt(peaks.charAt(Math.floor(i * peaks.length / BARS)), 36) / 35);
+      return out;
+    }
+    for (i = 0; i < BARS; i++) out.push(-1);
+    return out;
+  }
+  function barsHtml(peaks, startMs, lenMs, clipMs) {
+    var a = startMs / clipMs * BARS, b = (startMs + lenMs) / clipMs * BARS;
+    return heights(peaks).map(function (v, i) {
+      var inW = i + 0.5 >= a && i + 0.5 <= b;
+      var h = v < 0 ? 18 : Math.max(8, Math.round(v * 100));
+      return '<i' + (inW ? ' class="in"' : '') + ' style="height:' + h + '%"></i>';
+    }).join('');
+  }
+  function encodePeaks(arr) {
+    return arr ? arr.map(function (v) { return Math.max(0, Math.min(35, Math.round(v * 35))).toString(36); }).join('') : null;
+  }
+  // The clip's loudness, RMS per bar, spread between its OWN quietest and
+  // loudest bars. Normalising to the peak alone drew a flat brick for every
+  // modern master, which is loud from end to end; the stretch between the
+  // two is where the drop, the breath before a verse and the switch live.
+  // Deezer's preview CDN answers CORS, which is the only reason this can run.
+  function decodePeaks(url) {
+    return fetch(url).then(function (r) { if (!r.ok) throw new Error('clip ' + r.status); return r.arrayBuffer(); })
+      .then(function (buf) {
+        var Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+        if (!Ctx) throw new Error('no decoder');
+        var ctx = new Ctx(1, 44100, 44100);
+        return new Promise(function (res, rej) {
+          var p = ctx.decodeAudioData(buf, res, rej);
+          if (p && p.then) p.then(res, rej);
+        });
+      })
+      .then(function (ab) {
+        var d = ab.getChannelData(0), n = d.length, raw = [], max = 0, min = Infinity, i, j;
+        for (i = 0; i < BARS; i++) {
+          var a = Math.floor(i * n / BARS), b = Math.floor((i + 1) * n / BARS);
+          var step = Math.max(1, Math.floor((b - a) / 1500)), sum = 0, cnt = 0;
+          for (j = a; j < b; j += step) { sum += d[j] * d[j]; cnt++; }
+          var v = Math.sqrt(sum / Math.max(1, cnt));
+          raw.push(v); if (v > max) max = v; if (v < min) min = v;
+        }
+        return { ms: Math.round(ab.duration * 1000), peaks: raw.map(function (v) { return max > min ? 0.12 + 0.88 * Math.pow((v - min) / (max - min), 1.3) : 0.5; }) };
+      });
+  }
+
+  /* ---- the feed ------------------------------------------------------- */
+  function agreeHtml(m) {
+    var n = m.likes || 0;
+    if (me() && m.user_id === me()) {
+      return '<div class="cc-agree is-mine">' + IC_CHECK + '<b>' + n + '</b><span>' + (n === 1 ? 'agrees' : 'agree') + '</span>' +
+        '<button class="cc-del" type="button" data-cc-del aria-label="Remove your pick" title="Remove your pick">' + (window.ICONS ? ICONS.trash : '&times;') + '</button></div>';
+    }
+    var on = !!st.liked[m.id], open = on || st.heard[m.id];
+    return '<button class="cc-agree' + (on ? ' is-on' : '') + (open ? '' : ' is-locked') + '" type="button" data-cc-agree aria-pressed="' + on + '"' +
+      (open ? '' : ' title="Hear it first"') + '>' + IC_CHECK + '<b>' + n + '</b><span>' + (on ? 'Agreed' : 'Agree') + '</span></button>';
+  }
+  function cardHtml(m, rank) {
+    var c = CAT[m.category] || CATS[0], who = st.people[m.user_id] || {};
+    var a = m.start_ms / CLIP_MS * 100, w = m.len_ms / CLIP_MS * 100;
+    var lead = st.sort === 'top' && rank === 1;
+    return '<article class="cc-card' + (lead ? ' cc-lead' : '') + '" data-mid="' + esc(m.id) + '" style="--cc:' + hue(m.category) + '">' +
+      (st.sort === 'top' ? '<div class="cc-rank' + (rank <= 3 ? ' top' : '') + '">#' + rank + '</div>' : '') +
+      '<button class="cc-art" type="button" data-cc-play aria-label="Play ' + esc(m.track_name) + '">' +
+        '<img src="' + esc(m.art || '') + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.opacity=0">' +
+        '<span class="cc-art-btn">' + IC_PLAY + IC_PAUSE + '</span></button>' +
+      '<div class="cc-head">' +
+        '<span class="cc-cat">' + esc(c.one) + (m.featuring ? ' <b>&middot; ' + esc(m.featuring) + '</b>' : '') + '</span>' +
+        '<div class="cc-title" title="' + esc(m.track_name) + '">' + esc(m.track_name) + '</div>' +
+        '<div class="cc-artist">' + esc(m.artist) + '</div>' +
+      '</div>' +
+      '<div class="cc-wave-wrap" data-cc-play role="button" aria-label="Play the picked ' + Math.round(m.len_ms / 1000) + ' seconds">' +
+        '<div class="cc-wave">' + barsHtml(m.peaks, m.start_ms, m.len_ms, CLIP_MS) + '</div>' +
+        '<div class="cc-win" style="left:' + a.toFixed(2) + '%;width:' + w.toFixed(2) + '%"><span class="cc-win-len">' + Math.round(m.len_ms / 1000) + 's</span></div>' +
+      '</div>' +
+      '<div class="cc-foot">' +
+        '<button class="cc-by" type="button" data-uid="' + esc(m.user_id) + '">' +
+          '<img src="' + esc(window.avatarSrc ? avatarSrc(who.avatar_url) : (who.avatar_url || '')) + '" alt="">' +
+          '<span>Picked by <b>' + esc(who.username || 'someone') + '</b> &middot; ' + esc(rel(m.created_at)) + '</span></button>' +
+        agreeHtml(m) +
+      '</div></article>';
+  }
+  function stateHtml(title, body, cta) {
+    return '<div class="cc-state"><h3>' + title + '</h3><p>' + body + '</p>' +
+      (cta ? '<button class="btn-primary" type="button" data-cc-new>' + cta + '</button>' : '') + '</div>';
+  }
+
+  function paintBar() {
+    var cats = $('cc-cats');
+    if (cats && !cats.childElementCount) {
+      cats.innerHTML = '<button type="button" class="cc-chip" data-cat="all">All</button>' +
+        CATS.map(function (c) { return '<button type="button" class="cc-chip" data-cat="' + c.k + '" style="--cc:var(' + c.hue + ')">' + c.label + '</button>'; }).join('');
+    }
+    if (cats) cats.querySelectorAll('[data-cat]').forEach(function (b) {
+      var on = b.dataset.cat === st.cat;
+      b.classList.toggle('is-on', on); b.setAttribute('aria-selected', on);
+    });
+    var sort = $('cc-sort');
+    if (sort) sort.querySelectorAll('[data-sort]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.sort === st.sort); });
+  }
+
+  async function people(rows) {
+    var c = sb(), ids = [];
+    rows.forEach(function (m) { if (m.user_id && !st.people[m.user_id] && ids.indexOf(m.user_id) === -1) ids.push(m.user_id); });
+    if (!c || !ids.length) return;
+    try {
+      var r = await c.from('profiles').select('id,username,avatar_url').in('id', ids);
+      (r.data || []).forEach(function (p) { st.people[p.id] = p; });
+    } catch (e) {}
+  }
+  async function likedBy(rows) {
+    var c = sb(), uid = me();
+    if (!c || !uid || !rows.length) return;
+    try {
+      var r = await c.from('moment_likes').select('moment_id').eq('user_id', uid).in('moment_id', rows.map(function (m) { return m.id; }));
+      (r.data || []).forEach(function (x) { st.liked[x.moment_id] = true; });
+    } catch (e) {}
+  }
+
+  async function load(reset) {
+    var feed = $('cc-feed'), more = $('cc-more');
+    if (!feed) return;
+    if (st.loading && !reset) return;
+    var tok = ++st.tok;
+    if (reset) {
+      st.items = []; st.byId = {}; st.offset = 0; st.done = false;
+      feed.innerHTML = '<div class="cc-skel"></div><div class="cc-skel"></div><div class="cc-skel"></div>';
+      if (more) more.style.display = 'none';
+    }
+    st.loading = true;
+    try {
+      if (window.Cloud && Cloud.ready) await Cloud.ready;
+      var c = sb();
+      if (!c) throw new Error('offline');
+      if (window.loadBlocks) await loadBlocks();
+      var q = c.from('moments').select(COLS);
+      if (st.cat !== 'all') q = q.eq('category', st.cat);
+      q = st.sort === 'top'
+        ? q.order('likes', { ascending: false }).order('created_at', { ascending: false })
+        : q.order('created_at', { ascending: false });
+      var r = await q.range(st.offset, st.offset + PAGE - 1);
+      if (tok !== st.tok) return;
+      if (r.error) throw r.error;
+      st.off = false;
+      var rows = r.data || [];
+      st.offset += rows.length;
+      st.done = rows.length < PAGE;
+      rows = rows.filter(function (m) { return !(window.isBlocked && isBlocked(m.user_id)); });
+      await Promise.all([people(rows), likedBy(rows)]);
+      if (tok !== st.tok) return;
+      if (reset) feed.innerHTML = '';
+      var html = rows.map(function (m) {
+        st.items.push(m); st.byId[m.id] = m;
+        return cardHtml(m, st.items.length);
+      }).join('');
+      feed.insertAdjacentHTML('beforeend', html);
+      if (!st.items.length) {
+        var cat = CAT[st.cat];
+        feed.innerHTML = stateHtml(cat ? 'No ' + cat.label.toLowerCase() + ' yet' : 'Nothing picked yet',
+          cat ? 'Be the first to put one forward.' : 'Pick the best thirty seconds of a song you love, and see who agrees.',
+          'Pick a moment');
+      }
+      if (more) more.style.display = st.done ? 'none' : 'block';
+      paintPlaying();
+    } catch (e) {
+      if (tok !== st.tok) return;
+      if (missing(e)) {
+        st.off = true;
+        feed.innerHTML = stateHtml('Not switched on yet', 'Community Choice is almost here. Check back soon.');
+        reportOnce('Community Choice: moments table missing — apply 20261002120000_community_choice.sql', { code: e.code });
+      } else {
+        feed.innerHTML = stateHtml('Could not load the picks', 'Something went wrong reaching VINALL. Try again in a moment.');
+        reportOnce('Community Choice: feed failed', { message: String((e && e.message) || e) });
+      }
+      if (more) more.style.display = 'none';
+    } finally {
+      if (tok === st.tok) st.loading = false;
+    }
+  }
+
+  function repaintAgree(id) {
+    var card = cardEl(id), m = st.byId[id];
+    if (!card || !m) return;
+    var old = card.querySelector('.cc-agree');
+    if (old) old.outerHTML = agreeHtml(m);
+  }
+  var _pending = {};
+  async function toggleAgree(id) {
+    var m = st.byId[id];
+    if (!m || _pending[id]) return;
+    if (!window.Cloud || !Cloud.isOn()) { if (window.Cloud && Cloud.openAuth) Cloud.openAuth(); return; }
+    if (m.user_id === me()) return;
+    if (!st.liked[id] && !st.heard[id]) {
+      if (pl.id !== id) playMoment(m, 'feed');
+      say('Hear it out, then agree');
+      return;
+    }
+    var on = !st.liked[id];
+    st.liked[id] = on; m.likes = Math.max(0, (m.likes || 0) + (on ? 1 : -1));
+    repaintAgree(id);
+    if (on) {
+      if (window.buzz) buzz('tap');
+      var b = cardEl(id) && cardEl(id).querySelector('.cc-agree');
+      if (b && window.burst) burst(b, { count: 14, colors: [hue(m.category), '#ffffff'] });
+      if (window.track) track('moment_agreed', { category: m.category });
+    }
+    _pending[id] = true;
+    var c = sb(), uid = me(), r;
+    try {
+      r = on ? await c.from('moment_likes').insert({ moment_id: id, user_id: uid })
+             : await c.from('moment_likes').delete().eq('moment_id', id).eq('user_id', uid);
+    } catch (e) { r = { error: e }; }
+    delete _pending[id];
+    // A duplicate means it was already agreed on another device — the state
+    // we are now showing is the true one, so it is not an error.
+    if (r && r.error && !(on && r.error.code === '23505')) {
+      st.liked[id] = !on; m.likes = Math.max(0, m.likes + (on ? -1 : 1));
+      repaintAgree(id);
+      say('Could not save that — try again');
+    }
+  }
+
+  function removePick(id) {
+    var m = st.byId[id];
+    if (!m || m.user_id !== me()) return;
+    var go = window.ask ? ask({ title: 'Remove your pick?',
+      body: '<b>' + esc(m.track_name) + '</b> &middot; ' + esc((CAT[m.category] || CATS[0]).one) +
+            '<br>Everyone who agreed with it goes with it.',
+      confirm: 'Remove pick', danger: true }) : Promise.resolve(confirm('Remove your pick?'));
+    go.then(async function (ok) {
+      if (!ok) return;
+      if (pl.id === id) stop();
+      var r = await sb().from('moments').delete().eq('id', id);
+      if (r.error) { say('Could not remove that'); return; }
+      var el = cardEl(id); if (el) el.remove();
+      st.items = st.items.filter(function (x) { return x.id !== id; });
+      delete st.byId[id];
+    });
+  }
+
+  function wire() {
+    if (st.built) return;
+    st.built = true;
+    var view = $('view-choice');
+    if (!view) return;
+    view.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t.closest('[data-cc-new]') || t.closest('#cc-new')) { openComposer(); return; }
+      var chip = t.closest('#cc-cats [data-cat]');
+      if (chip) { if (chip.dataset.cat !== st.cat) { st.cat = chip.dataset.cat; stop(); setAuto(false); paintBar(); load(true); } return; }
+      var srt = t.closest('#cc-sort [data-sort]');
+      if (srt) { if (srt.dataset.sort !== st.sort) { st.sort = srt.dataset.sort; stop(); setAuto(false); paintBar(); load(true); } return; }
+      if (t.closest('#cc-playall')) {
+        if (pl.auto) { setAuto(false); stop(); return; }
+        if (!st.items.length) return;
+        setAuto(true);
+        var start = (pl.owner === 'feed' && st.byId[pl.id]) || st.items[0];
+        if (pl.id !== start.id) playMoment(start, 'feed');
+        return;
+      }
+      if (t.closest('#cc-more')) { load(false); return; }
+      var card = t.closest('.cc-card');
+      if (!card) return;
+      var id = card.dataset.mid, m = st.byId[id];
+      if (!m) return;
+      if (t.closest('[data-cc-del]')) { e.stopPropagation(); removePick(id); return; }
+      if (t.closest('[data-cc-agree]')) { toggleAgree(id); return; }
+      var by = t.closest('.cc-by');
+      if (by) { if (window.viewUserProfile) viewUserProfile(by.dataset.uid); return; }
+      if (t.closest('[data-cc-play]')) {
+        if (pl.id === id) { setAuto(false); stop(); }
+        else playMoment(m, 'feed');
+      }
+    });
+  }
+
+  function render() {
+    wire();
+    paintBar();
+    // Re-entering keeps the list you were reading, as the Crate does; a pick
+    // posted elsewhere arrives with Refresh or a change of tab.
+    if (!st.items.length || st.off) load(true);
+  }
+
+  /* ---- the picker ----------------------------------------------------- */
+  var ed = null;
+  function blankEditor(item) {
+    return { tok: (ed ? ed.tok : 0) + 1, track: item, clipUrl: null, clipMs: CLIP_MS, peaks: null,
+             startMs: 0, lenMs: 15000, cat: null, feat: '', featOpts: [], state: 'loading', busy: false };
+  }
+  function openComposer() {
+    if (!window.Cloud || !Cloud.isOn()) { if (window.Cloud && Cloud.openAuth) Cloud.openAuth(); return; }
+    if (st.off) { say('Community Choice is not switched on yet'); return; }
+    setAuto(false); stop();
+    if (window.openPicker) openPicker('song', startEditor);
+  }
+  function featCandidates(t, primary) {
+    var out = [], seen = {};
+    function add(n) {
+      n = String(n || '').trim();
+      var k = n.toLowerCase();
+      if (!n || seen[k] || k === String(primary || '').toLowerCase()) return;
+      seen[k] = 1; out.push(n);
+    }
+    (t.artists || []).forEach(function (a) { if (a && a.role !== 'Main') add(a.name); });
+    var mt = /\((?:feat\.?|ft\.?|featuring|with)\s+([^)]+)\)/i.exec(t.title || t.name || '');
+    if (mt) mt[1].split(/\s*(?:,|&| and | x )\s*/i).forEach(add);
+    (t.artists || []).forEach(function (a) { if (a) add(a.name); });
+    return out.slice(0, 6);
+  }
+  function startEditor(item) {
+    if (!item || !/^\d{1,20}$/.test(String(item.id || ''))) { say('That song cannot be picked'); return; }
+    ed = blankEditor({ id: String(item.id), name: item.name, artist: item.artist, album: item.album || '', art: item.art || '' });
+    var tok = ed.tok;
+    paintEditor(true);
+    var modal = $('cc-modal');
+    modal.classList.add('open');
+    clipFor(ed.track.id).then(function (t) {
+      if (!ed || tok !== ed.tok) return;
+      if (!t || !t.preview_url) { ed.state = 'noclip'; paintEditor(true); return; }
+      ed.clipUrl = t.preview_url;
+      ed.featOpts = featCandidates(t, (t.artists && t.artists[0] && t.artists[0].name) || ed.track.artist);
+      if (t.album && t.album.images && t.album.images[1] && !DZ_ART.test(ed.track.art)) ed.track.art = t.album.images[1].url;
+      if (t.album && t.album.name && !ed.track.album) ed.track.album = t.album.name;
+      ed.state = 'decoding';
+      paintEditor(true);
+      return decodePeaks(t.preview_url).then(function (r) {
+        if (!ed || tok !== ed.tok) return;
+        ed.peaks = r.peaks;
+        if (r.ms > 5000) ed.clipMs = Math.min(CLIP_MS, Math.floor(r.ms / 100) * 100);
+        clampEditor();
+      }, function () { /* no waveform is a dimmer picture, not a broken picker */ })
+      .then(function () { if (ed && tok === ed.tok) { ed.state = 'ready'; paintEditor(true); } });
+    }).catch(function () {
+      if (!ed || tok !== ed.tok) return;
+      ed.state = 'error'; paintEditor(true);
+    });
+  }
+  function clampEditor() {
+    if (ed.lenMs > ed.clipMs) ed.lenMs = ed.clipMs;
+    ed.startMs = Math.max(0, Math.min(ed.clipMs - ed.lenMs, Math.round(ed.startMs / 100) * 100));
+  }
+  function closeComposer() {
+    if (pl.owner === 'editor') stop();
+    var m = $('cc-modal'); if (m) m.classList.remove('open');
+    if (ed) ed.tok++;
+  }
+
+  function paintEditor(full) {
+    if (!ed) return;
+    var panel = $('cc-panel');
+    panel.style.setProperty('--cc', ed.cat ? hue(ed.cat) : 'var(--section)');
+    $('cc-track').innerHTML =
+      '<img src="' + esc(ed.track.art || '') + '" alt="" referrerpolicy="no-referrer" onerror="this.style.opacity=0">' +
+      '<div><div class="nm">' + esc(ed.track.name) + '</div><div class="ar">' + esc(ed.track.artist) + '</div></div>' +
+      '<button class="btn-mini" type="button" data-ed="change">Change</button>';
+    if (!full) { paintSel(); return; }
+    var body = $('cc-body');
+    if (ed.state === 'noclip' || ed.state === 'error') {
+      body.innerHTML = '<div class="cc-noclip">' + (ed.state === 'noclip'
+        ? 'Deezer has no preview for this song, so there is nothing to pick from. Try another version of it.'
+        : 'Could not reach this song’s preview. Check your connection and try again.') + '</div>';
+      return;
+    }
+    var waiting = ed.state === 'loading' || ed.state === 'decoding';
+    var catBtns = CATS.map(function (c) {
+      return '<button type="button" class="cc-chip' + (ed.cat === c.k ? ' is-on' : '') + '" data-ed-cat="' + c.k + '" style="--cc:var(' + c.hue + ')">' + esc(c.one) + '</button>';
+    }).join('');
+    var feat = '';
+    if (ed.cat === 'feature') {
+      feat = '<div class="cc-label">Whose part?</div><div class="cc-featpick">' +
+        ed.featOpts.map(function (n) {
+          return '<button type="button" class="cc-chip' + (ed.feat === n ? ' is-on' : '') + '" data-ed-feat="' + esc(n) + '">' + esc(n) + '</button>';
+        }).join('') +
+        '<input class="g-input" id="cc-feat-in" type="text" maxlength="60" placeholder="' + (ed.featOpts.length ? 'Someone else…' : 'Who has the feature?') + '" value="' +
+        esc(ed.featOpts.indexOf(ed.feat) === -1 ? ed.feat : '') + '" autocomplete="off"></div>';
+    }
+    body.innerHTML =
+      '<div class="cc-ed" id="cc-ed">' +
+        '<div class="cc-ed-wave' + (waiting ? ' is-loading' : '') + '" id="cc-ed-wave" tabindex="0" role="slider" aria-label="Where the moment starts" aria-valuemin="0">' +
+          '<div class="cc-wave" id="cc-ed-bars"></div>' +
+          '<div class="cc-sel" id="cc-sel"><span class="cc-sel-badge" id="cc-sel-badge"></span></div>' +
+          '<div class="cc-playhead" id="cc-playhead"></div>' +
+        '</div>' +
+        '<div class="cc-ed-times"><span>0:00</span><span class="mid" id="cc-sel-range"></span><span id="cc-clip-end">' + fmt(ed.clipMs) + '</span></div>' +
+        '<div class="cc-ed-row"><button class="cc-hear" type="button" data-ed="hear" aria-label="Hear your pick"' + (ed.clipUrl ? '' : ' disabled') + '>' + IC_PLAY + IC_PAUSE + '</button>' +
+          '<div class="cc-ed-hint">' + (waiting ? 'Reading the clip…' : 'Drag the box onto the moment, or tap where it starts.') + '</div></div>' +
+      '</div>' +
+      '<div class="cc-lens">' + LENS.map(function (s) {
+        return '<button type="button" data-ed-len="' + s + '"' + (ed.lenMs === Math.min(s * 1000, ed.clipMs) ? ' class="is-on"' : '') + '>' + s + 's</button>';
+      }).join('') + '</div>' +
+      '<div class="cc-label">What is it?</div><div class="cc-catpick">' + catBtns + '</div>' + feat +
+      '<p class="cc-note">VINALL plays Deezer’s 30-second preview of each song, so your moment has to be somewhere inside it.</p>' +
+      '<button class="btn-primary cc-post" type="button" data-ed="post" id="cc-post">Post to Community Choice</button>';
+    paintSel(true);
+    paintPost();
+    paintPlaying();
+  }
+  function paintSel(bars) {
+    if (!ed) return;
+    var sel = $('cc-sel'), w = $('cc-ed-wave');
+    if (!sel || !w) return;
+    if (bars) $('cc-ed-bars').innerHTML = barsHtml(ed.peaks, ed.startMs, ed.lenMs, ed.clipMs);
+    else {
+      var a = ed.startMs / ed.clipMs * BARS, b = (ed.startMs + ed.lenMs) / ed.clipMs * BARS;
+      w.querySelectorAll('.cc-wave i').forEach(function (el, i) { el.classList.toggle('in', i + 0.5 >= a && i + 0.5 <= b); });
+    }
+    sel.style.left = (ed.startMs / ed.clipMs * 100) + '%';
+    sel.style.width = (ed.lenMs / ed.clipMs * 100) + '%';
+    $('cc-sel-badge').textContent = Math.round(ed.lenMs / 1000) + 's';
+    $('cc-sel-range').textContent = fmt(ed.startMs) + ' – ' + fmt(ed.startMs + ed.lenMs);
+    w.setAttribute('aria-valuemax', String(Math.round((ed.clipMs - ed.lenMs) / 1000)));
+    w.setAttribute('aria-valuenow', String(Math.round(ed.startMs / 1000)));
+    w.setAttribute('aria-valuetext', fmt(ed.startMs) + ' to ' + fmt(ed.startMs + ed.lenMs));
+  }
+  function featValue() { return ed.cat === 'feature' ? String(ed.feat || '').trim() : ''; }
+  function paintPost() {
+    var b = $('cc-post');
+    if (!b || !ed) return;
+    var ok = !!ed.clipUrl && !!ed.cat && (ed.cat !== 'feature' || featValue().length > 0) && !ed.busy;
+    b.disabled = !ok;
+    b.textContent = ed.busy ? 'Posting…' : (!ed.cat ? 'Choose what it is' : (ed.cat === 'feature' && !featValue() ? 'Say whose part it is' : 'Post to Community Choice'));
+  }
+  function hearSelection() {
+    if (!ed || !ed.clipUrl) return;
+    if (pl.owner === 'editor') { stop(); return; }
+    // Hand the clip straight over: it was just fetched by id, and the play is
+    // inside the tap that asked for it.
+    clips[ed.track.id] = { at: Date.now(), p: Promise.resolve({ preview_url: ed.clipUrl }) };
+    playMoment({ id: 'editor', track_id: ed.track.id, track_name: ed.track.name, artist: ed.track.artist,
+                 start_ms: ed.startMs, len_ms: ed.lenMs }, 'editor');
+  }
+
+  async function post() {
+    if (!ed || ed.busy) return;
+    var feat = featValue();
+    if (!ed.clipUrl || !ed.cat || (ed.cat === 'feature' && !feat)) return;
+    if (feat && window.hasSlur && hasSlur(feat)) { say('Pick a different name for that'); return; }
+    ed.busy = true; paintPost();
+    var row = {
+      category: ed.cat, track_id: ed.track.id,
+      track_name: String(ed.track.name || '').slice(0, 200), artist: String(ed.track.artist || '').slice(0, 200),
+      album: ed.track.album ? String(ed.track.album).slice(0, 200) : null,
+      art: DZ_ART.test(ed.track.art || '') ? ed.track.art : null,
+      featuring: feat ? feat.slice(0, 60) : null,
+      start_ms: ed.startMs, len_ms: ed.lenMs, peaks: encodePeaks(ed.peaks)
+    };
+    var r;
+    try { r = await sb().from('moments').insert(row).select(COLS).single(); }
+    catch (e) { r = { error: e }; }
+    if (!ed) return;
+    ed.busy = false;
+    if (r.error) {
+      var msg = String(r.error.message || '');
+      if (r.error.code === '23505') say('You have already picked a ' + (CAT[ed.cat].one.toLowerCase()) + ' from this song');
+      else if (/moment_daily_limit/.test(msg)) say('That is twenty picks today — come back tomorrow');
+      else if (missing(r.error)) { st.off = true; say('Community Choice is not switched on yet'); reportOnce('Community Choice: moments table missing on post', { code: r.error.code }); }
+      else { say('Could not post that — try again'); reportOnce('Community Choice: post failed', { message: msg, code: r.error.code }); }
+      paintPost();
+      return;
+    }
+    if (window.track) track('moment_posted', { category: ed.cat, len: Math.round(ed.lenMs / 1000) });
+    if (window.buzz) buzz('good');
+    closeComposer();
+    // Show it where it is guaranteed to be: newest first, every category.
+    st.sort = 'new'; st.cat = 'all';
+    paintBar();
+    await load(true);
+    var el = r.data && cardEl(r.data.id);
+    if (el) {
+      el.classList.add('is-new');
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function () { el.classList.remove('is-new'); }, 2600);
+    }
+    say('Posted. Now let the room decide.');
+  }
+
+  function wireEditor() {
+    var modal = $('cc-modal');
+    if (!modal || modal._wired) return;
+    modal._wired = true;
+    $('cc-close').addEventListener('click', closeComposer);
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) { closeComposer(); return; }
+      if (!ed) return;
+      var t = e.target;
+      var act = t.closest('[data-ed]');
+      if (act) {
+        var a = act.dataset.ed;
+        if (a === 'change') { if (pl.owner === 'editor') stop(); openPicker('song', startEditor); }
+        else if (a === 'hear') hearSelection();
+        else if (a === 'post') post();
+        return;
+      }
+      var len = t.closest('[data-ed-len]');
+      if (len) {
+        ed.lenMs = Math.min(+len.dataset.edLen * 1000, ed.clipMs);
+        clampEditor(); if (pl.owner === 'editor') stop();
+        modal.querySelectorAll('[data-ed-len]').forEach(function (b) { b.classList.toggle('is-on', b === len); });
+        paintSel();
+        return;
+      }
+      var cat = t.closest('[data-ed-cat]');
+      if (cat) {
+        ed.cat = cat.dataset.edCat;
+        if (ed.cat === 'feature' && !ed.feat && ed.featOpts.length) ed.feat = ed.featOpts[0];
+        var playing = pl.owner === 'editor';
+        paintEditor(true);
+        if (playing) paintPlaying();
+        return;
+      }
+      var f = t.closest('[data-ed-feat]');
+      if (f) {
+        ed.feat = f.dataset.edFeat;
+        modal.querySelectorAll('[data-ed-feat]').forEach(function (b) { b.classList.toggle('is-on', b === f); });
+        var inp = $('cc-feat-in'); if (inp) inp.value = '';
+        paintPost();
+      }
+    });
+    modal.addEventListener('input', function (e) {
+      if (!ed || e.target.id !== 'cc-feat-in') return;
+      ed.feat = e.target.value.slice(0, 60);
+      modal.querySelectorAll('[data-ed-feat]').forEach(function (b) { b.classList.toggle('is-on', false); });
+      paintPost();
+    });
+
+    // Dragging the window. Pressing inside it grabs it where you pressed;
+    // pressing outside it moves it so it STARTS there, because "it starts
+    // here" is what somebody tapping a waveform means. Letting go plays it.
+    var drag = null;
+    function msAt(e, w) {
+      var r = w.getBoundingClientRect();
+      return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * ed.clipMs;
+    }
+    modal.addEventListener('pointerdown', function (e) {
+      var w = e.target.closest('#cc-ed-wave');
+      if (!w || !ed || !ed.clipUrl || e.button > 0) return;
+      var x = msAt(e, w);
+      var inside = x >= ed.startMs && x <= ed.startMs + ed.lenMs;
+      drag = { w: w, grab: inside ? x - ed.startMs : 0, moved: false, id: e.pointerId, x0: e.clientX };
+      if (pl.owner === 'editor') stop();
+      if (!inside) { ed.startMs = x; clampEditor(); paintSel(); }
+      try { w.setPointerCapture(e.pointerId); } catch (er) {}
+      w.classList.add('is-dragging');
+    });
+    modal.addEventListener('pointermove', function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (Math.abs(e.clientX - drag.x0) > 3) drag.moved = true;
+      ed.startMs = msAt(e, drag.w) - drag.grab; clampEditor(); paintSel();
+    });
+    function end(e) {
+      if (!drag || (e && e.pointerId !== drag.id)) return;
+      drag.w.classList.remove('is-dragging');
+      drag = null;
+      hearSelection();
+    }
+    modal.addEventListener('pointerup', end);
+    modal.addEventListener('pointercancel', function () { if (drag) { drag.w.classList.remove('is-dragging'); drag = null; } });
+    modal.addEventListener('keydown', function (e) {
+      if (!ed || e.target.id !== 'cc-ed-wave') return;
+      var step = e.shiftKey ? 2000 : 500;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        ed.startMs += e.key === 'ArrowLeft' ? -step : step; clampEditor();
+        if (pl.owner === 'editor') stop();
+        paintSel();
+      } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hearSelection(); }
+    });
+  }
+
+  function init() {
+    wireEditor();
+    try {
+      VinalAudio.on('tick', onTick);
+      VinalAudio.on('end', onEnd);
+    } catch (e) {}
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+  document.addEventListener('visibilitychange', function () { if (document.hidden && pl.id) { setAuto(false); stop(); } });
+
+  window.renderChoice = render;
+  window.ChoiceFeed = { stop: function () { setAuto(false); stop(); }, open: openComposer, reload: function () { load(true); } };
 })();
 </script>
 
@@ -28393,10 +29572,16 @@ window.renderAdminStats = renderAdminStats;
     }, 12);
   }
 
-  /* Play [0, seconds]. Resolution may already be cached, in which case this is
-     synchronous enough to stay inside the gesture that asked for it. */
+  /* Play [0, seconds] — or [from, from + seconds] when the caller names a
+     start. Recall and the previews always want the top of the clip; Community
+     Choice wants the exact stretch somebody picked, and a second element doing
+     that would be the iOS one-element rule broken. Ticks and the stop line are
+     both in clip time, so a caller with an offset reads positions the same way.
+     Resolution may already be cached, in which case this is synchronous enough
+     to stay inside the gesture that asked for it. */
   function play(track, seconds, opts) {
     var tok = ++playTok;
+    var from = Math.max(0, +(opts && opts.from) || 0);
     halt();
     // Two things playing at once is never right, and the player is a sibling
     // of every view rather than of this modal, so it survives one opening.
@@ -28418,7 +29603,7 @@ window.renderAdminStats = renderAdminStats;
     return pre.then(function (res) {
       if (tok !== playTok) return false;
       if (!res || !res.url) return false;
-      stopAt = seconds;
+      stopAt = from + seconds;
       /* Third line of defence, for the case neither of the other two covers: a
          provider with its own transport and a tab that has stopped painting.
          A timer is throttled in the background but it still fires, where an
@@ -28434,7 +29619,14 @@ window.renderAdminStats = renderAdminStats;
       }
       var a = audio();
       if (a.src !== res.url) { a.src = res.url; }
-      try { a.currentTime = 0; } catch (e) {}
+      /* Before metadata a seek is held as the start position by most engines
+         and dropped by some, so it is asserted again once the clip knows its
+         own length. Only while this play is still the current one. */
+      try { a.currentTime = from; } catch (e) {}
+      if (from) a.addEventListener('loadedmetadata', function once() {
+        a.removeEventListener('loadedmetadata', once);
+        if (tok === playTok && Math.abs(a.currentTime - from) > 0.25) { try { a.currentTime = from; } catch (e) {} }
+      });
       try { a.volume = 1; } catch (e) {}
       var pr = a.play();
       if (pr && pr.then) {
@@ -28454,7 +29646,7 @@ window.renderAdminStats = renderAdminStats;
              player does it — and because it is one, a genuinely dead track
              still says so rather than looping. */
           if (tok !== playTok || (opts && opts.fresh)) return false;
-          return play(track, seconds, { fresh: true });
+          return play(track, seconds, { fresh: true, from: from });
         });
       }
       raf = requestAnimationFrame(frame);

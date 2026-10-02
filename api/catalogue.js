@@ -302,6 +302,37 @@ export default async function handler(req, res) {
       return;
     }
 
+    // ---- one track ---------------------------------------------------------
+    // Community Choice stores a Deezer track id and an offset into that
+    // track's clip, never the clip url — the url is signed and dies in about
+    // ten minutes. So playing a pick means asking for this exact recording
+    // again, and an exact id is the only way to be sure the offset lands on
+    // the same audio somebody chose; a search by name could return a
+    // different pressing with a different clip.
+    //
+    // `contributors` is the honest source for "whose part is it" on a
+    // feature, and it is incomplete (SICKO MODE credits Travis Scott alone),
+    // which is why the client also reads `(feat. …)` and accepts a typed name.
+    if (path === 'track') {
+      const id = String(q.id || '');
+      if (!/^\d{1,20}$/.test(id)) { res.status(400).json({ error: { status: 400, message: 'numeric track id required' } }); return; }
+      const t = await dz('/track/' + id);
+      res.setHeader('Cache-Control', CLIP);
+      res.status(200).json({
+        id: String(t.id),
+        name: t.title_short || t.title,
+        title: t.title,
+        duration_ms: (t.duration || 0) * 1000,
+        preview_url: t.preview || null,
+        artists: (t.contributors && t.contributors.length ? t.contributors : (t.artist ? [t.artist] : []))
+          .map(a => ({ id: String(a.id), name: a.name, role: a.role || 'Main' })),
+        album: t.album ? { id: String(t.album.id), name: t.album.title, images: images(t.album) } : null,
+        link: t.link || '',
+        source: 'deezer'
+      });
+      return;
+    }
+
     // ---- artist ----------------------------------------------------------
     if (path === 'artist') {
       let aid = String(q.id || '');
