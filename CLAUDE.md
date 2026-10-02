@@ -2444,7 +2444,7 @@ then the tab says "Not switched on yet" and reports once to `client_errors`.
   needs `YOUTUBE_API_KEY` in Vercel). Deezer gives one fixed preview per song, so a Deezer pick was a
   few seconds either way of whatever Deezer chose. A YouTube pick stores `source = 'youtube'`,
   `video_id` and `duration_ms`, and plays through the visible embedded player (youtube-nocookie) with
-  the chosen start; our own 150ms poll owns the stop line. **Never play it hidden or pull its audio** —
+  the chosen start; our own 150ms poll owns the stop line and is the only source of "playing" (YouTube state 1, never "we asked it to play"). The host is **youtube.com, not youtube-nocookie**: measured in the same browser, the no-cookie host never left "unstarted" where youtube.com played, and it cannot see the viewer's own YouTube session, which is what puts people in front of YouTube's "confirm you're not a bot" page. That page is YouTube's decision about the viewer's network (iCloud Private Relay, VPNs, school IPs) and nothing an embedding site can switch off, so a player that has not played after 12s is shown as an error with an "Open on YouTube at m:ss" link, and the picker can still post the box or fall back to the Deezer preview. Tap a playing card to pause, again to resume from `pl.lastT` (Deezer reads the element's own clock on pause, not the last animation-frame tick). **Never play it hidden or pull its audio** —
   both break YouTube's terms, and the player must be at least 200px tall. Search costs 100 of 10,000
   daily quota units, spent once per pick. No key or no match falls back to the Deezer preview picker,
   and older picks keep playing from Deezer. No waveform for YouTube picks: the bars are a ruler.

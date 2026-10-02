@@ -3110,6 +3110,8 @@ html[data-motion="none"] .gc-emoji svg * { animation: none !important; }
      keyboard is up the home indicator is not there — paying for both leaves a
      band of dead space between the sheet and the keys. */
   body.kb-up .modal-panel { padding-bottom: var(--s5); }
+  body.kb-up .modal { top: var(--vv-top, 0px); bottom: auto; height: var(--vv-h, 100%); }
+  body.kb-up .modal-panel { max-height: calc(var(--vv-h, 88vh) - 8px); }
   /* The handle. Drawn rather than added to the markup, because there are a
      dozen panels and none of them should have to know about it. */
   .modal-panel::before {
@@ -3670,6 +3672,15 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
 .top3-slot .rank { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.65); color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 13px; padding: 2px 8px; border-radius: 7px; }
 .top3-slot .rm { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.7); color: #fff; border: none; width: 22px; height: 22px; border-radius: 6px; font-size: 14px; display: none; cursor: pointer; }
 .top3-slot:hover .rm { display: block; }
+/* The result list takes whatever height the sheet has left rather than a
+   fixed 50vh, which with a keyboard up was taller than the sheet itself and
+   was cut off mid-row. The panel stops scrolling as a whole so there is one
+   scroller, and the search field stays put above it. */
+#ptop-modal .modal-panel { display: flex; flex-direction: column; }
+#ptop-list { max-height: 50vh; overflow-y: auto; min-height: 0; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+body.kb-up #ptop-modal .modal-panel { overflow: hidden; }
+body.kb-up #ptop-list { max-height: none; flex: 1 1 auto; }
+body.kb-up .suggestions { max-height: min(480px, var(--sugg-max, 480px)); overscroll-behavior: contain; }
 .ptop-row { display: flex; align-items: center; gap: 12px; padding: 10px 8px; border-bottom: 1px solid var(--border); cursor: pointer; border-radius: 8px; transition: background 0.1s; }
 .ptop-row:hover { background: var(--surface-2); }
 .ptop-row img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; background: var(--surface-3); }
@@ -5689,6 +5700,23 @@ body.entering-done #artist-hero {
 .cc-nudge button:hover { color: var(--text); }
 .cc-vid-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; color: var(--text-faint); }
 .cc-vid-row span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* A real state, on the card, where the eye already is: a hint while YouTube
+   waits for a tap, an error when it will not play, and the way out. */
+.cc-msg {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2;
+  max-width: calc(100% - 12px); padding: 7px 12px; border-radius: 999px;
+  font: 600 12px/1.3 var(--font-body); text-align: center; white-space: normal;
+  background: rgba(10,9,8,.86); color: var(--text); border: 1px solid var(--border-strong);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.cc-msg.is-error { border-color: color-mix(in srgb, var(--red) 60%, transparent); }
+.cc-msg a { color: var(--cc); font-weight: 700; text-decoration: none; margin-left: 4px; white-space: nowrap; }
+.is-paused .cc-art-btn { background: color-mix(in srgb, var(--cc) 30%, rgba(10,9,8,.72)); }
+.cc-card.is-paused { border-color: color-mix(in srgb, var(--cc) 35%, transparent); }
+.cc-ed-fail { margin-top: 12px; padding: 12px; border-radius: 12px; font-size: 13px; line-height: 1.45; color: var(--text-dim); background: color-mix(in srgb, var(--red) 9%, transparent); border: 1px solid color-mix(in srgb, var(--red) 35%, transparent); }
+.cc-ed-fail b { color: var(--text); }
+.cc-ed-fail-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.cc-ed-fail-acts a { text-decoration: none; }
 .cc-noclip { padding: 22px 8px 10px; text-align: center; color: var(--text-dim); font-size: 13.5px; }
 @media (prefers-reduced-motion: reduce) {
   html:not([data-motion="full"]) .cc-card,
@@ -9468,16 +9496,39 @@ input, textarea, select, [contenteditable="true"],
   var root = document.documentElement;
   var last = 0;
 
+  /* --kb alone was half the fix. A sheet's overlay is position:fixed, and on
+     iOS Safari fixed means the LAYOUT viewport, which does not shrink for a
+     keyboard — so shortening the sheet left it anchored to a bottom edge that
+     was behind the keys, while iOS scrolled the page to show the input and
+     pushed the sheet's top up under the status bar. That is the clipped,
+     half-hidden result list. So while a keyboard is up the overlay is pinned
+     to the VISIBLE viewport (--vv-top / --vv-h), the sheet sits directly on
+     the keyboard, and lists inside it are sized from what is actually left.
+     Republished on every visualViewport scroll, because iOS scrolls that
+     viewport while the keyboard is up and the overlay has to follow it. */
+  var sugg = null;
+  function sizeSuggestions() {
+    sugg = sugg || document.getElementById('suggestions');
+    if (!sugg || !last) return;
+    var top = sugg.getBoundingClientRect().top;
+    var room = Math.round(vv.offsetTop + vv.height - top - 12);
+    root.style.setProperty('--sugg-max', Math.max(120, room) + 'px');
+  }
   function apply() {
     // Rounded and floored at zero: sub-pixel noise on every scroll would
     // otherwise churn a custom property that half the sheets are sized from.
     var kb = Math.max(0, Math.round(root.clientHeight - (vv.height + vv.offsetTop)));
     if (kb < 80) kb = 0;               // an accessory bar alone is not a keyboard
-    if (kb === last) return;
+    if (kb) {
+      root.style.setProperty('--vv-top', Math.round(vv.offsetTop) + 'px');
+      root.style.setProperty('--vv-h', Math.round(vv.height) + 'px');
+    }
+    if (kb === last) { sizeSuggestions(); return; }
     last = kb;
     root.style.setProperty('--kb', kb + 'px');
     document.body.classList.toggle('kb-up', kb > 0);
     if (!kb) return;
+    sizeSuggestions();
     var a = document.activeElement;
     if (!a || !/^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
     // The sheet has only just been told its new height; let it take it before
@@ -9489,6 +9540,9 @@ input, textarea, select, [contenteditable="true"],
 
   vv.addEventListener('resize', apply);
   vv.addEventListener('scroll', apply);
+  // The dropdown opens and grows as results arrive, after the keyboard has
+  // already settled, so it is re-measured when its contents change too.
+  document.addEventListener('input', function (e) { if (e.target && e.target.id === 'search-input') requestAnimationFrame(sizeSuggestions); }, true);
   apply();
 })();
 </script>
@@ -10940,7 +10994,7 @@ window.discAmt = function (n) {
     <button class="modal-close" id="ptop-close" aria-label="Close">&times;</button>
     <div class="modal-head"><span class="mh-emoji" data-icon="search"></span><div><h2 id="ptop-title">Search</h2><p>Type to search Deezer.</p></div></div>
     <input id="ptop-search" class="g-input" type="text" placeholder="Search&hellip;" autocomplete="off" style="margin-bottom:12px;">
-    <div id="ptop-list" style="max-height:50vh; overflow-y:auto;"></div>
+    <div id="ptop-list"></div>
   </div>
 </div>
 
@@ -25242,8 +25296,9 @@ window.renderAdminStats = renderAdminStats;
     });
     return _yt;
   }
-  // The feed's one live player. Built into the card being played and torn
-  // down when it stops, so a page of thirty picks is never thirty iframes.
+  // The feed's one live player, built into the card being played. The picker
+  // has its own (ed.player) and the two never exist at once: opening the
+  // picker stops the feed, and closing it destroys the picker's.
   var fy = { player: null, host: null, card: null, poll: 0 };
   function feedYTStop() {
     if (fy.poll) { clearInterval(fy.poll); fy.poll = 0; }
@@ -25252,43 +25307,88 @@ window.renderAdminStats = renderAdminStats;
     if (fy.card) fy.card.classList.remove('has-yt');
     fy.player = null; fy.host = null; fy.card = null;
   }
-  // Polls the player for time — the IFrame API has no timeupdate — and owns
-  // the stop line, because a player's own `end` is whole seconds and ours
-  // is not. Shared by the feed and the picker.
-  function watchYT(player, tok, endAt, onDone) {
-    var started = Date.now(), nudged = false;
-    return setInterval(function () {
-      if (tok !== pl.tok || !player || !player.getCurrentTime) return;
-      var stt = player.getPlayerState ? player.getPlayerState() : -1;
-      // Phones refuse to start a cross-origin video with sound without a tap
-      // on the video itself. Say so once instead of sitting on a black box.
-      if (stt !== 1 && stt !== 3 && !nudged && Date.now() - started > 2200) { nudged = true; say('Tap the video to start it'); }
-      if (stt !== 1) return;
-      var t = player.getCurrentTime();
-      onTick(t);
-      if (t >= endAt - 0.04) { try { player.pauseVideo(); } catch (e) {} onDone(); }
-    }, 150);
+  function ytLink(videoId, ms) {
+    return 'https://www.youtube.com/watch?v=' + encodeURIComponent(videoId) + '&t=' + Math.floor((ms || 0) / 1000) + 's';
   }
-  function ytPlayerFor(el, videoId, startSec, endSec, autoplay, tok, onReady) {
+  function clearMsg(card) { var m = card && card.querySelector('.cc-msg'); if (m) m.remove(); }
+  function showMsg(card, html, kind) {
+    var wrap = card && card.querySelector('.cc-wave-wrap');
+    if (!wrap) return;
+    clearMsg(card);
+    var d = document.createElement('div');
+    d.className = 'cc-msg' + (kind ? ' is-' + kind : '');
+    d.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    d.innerHTML = html;
+    wrap.appendChild(d);
+  }
+  // Anything else that could be sounding. One thing plays at a time.
+  function silenceOthers() {
+    try { if (window.VinalAudio) VinalAudio.stop(); } catch (e) {}
+    try { if (window.VinalPlayer && VinalPlayer.playing()) VinalPlayer.stop(); } catch (e) {}
+  }
+
+  /* Polls the player — the IFrame API has no timeupdate — and owns the stop
+     line, because the player's own `end` is whole seconds and ours is not.
+     It is also the ONLY honest source of "is it playing": a card is marked
+     playing when YouTube reports state 1, never when we asked it to play.
+     Before that first play it watches for the two ways it never starts: a
+     phone that wants the first tap on the player itself (a hint after 2.5s),
+     and YouTube refusing outright — its bot check, a region block — which
+     shows as a player that has still not played after 12s. */
+  function watchYT(player, tok, endAt, h) {
+    var asked = Date.now(), seen = false, waited = false, last = -2, id;
+    id = setInterval(function () {
+      if (tok !== pl.tok || !player) { clearInterval(id); return; }
+      if (!player.getPlayerState) return;                  // not ready yet: its methods arrive with onReady
+      var stt = player.getPlayerState();
+      if (stt === 1) {
+        if (last !== 1) { seen = true; h.playing(); }
+        last = 1;
+        var t = player.getCurrentTime();
+        onTick(t);
+        if (t >= endAt - 0.04) { try { player.pauseVideo(); } catch (e) {} clearInterval(id); h.done(); }
+        return;
+      }
+      if (seen) { if (stt === 2 && last === 1 && h.paused) h.paused(); last = stt; return; }
+      last = stt;
+      if (stt === 3) return;                               // buffering is progress
+      var gone = Date.now() - asked;
+      if (!waited && gone > 2500) { waited = true; h.waiting(); }
+      if (gone > 12000) { clearInterval(id); h.failed(); }
+    }, 150);
+    return id;
+  }
+  /* The standard youtube.com host, not youtube-nocookie. The no-cookie host
+     cannot see the viewer's own YouTube cookies, so YouTube treats every
+     visitor as a stranger and puts far more of them in front of its "confirm
+     you're not a bot" page. `origin` and `widget_referrer` say which site
+     the player is on, which YouTube also uses in that decision. */
+  function ytPlayerFor(el, videoId, startSec, endSec, autoplay, tok, onReady, onErr) {
     return loadYT().then(function (Y) {
       if (tok !== undefined && tok !== pl.tok) return null;
       return new Y.Player(el, {
-        host: 'https://www.youtube-nocookie.com', videoId: videoId, width: '100%', height: '100%',
+        host: 'https://www.youtube.com', videoId: videoId, width: '100%', height: '100%',
         playerVars: { start: Math.floor(startSec), end: Math.ceil(endSec), autoplay: autoplay ? 1 : 0,
-                      playsinline: 1, rel: 0, modestbranding: 1, controls: 1, fs: 0, iv_load_policy: 3 },
+                      playsinline: 1, rel: 0, controls: 1, fs: 0, iv_load_policy: 3,
+                      origin: location.origin, widget_referrer: location.href },
         events: {
           onReady: function (e) { if (onReady) onReady(e.target); },
-          onError: function () { if (tok === undefined || tok === pl.tok) { say('That video will not play here'); stop(); } }
+          onError: function (e) { if (tok === undefined || tok === pl.tok) { if (onErr) onErr(e && e.data); } }
         }
       });
     });
   }
 
-  /* ---- playback ------------------------------------------------------- */
+  /* ---- playback -------------------------------------------------------
+     pl.state is the one truth the cards are painted from:
+       loading  — asked for, nothing audible yet
+       playing  — the source has confirmed it is playing
+       paused   — stopped by a tap, holding its place (pl.lastT)
+       idle     — nothing */
   function stop() {
     pl.tok++;
     var had = pl.id, owner = pl.owner;
-    pl.id = null; pl.owner = null; pl.bar = -1;
+    pl.id = null; pl.owner = null; pl.bar = -1; pl.state = 'idle';
     if (had) { try { VinalAudio.stop(); } catch (e) {} }
     feedYTStop();
     if (owner === 'editor' && ed && ed.player) { try { ed.player.pauseVideo(); } catch (e) {} }
@@ -25300,52 +25400,114 @@ window.renderAdminStats = renderAdminStats;
     var b = $('cc-playall');
     if (b) { b.classList.toggle('is-on', pl.auto); b.querySelector('span').textContent = pl.auto ? 'Stop' : 'Play all'; }
   }
+  function setState(x) { pl.state = x; paintPlaying(); }
 
-  // m: { id, track_id, track_name, artist, start_ms, len_ms }. Called inside
-  // the tap that asked for it, so prime() still has the gesture iOS wants.
+  // m: { id, track_id, track_name, artist, start_ms, len_ms, source?, video_id? }.
+  // Called inside the tap that asked for it, so prime() still has the gesture
+  // iOS wants for the audio element.
   function playMoment(m, owner) {
     var tok = ++pl.tok;
-    try { if (window.VinalAudio) VinalAudio.stop(); } catch (e) {}
-    pl.id = m.id; pl.owner = owner; pl.from = m.start_ms / 1000; pl.len = m.len_ms / 1000;
-    pl.lastT = pl.from; pl.bar = -1;
-    try { VinalAudio.prime(); } catch (e) {}
-    paintPlaying(true);
-    if (owner === 'feed' && window.track) track('moment_played', { category: m.category || null, source: m.source || 'deezer' });
-    function fail(msg) {
-      if (tok !== pl.tok) return;
-      pl.id = null; pl.owner = null; feedYTStop(); paintPlaying();
-      if (msg) say(msg);
-    }
+    silenceOthers();
     feedYTStop();
+    pl.id = m.id; pl.owner = owner; pl.from = m.start_ms / 1000; pl.len = m.len_ms / 1000;
+    pl.lastT = pl.from; pl.bar = -1; pl.state = 'loading';
+    try { VinalAudio.prime(); } catch (e) {}
+    var card = owner === 'feed' ? cardEl(m.id) : null;
+    if (card) clearMsg(card);
+    paintPlaying();
+    if (owner === 'feed' && window.track) track('moment_played', { category: m.category || null, source: m.source || 'deezer' });
+    function fail(msg, link) {
+      if (tok !== pl.tok) return;
+      pl.tok++;
+      pl.id = null; pl.owner = null; pl.state = 'idle';
+      // A YouTube player that refused is LEFT on screen: what it shows is the
+      // reason, and taking it away would be hiding the error.
+      if (!(isYT(m) && link)) feedYTStop(); else if (fy.poll) { clearInterval(fy.poll); fy.poll = 0; }
+      setAuto(false);
+      paintPlaying();
+      if (card) showMsg(card, esc(msg) + (link ? '<a href="' + link + '" target="_blank" rel="noopener">Open on YouTube at ' + fmt(m.start_ms) + ' ↗</a>' : ''), 'error');
+      else if (msg) say(msg);
+    }
     if (isYT(m)) {
-      var card = cardEl(m.id);
       if (!card) { fail(); return; }
       var host = document.createElement('div'), inner = document.createElement('div');
       host.className = 'cc-yt'; host.appendChild(inner);
       card.appendChild(host); card.classList.add('has-yt');
       fy.host = host; fy.card = card;
+      var link = ytLink(m.video_id, m.start_ms);
       ytPlayerFor(inner, m.video_id, pl.from, pl.from + pl.len, true, tok, function (p) {
         if (tok !== pl.tok) return;
         try { p.seekTo(pl.from, true); p.playVideo(); } catch (e) {}
-        paintPlaying();
+      }, function (code) {
+        fail(code === 101 || code === 150 || code === 152 ? 'This video can only be played on YouTube.' : 'YouTube couldn’t play this video.', link);
       }).then(function (p) {
         if (!p || tok !== pl.tok) { if (p) try { p.destroy(); } catch (e) {} return; }
         fy.player = p;
-        fy.poll = watchYT(p, tok, pl.from + pl.len, onEnd);
+        fy.poll = watchYT(p, tok, pl.from + pl.len, {
+          playing: function () { clearMsg(card); setState('playing'); },
+          paused: function () { if (pl.state === 'playing') setState('paused'); },  // paused from YouTube's own controls
+          waiting: function () { if (pl.state === 'loading') showMsg(card, 'Tap the video to start it', 'hint'); },
+          failed: function () { fail('YouTube won’t play this video here.', link); },
+          done: onEnd
+        });
       }, function () { fail('Could not reach YouTube — check your connection'); });
       return;
     }
+    playDeezer(m, tok, pl.from, pl.len, fail);
+  }
+  // [from, from + len] of the Deezer clip. Shared by a fresh play and a resume.
+  function playDeezer(m, tok, from, len, fail) {
     clipFor(m.track_id).then(function (t) {
       if (tok !== pl.tok) return;
       if (!t || !t.preview_url) { fail('Deezer has no clip for this one right now'); return; }
-      return Promise.resolve(VinalAudio.play({ artist: m.artist, title: m.track_name }, pl.len,
-        { clip: { url: t.preview_url }, from: pl.from })).then(function (ok) {
+      return Promise.resolve(VinalAudio.play({ artist: m.artist, title: m.track_name }, len,
+        { clip: { url: t.preview_url }, from: from })).then(function (ok) {
         if (tok !== pl.tok) return;
-        if (ok === 'blocked') { fail('Tap play again to listen'); return; }
+        if (ok === 'blocked') { fail('Your browser blocked the sound — tap play again'); return; }
         if (!ok) { fail('That clip would not play just now'); return; }
-        paintPlaying();
+        setState('playing');
       });
     }).catch(function () { fail('Could not reach the clip — check your connection'); });
+  }
+
+  function pause() {
+    if (pl.state !== 'playing' || pl.owner !== 'feed') return;
+    var m = st.byId[pl.id];
+    if (isYT(m) && fy.player) { try { fy.player.pauseVideo(); } catch (e) {} }
+    else {
+      // The element's own clock, not the last tick: ticks ride animation frames,
+      // which a backgrounded or throttled tab stops delivering, and resuming
+      // from a stale tick replays what was already heard.
+      try { var at = VinalAudio.position(); if (at > pl.from) pl.lastT = at; } catch (e) {}
+      pl.tok++; try { VinalAudio.stop(); } catch (e) {}
+    }
+    setState('paused');
+  }
+  // From where it stopped, to the same stop line it always had.
+  function resume() {
+    var m = st.byId[pl.id];
+    if (!m || pl.state !== 'paused') return;
+    var end = pl.from + pl.len;
+    var at = Math.max(pl.from, Math.min(pl.lastT, end - 0.5));
+    if (isYT(m) && fy.player) {
+      try { fy.player.seekTo(at, true); fy.player.playVideo(); } catch (e) {}
+      setState('loading');
+      var tok0 = pl.tok;
+      // watchYT flips it to playing the moment YouTube agrees. If it does not
+      // (a phone that wants the tap on the player), say so and stay paused.
+      setTimeout(function () {
+        if (tok0 === pl.tok && pl.state === 'loading') { setState('paused'); showMsg(cardEl(m.id), 'Tap the video to carry on', 'hint'); }
+      }, 3000);
+      return;
+    }
+    var tok = ++pl.tok, card = cardEl(m.id);
+    try { VinalAudio.prime(); } catch (e) {}
+    setState('loading');
+    playDeezer(m, tok, at, end - at, function (msg) {
+      if (tok !== pl.tok) return;
+      pl.state = 'paused'; paintPlaying();
+      if (card) showMsg(card, esc(msg), 'error');
+    });
   }
 
   function onTick(t) {
@@ -25374,12 +25536,12 @@ window.renderAdminStats = renderAdminStats;
     }
   }
   function onEnd() {
-    if (!pl.id) return;
+    if (!pl.id || pl.state === 'paused') return;
     var id = pl.id, owner = pl.owner;
     // 'end' is emitted for every clip VinalAudio plays, so only an end that
     // this pick actually reached counts as having heard it.
     var reached = pl.lastT >= pl.from + pl.len * HEARD_AT;
-    pl.id = null; pl.owner = null; pl.bar = -1;
+    pl.id = null; pl.owner = null; pl.bar = -1; pl.state = 'idle';
     if (ed && ed.poll) { clearInterval(ed.poll); ed.poll = 0; }
     if (owner === 'feed') feedYTStop();
     if (owner === 'feed' && reached) markHeard(id);
@@ -25396,20 +25558,21 @@ window.renderAdminStats = renderAdminStats;
   }
 
   function cardEl(id) { var f = $('cc-feed'); return f ? f.querySelector('[data-mid="' + id + '"]') : null; }
-  function paintPlaying(loading) {
+  function paintPlaying() {
     var feed = $('cc-feed');
     if (feed) feed.querySelectorAll('.cc-card').forEach(function (c) {
-      var on = pl.owner === 'feed' && c.dataset.mid === pl.id;
-      c.classList.toggle('is-playing', on);
-      c.classList.toggle('is-loading', !!(on && loading));
-      if (!on) {
+      var mine = pl.owner === 'feed' && c.dataset.mid === pl.id;
+      c.classList.toggle('is-playing', mine && pl.state === 'playing');
+      c.classList.toggle('is-loading', mine && pl.state === 'loading');
+      c.classList.toggle('is-paused', mine && pl.state === 'paused');
+      if (!mine) {
         c.querySelectorAll('.cc-wave i.on').forEach(function (i) { i.classList.remove('on'); });
         var m = st.byId[c.dataset.mid], len = c.querySelector('.cc-win-len');
         if (m && len) len.textContent = winLabel(m);
       }
     });
     var edEl = $('cc-ed');
-    if (edEl) edEl.classList.toggle('is-playing', pl.owner === 'editor');
+    if (edEl) edEl.classList.toggle('is-playing', pl.owner === 'editor' && (pl.state === 'playing' || pl.state === 'loading'));
   }
   function markHeard(id) {
     if (st.heard[id]) return;
@@ -25700,9 +25863,13 @@ window.renderAdminStats = renderAdminStats;
       if (t.closest('[data-cc-agree]')) { toggleAgree(id); return; }
       var by = t.closest('.cc-by');
       if (by) { if (window.viewUserProfile) viewUserProfile(by.dataset.uid); return; }
+      if (t.closest('.cc-msg a')) return;            // the "Open on YouTube" link
       if (t.closest('[data-cc-play]')) {
-        if (pl.id === id) { setAuto(false); stop(); }
-        else playMoment(m, 'feed');
+        if (pl.id === id && pl.owner === 'feed') {
+          if (pl.state === 'playing') { setAuto(false); pause(); }
+          else if (pl.state === 'paused') resume();
+          else { setAuto(false); stop(); }             // still loading: a second tap cancels
+        } else playMoment(m, 'feed');
       }
     });
   }
@@ -25764,6 +25931,13 @@ window.renderAdminStats = renderAdminStats;
       if (!ed || tok !== ed.tok) return;
       ed.ready = true;
       try { var d = p.getDuration(); if (d > 30) { ed.clipMs = Math.min(1200000, Math.floor(d * 10) * 100); clampEditor(); paintEditor(true); } } catch (e) {}
+    }, function (code) {
+      if (!ed || tok !== ed.tok) return;
+      // Not embeddable or gone: the next candidate is a real answer, so try it
+      // before telling anybody anything.
+      if (ed.vi + 1 < ed.videos.length) {
+        ed.vi++; ed.clipMs = ed.videos[ed.vi].ms; clampEditor(); paintEditor(true); mountEdVideo();
+      } else edFail(code);
     }).then(function (p) {
       if (!ed || tok !== ed.tok) { if (p) try { p.destroy(); } catch (e) {} return; }
       ed.player = p;
@@ -25900,6 +26074,7 @@ window.renderAdminStats = renderAdminStats;
     paintSel(true);
     paintPost();
     paintPlaying();
+    if (yt && ed.ytBlocked) edFail();
   }
   function paintSel(bars) {
     if (!ed) return;
@@ -25930,13 +26105,20 @@ window.renderAdminStats = renderAdminStats;
     if (!ed || !edPlayable()) return;
     if (pl.owner === 'editor') { stop(); return; }
     if (ed.source === 'youtube') {
-      if (!ed.player || !ed.ready) { say('The video is still loading'); return; }
+      if (!ed.player || !ed.ready) { edHint('The video is still loading\u2026'); return; }
       var tok = ++pl.tok;
-      try { VinalAudio.stop(); } catch (e) {}
+      silenceOthers();
       pl.id = 'editor'; pl.owner = 'editor'; pl.from = ed.startMs / 1000; pl.len = ed.lenMs / 1000; pl.lastT = pl.from;
+      pl.state = 'loading';
       try { ed.player.seekTo(pl.from, true); ed.player.playVideo(); } catch (e) {}
       if (ed.poll) clearInterval(ed.poll);
-      ed.poll = watchYT(ed.player, tok, pl.from + pl.len, onEnd);
+      ed.poll = watchYT(ed.player, tok, pl.from + pl.len, {
+        playing: function () { pl.state = 'playing'; edHint(''); paintPlaying(); },
+        paused: function () { stop(); },
+        waiting: function () { edHint('Tap the video to start it \u2014 your phone wants the first tap on the player itself.'); },
+        failed: function () { edFail(); },
+        done: onEnd
+      });
       paintPlaying();
       return;
     }
@@ -25945,6 +26127,38 @@ window.renderAdminStats = renderAdminStats;
     clips[ed.track.id] = { at: Date.now(), p: Promise.resolve({ preview_url: ed.clipUrl }) };
     playMoment({ id: 'editor', track_id: ed.track.id, track_name: ed.track.name, artist: ed.track.artist,
                  start_ms: ed.startMs, len_ms: ed.lenMs }, 'editor');
+  }
+
+  function edHint(text) {
+    var h = document.querySelector('#cc-ed .cc-ed-hint');
+    if (!h) return;
+    if (!h.dataset.base) h.dataset.base = h.textContent;
+    h.textContent = text || h.dataset.base;
+  }
+  /* YouTube decided not to play this video here — most often its "confirm
+     you're not a bot" page, which it shows to networks it distrusts (iCloud
+     Private Relay, VPNs, shared school or office IPs) and which no embedding
+     site can switch off. The box still works without hearing it, so the pick
+     is NOT blocked: the window can be set and posted, it can be heard on
+     YouTube itself at the right second, or the pick can move to Deezer's
+     preview. Nothing here asks anybody to sign in to anything. */
+  function edFail(code) {
+    if (!ed) return;
+    if (pl.owner === 'editor') stop();
+    ed.ytBlocked = true;
+    var box = $('cc-ed-fail'), v = edVideo();
+    if (!box) {
+      var row = document.querySelector('#cc-ed .cc-ed-row');
+      if (!row) return;
+      box = document.createElement('div'); box.id = 'cc-ed-fail'; box.className = 'cc-ed-fail';
+      row.insertAdjacentElement('afterend', box);
+    }
+    box.innerHTML = '<b>' + (code === 101 || code === 150 || code === 152 ? 'This video can only be played on YouTube.' : 'YouTube won\u2019t play this video here.') + '</b> ' +
+      'You can still set the box and post it.' +
+      '<div class="cc-ed-fail-acts">' +
+        (v ? '<a class="btn-mini" href="' + ytLink(v.id, ed.startMs) + '" target="_blank" rel="noopener">Hear it on YouTube at ' + fmt(ed.startMs) + ' \u2197</a>' : '') +
+        (ed.clipUrl ? '<button class="btn-mini" type="button" data-ed="usedeezer">Pick inside the Deezer preview instead</button>' : '') +
+      '</div>';
   }
 
   async function post() {
@@ -26013,9 +26227,10 @@ window.renderAdminStats = renderAdminStats;
           if (pl.owner === 'editor') stop();
           paintSel();
         }
+        else if (a === 'usedeezer') { useDeezer('YouTube wouldn\u2019t play that video here, so this pick is inside Deezer\u2019s 30-second preview.'); }
         else if (a === 'nextvid') {
           if (pl.owner === 'editor') stop();
-          ed.vi = (ed.vi + 1) % ed.videos.length;
+          ed.vi = (ed.vi + 1) % ed.videos.length; ed.ytBlocked = false;
           ed.clipMs = ed.videos[ed.vi].ms; clampEditor();
           paintEditor(true); mountEdVideo();
         }
@@ -26111,7 +26326,11 @@ window.renderAdminStats = renderAdminStats;
   document.addEventListener('visibilitychange', function () { if (document.hidden && pl.id) { setAuto(false); stop(); } });
 
   window.renderChoice = render;
-  window.ChoiceFeed = { stop: function () { setAuto(false); stop(); }, open: openComposer, reload: function () { load(true); } };
+  window.ChoiceFeed = { stop: function () { setAuto(false); stop(); }, open: openComposer, reload: function () { load(true); },
+    // Read-only, for checking a report from a phone: what the feed thinks is
+    // happening against what the player says.
+    state: function () { var p = fy.player; return { id: pl.id, state: pl.state, from: pl.from, len: pl.len, at: pl.lastT,
+      yt: p && p.getPlayerState ? { state: p.getPlayerState(), t: p.getCurrentTime() } : null }; } };
 })();
 </script>
 
