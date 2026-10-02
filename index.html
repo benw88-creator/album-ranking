@@ -5717,6 +5717,37 @@ body.entering-done #artist-hero {
 .cc-ed-fail b { color: var(--text); }
 .cc-ed-fail-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .cc-ed-fail-acts a { text-decoration: none; }
+/* The YouTube check. The player in it is real and on screen for the few
+   seconds it runs, as YouTube requires; it folds away with the result. */
+.cc-probe { display: flex; align-items: center; gap: 14px; margin: 0 0 16px; padding: 12px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); animation: ccIn .4s var(--ease) both; transition: opacity .4s var(--ease), transform .4s var(--ease); }
+.cc-probe[hidden] { display: none; }
+.cc-probe.is-done { opacity: 0; transform: translateY(-6px); }
+.cc-probe-player { display: none; flex: none; width: 356px; max-width: 100%; height: 200px; border-radius: 12px; overflow: hidden; background: #000; }
+.cc-probe.is-checking .cc-probe-player { display: block; }
+.cc-probe-player iframe { width: 100%; height: 100%; border: 0; display: block; }
+.cc-probe-body { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.cc-probe-txt { flex: 1; min-width: 0; font-size: 13px; color: var(--text-dim); line-height: 1.4; }
+.cc-probe-txt b { display: block; color: var(--text); font: 700 15px var(--font-display); margin-bottom: 2px; }
+.cc-probe.is-checking .cc-probe-txt b::after { content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 8px; border-radius: 50%; background: var(--section); vertical-align: middle; animation: ccLoad 1s ease-in-out infinite; }
+.cc-probe.is-blocked { border-color: color-mix(in srgb, var(--red) 35%, transparent); background: color-mix(in srgb, var(--red) 6%, var(--surface)); }
+.cc-probe.is-ok { border-color: color-mix(in srgb, var(--section) 55%, transparent); box-shadow: 0 18px 44px -24px var(--section); }
+.cc-probe-ic { flex: none; width: 40px; height: 40px; display: none; }
+.cc-probe.is-ok .cc-probe-ic { display: block; }
+.cc-probe-ic svg { width: 40px; height: 40px; fill: none; stroke: var(--section); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.cc-probe-ic .ring { stroke-dasharray: 63; stroke-dashoffset: 63; animation: ccRing .5s var(--ease) forwards; }
+.cc-probe-ic .tick { stroke-dasharray: 16; stroke-dashoffset: 16; animation: ccRing .35s var(--ease) .32s forwards; }
+@keyframes ccRing { to { stroke-dashoffset: 0; } }
+.cc-probe.is-ok .cc-probe-ic svg { animation: ccPop .6s var(--ease) .3s both; }
+@keyframes ccPop { 0% { transform: scale(.7); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+.cc-probe-x { flex: none; background: none; border: none; color: var(--text-faint); font-size: 20px; cursor: pointer; padding: 0 4px; }
+@media (max-width: 560px) {
+  .cc-probe { flex-direction: column; align-items: stretch; }
+  .cc-probe-player { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .cc-probe-ic .ring, html:not([data-motion="full"]) .cc-probe-ic .tick { animation: none; stroke-dashoffset: 0; }
+  html:not([data-motion="full"]) .cc-probe.is-ok .cc-probe-ic svg { animation: none; }
+}
 .cc-noclip { padding: 22px 8px 10px; text-align: center; color: var(--text-dim); font-size: 13.5px; }
 @media (prefers-reduced-motion: reduce) {
   html:not([data-motion="full"]) .cc-card,
@@ -10043,6 +10074,17 @@ window.discAmt = function (n) {
         <button type="button" data-sort="new">New</button>
       </div>
       <button type="button" class="btn-mini cc-playall" id="cc-playall"><svg class="cc-ic-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8Z" fill="currentColor"/></svg><svg class="cc-ic-stop" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1.6" fill="currentColor"/></svg><span>Play all</span></button>
+    </div>
+    <!-- Whether YouTube will play on THIS network, found out before anybody
+         reaches a player. Filled by the COMMUNITY CHOICE module. -->
+    <div class="cc-probe" id="cc-probe" hidden>
+      <div class="cc-probe-player" id="cc-probe-player"></div>
+      <div class="cc-probe-body">
+        <span class="cc-probe-ic" id="cc-probe-ic" aria-hidden="true"></span>
+        <div class="cc-probe-txt" role="status"><b id="cc-probe-t"></b><span id="cc-probe-s"></span></div>
+        <button type="button" class="btn-mini" data-cc-probe="retry" id="cc-probe-retry" hidden>Check again</button>
+        <button type="button" class="cc-probe-x" data-cc-probe="close" aria-label="Dismiss" id="cc-probe-x" hidden>&times;</button>
+      </div>
     </div>
     <div class="cc-feed" id="cc-feed"></div>
     <button class="btn-ghost" id="cc-more" style="width:100%; margin-top:16px; display:none;">Load more</button>
@@ -25428,6 +25470,14 @@ window.renderAdminStats = renderAdminStats;
       if (card) showMsg(card, esc(msg) + (link ? '<a href="' + link + '" target="_blank" rel="noopener">Open on YouTube at ' + fmt(m.start_ms) + ' ↗</a>' : ''), 'error');
       else if (msg) say(msg);
     }
+    if (isYT(m) && yp.status === 'blocked' && owner === 'feed') {
+      // Opened inside the tap, so it is a link the browser lets through. The
+      // listen happens on YouTube, which is the honest way to have heard it.
+      pl.tok++; pl.id = null; pl.owner = null; pl.state = 'idle'; paintPlaying();
+      window.open(ytLink(m.video_id, m.start_ms), '_blank', 'noopener');
+      markHeard(m.id);
+      return;
+    }
     if (isYT(m)) {
       if (!card) { fail(); return; }
       var host = document.createElement('div'), inner = document.createElement('div');
@@ -25447,10 +25497,10 @@ window.renderAdminStats = renderAdminStats;
           playing: function () { clearMsg(card); setState('playing'); },
           paused: function () { if (pl.state === 'playing') setState('paused'); },  // paused from YouTube's own controls
           waiting: function () { if (pl.state === 'loading') showMsg(card, 'Tap the video to start it', 'hint'); },
-          failed: function () { fail('YouTube won’t play this video here.', link); },
+          failed: function () { probeLearnBlocked(); fail('YouTube won\u2019t play this video here.', link); },
           done: onEnd
         });
-      }, function () { fail('Could not reach YouTube — check your connection'); });
+      }, function () { probeLearnBlocked(); fail('Could not reach YouTube \u2014 check your connection'); });
       return;
     }
     playDeezer(m, tok, pl.from, pl.len, fail);
@@ -25842,6 +25892,12 @@ window.renderAdminStats = renderAdminStats;
     view.addEventListener('click', function (e) {
       var t = e.target;
       if (t.closest('[data-cc-new]') || t.closest('#cc-new')) { openComposer(); return; }
+      var pb = t.closest('[data-cc-probe]');
+      if (pb) {
+        if (pb.dataset.ccProbe === 'retry') probeYT(true);
+        else { yp.closed = true; paintProbe(false); }
+        return;
+      }
       var chip = t.closest('#cc-cats [data-cat]');
       if (chip) { if (chip.dataset.cat !== st.cat) { st.cat = chip.dataset.cat; stop(); setAuto(false); paintBar(); load(true); } return; }
       var srt = t.closest('#cc-sort [data-sort]');
@@ -25880,6 +25936,150 @@ window.renderAdminStats = renderAdminStats;
     // Re-entering keeps the list you were reading, as the Crate does; a pick
     // posted elsewhere arrives with Refresh or a change of tab.
     if (!st.items.length || st.off) load(true);
+    probeYT(false);
+  }
+
+  /* ---- will YouTube play here? ----------------------------------------
+     Asked once when Choice opens, BEFORE anybody presses play, because the
+     only failure YouTube has here — its "confirm you're not a bot" page —
+     depends on the viewer's network (iCloud Private Relay, VPNs, some
+     providers) and cannot be known any other way than by playing something.
+     Signing in would not change it: the embedded player only knows a viewer
+     by youtube.com's own cookies, which iOS blocks inside another site.
+
+     So the probe plays a few muted seconds in a small player that is on
+     screen, as YouTube requires of every player. Passing means state 1 and
+     the clock moving; anything else inside 10s is a no. The answer is kept
+     for the session (30 minutes) and thrown away when the connection
+     changes, because it belongs to the network and not to the person.
+
+     Blocked does not switch anything off. New picks use Deezer's preview,
+     and a YouTube pick opens on YouTube at its own second instead of a
+     player that is going to fail. */
+  var yp = { status: null, p: null, shownOk: false, closed: false };
+  var YP_KEY = 'vinall_yt_probe', YP_TTL = 30 * 60 * 1000;
+  function probeCached() {
+    try {
+      var j = JSON.parse(sessionStorage.getItem(YP_KEY) || 'null');
+      if (j && Date.now() - j.at < YP_TTL) return j.ok ? 'ok' : 'blocked';
+    } catch (e) {}
+    return null;
+  }
+  function probeSave(ok) { try { sessionStorage.setItem(YP_KEY, JSON.stringify({ ok: !!ok, at: Date.now() })); } catch (e) {} }
+  function probeForget() { try { sessionStorage.removeItem(YP_KEY); } catch (e) {} if (!yp.p) yp.status = null; }
+  window.addEventListener('online', probeForget);
+  try { if (navigator.connection) navigator.connection.addEventListener('change', probeForget); } catch (e) {}
+  // A real player refusing is the same evidence the probe looks for.
+  function probeLearnBlocked() {
+    if (yp.status === 'blocked') return;
+    yp.status = 'blocked'; yp.closed = false; probeSave(false); paintProbe(false);
+  }
+  function probeYT(force) {
+    if (!force) {
+      if (yp.p) return yp.p;
+      var c = yp.status || probeCached();
+      if (c) { yp.status = c; paintProbe(false); return Promise.resolve(c); }
+    }
+    if (yp.p) return yp.p;
+    var hostWrap = $('cc-probe-player');
+    if (!hostWrap) return Promise.resolve(null);
+    yp.status = 'checking'; yp.closed = false; paintProbe(false);
+    var known = st.items.filter(isYT)[0];
+    var vid = (known && known.video_id) || 'hSitXYlIqKI';
+    yp.p = new Promise(function (res) {
+      hostWrap.innerHTML = '<div></div>';
+      var done = false, poll = 0, player = null, wasHidden = document.hidden;
+      // A page that is not on screen does not start media at all, so a check
+      // that ran while it was hidden proves nothing either way. It ends as
+      // UNKNOWN — not saved, not shown — and runs again when the page is back.
+      function onVis() { if (document.hidden) wasHidden = true; }
+      document.addEventListener('visibilitychange', onVis);
+      var timer = setTimeout(function () { finish(wasHidden ? null : false); }, 10000);
+      function finish(ok) {
+        if (done) return; done = true;
+        clearTimeout(timer); if (poll) clearInterval(poll);
+        document.removeEventListener('visibilitychange', onVis);
+        try { if (player && player.destroy) player.destroy(); } catch (e) {}
+        hostWrap.innerHTML = '';
+        yp.p = null;
+        if (ok === null) {
+          yp.status = null; paintProbe(false);
+          document.addEventListener('visibilitychange', function again() {
+            if (document.hidden) return;
+            document.removeEventListener('visibilitychange', again);
+            var v = $('view-choice'); if (v && v.style.display !== 'none') probeYT(false);
+          });
+          res(null); return;
+        }
+        yp.status = ok ? 'ok' : 'blocked';
+        probeSave(ok);
+        paintProbe(true);
+        res(yp.status);
+      }
+      loadYT().then(function (Y) {
+        if (done) return;
+        player = new Y.Player(hostWrap.firstChild, {
+          host: 'https://www.youtube.com', videoId: vid, width: '100%', height: '100%',
+          playerVars: { autoplay: 1, mute: 1, playsinline: 1, controls: 0, rel: 0, start: 20, fs: 0,
+                        iv_load_policy: 3, origin: location.origin, widget_referrer: location.href },
+          events: {
+            onReady: function (e) { try { e.target.mute(); e.target.playVideo(); } catch (er) {} },
+            onError: function () { finish(false); }
+          }
+        });
+        var t0 = null, n = 0;
+        poll = setInterval(function () {
+          try {
+            if (!player.getPlayerState) return;
+            // One autoplay attempt that lands while the page is not yet
+            // painting is refused and never retried by the player itself, which
+            // would read as YouTube refusing. Muted, so asking again is allowed.
+            if (player.getPlayerState() !== 1) { if (++n % 5 === 0) { player.mute(); player.playVideo(); } return; }
+            var t = player.getCurrentTime();
+            if (t0 === null) t0 = t;
+            if (t - t0 > 0.4) finish(true);          // the clock moving, not just a state flag
+          } catch (e) {}
+        }, 200);
+      }, function () { finish(false); });             // youtube.com itself unreachable
+    });
+    return yp.p;
+  }
+  function paintProbe(justFinished) {
+    var box = $('cc-probe');
+    if (!box) return;
+    var t = $('cc-probe-t'), sub = $('cc-probe-s'), retry = $('cc-probe-retry'), x = $('cc-probe-x'), ic = $('cc-probe-ic');
+    box.classList.remove('is-checking', 'is-ok', 'is-blocked', 'is-done');
+    if (yp.status === 'checking') {
+      box.hidden = false; box.classList.add('is-checking');
+      t.textContent = 'Checking YouTube on this network\u2026';
+      sub.textContent = 'A few muted seconds, so whole-song picks work before you need them.';
+      retry.hidden = true; x.hidden = true; ic.innerHTML = '';
+      return;
+    }
+    if (yp.status === 'ok') {
+      // Celebrated once, on the check that actually passed. A cached pass is
+      // simply true and says nothing.
+      if (!justFinished || yp.shownOk) { box.hidden = true; return; }
+      yp.shownOk = true;
+      box.hidden = false; box.classList.add('is-ok');
+      t.textContent = 'YouTube is good to go';
+      sub.textContent = 'Pick any thirty seconds of the whole song.';
+      retry.hidden = true; x.hidden = true;
+      ic.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle class="ring" cx="12" cy="12" r="10"/><path class="tick" d="M7 12.4 10.4 15.6 17 8.6"/></svg>';
+      if (window.buzz) buzz('good');
+      if (window.burst) setTimeout(function () { burst(ic, { count: 16, colors: ['var(--section)', '#ffffff', 'var(--gold)'] }); }, 380);
+      clearTimeout(yp.hideT);
+      yp.hideT = setTimeout(function () { box.classList.add('is-done'); setTimeout(function () { if (yp.status === 'ok') box.hidden = true; }, 420); }, 2600);
+      return;
+    }
+    if (yp.status === 'blocked') {
+      box.hidden = yp.closed; box.classList.add('is-blocked');
+      t.textContent = 'YouTube won\u2019t play videos on this network';
+      sub.textContent = 'New picks use Deezer\u2019s 30-second previews, and YouTube picks open on YouTube at their moment. Private Relay or a VPN is the usual cause.';
+      retry.hidden = false; x.hidden = false; ic.innerHTML = '';
+      return;
+    }
+    box.hidden = true;
   }
 
   /* ---- the picker ----------------------------------------------------- */
@@ -25963,12 +26163,21 @@ window.renderAdminStats = renderAdminStats;
        the Deezer lookup is still wanted either way, for the cover, the album
        and the credited features. */
     var base = (window.Native && Native.api) || '';
-    var ytAsk = fetch(base + '/api/youtube?artist=' + encodeURIComponent(item.artist || '') + '&title=' + encodeURIComponent(item.name || ''))
-      .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    // The probe's answer first: on a network where YouTube will not play,
+    // looking a video up only spends search quota on a player that fails.
+    var ytAsk = probeYT(false).then(function (status) {
+      if (status === 'blocked') return { blocked: true };
+      return fetch(base + '/api/youtube?artist=' + encodeURIComponent(item.artist || '') + '&title=' + encodeURIComponent(item.name || ''))
+        .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    });
     ytAsk.then(function (j) {
       if (!ed || tok !== ed.tok) return;
       var vids = (j && j.videos || []).filter(function (v) { return /^[A-Za-z0-9_-]{11}$/.test(v.id) && v.ms >= 30000 && v.ms <= 1200000; });
-      if (!vids.length) { ed.why = 'Not on YouTube, so this pick is inside Deezer\u2019s 30-second preview.'; if (ed.state === 'ready') paintEditor(true); return; }
+      if (!vids.length) {
+        ed.why = j && j.blocked ? 'YouTube won\u2019t play videos on this network, so this pick is inside Deezer\u2019s 30-second preview.'
+                                : 'Not on YouTube, so this pick is inside Deezer\u2019s 30-second preview.';
+        if (ed.state === 'ready') paintEditor(true); return;
+      }
       ed.source = 'youtube'; ed.videos = vids; ed.vi = 0;
       ed.clipMs = vids[0].ms; ed.lenMs = 30000; ed.startMs = Math.round(ed.clipMs * 0.3);
       clampEditor();
@@ -26116,7 +26325,7 @@ window.renderAdminStats = renderAdminStats;
         playing: function () { pl.state = 'playing'; edHint(''); paintPlaying(); },
         paused: function () { stop(); },
         waiting: function () { edHint('Tap the video to start it \u2014 your phone wants the first tap on the player itself.'); },
-        failed: function () { edFail(); },
+        failed: function () { probeLearnBlocked(); edFail(); },
         done: onEnd
       });
       paintPlaying();
