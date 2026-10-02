@@ -20,7 +20,7 @@
 
 import { cors } from './_cors.js';
 
-const BAD = /\b(karaoke|cover|tribute|instrumental|8-?bit|slowed|sped up|reverb|nightcore|remix|lyrics? video|reaction|live at|live from|concert|tutorial|piano version|1 hour|loop)\b/i;
+const BAD = /\b(karaoke|cover|tribute|instrumental|8-?bit|slowed|sped up|reverb|nightcore|remix|lyrics?|reaction|live at|live from|concert|tutorial|piano version|1 hour|loop)\b/i;
 
 function loose(s) {
   return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
