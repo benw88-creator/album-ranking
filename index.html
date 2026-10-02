@@ -3794,6 +3794,26 @@ body.kb-up .suggestions { max-height: min(480px, var(--sugg-max, 480px)); oversc
 .badge-beta { background: rgba(133,183,235,0.15); color: #85b7eb; border-color: #85b7eb; }
 .badge-critic { background: rgba(79,180,119,0.15); color: var(--green); border-color: var(--green); }
 .badge-verified { background: rgba(133,183,235,0.15); color: #85b7eb; border-color: #85b7eb; }
+/* Baddie. Awarded by hand in Supabase (profiles.badges += 'baddie'), never
+   bought. Rose gold to blush pink with a slow glint across it, the same
+   sheen language as the Groove role chips. The sweep travels in pixels over a
+   90deg gradient whose ends match, so it loops without a snap. */
+.badge-baddie {
+  position: relative; overflow: hidden; isolation: isolate;
+  color: #fff4f8; border-color: rgba(255,182,213,0.75);
+  background: linear-gradient(135deg, #ff6aae 0%, #f48fbe 50%, #d98aa0 100%);
+  text-shadow: 0 1px 2px rgba(120,20,60,0.45);
+  box-shadow: 0 0 14px rgba(255,126,182,0.35);
+}
+.badge-baddie::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(90deg, transparent 0px, transparent 60px, rgba(255,255,255,0.55) 80px, transparent 100px, transparent 160px);
+  background-size: 160px 100%; animation: baddieGlint 3.2s linear infinite;
+}
+.badge-baddie .ui-icon { color: #fff; filter: drop-shadow(0 0 3px rgba(255,255,255,0.8)); }
+@keyframes baddieGlint { from { background-position: 0 0; } to { background-position: 160px 0; } }
+@media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) .badge-baddie::after { animation: none; } }
+html[data-motion="none"] .badge-baddie::after { animation: none; }
 
 .prof-stat.clickable { cursor: pointer; border-radius: 8px; padding: 2px 6px; margin: -2px -6px; transition: background 0.12s; }
 .prof-stat.clickable:hover { background: var(--surface-2); }
@@ -16610,7 +16630,7 @@ const DEFAULT_AVATAR="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 function avatarSrc(url){return url&&String(url).trim()?url:DEFAULT_AVATAR;}
 window.avatarSrc=avatarSrc;
 
-const BADGES={ceo:{label:'CEO',emoji:ICONS.crown,cls:'badge-ceo'},og:{label:'OG',emoji:ICONS.trophy,cls:'badge-og'},beta:{label:'Beta Tester',emoji:ICONS.beaker,cls:'badge-beta'},critic:{label:'Top Critic',emoji:ICONS.edit,cls:'badge-critic'},verified:{label:'Verified',emoji:ICONS.check,cls:'badge-verified'}};
+const BADGES={ceo:{label:'CEO',emoji:ICONS.crown,cls:'badge-ceo'},og:{label:'OG',emoji:ICONS.trophy,cls:'badge-og'},beta:{label:'Beta Tester',emoji:ICONS.beaker,cls:'badge-beta'},critic:{label:'Top Critic',emoji:ICONS.edit,cls:'badge-critic'},verified:{label:'Verified',emoji:ICONS.check,cls:'badge-verified'},baddie:{label:'Baddie',emoji:'<svg class="ui-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.6c.35 2.6 1.15 3.9 3.7 4.4-2.55.5-3.35 1.8-3.7 4.4-.35-2.6-1.15-3.9-3.7-4.4 2.55-.5 3.35-1.8 3.7-4.4Z"/><path d="M12.7 9.4c.2 1.3.6 1.9 1.9 2.2-1.3.3-1.7.9-1.9 2.2-.2-1.3-.6-1.9-1.9-2.2 1.3-.3 1.7-.9 1.9-2.2Z" opacity=".75"/></svg>',cls:'badge-baddie'}};
 const CEO_USER_ID='d8efaf23-c9fb-40d4-8c73-4dca30245398';
 function computeBadges(profile,ratedAlbumCount,isOwner){const out=[];const stored=(profile&&profile.badges)||[];if(CEO_USER_ID&&profile&&profile.id===CEO_USER_ID)out.push('ceo');stored.forEach(function(b){if(BADGES[b]&&out.indexOf(b)===-1)out.push(b);});if(ratedAlbumCount>=50&&out.indexOf('critic')===-1)out.push('critic');return out;}
 function badgeHtml(keys){if(!keys||!keys.length)return'';return'<span class="badges">'+keys.map(function(k){const b=BADGES[k];if(!b)return'';return'<span class="badge '+b.cls+'" title="'+esc(b.label)+'">'+b.emoji+' '+esc(b.label)+'</span>';}).join('')+'</span>';}
