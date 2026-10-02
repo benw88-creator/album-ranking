@@ -60,7 +60,10 @@ export default async function handler(req, res) {
       const t = x.snippet.title || '', ch = x.snippet.channelTitle || '', lt = loose(t), lc = loose(ch);
       const ms = iso(x.contentDetails && x.contentDetails.duration);
       let sc = 0;
-      if (lt.includes(wt)) sc += 5;
+      // The song's own title, as whole words. Without it a search for Monster
+      // offered I Love It as the second choice.
+      if (!(' ' + lt + ' ').includes(' ' + wt + ' ')) return { score: -99 };
+      sc += 5;
       if (lc.includes(wa) || lc.endsWith(' topic') || /vevo$/.test(lc)) sc += 4;   // the artist's own channel or YouTube's auto "Topic" upload
       if (lt.includes(wa)) sc += 1;
       if (/official (audio|video|music video)/i.test(t)) sc += 2;
