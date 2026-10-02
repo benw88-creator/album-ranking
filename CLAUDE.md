@@ -2440,6 +2440,14 @@ then the tab says "Not switched on yet" and reports once to `client_errors`.
   `Access-Control-Allow-Origin: *`), RMS per bar spread between the clip's own quietest and
   loudest bars, stored as 64 base-36 chars in `peaks`. The feed draws it without downloading a
   clip per card. No peaks means an even dim row, never an invented shape.
+- **Whole-song picks play from YouTube** (`..._20261002180000_moments_youtube.sql`, `api/youtube.js`,
+  needs `YOUTUBE_API_KEY` in Vercel). Deezer gives one fixed preview per song, so a Deezer pick was a
+  few seconds either way of whatever Deezer chose. A YouTube pick stores `source = 'youtube'`,
+  `video_id` and `duration_ms`, and plays through the visible embedded player (youtube-nocookie) with
+  the chosen start; our own 150ms poll owns the stop line. **Never play it hidden or pull its audio** —
+  both break YouTube's terms, and the player must be at least 200px tall. Search costs 100 of 10,000
+  daily quota units, spent once per pick. No key or no match falls back to the Deezer preview picker,
+  and older picks keep playing from Deezer. No waveform for YouTube picks: the bars are a ruler.
 - Featured artists come from Deezer `contributors`, then `(feat. …)` in the title, then a typed
   name. Contributors are incomplete (SICKO MODE credits Travis Scott alone).
 

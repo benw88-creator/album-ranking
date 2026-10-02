@@ -5639,6 +5639,22 @@ body.entering-done #artist-hero {
 .cc-note { font-size: 12px; color: var(--text-faint); margin: 16px 0 0; line-height: 1.45; }
 .cc-post { width: 100%; margin-top: 14px; justify-content: center; }
 .cc-post:disabled { opacity: .45; cursor: default; filter: none; box-shadow: none; }
+/* YouTube. The player is on screen whenever it plays — YouTube's terms, and
+   at least 200px tall, which is their minimum. A playing card makes a row
+   for it between the record and the timeline. */
+.cc-card.has-yt { grid-template-areas: "art head" "yt yt" "wave wave" "foot foot"; }
+.cc-yt, .cc-ed-video { grid-area: yt; position: relative; width: 100%; aspect-ratio: 16 / 9; min-height: 200px; border-radius: 12px; overflow: hidden; background: #000; }
+.cc-yt iframe, .cc-ed-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.cc-ed-video { margin: 0 0 14px; }
+/* A song-length timeline has no preview loudness behind it, so its bars are
+   an even row: a ruler, not a shape. */
+.cc-wave.is-song i { opacity: .38; height: 30% !important; }
+.cc-wave.is-song i.in { opacity: 1; height: 62% !important; }
+.cc-nudge { display: flex; gap: 6px; margin-left: auto; flex: none; }
+.cc-nudge button { border: 1px solid var(--border-strong); background: transparent; color: var(--text-dim); font: 600 12px var(--font-body); padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+.cc-nudge button:hover { color: var(--text); }
+.cc-vid-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; color: var(--text-faint); }
+.cc-vid-row span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cc-noclip { padding: 22px 8px 10px; text-align: center; color: var(--text-dim); font-size: 13.5px; }
 @media (prefers-reduced-motion: reduce) {
   html:not([data-motion="full"]) .cc-card,
@@ -10900,6 +10916,7 @@ window.discAmt = function (n) {
     <button class="modal-close" id="cc-close" aria-label="Close">&times;</button>
     <div class="modal-head"><span class="mh-emoji" data-icon="wave"></span><div><h2>Pick a moment</h2><p>The part you would play somebody first.</p></div></div>
     <div class="cc-track" id="cc-track"></div>
+    <div class="cc-ed-video" id="cc-ed-video" style="display:none;"></div>
     <div id="cc-body"></div>
   </div>
 </div>
@@ -25105,7 +25122,7 @@ window.renderAdminStats = renderAdminStats;
     { k: 'beat',    label: 'Beat switches', one: 'Best beat switch', hue: '--c-lime' }
   ];
   var CAT = {}; CATS.forEach(function (c) { CAT[c.k] = c; });
-  var COLS = 'id,user_id,category,track_id,track_name,artist,album,art,featuring,start_ms,len_ms,peaks,likes,created_at';
+  var COLS = 'id,user_id,category,track_id,track_name,artist,album,art,featuring,start_ms,len_ms,peaks,likes,created_at,source,video_id,duration_ms';
   var PAGE = 20, BARS = 64, CLIP_MS = 30000, LENS = [10, 15, 20, 30], TTL = 4 * 60 * 1000;
   var HEARD_AT = 0.8;              // of the pick, before Agree opens
   var DZ_ART = /^https:\/\/[a-z0-9-]+\.dzcdn\.net\//;
@@ -25158,12 +25175,85 @@ window.renderAdminStats = renderAdminStats;
     return p;
   }
 
+  /* ---- YouTube --------------------------------------------------------
+     Deezer's preview is one fixed thirty seconds per song, so a pick there is
+     a few seconds either way of whatever Deezer chose. YouTube's embedded
+     player plays any stretch of the whole song, which is what "pick the best
+     part" needs. It is played ONLY through that player, on screen, with the
+     start and end somebody chose: no audio is pulled out of it and nothing
+     plays hidden, both of which YouTube's terms forbid. The player being
+     visible is the price of the whole song, and the card makes room for it.
+
+     youtube-nocookie.com, so a visitor who never presses play is not tracked
+     by an embed they never used. The video id is stored with the pick, so the
+     search quota (~100 a day) is spent once per pick, never per play. */
+  function isYT(m) { return m && m.source === 'youtube' && m.video_id; }
+  function total(m) { return isYT(m) ? (m.duration_ms || CLIP_MS) : CLIP_MS; }
+  var _yt = null;
+  function loadYT() {
+    if (_yt) return _yt;
+    _yt = new Promise(function (res, rej) {
+      if (window.YT && YT.Player) { res(YT); return; }
+      var prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = function () { try { if (prev) prev(); } catch (e) {} res(YT); };
+      var sc = document.createElement('script');
+      sc.src = 'https://www.youtube.com/iframe_api';
+      sc.onerror = function () { _yt = null; rej(new Error('youtube api')); };
+      document.head.appendChild(sc);
+    });
+    return _yt;
+  }
+  // The feed's one live player. Built into the card being played and torn
+  // down when it stops, so a page of thirty picks is never thirty iframes.
+  var fy = { player: null, host: null, card: null, poll: 0 };
+  function feedYTStop() {
+    if (fy.poll) { clearInterval(fy.poll); fy.poll = 0; }
+    if (fy.player) { try { fy.player.destroy(); } catch (e) {} }
+    if (fy.host) fy.host.remove();
+    if (fy.card) fy.card.classList.remove('has-yt');
+    fy.player = null; fy.host = null; fy.card = null;
+  }
+  // Polls the player for time — the IFrame API has no timeupdate — and owns
+  // the stop line, because a player's own `end` is whole seconds and ours
+  // is not. Shared by the feed and the picker.
+  function watchYT(player, tok, endAt, onDone) {
+    var started = Date.now(), nudged = false;
+    return setInterval(function () {
+      if (tok !== pl.tok || !player || !player.getCurrentTime) return;
+      var stt = player.getPlayerState ? player.getPlayerState() : -1;
+      // Phones refuse to start a cross-origin video with sound without a tap
+      // on the video itself. Say so once instead of sitting on a black box.
+      if (stt !== 1 && stt !== 3 && !nudged && Date.now() - started > 2200) { nudged = true; say('Tap the video to start it'); }
+      if (stt !== 1) return;
+      var t = player.getCurrentTime();
+      onTick(t);
+      if (t >= endAt - 0.04) { try { player.pauseVideo(); } catch (e) {} onDone(); }
+    }, 150);
+  }
+  function ytPlayerFor(el, videoId, startSec, endSec, autoplay, tok, onReady) {
+    return loadYT().then(function (Y) {
+      if (tok !== undefined && tok !== pl.tok) return null;
+      return new Y.Player(el, {
+        host: 'https://www.youtube-nocookie.com', videoId: videoId, width: '100%', height: '100%',
+        playerVars: { start: Math.floor(startSec), end: Math.ceil(endSec), autoplay: autoplay ? 1 : 0,
+                      playsinline: 1, rel: 0, modestbranding: 1, controls: 1, fs: 0, iv_load_policy: 3 },
+        events: {
+          onReady: function (e) { if (onReady) onReady(e.target); },
+          onError: function () { if (tok === undefined || tok === pl.tok) { say('That video will not play here'); stop(); } }
+        }
+      });
+    });
+  }
+
   /* ---- playback ------------------------------------------------------- */
   function stop() {
     pl.tok++;
-    var had = pl.id;
+    var had = pl.id, owner = pl.owner;
     pl.id = null; pl.owner = null; pl.bar = -1;
     if (had) { try { VinalAudio.stop(); } catch (e) {} }
+    feedYTStop();
+    if (owner === 'editor' && ed && ed.player) { try { ed.player.pauseVideo(); } catch (e) {} }
+    if (ed && ed.poll) { clearInterval(ed.poll); ed.poll = 0; }
     paintPlaying();
   }
   function setAuto(on) {
@@ -25181,11 +25271,30 @@ window.renderAdminStats = renderAdminStats;
     pl.lastT = pl.from; pl.bar = -1;
     try { VinalAudio.prime(); } catch (e) {}
     paintPlaying(true);
-    if (owner === 'feed' && window.track) track('moment_played', { category: m.category || null });
+    if (owner === 'feed' && window.track) track('moment_played', { category: m.category || null, source: m.source || 'deezer' });
     function fail(msg) {
       if (tok !== pl.tok) return;
-      pl.id = null; pl.owner = null; paintPlaying();
+      pl.id = null; pl.owner = null; feedYTStop(); paintPlaying();
       if (msg) say(msg);
+    }
+    feedYTStop();
+    if (isYT(m)) {
+      var card = cardEl(m.id);
+      if (!card) { fail(); return; }
+      var host = document.createElement('div'), inner = document.createElement('div');
+      host.className = 'cc-yt'; host.appendChild(inner);
+      card.appendChild(host); card.classList.add('has-yt');
+      fy.host = host; fy.card = card;
+      ytPlayerFor(inner, m.video_id, pl.from, pl.from + pl.len, true, tok, function (p) {
+        if (tok !== pl.tok) return;
+        try { p.seekTo(pl.from, true); p.playVideo(); } catch (e) {}
+        paintPlaying();
+      }).then(function (p) {
+        if (!p || tok !== pl.tok) { if (p) try { p.destroy(); } catch (e) {} return; }
+        fy.player = p;
+        fy.poll = watchYT(p, tok, pl.from + pl.len, onEnd);
+      }, function () { fail('Could not reach YouTube — check your connection'); });
+      return;
     }
     clipFor(m.track_id).then(function (t) {
       if (tok !== pl.tok) return;
@@ -25212,7 +25321,7 @@ window.renderAdminStats = renderAdminStats;
       // Bars light as they are played. Only touched when the boundary moves,
       // which is a few times a second rather than every frame.
       var m = st.byId[pl.id];
-      var b = Math.floor((m.start_ms + f * m.len_ms) / CLIP_MS * BARS);
+      var b = Math.floor((m.start_ms + f * m.len_ms) / total(m) * BARS);
       if (b !== pl.bar) {
         pl.bar = b;
         var bars = card.querySelectorAll('.cc-wave i');
@@ -25232,6 +25341,8 @@ window.renderAdminStats = renderAdminStats;
     // this pick actually reached counts as having heard it.
     var reached = pl.lastT >= pl.from + pl.len * HEARD_AT;
     pl.id = null; pl.owner = null; pl.bar = -1;
+    if (ed && ed.poll) { clearInterval(ed.poll); ed.poll = 0; }
+    if (owner === 'feed') feedYTStop();
     if (owner === 'feed' && reached) markHeard(id);
     paintPlaying();
     if (owner === 'feed' && pl.auto && reached) {
@@ -25255,7 +25366,7 @@ window.renderAdminStats = renderAdminStats;
       if (!on) {
         c.querySelectorAll('.cc-wave i.on').forEach(function (i) { i.classList.remove('on'); });
         var m = st.byId[c.dataset.mid], len = c.querySelector('.cc-win-len');
-        if (m && len) len.textContent = Math.round(m.len_ms / 1000) + 's';
+        if (m && len) len.textContent = winLabel(m);
       }
     });
     var edEl = $('cc-ed');
@@ -25334,9 +25445,13 @@ window.renderAdminStats = renderAdminStats;
     return '<button class="cc-agree' + (on ? ' is-on' : '') + (open ? '' : ' is-locked') + '" type="button" data-cc-agree aria-pressed="' + on + '"' +
       (open ? '' : ' title="Hear it first"') + '>' + IC_CHECK + '<b>' + n + '</b><span>' + (on ? 'Agreed' : 'Agree') + '</span></button>';
   }
+  // A YouTube pick says WHERE in the song it is, because that is now a real
+  // place in the song; a preview pick only how long, because 0:12 into
+  // Deezer's clip is not 0:12 into anything anybody would recognise.
+  function winLabel(m) { return isYT(m) ? fmt(m.start_ms) + ' \u00b7 ' + Math.round(m.len_ms / 1000) + 's' : Math.round(m.len_ms / 1000) + 's'; }
   function cardHtml(m, rank) {
     var c = CAT[m.category] || CATS[0], who = st.people[m.user_id] || {};
-    var a = m.start_ms / CLIP_MS * 100, w = m.len_ms / CLIP_MS * 100;
+    var tl = total(m), a = m.start_ms / tl * 100, w = m.len_ms / tl * 100;
     var lead = st.sort === 'top' && rank === 1;
     return '<article class="cc-card' + (lead ? ' cc-lead' : '') + '" data-mid="' + esc(m.id) + '" style="--cc:' + hue(m.category) + '">' +
       (st.sort === 'top' ? '<div class="cc-rank' + (rank <= 3 ? ' top' : '') + '">#' + rank + '</div>' : '') +
@@ -25349,8 +25464,8 @@ window.renderAdminStats = renderAdminStats;
         '<div class="cc-artist">' + esc(m.artist) + '</div>' +
       '</div>' +
       '<div class="cc-wave-wrap" data-cc-play role="button" aria-label="Play the picked ' + Math.round(m.len_ms / 1000) + ' seconds">' +
-        '<div class="cc-wave">' + barsHtml(m.peaks, m.start_ms, m.len_ms, CLIP_MS) + '</div>' +
-        '<div class="cc-win" style="left:' + a.toFixed(2) + '%;width:' + w.toFixed(2) + '%"><span class="cc-win-len">' + Math.round(m.len_ms / 1000) + 's</span></div>' +
+        '<div class="cc-wave' + (isYT(m) ? ' is-song' : '') + '">' + barsHtml(m.peaks, m.start_ms, m.len_ms, tl) + '</div>' +
+        '<div class="cc-win" style="left:' + a.toFixed(2) + '%;width:' + w.toFixed(2) + '%"><span class="cc-win-len">' + winLabel(m) + '</span></div>' +
       '</div>' +
       '<div class="cc-foot">' +
         '<button class="cc-by" type="button" data-uid="' + esc(m.user_id) + '">' +
@@ -25565,7 +25680,8 @@ window.renderAdminStats = renderAdminStats;
   var ed = null;
   function blankEditor(item) {
     return { tok: (ed ? ed.tok : 0) + 1, track: item, clipUrl: null, clipMs: CLIP_MS, peaks: null,
-             startMs: 0, lenMs: 15000, cat: null, feat: '', featOpts: [], state: 'loading', busy: false };
+             startMs: 0, lenMs: 15000, cat: null, feat: '', featOpts: [], state: 'loading', busy: false,
+             source: 'deezer', videos: [], vi: 0, player: null, ready: false, poll: 0 };
   }
   function openComposer() {
     if (!window.Cloud || !Cloud.isOn()) { if (window.Cloud && Cloud.openAuth) Cloud.openAuth(); return; }
@@ -25587,32 +25703,97 @@ window.renderAdminStats = renderAdminStats;
     (t.artists || []).forEach(function (a) { if (a) add(a.name); });
     return out.slice(0, 6);
   }
+  function edVideo() { return ed && ed.source === 'youtube' ? ed.videos[ed.vi] : null; }
+  function edPlayable() { return !!ed && (ed.source === 'youtube' ? !!edVideo() : !!ed.clipUrl); }
+  function destroyEdPlayer() {
+    if (!ed) return;
+    if (ed.poll) { clearInterval(ed.poll); ed.poll = 0; }
+    if (ed.player) { try { ed.player.destroy(); } catch (e) {} }
+    ed.player = null; ed.ready = false;
+    var v = $('cc-ed-video'); if (v) { v.innerHTML = ''; v.style.display = 'none'; }
+  }
+  // The picker's player lives OUTSIDE #cc-body, which paintEditor rebuilds on
+  // every category tap; an iframe inside it would reload each time.
+  function mountEdVideo() {
+    var v = edVideo(), host = $('cc-ed-video');
+    if (!v || !host) return;
+    var tok = ed.tok;
+    destroyEdPlayer();
+    host.style.display = '';
+    host.innerHTML = '<div></div>';
+    ytPlayerFor(host.firstChild, v.id, ed.startMs / 1000, ed.clipMs / 1000, false, undefined, function (p) {
+      if (!ed || tok !== ed.tok) return;
+      ed.ready = true;
+      try { var d = p.getDuration(); if (d > 30) { ed.clipMs = Math.min(1200000, Math.floor(d * 10) * 100); clampEditor(); paintEditor(true); } } catch (e) {}
+    }).then(function (p) {
+      if (!ed || tok !== ed.tok) { if (p) try { p.destroy(); } catch (e) {} return; }
+      ed.player = p;
+    }, function () {
+      if (!ed || tok !== ed.tok) return;
+      useDeezer('Could not reach YouTube, so this pick is inside Deezer\u2019s 30-second preview.');
+    });
+  }
+  function useDeezer(why) {
+    destroyEdPlayer();
+    ed.source = 'deezer'; ed.clipMs = ed.deezerMs || CLIP_MS; ed.lenMs = Math.min(ed.lenMs, 15000);
+    ed.why = why || ''; clampEditor(); paintEditor(true);
+  }
   function startEditor(item) {
     if (!item || !/^\d{1,20}$/.test(String(item.id || ''))) { say('That song cannot be picked'); return; }
+    if (ed) destroyEdPlayer();
     ed = blankEditor({ id: String(item.id), name: item.name, artist: item.artist, album: item.album || '', art: item.art || '' });
     var tok = ed.tok;
     paintEditor(true);
     var modal = $('cc-modal');
     modal.classList.add('open');
+    /* The whole song first. YouTube is asked in parallel with Deezer's clip;
+       the Deezer lookup is still wanted either way, for the cover, the album
+       and the credited features. */
+    var base = (window.Native && Native.api) || '';
+    var ytAsk = fetch(base + '/api/youtube?artist=' + encodeURIComponent(item.artist || '') + '&title=' + encodeURIComponent(item.name || ''))
+      .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    ytAsk.then(function (j) {
+      if (!ed || tok !== ed.tok) return;
+      var vids = (j && j.videos || []).filter(function (v) { return /^[A-Za-z0-9_-]{11}$/.test(v.id) && v.ms >= 30000 && v.ms <= 1200000; });
+      if (!vids.length) { ed.why = 'Not on YouTube, so this pick is inside Deezer\u2019s 30-second preview.'; if (ed.state === 'ready') paintEditor(true); return; }
+      ed.source = 'youtube'; ed.videos = vids; ed.vi = 0;
+      ed.clipMs = vids[0].ms; ed.lenMs = 30000; ed.startMs = Math.round(ed.clipMs * 0.3);
+      clampEditor();
+      if (ed.state !== 'error') ed.state = 'ready';
+      paintEditor(true);
+      mountEdVideo();
+    });
     clipFor(ed.track.id).then(function (t) {
       if (!ed || tok !== ed.tok) return;
-      if (!t || !t.preview_url) { ed.state = 'noclip'; paintEditor(true); return; }
+      if (t) {
+        ed.featOpts = featCandidates(t, (t.artists && t.artists[0] && t.artists[0].name) || ed.track.artist);
+        if (t.album && t.album.images && t.album.images[1] && !DZ_ART.test(ed.track.art)) ed.track.art = t.album.images[1].url;
+        if (t.album && t.album.name && !ed.track.album) ed.track.album = t.album.name;
+      }
+      if (!t || !t.preview_url) {
+        if (ed.source === 'youtube') { paintEditor(true); return; }
+        // Wait for YouTube's answer before calling it unpickable.
+        return ytAsk.then(function () { if (ed && tok === ed.tok && ed.source !== 'youtube') { ed.state = 'noclip'; paintEditor(true); } });
+      }
       ed.clipUrl = t.preview_url;
       ed.featOpts = featCandidates(t, (t.artists && t.artists[0] && t.artists[0].name) || ed.track.artist);
       if (t.album && t.album.images && t.album.images[1] && !DZ_ART.test(ed.track.art)) ed.track.art = t.album.images[1].url;
       if (t.album && t.album.name && !ed.track.album) ed.track.album = t.album.name;
+      if (ed.source === 'youtube') { ed.state = 'ready'; paintEditor(true); return; }
       ed.state = 'decoding';
       paintEditor(true);
       return decodePeaks(t.preview_url).then(function (r) {
         if (!ed || tok !== ed.tok) return;
-        ed.peaks = r.peaks;
-        if (r.ms > 5000) ed.clipMs = Math.min(CLIP_MS, Math.floor(r.ms / 100) * 100);
-        clampEditor();
+        // Peaks belong to the PREVIEW. Kept for a fallback to Deezer, never
+        // drawn across a whole song they do not describe.
+        ed.dzPeaks = r.peaks;
+        if (r.ms > 5000) ed.deezerMs = Math.min(CLIP_MS, Math.floor(r.ms / 100) * 100);
+        if (ed.source === 'deezer') { ed.clipMs = ed.deezerMs || CLIP_MS; clampEditor(); }
       }, function () { /* no waveform is a dimmer picture, not a broken picker */ })
       .then(function () { if (ed && tok === ed.tok) { ed.state = 'ready'; paintEditor(true); } });
     }).catch(function () {
       if (!ed || tok !== ed.tok) return;
-      ed.state = 'error'; paintEditor(true);
+      if (ed.source !== 'youtube') { ed.state = 'error'; paintEditor(true); }
     });
   }
   function clampEditor() {
@@ -25621,6 +25802,7 @@ window.renderAdminStats = renderAdminStats;
   }
   function closeComposer() {
     if (pl.owner === 'editor') stop();
+    destroyEdPlayer();
     var m = $('cc-modal'); if (m) m.classList.remove('open');
     if (ed) ed.tok++;
   }
@@ -25641,7 +25823,8 @@ window.renderAdminStats = renderAdminStats;
         : 'Could not reach this song’s preview. Check your connection and try again.') + '</div>';
       return;
     }
-    var waiting = ed.state === 'loading' || ed.state === 'decoding';
+    var yt = ed.source === 'youtube', vid = edVideo();
+    var waiting = !yt && (ed.state === 'loading' || ed.state === 'decoding');
     var catBtns = CATS.map(function (c) {
       return '<button type="button" class="cc-chip' + (ed.cat === c.k ? ' is-on' : '') + '" data-ed-cat="' + c.k + '" style="--cc:var(' + c.hue + ')">' + esc(c.one) + '</button>';
     }).join('');
@@ -25657,19 +25840,23 @@ window.renderAdminStats = renderAdminStats;
     body.innerHTML =
       '<div class="cc-ed" id="cc-ed">' +
         '<div class="cc-ed-wave' + (waiting ? ' is-loading' : '') + '" id="cc-ed-wave" tabindex="0" role="slider" aria-label="Where the moment starts" aria-valuemin="0">' +
-          '<div class="cc-wave" id="cc-ed-bars"></div>' +
+          '<div class="cc-wave' + (yt ? ' is-song' : '') + '" id="cc-ed-bars"></div>' +
           '<div class="cc-sel" id="cc-sel"><span class="cc-sel-badge" id="cc-sel-badge"></span></div>' +
           '<div class="cc-playhead" id="cc-playhead"></div>' +
         '</div>' +
         '<div class="cc-ed-times"><span>0:00</span><span class="mid" id="cc-sel-range"></span><span id="cc-clip-end">' + fmt(ed.clipMs) + '</span></div>' +
-        '<div class="cc-ed-row"><button class="cc-hear" type="button" data-ed="hear" aria-label="Hear your pick"' + (ed.clipUrl ? '' : ' disabled') + '>' + IC_PLAY + IC_PAUSE + '</button>' +
-          '<div class="cc-ed-hint">' + (waiting ? 'Reading the clip…' : 'Drag the box onto the moment, or tap where it starts.') + '</div></div>' +
+        '<div class="cc-ed-row"><button class="cc-hear" type="button" data-ed="hear" aria-label="Hear your pick"' + (edPlayable() ? '' : ' disabled') + '>' + IC_PLAY + IC_PAUSE + '</button>' +
+          '<div class="cc-ed-hint">' + (waiting ? 'Reading the clip\u2026' : (yt ? 'Drag the box anywhere in the song.' : 'Drag the box onto the moment, or tap where it starts.')) + '</div>' +
+          '<div class="cc-nudge"><button type="button" data-ed="back" aria-label="One second earlier">&lsaquo; 1s</button><button type="button" data-ed="fwd" aria-label="One second later">1s &rsaquo;</button></div></div>' +
       '</div>' +
+      (yt && vid ? '<div class="cc-vid-row"><span>' + esc(vid.title) + ' &middot; ' + esc(vid.channel) + '</span>' +
+        (ed.videos.length > 1 ? '<button class="btn-mini" type="button" data-ed="nextvid">Wrong video?</button>' : '') + '</div>' : '') +
       '<div class="cc-lens">' + LENS.map(function (s) {
         return '<button type="button" data-ed-len="' + s + '"' + (ed.lenMs === Math.min(s * 1000, ed.clipMs) ? ' class="is-on"' : '') + '>' + s + 's</button>';
       }).join('') + '</div>' +
       '<div class="cc-label">What is it?</div><div class="cc-catpick">' + catBtns + '</div>' + feat +
-      '<p class="cc-note">VINALL plays Deezer’s 30-second preview of each song, so your moment has to be somewhere inside it.</p>' +
+      '<p class="cc-note">' + (yt ? 'Plays from YouTube, so the whole song is yours to pick from.'
+        : esc(ed.why || 'VINALL plays Deezer\u2019s 30-second preview of each song, so your moment has to be somewhere inside it.')) + '</p>' +
       '<button class="btn-primary cc-post" type="button" data-ed="post" id="cc-post">Post to Community Choice</button>';
     paintSel(true);
     paintPost();
@@ -25679,7 +25866,7 @@ window.renderAdminStats = renderAdminStats;
     if (!ed) return;
     var sel = $('cc-sel'), w = $('cc-ed-wave');
     if (!sel || !w) return;
-    if (bars) $('cc-ed-bars').innerHTML = barsHtml(ed.peaks, ed.startMs, ed.lenMs, ed.clipMs);
+    if (bars) $('cc-ed-bars').innerHTML = barsHtml(ed.source === 'deezer' ? ed.dzPeaks : null, ed.startMs, ed.lenMs, ed.clipMs);
     else {
       var a = ed.startMs / ed.clipMs * BARS, b = (ed.startMs + ed.lenMs) / ed.clipMs * BARS;
       w.querySelectorAll('.cc-wave i').forEach(function (el, i) { el.classList.toggle('in', i + 0.5 >= a && i + 0.5 <= b); });
@@ -25696,13 +25883,24 @@ window.renderAdminStats = renderAdminStats;
   function paintPost() {
     var b = $('cc-post');
     if (!b || !ed) return;
-    var ok = !!ed.clipUrl && !!ed.cat && (ed.cat !== 'feature' || featValue().length > 0) && !ed.busy;
+    var ok = edPlayable() && !!ed.cat && (ed.cat !== 'feature' || featValue().length > 0) && !ed.busy;
     b.disabled = !ok;
     b.textContent = ed.busy ? 'Posting…' : (!ed.cat ? 'Choose what it is' : (ed.cat === 'feature' && !featValue() ? 'Say whose part it is' : 'Post to Community Choice'));
   }
   function hearSelection() {
-    if (!ed || !ed.clipUrl) return;
+    if (!ed || !edPlayable()) return;
     if (pl.owner === 'editor') { stop(); return; }
+    if (ed.source === 'youtube') {
+      if (!ed.player || !ed.ready) { say('The video is still loading'); return; }
+      var tok = ++pl.tok;
+      try { VinalAudio.stop(); } catch (e) {}
+      pl.id = 'editor'; pl.owner = 'editor'; pl.from = ed.startMs / 1000; pl.len = ed.lenMs / 1000; pl.lastT = pl.from;
+      try { ed.player.seekTo(pl.from, true); ed.player.playVideo(); } catch (e) {}
+      if (ed.poll) clearInterval(ed.poll);
+      ed.poll = watchYT(ed.player, tok, pl.from + pl.len, onEnd);
+      paintPlaying();
+      return;
+    }
     // Hand the clip straight over: it was just fetched by id, and the play is
     // inside the tap that asked for it.
     clips[ed.track.id] = { at: Date.now(), p: Promise.resolve({ preview_url: ed.clipUrl }) };
@@ -25713,7 +25911,7 @@ window.renderAdminStats = renderAdminStats;
   async function post() {
     if (!ed || ed.busy) return;
     var feat = featValue();
-    if (!ed.clipUrl || !ed.cat || (ed.cat === 'feature' && !feat)) return;
+    if (!edPlayable() || !ed.cat || (ed.cat === 'feature' && !feat)) return;
     if (feat && window.hasSlur && hasSlur(feat)) { say('Pick a different name for that'); return; }
     ed.busy = true; paintPost();
     var row = {
@@ -25722,8 +25920,11 @@ window.renderAdminStats = renderAdminStats;
       album: ed.track.album ? String(ed.track.album).slice(0, 200) : null,
       art: DZ_ART.test(ed.track.art || '') ? ed.track.art : null,
       featuring: feat ? feat.slice(0, 60) : null,
-      start_ms: ed.startMs, len_ms: ed.lenMs, peaks: encodePeaks(ed.peaks)
+      start_ms: ed.startMs, len_ms: ed.lenMs
     };
+    if (ed.source === 'youtube') {
+      row.source = 'youtube'; row.video_id = edVideo().id; row.duration_ms = ed.clipMs; row.peaks = null;
+    } else row.peaks = encodePeaks(ed.dzPeaks);
     var r;
     try { r = await sb().from('moments').insert(row).select(COLS).single(); }
     catch (e) { r = { error: e }; }
@@ -25733,12 +25934,13 @@ window.renderAdminStats = renderAdminStats;
       var msg = String(r.error.message || '');
       if (r.error.code === '23505') say('You have already picked a ' + (CAT[ed.cat].one.toLowerCase()) + ' from this song');
       else if (/moment_daily_limit/.test(msg)) say('That is twenty picks today — come back tomorrow');
+      else if (ed.source === 'youtube' && /source|video_id|duration_ms/.test(msg)) { say('Whole-song picks are not switched on yet'); reportOnce('Community Choice: apply 20261002180000_moments_youtube.sql', { code: r.error.code }); }
       else if (missing(r.error)) { st.off = true; say('Community Choice is not switched on yet'); reportOnce('Community Choice: moments table missing on post', { code: r.error.code }); }
       else { say('Could not post that — try again'); reportOnce('Community Choice: post failed', { message: msg, code: r.error.code }); }
       paintPost();
       return;
     }
-    if (window.track) track('moment_posted', { category: ed.cat, len: Math.round(ed.lenMs / 1000) });
+    if (window.track) track('moment_posted', { category: ed.cat, len: Math.round(ed.lenMs / 1000), source: ed.source });
     if (window.buzz) buzz('good');
     closeComposer();
     // Show it where it is guaranteed to be: newest first, every category.
@@ -25766,7 +25968,18 @@ window.renderAdminStats = renderAdminStats;
       var act = t.closest('[data-ed]');
       if (act) {
         var a = act.dataset.ed;
-        if (a === 'change') { if (pl.owner === 'editor') stop(); openPicker('song', startEditor); }
+        if (a === 'change') { if (pl.owner === 'editor') stop(); destroyEdPlayer(); openPicker('song', startEditor); }
+        else if (a === 'back' || a === 'fwd') {
+          ed.startMs += a === 'back' ? -1000 : 1000; clampEditor();
+          if (pl.owner === 'editor') stop();
+          paintSel();
+        }
+        else if (a === 'nextvid') {
+          if (pl.owner === 'editor') stop();
+          ed.vi = (ed.vi + 1) % ed.videos.length;
+          ed.clipMs = ed.videos[ed.vi].ms; clampEditor();
+          paintEditor(true); mountEdVideo();
+        }
         else if (a === 'hear') hearSelection();
         else if (a === 'post') post();
         return;
