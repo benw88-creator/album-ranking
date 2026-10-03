@@ -450,3 +450,43 @@ export function pickArtist(list, wantedName) {
   }
   return { artist: top.artist, how: top.how, considered: ranked.length, log };
 }
+
+/* ---- song search ranking -------------------------------------------------
+   Deezer's /search/track order is relevance by ITS measure, which mixes in
+   lyric and album hits and is blind to who anybody means. "Fancy" put Iggy
+   Azalea over Drake on Deezer's track `rank` alone (730k against 636k), while
+   Drake's audience on Deezer is seven times larger. So:
+
+     1. how well the TITLE answers the query, in tiers — exact, title + artist
+        typed together, prefix, every word present — because a strong title
+        match beats any amount of popularity on a weak one;
+     2. inside a tier, popularity: log of the track's own `rank` plus half the
+        log of the artist's fans. Logs, because both are power-law and a raw
+        sum would let one number decide alone. Half, because the track's own
+        popularity is the more direct evidence and fans only break near-ties;
+     3. edits of a song (slowed, sped up, karaoke, a cover…) lose half a tier,
+        so they sit under the original that shares their title but still
+        above a weaker title match;
+     4. Deezer's own position last, as the tiebreak, so nothing it got right is
+        thrown away.
+
+   `fans` is a map of artist id to nb_fan; a missing entry counts as zero, so
+   the ranking still works (on rank alone) when that lookup could not run. */
+const SONG_EDIT = /\b(slowed|sped ?up|nightcore|reverb|8d|karaoke|instrumental|acapella|a cappella|tribute|cover|made famous|in the style|remix|workout|\d+ ?bpm|acoustic|live at)\b/i;
+export function rankTracks(list, query, fans) {
+  const qn = normName(query), qw = normWords(query).split(' ').filter(Boolean);
+  const f = fans || {};
+  return (list || []).map((t, i) => {
+    const title = t.title_short || t.title || '', artist = (t.artist && t.artist.name) || '';
+    const tn = normName(title), an = normName(artist);
+    const words = new Set(normWords(title + ' ' + artist).split(' '));
+    let tier = 0;
+    if (qn && tn === qn) tier = 4;
+    else if (qn && (qn === tn + an || qn === an + tn)) tier = 4;
+    else if (qn && tn.startsWith(qn)) tier = 2;
+    else if (qw.length && qw.every(w => words.has(w))) tier = 1;
+    const pop = Math.log10((t.rank || 0) + 1) + 0.5 * Math.log10((f[t.artist && t.artist.id] || 0) + 1);
+    const edit = SONG_EDIT.test(t.title || '') || SONG_EDIT.test(artist) ? 1 : 0;
+    return { t, tier, score: tier * 100 - edit * 50 + pop - i * 0.001 };
+  }).sort((a, b) => b.score - a.score).map(x => x.t);
+}

@@ -164,8 +164,30 @@ async function fullAlbum(id) {
 
 import { cors } from './_cors.js';
 import {
-  pickArtist, classifyRelease, dedupeReleases, countsForCompletion, dedupeArtists, rankArtists,
+  pickArtist, classifyRelease, dedupeReleases, countsForCompletion, dedupeArtists, rankArtists, rankTracks,
 } from './_artists.js';
+
+/* Artist audience sizes for song-search ranking (see rankTracks). nb_fan is a
+   public count with no signature in it, so it can live as long as the warm
+   instance does — a day here — and a repeat search spends nothing on it. */
+const FANS = new Map();
+// Capped at FANS_WAIT: whatever has answered by then is used and the rest
+// rank on the track alone, so a slow Deezer never makes the search slow.
+const FANS_WAIT = 700;
+async function fansFor(ids) {
+  const now = Date.now(), out = {};
+  const all = Promise.all(ids.map(async (id) => {
+    const c = FANS.get(id);
+    if (c && now - c.at < 86400000) { out[id] = c.n; return; }
+    try {
+      const a = await dz('/artist/' + id);
+      const n = (a && a.nb_fan) || 0;
+      FANS.set(id, { n, at: now }); out[id] = n;
+    } catch (e) { /* ranks on the track alone, never a failed search */ }
+  }));
+  await Promise.race([all, new Promise(r => setTimeout(r, FANS_WAIT))]);
+  return { ...out };
+}
 
 export default async function handler(req, res) {
   // Answers the preflight and stops. Must be first: the method checks below
@@ -233,8 +255,9 @@ export default async function handler(req, res) {
            for every query ever typed into it. The feature has never worked
            since the catalogue moved.
 
-           Deezer's own relevance order is already right (Drake's "God's Plan"
-           leads that query), so it is kept. What it needs is DEDUPING: the
+           Deezer's own relevance order is NOT always right — "Fancy" led with
+           Iggy Azalea over Drake — so results are re-ranked by rankTracks
+           (title match first, then track and artist popularity). It also needs DEDUPING: the
            same recording comes back off a single, an album and a deluxe, and a
            picker showing one song four times is a picker nobody trusts. Keyed
            on artist+title with `rank` — Deezer's popularity field — deciding
@@ -247,8 +270,17 @@ export default async function handler(req, res) {
           const ex = byKey.get(k);
           if (!ex || (t.rank || 0) > (ex.rank || 0)) byKey.set(k, t);
         });
+        // A first pass without audiences picks whose audience is worth asking
+        // about: the artists of the strongest few matches, at most eight
+        // parallel lookups, each cached.
+        let ranked = rankTracks([...byKey.values()], term);
+        const ids = [...new Set(ranked.slice(0, 10).map(t => t.artist && t.artist.id).filter(Boolean))].slice(0, 8);
+        // All or nothing: one artist missing would count as zero fans and sink
+        // exactly the big name whose lookup happened to be slow.
+        const fans = await fansFor(ids);
+        if (ids.every(id => id in fans)) ranked = rankTracks(ranked, term, fans);
         out.tracks = {
-          items: [...byKey.values()].slice(0, limit).map(t => ({
+          items: ranked.slice(0, limit).map(t => ({
             id: String(t.id),
             name: t.title,
             duration_ms: (t.duration || 0) * 1000,

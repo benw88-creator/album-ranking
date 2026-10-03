@@ -4525,7 +4525,10 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 @keyframes splashIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 .splash-word {
   font-family: var(--font-display); font-weight: 800;
-  font-size: clamp(56px, 13vw, 148px); letter-spacing: -0.03em; line-height: 0.88;
+  /* The wordmark IS the splash. 13vw left it at its 56px floor on a phone — a
+     heading, not a brand. "VINALL" sets at about 3.3em, so 24vw is ~300px of a
+     375px screen, inside the 24px padding either side. */
+  font-size: clamp(72px, 24vw, 196px); letter-spacing: -0.035em; line-height: 0.86;
   color: var(--text);
   text-shadow: 0 10px 50px rgba(0,0,0,0.55);
   position: relative;
@@ -4561,7 +4564,10 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
        word stays the brightest thing on the screen. */
     background: linear-gradient(172deg, #fffaf0 0%, #fbeccb 34%, #f3d79a 52%, #f6c9a0 74%, #f2a98a 100%);
     -webkit-background-clip: text; background-clip: text;
-    filter: drop-shadow(0 10px 36px rgba(0,0,0,0.55));
+    /* Dark shadow to lift it off the record, plus a soft halo so it glows
+       rather than merely sits there. --gold-glow is themed, so the halo
+       follows the skin the way the liquid does. */
+    filter: drop-shadow(0 10px 36px rgba(0,0,0,0.55)) drop-shadow(0 0 34px var(--gold-glow));
   }
   .splash-word::before, .splash-word::after {
     content: attr(data-text);
@@ -4622,12 +4628,19 @@ html[data-motion="none"][data-theme] .splash-word::before { animation: none; }
 }
 html[data-motion="none"] .splash-word::before,
 html[data-motion="none"] .splash-word::after { animation: none; }
+/* Under a wordmark this size, a sentence-case line reads as a second heading
+   competing with it. Small tracked caps make it a caption to the brand, and the
+   negative margin pulls it into the word block so GO reads as the next thing
+   rather than the third of three equal items. padding-left balances the
+   trailing letter-spacing so the line stays optically centred. */
 .splash-tag {
-  font-size: clamp(14px, 2vw, 18px); color: var(--text-dim); max-width: 38ch;
+  font-size: clamp(12px, 1.5vw, 15px); color: var(--text-dim); max-width: 38ch;
+  text-transform: uppercase; letter-spacing: 0.22em; font-weight: 600;
+  margin-top: -6px; padding-left: 0.22em;
   text-shadow: 0 2px 12px rgba(0,0,0,0.6);
 }
 .splash-cta {
-  margin-top: 8px;
+  margin-top: 22px;
   background: linear-gradient(120deg, var(--gold), var(--accent-2));
   background-size: 200% 100%;
   color: var(--bg);
@@ -4746,11 +4759,10 @@ html[data-motion="none"] .splash-cta.waiting { animation: none; }
   position: absolute; inset: 15%; border-radius: 50%;
   border: 1px solid rgba(245,200,66,0.18);
 }
-.sd-hole {
-  width: 8%; height: 8%; border-radius: 50%;
-  background: #050404;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.9), 0 0 0 1px rgba(245,200,66,0.22);
-}
+/* No spindle hole. The label sits dead centre behind the wordmark, so a black
+   8% dot showed between the letters — and through the bloom on the way out —
+   as a blemish on the word. Same reason the app icon has none, and the header
+   mark the record flies into has none either, so the flight matches better. */
 /* Held still if motion is off — a still record is still a record. */
 html[data-motion="none"] .sd-vinyl { animation: none; }
 /* Why the record didn't look like it was turning on a desktop.
@@ -5674,6 +5686,37 @@ body.entering-done #artist-hero {
 .cc-ed.is-playing .cc-playhead { display: block; }
 .cc-ed-times { display: flex; justify-content: space-between; margin-top: 8px; font: 500 11.5px var(--font-mono); color: var(--text-faint); font-variant-numeric: tabular-nums; }
 .cc-ed-times .mid { color: var(--text); }
+/* THE FINE SCRUBBER. The box above maps the whole song onto ~340px, so on a
+   four-minute track one pixel is ~0.7s and a finger's wobble is several
+   seconds — too coarse to land on a beat. This strip is the same start time at
+   14px a second: a native horizontal scroll (so momentum and rubber-banding are
+   the phone's own) under a fixed needle, value = scrollLeft / 14 rounded to a
+   whole second. The band to the right of the needle is the window you are
+   choosing, so you can see where it runs to. Ticks are background gradients in
+   PIXELS, one per second and a taller one every five, so a twenty-minute song
+   costs no extra DOM beyond a label every ten seconds. */
+.cc-fine-wrap { position: relative; margin-top: 12px; height: 54px; border-radius: 12px; overflow: hidden;
+  background: color-mix(in srgb, var(--cc) 5%, var(--surface-3, rgba(0,0,0,.25))); border: 1px solid var(--border); }
+.cc-fine { position: absolute; inset: 0; overflow-x: auto; overflow-y: hidden; touch-action: pan-x;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; cursor: grab; }
+.cc-fine::-webkit-scrollbar { display: none; }
+.cc-fine.is-grabbing { cursor: grabbing; }
+.cc-fine-track { position: relative; height: 100%; box-sizing: content-box;
+  background-origin: content-box; background-clip: content-box; background-repeat: repeat-x;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255,245,235,.55) 0 1px, transparent 1px 70px),
+    repeating-linear-gradient(90deg, rgba(255,245,235,.22) 0 1px, transparent 1px 14px);
+  background-size: 100% 22px, 100% 12px;
+  background-position: 0 100%, 0 100%; }
+.cc-fine-track b { position: absolute; bottom: 25px; transform: translateX(-50%); font: 500 10px var(--font-mono);
+  color: var(--text-faint); font-variant-numeric: tabular-nums; pointer-events: none; }
+.cc-fine-win { position: absolute; top: 0; bottom: 0; left: 50%; pointer-events: none;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--cc) 26%, transparent), color-mix(in srgb, var(--cc) 6%, transparent)); }
+.cc-fine-needle { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; pointer-events: none;
+  background: var(--cc); box-shadow: 0 0 10px var(--cc); }
+.cc-fine-needle::before { content: ''; position: absolute; top: 0; left: 50%; margin-left: -5px;
+  border: 5px solid transparent; border-top-color: var(--cc); }
+.cc-fine-cap { margin-top: 6px; font-size: 11.5px; color: var(--text-faint); text-align: center; }
 .cc-ed-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
 .cc-hear {
   width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer; flex: none;
@@ -8267,12 +8310,42 @@ body[data-section="foryou"] .fy-tabs {
    is the "buggy" overlap the button was reported with. */
 #view-home { position: relative; padding-top: 46px; }
 .dm-wrap { position: absolute; top: 0; right: 0; z-index: 20; }
+/* At rest it was a grey outlined word — the only door to the day's goals,
+   dressed as a settings button. Now: a target glyph, a faint wash of the
+   theme's two accents, a rim tinted toward --gold, and one pass of light
+   every seven seconds. Rare enough to notice and never constant enough to
+   nag. The sheen is a 60px no-repeat band travelling in PIXELS, so there is
+   no tile to seam. The ::after clips to the pill's radius by itself, so no
+   overflow:hidden — that would cut off the ready badge, which sits at -4px. */
 .dm-toggle {
   position: relative;
-  background: var(--surface-2);
-  transition: transform .12s var(--ease), border-color .18s var(--ease), color .18s var(--ease), background .18s var(--ease);
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 999px;
+  border-color: color-mix(in srgb, var(--gold) 38%, var(--border-strong));
+  background: var(--dm-bg);
+  --dm-bg:
+    linear-gradient(120deg,
+      color-mix(in srgb, var(--gold) 14%, var(--surface-2)) 0%,
+      var(--surface-2) 55%,
+      color-mix(in srgb, var(--accent-2) 12%, var(--surface-2)) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  transition: transform .12s var(--ease), border-color .18s var(--ease), color .18s var(--ease), box-shadow .18s var(--ease);
 }
-.dm-toggle:hover { background: var(--surface-2); }
+.dm-toggle::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,250,235,.22), transparent) no-repeat;
+  background-size: 60px 100%;
+  background-position: -60px 0;
+  animation: dmSheen 7s cubic-bezier(.4,0,.2,1) 1.2s infinite;
+}
+@keyframes dmSheen {
+  0%, 82% { background-position: -60px 0; }
+  100%    { background-position: 180px 0; }
+}
+.dm-ico { flex-shrink: 0; color: var(--gold); }
+.dm-ico-core { transform-box: fill-box; transform-origin: center; }
+/* .btn-mini:hover would flatten the wash to plain surface-2. */
+.dm-toggle:hover { background: var(--dm-bg); border-color: color-mix(in srgb, var(--gold) 60%, var(--border-strong)); }
 .dm-toggle:active { transform: scale(.94); }
 /* A mission ready to claim gets a slow breathing glow on the button itself —
    noticeable at rest, not just a dot you have to spot — plus the dot. Nothing
@@ -8283,6 +8356,11 @@ body[data-section="foryou"] .fy-tabs {
   color: var(--gold);
   animation: dmReady 2.2s ease-in-out infinite;
 }
+/* Ready also beats the target's centre in time with the glow, and the sheen
+   comes round twice as often. Only while something is claimable. */
+.dm-toggle.ready::after { animation-duration: 3.5s; }
+.dm-toggle.ready .dm-ico-core { animation: dmCore 2.2s ease-in-out infinite; }
+@keyframes dmCore { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.7); } }
 @keyframes dmReady {
   0%, 100% { box-shadow: 0 0 0 rgba(245,200,66,0); }
   50%      { box-shadow: 0 0 14px rgba(245,200,66,.4); }
@@ -8308,8 +8386,12 @@ body[data-section="foryou"] .fy-tabs {
 @media (prefers-reduced-motion: reduce) {
   html:not([data-motion="full"]) .dm-toggle.ready { animation: none; }
   html:not([data-motion="full"]) .dm-badge { animation: none; }
+  html:not([data-motion="full"]) .dm-toggle::after,
+  html:not([data-motion="full"]) .dm-toggle.ready .dm-ico-core { animation: none; }
 }
-html[data-motion="none"] .dm-toggle.ready, html[data-motion="none"] .dm-badge { animation: none; }
+html[data-motion="none"] .dm-toggle.ready, html[data-motion="none"] .dm-badge,
+html[data-motion="none"] .dm-toggle::after,
+html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
 .dm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .dm-title { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0; }
 .dm-today { font-size: 12px; font-weight: 700; color: var(--gold); font-family: var(--font-mono); flex-shrink: 0; white-space: nowrap; }
@@ -9728,7 +9810,7 @@ window.discAmt = function (n) {
          it needs no autoplay permission, and it cannot stall. -->
     <div class="splash-disc" id="splash-disc" aria-hidden="true">
       <div class="sd-vinyl">
-        <div class="sd-label"><span class="sd-label-ring"></span><span class="sd-hole"></span></div>
+        <div class="sd-label"><span class="sd-label-ring"></span></div>
       </div>
     </div>
   </div>
@@ -9856,7 +9938,7 @@ window.discAmt = function (n) {
          its own corner rather than squeezed into the Today row with Auto,
          Refresh and Undo, which is what made that row cramped. -->
     <div class="dm-wrap" id="dm-wrap">
-      <button class="btn-mini dm-toggle" id="dm-toggle" aria-haspopup="true" aria-expanded="false">Missions<span class="dm-badge" id="dm-badge" style="display:none;"></span></button>
+      <button class="btn-mini dm-toggle" id="dm-toggle" aria-haspopup="true" aria-expanded="false"><svg class="dm-ico" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><circle cx="8" cy="8" r="3.4"/><circle class="dm-ico-core" cx="8" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg>Missions<span class="dm-badge" id="dm-badge" style="display:none;"></span></button>
       <div class="dm-panel" id="dm-panel"></div>
     </div>
 
@@ -26179,6 +26261,8 @@ window.renderAdminStats = renderAdminStats;
     paintEditor(true);
     var modal = $('cc-modal');
     modal.classList.add('open');
+    // The strip measured itself while the sheet was still closed (zero wide).
+    requestAnimationFrame(paintFine);
     /* The whole song first. YouTube is asked in parallel with Deezer's clip;
        the Deezer lookup is still wanted either way, for the cover, the album
        and the credited features. */
@@ -26240,9 +26324,12 @@ window.renderAdminStats = renderAdminStats;
   }
   function clampEditor() {
     if (ed.lenMs > ed.clipMs) ed.lenMs = ed.clipMs;
-    ed.startMs = Math.max(0, Math.min(ed.clipMs - ed.lenMs, Math.round(ed.startMs / 100) * 100));
+    // Whole seconds. The label prints seconds, the window restarts on every
+    // change, and a start of 42.4s shown as 0:42 is a label that lies.
+    ed.startMs = Math.max(0, Math.min(ed.clipMs - ed.lenMs, Math.round(ed.startMs / 1000) * 1000));
   }
   function closeComposer() {
+    clearTimeout(rs.t);
     if (pl.owner === 'editor') stop();
     destroyEdPlayer();
     var m = $('cc-modal'); if (m) m.classList.remove('open');
@@ -26287,6 +26374,9 @@ window.renderAdminStats = renderAdminStats;
           '<div class="cc-playhead" id="cc-playhead"></div>' +
         '</div>' +
         '<div class="cc-ed-times"><span>0:00</span><span class="mid" id="cc-sel-range"></span><span id="cc-clip-end">' + fmt(ed.clipMs) + '</span></div>' +
+        '<div class="cc-fine-wrap"><div class="cc-fine" id="cc-fine" aria-hidden="true"><div class="cc-fine-track" id="cc-fine-track"></div></div>' +
+          '<div class="cc-fine-win" id="cc-fine-win"></div><div class="cc-fine-needle"></div></div>' +
+        '<div class="cc-fine-cap">Slide to fine-tune the start, a second at a time</div>' +
         '<div class="cc-ed-row"><button class="cc-hear" type="button" data-ed="hear" aria-label="Hear your pick"' + (edPlayable() ? '' : ' disabled') + '>' + IC_PLAY + IC_PAUSE + '</button>' +
           '<div class="cc-ed-hint">' + (waiting ? 'Reading the clip\u2026' : (yt ? 'Drag the box anywhere in the song.' : 'Drag the box onto the moment, or tap where it starts.')) + '</div>' +
           '<div class="cc-nudge"><button type="button" data-ed="back" aria-label="One second earlier">&lsaquo; 1s</button><button type="button" data-ed="fwd" aria-label="One second later">1s &rsaquo;</button></div></div>' +
@@ -26321,6 +26411,28 @@ window.renderAdminStats = renderAdminStats;
     w.setAttribute('aria-valuemax', String(Math.round((ed.clipMs - ed.lenMs) / 1000)));
     w.setAttribute('aria-valuenow', String(Math.round(ed.startMs / 1000)));
     w.setAttribute('aria-valuetext', fmt(ed.startMs) + ' to ' + fmt(ed.startMs + ed.lenMs));
+    paintFine();
+  }
+  /* The fine strip (see .cc-fine in the CSS). Rebuilt only when its geometry
+     changes; otherwise it is only scrolled, and only when the value it shows
+     disagrees with ed.startMs — so it never fights a finger that is moving it. */
+  var FINE_PX = 14;
+  function paintFine() {
+    var sc = $('cc-fine'), tr = $('cc-fine-track'), win = $('cc-fine-win');
+    if (!sc || !tr || !ed) return;
+    var pad = Math.round(sc.clientWidth / 2), maxS = Math.max(0, Math.floor((ed.clipMs - ed.lenMs) / 1000));
+    var key = pad + ':' + maxS;
+    if (tr.dataset.k !== key) {
+      tr.dataset.k = key;
+      tr.style.padding = '0 ' + pad + 'px';
+      tr.style.width = (maxS * FINE_PX + 1) + 'px';
+      var h = '';
+      for (var s = 0; s <= maxS; s += 10) h += '<b style="left:' + (pad + s * FINE_PX) + 'px">' + fmt(s * 1000) + '</b>';
+      tr.innerHTML = h;
+      sc.scrollLeft = 0;
+    }
+    if (win) win.style.width = Math.round(ed.lenMs / 1000 * FINE_PX) + 'px';
+    if (Math.round(sc.scrollLeft / FINE_PX) * 1000 !== ed.startMs) sc.scrollLeft = ed.startMs / 1000 * FINE_PX;
   }
   function featValue() { return ed.cat === 'feature' ? String(ed.feat || '').trim() : ''; }
   function paintPost() {
@@ -26332,7 +26444,46 @@ window.renderAdminStats = renderAdminStats;
   }
   function hearSelection() {
     if (!ed || !edPlayable()) return;
-    if (pl.owner === 'editor') { stop(); return; }
+    if (pl.owner === 'editor') { clearTimeout(rs.t); stop(); return; }
+    playSelection();
+  }
+  /* MOVING THE WINDOW RESTARTS IT. Whatever is heard is always exactly the
+     window on screen: move the start to 0:43 and it plays 0:43 onwards, never
+     carries on from where the last one had got to. The old window is cut the
+     instant the start moves (quiet), and the new one starts once the start has
+     held still for RESTART_MS — so a slow, deliberate nudge restarts on every
+     second, and a fast flick does not stutter through thirty restarts on the
+     way. rs.key is the window that is playing or about to, so arriving back on
+     the same start does not restart it for nothing. */
+  var RESTART_MS = 140;
+  var rs = { t: 0, key: '' };
+  function winKey() { return ed.source + ':' + ed.startMs + ':' + ed.lenMs; }
+  function selChanged(opts) {
+    if (!ed || !edPlayable()) return;
+    opts = opts || {};
+    var live = pl.owner === 'editor';
+    if (opts.ifPlaying && !live) return;
+    if (live && rs.key === winKey()) return;
+    clearTimeout(rs.t);
+    if (live) quiet();
+    rs.t = setTimeout(function () {
+      if (!ed || !$('cc-modal') || !$('cc-modal').classList.contains('open')) return;
+      playSelection();
+    }, opts.now ? 0 : RESTART_MS);
+  }
+  // Silence the current window without letting go of the picker's claim on
+  // playback, so the button keeps reading as playing across a restart.
+  function quiet() {
+    pl.tok++;
+    if (ed && ed.poll) { clearInterval(ed.poll); ed.poll = 0; }
+    if (ed && ed.source === 'youtube' && ed.player) { try { ed.player.pauseVideo(); } catch (e) {} }
+    else { try { VinalAudio.stop(); } catch (e) {} }
+    pl.state = 'loading'; paintPlaying();
+  }
+  function playSelection() {
+    if (!ed || !edPlayable()) return;
+    clearTimeout(rs.t);
+    rs.key = winKey();
     if (ed.source === 'youtube') {
       if (!ed.player || !ed.ready) { edHint('The video is still loading\u2026'); return; }
       var tok = ++pl.tok;
@@ -26453,8 +26604,7 @@ window.renderAdminStats = renderAdminStats;
         if (a === 'change') { if (pl.owner === 'editor') stop(); destroyEdPlayer(); openPicker('song', startEditor); }
         else if (a === 'back' || a === 'fwd') {
           ed.startMs += a === 'back' ? -1000 : 1000; clampEditor();
-          if (pl.owner === 'editor') stop();
-          paintSel();
+          paintSel(); selChanged();
         }
         else if (a === 'usedeezer') { useDeezer('YouTube wouldn\u2019t play that video here, so this pick is inside Deezer\u2019s 30-second preview.'); }
         else if (a === 'nextvid') {
@@ -26470,9 +26620,9 @@ window.renderAdminStats = renderAdminStats;
       var len = t.closest('[data-ed-len]');
       if (len) {
         ed.lenMs = Math.min(+len.dataset.edLen * 1000, ed.clipMs);
-        clampEditor(); if (pl.owner === 'editor') stop();
+        clampEditor();
         modal.querySelectorAll('[data-ed-len]').forEach(function (b) { b.classList.toggle('is-on', b === len); });
-        paintSel();
+        paintSel(); selChanged({ ifPlaying: true });
         return;
       }
       var cat = t.closest('[data-ed-cat]');
@@ -26509,11 +26659,12 @@ window.renderAdminStats = renderAdminStats;
     }
     modal.addEventListener('pointerdown', function (e) {
       var w = e.target.closest('#cc-ed-wave');
-      if (!w || !ed || !ed.clipUrl || e.button > 0) return;
+      if (!w || !ed || !edPlayable() || e.button > 0) return;
       var x = msAt(e, w);
       var inside = x >= ed.startMs && x <= ed.startMs + ed.lenMs;
-      drag = { w: w, grab: inside ? x - ed.startMs : 0, moved: false, id: e.pointerId, x0: e.clientX };
-      if (pl.owner === 'editor') stop();
+      drag = { w: w, grab: inside ? x - ed.startMs : 0, moved: false, id: e.pointerId, x0: e.clientX, s0: ed.startMs };
+      // Inside the press, so iOS lets the element play when the drag ends.
+      if (ed.source !== 'youtube') { try { VinalAudio.prime(); } catch (er) {} }
       if (!inside) { ed.startMs = x; clampEditor(); paintSel(); }
       try { w.setPointerCapture(e.pointerId); } catch (er) {}
       w.classList.add('is-dragging');
@@ -26521,24 +26672,89 @@ window.renderAdminStats = renderAdminStats;
     modal.addEventListener('pointermove', function (e) {
       if (!drag || e.pointerId !== drag.id) return;
       if (Math.abs(e.clientX - drag.x0) > 3) drag.moved = true;
-      ed.startMs = msAt(e, drag.w) - drag.grab; clampEditor(); paintSel();
+      var before = ed.startMs;
+      ed.startMs = msAt(e, drag.w) - drag.grab; clampEditor();
+      if (ed.startMs !== before) { paintSel(); selChanged(); }
     });
     function end(e) {
       if (!drag || (e && e.pointerId !== drag.id)) return;
       drag.w.classList.remove('is-dragging');
+      var changed = ed.startMs !== drag.s0;
       drag = null;
-      hearSelection();
+      // A tap on the box that moved nothing plays or stops it, as it always
+      // did. A drag that moved it plays the window it ended on, now.
+      if (changed) selChanged({ now: true }); else hearSelection();
     }
     modal.addEventListener('pointerup', end);
     modal.addEventListener('pointercancel', function () { if (drag) { drag.w.classList.remove('is-dragging'); drag = null; } });
+
+    /* The fine strip. Native scrolling does the feel; this only reads it. Each
+       whole-second step is a light tick under the finger, the way a picker
+       wheel clicks, and restarts the window (debounced in selChanged). When
+       the finger lifts and the scroll settles between two seconds, it eases
+       onto the one it is showing — a nudge into place, not a wall: the value
+       never changes in that ease, so it never restarts anything. */
+    var fineHold = false, fineIdle = 0, lastBuzz = 0;
+    function fineSettle() {
+      clearTimeout(fineIdle);
+      fineIdle = setTimeout(function () {
+        var sc = $('cc-fine');
+        if (!sc || fineHold || !ed) return;
+        var want = ed.startMs / 1000 * FINE_PX;
+        if (Math.abs(sc.scrollLeft - want) > 0.5) sc.scrollTo({ left: want, behavior: 'smooth' });
+      }, 160);
+    }
+    modal.addEventListener('scroll', function (e) {
+      if (!ed || e.target.id !== 'cc-fine') return;
+      var v = Math.round(e.target.scrollLeft / FINE_PX) * 1000, before = ed.startMs;
+      ed.startMs = v; clampEditor();
+      if (ed.startMs !== before) {
+        paintSel(); selChanged();
+        var now = Date.now();
+        if (now - lastBuzz > 45 && window.buzz) { lastBuzz = now; buzz('tap'); }
+      }
+      fineSettle();
+    }, true);
+    // The needle is half the strip's width in from its edge, so a new width is
+    // a new geometry (paintFine rebuilds when that half changes).
+    window.addEventListener('resize', function () { if (ed) paintFine(); });
+    modal.addEventListener('touchstart', function (e) {
+      if (e.target.closest && e.target.closest('#cc-fine')) { fineHold = true; clearTimeout(fineIdle); }
+    }, { passive: true });
+    modal.addEventListener('touchend', function (e) {
+      if (!fineHold) return;
+      fineHold = false; fineSettle();
+      // The lift is the nearest thing to a gesture a scroll gives; iOS may
+      // accept it for the audio element's first play.
+      if (ed && ed.source !== 'youtube') { try { VinalAudio.prime(); } catch (er) {} }
+    }, { passive: true });
+    // A mouse cannot drag a scroller natively, so it gets the same by hand.
+    var fdrag = null;
+    modal.addEventListener('pointerdown', function (e) {
+      var sc = e.target.closest && e.target.closest('#cc-fine');
+      if (!sc || e.pointerType !== 'mouse' || e.button > 0) return;
+      fdrag = { sc: sc, x: e.clientX, l: sc.scrollLeft, id: e.pointerId };
+      fineHold = true; sc.classList.add('is-grabbing');
+      if (ed && ed.source !== 'youtube') { try { VinalAudio.prime(); } catch (er) {} }
+      try { sc.setPointerCapture(e.pointerId); } catch (er) {}
+      e.preventDefault();
+    });
+    modal.addEventListener('pointermove', function (e) {
+      if (fdrag && e.pointerId === fdrag.id) fdrag.sc.scrollLeft = fdrag.l - (e.clientX - fdrag.x);
+    });
+    function fineUp(e) {
+      if (!fdrag || e.pointerId !== fdrag.id) return;
+      fdrag.sc.classList.remove('is-grabbing'); fdrag = null; fineHold = false; fineSettle();
+    }
+    modal.addEventListener('pointerup', fineUp);
+    modal.addEventListener('pointercancel', fineUp);
     modal.addEventListener('keydown', function (e) {
       if (!ed || e.target.id !== 'cc-ed-wave') return;
-      var step = e.shiftKey ? 2000 : 500;
+      var step = e.shiftKey ? 5000 : 1000;
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         e.preventDefault();
         ed.startMs += e.key === 'ArrowLeft' ? -step : step; clampEditor();
-        if (pl.owner === 'editor') stop();
-        paintSel();
+        paintSel(); selChanged();
       } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hearSelection(); }
     });
   }

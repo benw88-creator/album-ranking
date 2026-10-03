@@ -1,7 +1,7 @@
 // node api/_artists.selfcheck.mjs — the smallest thing that fails if the
 // release/artist classification breaks. No framework on purpose.
 import assert from 'node:assert/strict';
-import { dedupeReleases, classifyRelease, rankArtists } from './_artists.js';
+import { dedupeReleases, classifyRelease, rankArtists, rankTracks } from './_artists.js';
 
 const rel = [
   { id: 1, title: 'Sweet Boy',        release_date: '2024-04-05', record_type: 'album', nb_tracks: 16, duration: 2700 },
@@ -29,5 +29,23 @@ const ranked = rankArtists(
   'drake', { keepAll: true });
 assert.equal(ranked[0].artist.nb_fan, 29e6);
 assert.equal(ranked.length, 3);
+
+// Song search: "Fancy" — Deezer leads with Iggy Azalea on track rank alone;
+// the title ties, so the artist with seven times the audience wins. A slowed
+// edit sits under the originals, and a song that merely contains the word
+// sits under every exact title.
+const fancy = [
+  { title: 'Fancy', artist: { id: 1, name: 'Iggy Azalea' }, rank: 730046 },
+  { title: 'Fancy', artist: { id: 2, name: 'Drake' }, rank: 636246 },
+  { title: 'FANCY (Slowed)', title_short: 'FANCY', artist: { id: 5, name: 'Xlout' }, rank: 904018 },
+  { title: 'Fancy Footwork', artist: { id: 3, name: 'Chromeo' }, rank: 900848 },
+  { title: 'FANCY', artist: { id: 4, name: 'TWICE' }, rank: 597094 },
+];
+const fans = { 1: 3403143, 2: 24098041, 3: 400000, 4: 1357378, 5: 1022 };
+assert.deepEqual(rankTracks(fancy, 'Fancy', fans).map(t => t.artist.name), ['Drake', 'Iggy Azalea', 'TWICE', 'Xlout', 'Chromeo']);
+// Typing the artist too is still an exact answer.
+assert.equal(rankTracks(fancy, 'fancy iggy azalea', fans)[0].artist.name, 'Iggy Azalea');
+// No audiences known: it still ranks, on the tracks alone.
+assert.equal(rankTracks(fancy, 'fancy')[0].artist.name, 'Iggy Azalea');
 
 console.log('ok');
