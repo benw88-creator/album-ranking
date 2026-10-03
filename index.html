@@ -5716,7 +5716,7 @@ body.entering-done #artist-hero {
   background: var(--cc); box-shadow: 0 0 10px var(--cc); }
 .cc-fine-needle::before { content: ''; position: absolute; top: 0; left: 50%; margin-left: -5px;
   border: 5px solid transparent; border-top-color: var(--cc); }
-.cc-fine-cap { margin-top: 6px; font-size: 11.5px; color: var(--text-faint); text-align: center; }
+
 .cc-ed-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
 .cc-hear {
   width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer; flex: none;
@@ -9952,7 +9952,7 @@ window.discAmt = function (n) {
         </div>
         <div class="today-head-right">
           <span class="today-count" id="today-count" style="display:none;"></span>
-          <span class="today-hint" id="today-hint">Tap an answer &mdash; it moves on by itself</span>
+          <span class="today-hint" id="today-hint">Tap an answer</span>
           <!-- Undo lives up here rather than on the card. With auto-advance on,
                the card you want to take back has already gone by the time you
                want to take it back, so an in-card button is the one place it
@@ -10168,7 +10168,7 @@ window.discAmt = function (n) {
       <div><h2 style="font-size:26px; letter-spacing:-0.025em;">Community Choice</h2></div>
       <button class="btn-primary" id="cc-new" style="margin-left:auto;">Pick a moment</button>
     </div>
-    <p class="cc-intro">The best thirty seconds of a song, picked by someone who loves it. Hear it, and agree if they got it right.</p>
+    <p class="cc-intro">The best thirty seconds of a song, picked by someone who loves it.</p>
     <div class="cc-bar">
       <div class="cc-cats" id="cc-cats" role="tablist" aria-label="Category"></div>
       <div class="cc-sort" id="cc-sort" role="tablist" aria-label="Order">
@@ -10394,7 +10394,7 @@ window.discAmt = function (n) {
     <h3 class="ach-group-title">Album milestones</h3>
     <div class="ach-grid" id="ach-milestones"></div>
     <h3 class="ach-group-title">Artist completionist</h3>
-    <p class="reco-note" id="ach-comp-note">Rate every studio album by an artist to unlock their Completionist badge.</p>
+    <p class="reco-note" id="ach-comp-note">Rate every studio album by an artist to earn their badge.</p>
     <div class="ach-grid" id="ach-completionist"></div>
   </section>
 
@@ -10431,7 +10431,7 @@ window.discAmt = function (n) {
   <!-- ============================ GROOVES ============================ -->
   <section id="view-grooves" class="view" style="display:none;">
     <div class="section-head"><h2><span data-icon="groove"></span> Grooves</h2><button class="btn-primary" id="groove-create-btn" style="margin-left:auto;">+ New Groove</button></div>
-    <p class="reco-note">Groups for you and your mates. Create one, invite people, see everyone&rsquo;s taste.</p>
+    <p class="reco-note">Groups for you and your mates.</p>
     <div id="groove-invites"></div>
     <div id="groove-list"></div>
   </section>
@@ -10923,7 +10923,7 @@ window.discAmt = function (n) {
   <div class="modal-panel" style="max-width:520px;">
     <button class="modal-close" id="settings-close" aria-label="Close">&times;</button>
     <div class="modal-head"><span class="mh-emoji" data-icon="edit"></span>
-      <div><h2>Settings</h2><p>Preferences, your data, and your account.</p></div></div>
+      <div><h2>Settings</h2></div></div>
 
     <div class="set-group">
       <div class="shop-section-title">Motion</div>
@@ -10944,7 +10944,7 @@ window.discAmt = function (n) {
       <div class="shop-section-title">Reminders</div>
       <div class="set-row">
         <div class="set-copy"><div class="set-name">Streak &amp; Recall nudges</div>
-          <div class="set-note">One notification if today's streak is unclaimed, one if Recall is unplayed.</div></div>
+          <div class="set-note">Streak and Recall reminders.</div></div>
         <input type="checkbox" id="set-reminders-on">
       </div>
     </div>
@@ -10962,7 +10962,7 @@ window.discAmt = function (n) {
       <div class="set-row">
         <div class="set-copy">
           <div class="set-name">Clear cached app data</div>
-          <div class="set-note" id="set-cache-note">Drops the offline copy and reloads. Your ratings are safe &mdash; they live in your account.</div>
+          <div class="set-note" id="set-cache-note">Your ratings are safe.</div>
         </div>
         <button class="btn-mini" id="set-purge">Clear</button>
       </div>
@@ -11364,7 +11364,7 @@ window.discAmt = function (n) {
       <div class="war-wait">
         <div class="war-wait-ic" data-icon="stopwatch"></div>
         <h3>Bids locked</h3>
-        <p id="war-wait-sub">Waiting on them. Updates the second they bid.</p>
+        <p id="war-wait-sub">Waiting on them.</p>
       </div>
       <div id="war-mybids" class="war-mybids"></div>
     </div>
@@ -11465,7 +11465,7 @@ window.discAmt = function (n) {
         style="-webkit-appearance:none; appearance:none; flex:1; height:4px; border-radius:2px; background:var(--surface-4); outline:none;">
       <div id="rate-score" style="font-family:var(--font-display); font-size:38px; font-weight:800; min-width:80px; text-align:right; letter-spacing:-0.04em;">50<span style="font-size:14px; color:var(--text-faint);">/100</span></div>
     </div>
-    <p class="reco-note" style="margin-bottom:16px;">Drag to set your score, then Save.</p>
+    
     <label class="g-label" style="text-align:left;" for="rate-note">Notes (optional)</label>
     <textarea id="rate-note" placeholder="Your thoughts on this album&hellip;"></textarea>
     <button class="btn-primary g-btn-full" id="rate-save-btn" style="margin-top:16px;">Save rating</button>
@@ -12828,7 +12828,7 @@ window.removeSong = removeSong;
         '<div class="cert-insc"><button class="btn-mini" data-insc-edit="1">Change it</button></div>';
     }
     return '<div class="cert-sub">Inscription</div>' +
-      '<div class="cert-next">One line of your own on the plaque. Free — it is the only part of a plated record that could not have been bought.</div>' +
+      '<div class="cert-next">One line of your own on the plaque.</div>' +
       '<div class="cert-insc"><input id="cert-insc-in" maxlength="80" placeholder="Why this one…">' +
       '<button class="btn-mini" data-insc-save="1">Inscribe</button></div>';
   }
@@ -12838,7 +12838,7 @@ window.removeSong = removeSong;
       '<div class="cert-next">' +
       (c.master
         ? 'This is one of your Masters. It leads your profile.'
-        : 'Three records at most can represent you on your profile. This one is eligible.') +
+        : 'Up to three lead your profile.') +
       '</div><div class="cert-insc"><button class="btn-mini" data-master="' + (c.master ? '0' : '1') + '">' +
       (c.master ? 'Retire it' : 'Make it a Master') + '</button></div>';
   }
@@ -14559,7 +14559,7 @@ function renderAuthArea(connected){
   async function loadBoard(){
     listHost.innerHTML='<p class="reco-note">Loading\u2026</p>';
     if(!window.Cloud||!Cloud.isOn||!Cloud.isOn()){
-      listHost.innerHTML='<div class="reco-note">Log in to see global times \u2014 and to have your own runs counted.</div>';
+      listHost.innerHTML='<div class="reco-note">Log in to see global times.</div>';
       return;
     }
     const isScore=!!SCORE_GAMES[activeGame];
@@ -15099,7 +15099,7 @@ function renderCompletionistAchievements(){
   const note=document.getElementById('ach-comp-note');
   if(note)note.textContent=nKnown
     ? nDone+' of '+nKnown+' artists complete'+(nKnown<artists.length?' \u00b7 '+(artists.length-nKnown)+' not checked yet':'')
-    : 'Rate every studio album by an artist to unlock their Completionist badge.';
+    : 'Rate every studio album by an artist to earn their badge.';
 
   el.innerHTML=artists.map(function(a){return'<div class="ach" id="compach-'+a.id+'"></div>';}).join('');
   artists.forEach(function(a){drawCompCard(a,claimed);});
@@ -16817,7 +16817,7 @@ function tasteMatchHtml(tm,uname){
       (tm.shared
         ? 'Only <b>'+tm.shared+'</b> record'+(tm.shared===1?'':'s')+' in common so far. Rate <b>'+tm.need+
           '</b> more of what '+esc(uname)+' has rated and this fills in.'
-        : 'Nothing in common yet — rate some of the records below and this fills in.')+
+        : 'Nothing in common yet.')+
       '</div></div>';
   }
   function row(r,right){
@@ -17444,7 +17444,7 @@ async function renderPeople(){
     if(B)return 1;
     return String(a.username||'').localeCompare(String(b.username||''));
   });
-  fhost.innerHTML=(Object.keys(chips).length?'<div class="reco-note" style="margin-bottom:8px;">Ordered by taste match \u2014 the percentage, then how many records it is based on.</div>':'')+
+  fhost.innerHTML=''+
     list.map(function(p){return personRow(p,chips[p.id]);}).join('');
   wirePersonRows(fhost);
 }
@@ -19224,7 +19224,7 @@ window.handleGrooveLink=handleGrooveLink;
       return !(c.user_id && window.isBlocked && isBlocked(c.user_id));
     });
     if(!shownComments.length){
-      list.innerHTML='<div class="reco-note" style="font-size:13px;">No comments yet. Be the first to say something.</div>';
+      list.innerHTML='<div class="reco-note" style="font-size:13px;">No comments yet.</div>';
     } else {
       list.innerHTML='';
       shownComments.forEach(function(c){list.appendChild(renderCommentRow(c));});
@@ -20495,7 +20495,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
      Album Banner Pick used to sit beside it. It went with the banner itself. */
   const BOOSTS = {
-    freeze: { name: 'Streak Freeze', cost: 30000, desc: 'Covers one missed day of your rating streak. Stacks — buy as many as you like.' },
+    freeze: { name: 'Streak Freeze', cost: 30000, desc: 'Covers one missed day of your streak.' },
   };
   const BOOST_SWATCH = {
     freeze: 'linear-gradient(135deg,#0b1d2a,#5eb8ff)',
@@ -21082,7 +21082,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        ladder is the only one that says nothing when you take it. */
     if (w.album_pick && typeof window.celebrate === 'function') {
       window.celebrate('Seven days straight',
-        'A record of your choice, free — take any album in the Market.');
+        'A record of your choice, free.');
       if (window.buzz) buzz('big');
     }
     return w;
@@ -21478,7 +21478,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     const suggestRow =
       '<button class="shop-suggest" id="shop-suggest-tag" type="button">' +
         '<span class="ss-plus" aria-hidden="true">+</span>' +
-        '<span><b>Suggest a tag</b><small>Not here? Put one forward and see who else wants it.</small></span>' +
+        '<span><b>Suggest a tag</b><small>Not here? Put one forward.</small></span>' +
       '</button>';
 
     list.innerHTML =
@@ -21654,8 +21654,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
           pref === 'none' ? 'Reduced motion' :
           (systemReduced ? 'Following your system: reduced' : 'Following your system: full');
         noteEl.textContent = (pref === 'auto' && systemReduced)
-          ? 'Your device asks for reduced motion, so some animations are switched off. Choose Full to see them anyway.'
-          : 'Affects the intro, card entrances and the Discs burst.';
+          ? 'Reduced motion is on for this device. Choose Full to override.'
+          : '';
       };
       choice.addEventListener('click', function (e) {
         const b = e.target.closest('[data-motion-set]');
@@ -24626,7 +24626,7 @@ function playDismissAnimation(gateEl, callback) {
     startPoll();
     document.getElementById('war-sub').textContent = 'Sealed — waiting on ' + nameOf(other(w));
     document.getElementById('war-wait-sub').textContent =
-      'Waiting on ' + nameOf(other(w)) + '. Updates the second they bid.';
+      'Waiting on ' + nameOf(other(w)) + '.';
     document.getElementById('war-mybids').innerHTML =
       '<h3 class="prof-section-title" style="margin-top:0;">Your bids</h3>' +
       (w.records || []).map(function (r) {
@@ -25905,7 +25905,7 @@ window.renderAdminStats = renderAdminStats;
       if (!st.items.length) {
         var cat = CAT[st.cat];
         feed.innerHTML = stateHtml(cat ? 'No ' + cat.label.toLowerCase() + ' yet' : 'Nothing picked yet',
-          cat ? 'Be the first to put one forward.' : 'Pick the best thirty seconds of a song you love, and see who agrees.',
+          cat ? 'Be the first to put one forward.' : 'Be the first to pick one.',
           'Pick a moment');
       }
       if (more) more.style.display = st.done ? 'none' : 'block';
@@ -26153,8 +26153,8 @@ window.renderAdminStats = renderAdminStats;
     box.classList.remove('is-checking', 'is-ok', 'is-blocked', 'is-done');
     if (yp.status === 'checking') {
       box.hidden = false; box.classList.add('is-checking');
-      t.textContent = 'Checking YouTube on this network\u2026';
-      sub.textContent = 'A few muted seconds, so whole-song picks work before you need them.';
+      t.textContent = 'Checking YouTube\u2026';
+      sub.textContent = '';
       retry.hidden = true; x.hidden = true; ic.innerHTML = '';
       return;
     }
@@ -26165,7 +26165,7 @@ window.renderAdminStats = renderAdminStats;
       yp.shownOk = true;
       box.hidden = false; box.classList.add('is-ok');
       t.textContent = 'YouTube is good to go';
-      sub.textContent = 'Pick any thirty seconds of the whole song.';
+      sub.textContent = '';
       retry.hidden = true; x.hidden = true;
       ic.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle class="ring" cx="12" cy="12" r="10"/><path class="tick" d="M7 12.4 10.4 15.6 17 8.6"/></svg>';
       if (window.buzz) buzz('good');
@@ -26177,7 +26177,7 @@ window.renderAdminStats = renderAdminStats;
     if (yp.status === 'blocked') {
       box.hidden = yp.closed; box.classList.add('is-blocked');
       t.textContent = 'YouTube won\u2019t play videos on this network';
-      sub.textContent = 'New picks use Deezer\u2019s 30-second previews, and YouTube picks open on YouTube at their moment. Private Relay or a VPN is the usual cause.';
+      sub.textContent = 'Private Relay or VPN is usually the cause';
       retry.hidden = false; x.hidden = false; ic.innerHTML = '';
       return;
     }
@@ -26245,7 +26245,7 @@ window.renderAdminStats = renderAdminStats;
       ed.player = p;
     }, function () {
       if (!ed || tok !== ed.tok) return;
-      useDeezer('Could not reach YouTube, so this pick is inside Deezer\u2019s 30-second preview.');
+      useDeezer('Couldn\u2019t reach YouTube \u2014 using Deezer\u2019s 30-second preview.');
     });
   }
   function useDeezer(why) {
@@ -26278,8 +26278,8 @@ window.renderAdminStats = renderAdminStats;
       if (!ed || tok !== ed.tok) return;
       var vids = (j && j.videos || []).filter(function (v) { return /^[A-Za-z0-9_-]{11}$/.test(v.id) && v.ms >= 30000 && v.ms <= 1200000; });
       if (!vids.length) {
-        ed.why = j && j.blocked ? 'YouTube won\u2019t play videos on this network, so this pick is inside Deezer\u2019s 30-second preview.'
-                                : 'Not on YouTube, so this pick is inside Deezer\u2019s 30-second preview.';
+        ed.why = j && j.blocked ? 'YouTube is blocked here \u2014 using Deezer\u2019s 30-second preview.'
+                                : 'Not on YouTube \u2014 using Deezer\u2019s 30-second preview.';
         if (ed.state === 'ready') paintEditor(true); return;
       }
       ed.source = 'youtube'; ed.videos = vids; ed.vi = 0;
@@ -26348,7 +26348,7 @@ window.renderAdminStats = renderAdminStats;
     var body = $('cc-body');
     if (ed.state === 'noclip' || ed.state === 'error') {
       body.innerHTML = '<div class="cc-noclip">' + (ed.state === 'noclip'
-        ? 'Deezer has no preview for this song, so there is nothing to pick from. Try another version of it.'
+        ? 'No preview for this song. Try another version.'
         : 'Could not reach this song’s preview. Check your connection and try again.') + '</div>';
       return;
     }
@@ -26376,9 +26376,8 @@ window.renderAdminStats = renderAdminStats;
         '<div class="cc-ed-times"><span>0:00</span><span class="mid" id="cc-sel-range"></span><span id="cc-clip-end">' + fmt(ed.clipMs) + '</span></div>' +
         '<div class="cc-fine-wrap"><div class="cc-fine" id="cc-fine" aria-hidden="true"><div class="cc-fine-track" id="cc-fine-track"></div></div>' +
           '<div class="cc-fine-win" id="cc-fine-win"></div><div class="cc-fine-needle"></div></div>' +
-        '<div class="cc-fine-cap">Slide to fine-tune the start, a second at a time</div>' +
         '<div class="cc-ed-row"><button class="cc-hear" type="button" data-ed="hear" aria-label="Hear your pick"' + (edPlayable() ? '' : ' disabled') + '>' + IC_PLAY + IC_PAUSE + '</button>' +
-          '<div class="cc-ed-hint">' + (waiting ? 'Reading the clip\u2026' : (yt ? 'Drag the box anywhere in the song.' : 'Drag the box onto the moment, or tap where it starts.')) + '</div>' +
+          '<div class="cc-ed-hint">' + (waiting ? 'Reading the clip\u2026' : 'Drag to choose') + '</div>' +
           '<div class="cc-nudge"><button type="button" data-ed="back" aria-label="One second earlier">&lsaquo; 1s</button><button type="button" data-ed="fwd" aria-label="One second later">1s &rsaquo;</button></div></div>' +
       '</div>' +
       (yt && vid ? '<div class="cc-vid-row"><span>' + esc(vid.title) + ' &middot; ' + esc(vid.channel) + '</span>' +
@@ -26387,8 +26386,7 @@ window.renderAdminStats = renderAdminStats;
         return '<button type="button" data-ed-len="' + s + '"' + (ed.lenMs === Math.min(s * 1000, ed.clipMs) ? ' class="is-on"' : '') + '>' + s + 's</button>';
       }).join('') + '</div>' +
       '<div class="cc-label">What is it?</div><div class="cc-catpick">' + catBtns + '</div>' + feat +
-      '<p class="cc-note">' + (yt ? 'Plays from YouTube, so the whole song is yours to pick from.'
-        : esc(ed.why || 'VINALL plays Deezer\u2019s 30-second preview of each song, so your moment has to be somewhere inside it.')) + '</p>' +
+      (!yt && ed.why ? '<p class="cc-note">' + esc(ed.why) + '</p>' : '') +
       '<button class="btn-primary cc-post" type="button" data-ed="post" id="cc-post">Post to Community Choice</button>';
     paintSel(true);
     paintPost();
@@ -26495,7 +26493,7 @@ window.renderAdminStats = renderAdminStats;
       ed.poll = watchYT(ed.player, tok, pl.from + pl.len, {
         playing: function () { pl.state = 'playing'; edHint(''); paintPlaying(); },
         paused: function () { stop(); },
-        waiting: function () { edHint('Tap the video to start it \u2014 your phone wants the first tap on the player itself.'); },
+        waiting: function () { edHint('Tap the video to start it'); },
         failed: function () { probeLearnBlocked(); edFail(); },
         done: onEnd
       });
@@ -26534,7 +26532,7 @@ window.renderAdminStats = renderAdminStats;
       row.insertAdjacentElement('afterend', box);
     }
     box.innerHTML = '<b>' + (code === 101 || code === 150 || code === 152 ? 'This video can only be played on YouTube.' : 'YouTube won\u2019t play this video here.') + '</b> ' +
-      'You can still set the box and post it.' +
+
       '<div class="cc-ed-fail-acts">' +
         (v ? '<a class="btn-mini" href="' + ytLink(v.id, ed.startMs) + '" target="_blank" rel="noopener">Hear it on YouTube at ' + fmt(ed.startMs) + ' \u2197</a>' : '') +
         (ed.clipUrl ? '<button class="btn-mini" type="button" data-ed="usedeezer">Pick inside the Deezer preview instead</button>' : '') +
@@ -26606,7 +26604,7 @@ window.renderAdminStats = renderAdminStats;
           ed.startMs += a === 'back' ? -1000 : 1000; clampEditor();
           paintSel(); selChanged();
         }
-        else if (a === 'usedeezer') { useDeezer('YouTube wouldn\u2019t play that video here, so this pick is inside Deezer\u2019s 30-second preview.'); }
+        else if (a === 'usedeezer') { useDeezer('Using Deezer\u2019s 30-second preview.'); }
         else if (a === 'nextvid') {
           if (pl.owner === 'editor') stop();
           ed.vi = (ed.vi + 1) % ed.videos.length; ed.ytBlocked = false;
@@ -27565,7 +27563,7 @@ window.renderAdminStats = renderAdminStats;
       if (!mine.length) {
         body.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.disc +
           '</span><h3>Nothing on the shelf yet</h3>' +
-          '<p>Records cost Discs. What you own adds up to your net worth.</p>' +
+          
           '<button class="btn-primary" id="col-go-market" style="margin-top:8px;">Go to the Market</button></div>';
         var g = el('col-go-market');
         if (g) g.addEventListener('click', function () { tab = 'market'; render(); });
@@ -29795,7 +29793,7 @@ window.renderAdminStats = renderAdminStats;
     var rows = [];
     try { rows = await Cloud.blitzList(); } catch (e) {}
     var me = meId();
-    if (!rows.length) { host.innerHTML = '<div class="reco-note">No matches yet. Challenge somebody and it appears here.</div>'; return; }
+    if (!rows.length) { host.innerHTML = '<div class="reco-note">No matches yet.</div>'; return; }
 
     /* Your turn first, then waiting, then settled. The whole point of the
        lobby is the row that says somebody is waiting on you. */
@@ -32072,9 +32070,9 @@ window.track = function (name, props) {
 
   var COPY = {
     song: { title: 'What users suggested',
-            blurb: 'Records other people pushed to For You. Back one and it climbs.' },
+            blurb: 'Records people pushed to For You.' },
     tag:  { title: 'Suggest a tag',
-            blurb: 'Type one and see who else wants it. The most-backed get made.' }
+            blurb: 'The most-backed get made.' }
   };
 
   /* ---------- open / close ---------- */
@@ -32206,7 +32204,7 @@ window.track = function (name, props) {
         (mode === 'tag'
           ? (q ? 'Nobody has suggested that one yet. Be the first.'
                : 'No tags suggested yet.')
-          : 'Nothing pushed yet. Push a record from the For You feed and it lands here.') +
+          : 'Nothing pushed yet.') +
         '</div>';
       return;
     }
@@ -33186,8 +33184,8 @@ window.track = function (name, props) {
     try { localStorage.setItem(AUTO_KEY, on ? '1' : '0'); } catch (e) {}
     var hint = document.getElementById('today-hint');
     if (hint) hint.textContent = on
-      ? 'Tap an answer — it moves on by itself'
-      : 'Tap an answer, then Next when you are ready';
+      ? 'Tap an answer'
+      : 'Tap an answer, then Next';
   }
 
   var _undoItem = null, _undoQ = null, _undoRestore = null, _undoIndex = -1, _undoGen = -1;
@@ -35988,7 +35986,7 @@ window.track = function (name, props) {
           end.dataset.i = '-1';
           end.innerHTML = '<div class="fy-why">That is everything</div>' +
             '<div class="fy-end-body"><h3>You have heard the lot</h3>' +
-            '<p>Rate more records, or shortlist a few from the Crate, and this fills up again.</p>' +
+            '<p>Rate more records to fill this up.</p>' +
             '<button class="btn-primary" id="fy-end-crate">Go to the Crate</button></div>';
           host.appendChild(end);
           if (_io) _io.observe(end);
@@ -36374,7 +36372,7 @@ window.track = function (name, props) {
            thing the person reading it can personally fix. */
         host.innerHTML = '<div class="empty"><span class="emoji">' + (window.ICONS ? ICONS.sparkle : '') + '</span>' +
           (_feed === 'pushed'
-            ? '<h3>Nothing pushed yet</h3><p>Records people put forward land here. Push one and you are the first.</p>'
+            ? '<h3>Nothing pushed yet</h3>'
             : '<h3>Nothing to play yet</h3><p>Rate a few records and this fills up with songs worth hearing.</p>') +
           '</div>';
         _built = true; return;
