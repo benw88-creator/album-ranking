@@ -863,7 +863,10 @@ nav.modes button:active { transform: scale(0.94); }
 
 @media (min-width: 700px) {
   nav.modes {
-    position: static;
+    /* relative, never static: the .nav-indicator pill is absolutely
+       positioned with top/bottom 5px, and a static nav hands it some taller
+       ancestor instead — a highlight bar running the height of the page. */
+    position: relative;
     transform: none;
     width: auto;
     max-width: none;
