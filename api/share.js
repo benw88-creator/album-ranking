@@ -36,7 +36,9 @@ async function sb(path) {
   return r.ok ? r.json() : [];
 }
 async function dz(path) {
-  try { const r = await fetch('https://api.deezer.com' + path); const j = await r.json(); return j && !j.error ? j : null; } catch (e) { return null; }
+  // Same User-Agent the catalogue route sends; from a Vercel IP Deezer can
+  // refuse a request without one, which read here as "no such record".
+  try { const r = await fetch('https://api.deezer.com' + path, { headers: { 'User-Agent': 'VINALL/1.0 (+https://vinall.xyz)' } }); const j = await r.json(); return j && !j.error ? j : null; } catch (e) { return null; }
 }
 
 // Same ramp as albumColor() in index.html: red → amber → green.
