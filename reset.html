@@ -116,16 +116,16 @@
   // Read the link BEFORE the client exists: createClient strips the fragment.
   var q = new URLSearchParams(location.search);
   var h = new URLSearchParams(location.hash.replace(/^#/, ''));
-  var shape = q.get('token_hash') ? 'token_hash' : q.get('code') ? 'code' : h.get('access_token') ? 'fragment' : (q.get('error') || h.get('error')) ? 'error' : 'no token';
+  var shape = (q.get('error') || h.get('error')) ? 'error' : q.get('token_hash') ? 'token_hash' : q.get('code') ? 'code' : h.get('access_token') ? 'fragment' : 'no token';
   var err = h.get('error_description') || q.get('error_description') || h.get('error') || q.get('error');
 
   if (!window.supabase || !window.supabase.createClient) { bad('The page could not load its sign-in library. Check your connection and reload.'); return; }
-  var sb = window.supabase.createClient(URL_, ANON, { auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true } });
+  var sb = window.supabase.createClient(URL_, ANON, { auth: { detectSessionInUrl: false, persistSession: true, autoRefreshToken: true } });
 
   function bad(why, raw) {
     show('bad');
     if (why) $('bad-why').textContent = why;
-    $('shape').textContent = 'link: ' + shape + (raw ? ' · ' + raw : '');
+    $('shape').textContent = 'link: ' + shape + ' · ' + (raw || 'no detail');
     history.replaceState(null, '', location.pathname);
   }
   async function ready() {
@@ -153,8 +153,13 @@
           return;
         }
       } else if (h.get('access_token')) {
-        // supabase-js is reading the fragment itself; give it a moment.
-        await new Promise(function (r) { setTimeout(r, 400); });
+        /* The default Supabase email: its link signs you in on Supabase's side
+           and hands the session over in the fragment. Read it HERE rather
+           than trusting the library to — detectSessionInUrl is off, because
+           "give it a moment" is the version that reported "link: fragment"
+           with no session (2026-10). setSession is deterministic. */
+        var st = await sb.auth.setSession({ access_token: h.get('access_token'), refresh_token: h.get('refresh_token') || '' });
+        if (st.error) { bad(null, st.error.message); return; }
       } else {
         // Arrived with nothing: maybe already signed in from a previous open.
         if (await ready()) return;
@@ -188,7 +193,12 @@
     b.disabled = true; b.textContent = 'Sending…';
     var r = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.origin + '/reset.html' });
     b.disabled = false; b.textContent = 'Send a new link';
-    if (r.error) { m.className = 'msg'; m.textContent = r.error.message; return; }
+    if (r.error) {
+      m.className = 'msg';
+      // Supabase's built-in mailer sends only a few emails an hour per project.
+      m.textContent = /rate|limit|seconds/i.test(r.error.message) ? 'Too many reset emails just now. Wait a little while, then try again.' : r.error.message;
+      return;
+    }
     m.className = 'msg ok'; m.textContent = 'Sent — check your email.';
   });
 
