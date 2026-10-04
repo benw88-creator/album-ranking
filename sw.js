@@ -80,6 +80,9 @@ self.addEventListener('fetch', (event) => {
   // Never the API. /api/app-token mints a short-lived credential; a cached one
   // is a broken one.
   if (url.pathname.startsWith('/api/')) return;
+  // Share pages (/u/, /r/, /a/) are rendered per request from live data;
+  // a cached one is somebody's old score.
+  if (/^\/(u|r|a)\//.test(url.pathname)) return;
 
   /* Navigations: serve the cached copy immediately, then fetch in the
      background and keep the new one for next time.
@@ -159,4 +162,33 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Everything else falls through to the network untouched.
+});
+
+/* ---- Push --------------------------------------------------------------
+   /api/push encrypts { title, body, url, tag, image } to this browser's key.
+   `tag` collapses repeats (three messages from one person are one banner that
+   updates, not three), and a click focuses an open VINALL tab and sends it to
+   the url rather than opening a second copy of the app. */
+self.addEventListener('push', (event) => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (e) { d = { title: event.data && event.data.text() }; }
+  event.waitUntil(self.registration.showNotification(d.title || 'VINALL', {
+    body: d.body || '',
+    tag: d.tag || undefined,
+    renotify: !!d.tag,
+    icon: '/assets/icons/icon-192.png',
+    badge: '/assets/icons/icon-192.png',
+    image: d.image || undefined,
+    data: { url: d.url || '/' },
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href;
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+    const w = wins.find((c) => new URL(c.url).origin === self.location.origin);
+    if (w) { w.focus(); return w.navigate ? w.navigate(url) : null; }
+    return self.clients.openWindow(url);
+  }));
 });

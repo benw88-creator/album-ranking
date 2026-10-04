@@ -5748,6 +5748,137 @@ body.entering-done #artist-hero {
 .cc-featpick .cc-chip { --cc: inherit; }
 .cc-featpick .g-input { flex: 1 1 160px; min-width: 0; }
 .cc-note { font-size: 12px; color: var(--text-faint); margin: 16px 0 0; line-height: 1.45; }
+
+/* ---- REVIEWS (album page) -------------------------------------------------
+   AOTY's layout — the room's score, its spread, then what people wrote — in
+   VINALL's own language: every score wears the red→green ramp it wears
+   everywhere else (--c), and the badge is the number at size rather than a
+   star row, because a score out of 100 is the unit this app thinks in. */
+.rv { margin-top: 36px; }
+.rv-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.rv-title { font: 700 var(--t-h2, 22px)/1.1 var(--font-display); letter-spacing: -0.02em; }
+.rv-loading { display: flex; gap: 6px; padding: 18px 0; }
+.rv-loading i { width: 8px; height: 8px; border-radius: 50%; background: var(--text-faint); animation: rvDot 1s ease-in-out infinite; }
+.rv-loading i:nth-child(2) { animation-delay: .15s; } .rv-loading i:nth-child(3) { animation-delay: .3s; }
+@keyframes rvDot { 0%, 100% { opacity: .25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-4px); } }
+.rv-empty { font-size: 13.5px; color: var(--text-dim); padding: 10px 0; }
+
+.rv-sum { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: end; padding: 18px;
+  border-radius: 18px; background: var(--surface-2); border: 1px solid var(--border); }
+.rv-avg { text-align: center; min-width: 96px; }
+.rv-avg-n { font: 700 54px/0.9 var(--font-display); letter-spacing: -0.04em; color: var(--c); text-shadow: 0 0 28px color-mix(in srgb, var(--c) 35%, transparent); }
+.rv-avg-k { margin-top: 8px; font: 700 10.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); }
+.rv-avg-c { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
+.rv-dist { min-width: 0; }
+.rv-bars { display: flex; align-items: flex-end; gap: 4px; height: 72px; }
+.rv-bars i { flex: 1; border-radius: 4px 4px 2px 2px; background: color-mix(in srgb, var(--c) 55%, transparent); transform-origin: bottom;
+  animation: rvGrow .5s var(--ease) both; }
+.rv-bars i:nth-child(2n) { animation-delay: .04s; } .rv-bars i:nth-child(3n) { animation-delay: .08s; }
+.rv-bars i.is-you { background: var(--c); box-shadow: 0 0 0 2px var(--text), 0 0 16px var(--c); }
+@keyframes rvGrow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.rv-axis { display: flex; justify-content: space-between; margin-top: 6px; font: 500 10.5px var(--font-mono); color: var(--text-faint); }
+.rv-you { margin-top: 8px; font-size: 13px; color: var(--text-dim); }
+.rv-you b { font-family: var(--font-display); font-size: 16px; }
+.rv-you .up { color: var(--green, #4fb477); font: 600 12px var(--font-mono); }
+.rv-you .down { color: var(--red, #e24b4a); font: 600 12px var(--font-mono); }
+
+.rv-compose { display: flex; gap: 14px; margin-top: 14px; padding: 14px; border-radius: 16px;
+  background: color-mix(in srgb, var(--c, var(--gold)) 7%, var(--surface-2)); border: 1px solid color-mix(in srgb, var(--c, var(--gold)) 30%, var(--border)); }
+.rv-compose-cta { align-items: center; justify-content: space-between; font-size: 14px; color: var(--text-dim); --c: var(--gold); }
+.rv-compose-score { flex: none; width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center;
+  font: 700 22px var(--font-display); color: #0a0908; background: var(--c); }
+.rv-compose-main { flex: 1; min-width: 0; }
+.rv-compose textarea { width: 100%; resize: vertical; min-height: 52px; background: transparent; border: none; outline: none;
+  color: var(--text); font: 16px/1.5 var(--font-body); padding: 4px 0; }
+.rv-compose-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.rv-count { font: 500 11px var(--font-mono); color: var(--text-faint); }
+
+.rv-sorts { display: flex; gap: 6px; margin: 20px 0 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.rv-sorts::-webkit-scrollbar { display: none; }
+.rv-sorts button { flex: none; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--border-strong); background: transparent;
+  color: var(--text-dim); font: 600 13px var(--font-body); cursor: pointer; transition: all .15s var(--ease); }
+.rv-sorts button.is-on { color: #0a0908; background: var(--text); border-color: var(--text); }
+
+.rv-list { display: flex; flex-direction: column; }
+.rv-card { position: relative; padding: 18px 0; border-bottom: 1px solid var(--border); animation: rvIn .35s var(--ease) both;
+  content-visibility: auto; contain-intrinsic-size: auto 160px; }
+@keyframes rvIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.rv-card.is-mine::before { content: ''; position: absolute; left: -12px; top: 18px; bottom: 18px; width: 3px; border-radius: 3px; background: var(--c); }
+.rv-card.is-focus { animation: rvFocus 2.4s var(--ease); }
+@keyframes rvFocus { 0%, 40% { background: color-mix(in srgb, var(--c) 12%, transparent); } 100% { background: transparent; } }
+.rv-who { display: flex; align-items: center; gap: 12px; }
+.rv-av { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: none; background: var(--surface-3); }
+.rv-id { flex: 1; min-width: 0; }
+.rv-name { background: none; border: none; padding: 0; color: var(--text); font: 700 15px var(--font-display); cursor: pointer; }
+.rv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 3px; font-size: 12px; color: var(--text-faint); }
+.rv-moved { font: 600 11px var(--font-mono); padding: 2px 7px; border-radius: 999px; background: var(--surface-3); }
+.rv-moved.up { color: var(--green, #4fb477); } .rv-moved.down { color: var(--red, #e24b4a); }
+.rv-take { font: 600 11px var(--font-mono); color: var(--c-pink, #ff4fa3); }
+/* The AOTY badge: the number, at size, in its own colour. */
+.rv-score { flex: none; min-width: 54px; height: 54px; padding: 0 8px; border-radius: 14px; display: grid; place-items: center;
+  font: 700 24px var(--font-display); letter-spacing: -0.03em; color: var(--c);
+  background: color-mix(in srgb, var(--c) 13%, transparent); border: 1.5px solid color-mix(in srgb, var(--c) 45%, transparent); }
+.rv-body { margin: 12px 0 0 52px; font-size: 15px; line-height: 1.6; color: var(--text); overflow-wrap: anywhere; }
+.rv-body.is-clamped { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.rv-more { margin: 4px 0 0 52px; background: none; border: none; padding: 0; color: var(--c); font: 600 13px var(--font-body); cursor: pointer; }
+.rv-acts { display: flex; gap: 6px; margin: 10px 0 0 46px; }
+.rv-acts button { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 10px; border-radius: 999px;
+  background: transparent; border: none; color: var(--text-faint); font: 600 12.5px var(--font-body); cursor: pointer; }
+.rv-acts button:hover:not(:disabled) { color: var(--text); background: var(--surface-2); }
+.rv-like svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.4; transition: transform .2s var(--ease); }
+.rv-like.is-on { color: var(--c-pink, #ff4fa3); }
+.rv-like.is-on svg { fill: currentColor; animation: rvPop .35s var(--ease); }
+.rv-like:disabled { opacity: .45; cursor: default; }
+@keyframes rvPop { 50% { transform: scale(1.35); } }
+.rv-quiet-h { margin: 22px 0 10px; font: 700 10.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--text-faint); }
+.rv-quiet { display: flex; flex-wrap: wrap; gap: 8px; }
+.rv-q { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 3px; border-radius: 999px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--c); font: 700 13px var(--font-display); }
+.rv-q img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.rv-q-more { align-self: center; font-size: 12px; color: var(--text-faint); }
+@media (max-width: 700px) {
+  .rv-sum { gap: 16px; padding: 14px; }
+  .rv-avg { min-width: 80px; } .rv-avg-n { font-size: 46px; }
+  .rv-body { margin-left: 0; } .rv-more { margin-left: 0; } .rv-acts { margin-left: -10px; }
+  .rv-card.is-mine::before { left: -8px; }
+}
+@media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) .rv-bars i, html:not([data-motion="full"]) .rv-card { animation: none; } }
+html[data-motion="none"] .rv-bars i, html[data-motion="none"] .rv-card { animation: none; }
+
+/* ---- YOUR KIND OF PEOPLE ---- */
+.kin-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--border); margin-bottom: 8px; transition: border-color .15s var(--ease); }
+.kin-row:hover { border-color: var(--border-strong); }
+.kin-row img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; }
+.kin-id { flex: 1; min-width: 0; }
+.kin-id .nm { font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kin-why { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kin-why b { color: var(--text); font-weight: 600; }
+.kin-follow { flex: none; padding: 9px 16px; }
+
+/* ---- IMPORT ---- */
+.imp-drop { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 26px 16px; border-radius: 16px; cursor: pointer;
+  border: 1.5px dashed var(--border-strong); background: var(--surface-2); text-align: center; }
+.imp-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.imp-drop span { font: 700 15px var(--font-display); }
+.imp-drop small { font-size: 12px; color: var(--text-faint); }
+.imp-drop:focus-within { border-color: var(--gold); }
+.imp-or { text-align: center; margin: 14px 0 8px; font: 600 11px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--text-faint); }
+#imp-text { width: 100%; font: 14px/1.5 var(--font-mono); resize: vertical; }
+.imp-replace { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
+.imp-list { max-height: 48vh; overflow-y: auto; margin: 0 -4px; }
+.imp-row { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.imp-row.is-off { opacity: .5; }
+.imp-row img, .imp-ph { width: 38px; height: 38px; border-radius: 7px; object-fit: cover; flex: none; background: var(--surface-3); }
+.imp-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.imp-t b, .imp-t small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.imp-t b { font-size: 14px; } .imp-t small { font-size: 12px; color: var(--text-faint); }
+.imp-st { font: 600 11px var(--font-mono); color: var(--text-faint); flex: none; }
+.imp-st.no { color: var(--red, #e24b4a); } .imp-st.had { color: var(--text-dim); }
+.imp-score { flex: none; font: 700 16px var(--font-display); color: var(--c); min-width: 30px; text-align: right; }
+.imp-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+.imp-status { font-size: 12.5px; color: var(--text-dim); }
+
 .cc-post { width: 100%; margin-top: 14px; justify-content: center; }
 .cc-post:disabled { opacity: .45; cursor: default; filter: none; box-shadow: none; }
 /* YouTube. The player is on screen whenever it plays — YouTube's terms, and
@@ -10418,6 +10549,8 @@ window.discAmt = function (n) {
       <input id="people-search" class="g-input" type="text" placeholder="Find someone by exact username&hellip;" autocomplete="off">
     </div>
     <div id="people-result" style="margin-bottom:8px;"></div>
+    <h3 class="prof-section-title" id="people-kin-h" style="margin-top:24px;">Your kind of people</h3>
+    <div id="people-kin"></div>
     <h3 class="prof-section-title" style="margin-top:24px;">Following</h3>
     <div id="people-following"></div>
     <!-- REACH lives here rather than in a modal off the account menu. It is
@@ -10464,6 +10597,10 @@ window.discAmt = function (n) {
          secretly a button is not a thing anybody finds by playing. -->
     <div class="tracks-head">Tracks &mdash; rate each 0&ndash;10 &middot; tap a number to play it</div>
     <div id="detail-tracks"></div>
+    <!-- Reviews: every crate_feed row for this record, laid out the way AOTY
+         does it — the room's score, its spread, then what people wrote. See
+         the Reviews module. -->
+    <div id="detail-reviews" class="rv"></div>
     <!-- Certification. Under the tracks on purpose: nearly every mark is
          earned by something on this screen, so the ladder sits where the
          rungs are. -->
@@ -10957,6 +11094,29 @@ window.discAmt = function (n) {
       <div class="set-row">
         <div class="set-copy"><div class="set-name">Show on my profile</div></div>
         <input type="checkbox" id="set-likes-public">
+      </div>
+    </div>
+
+    <div class="set-group" id="set-push-group" style="display:none;">
+      <div class="shop-section-title">Notifications</div>
+      <div class="set-row">
+        <div class="set-copy"><div class="set-name">Push notifications</div>
+          <div class="set-note" id="set-push-note"></div></div>
+        <input type="checkbox" id="set-push-on">
+      </div>
+    </div>
+
+    <div class="set-group">
+      <div class="shop-section-title">Your ratings</div>
+      <div class="set-row">
+        <div class="set-copy"><div class="set-name">Export</div>
+          <div class="set-note">Scores, notes and history.</div></div>
+        <div style="display:flex;gap:6px;"><button class="btn-mini" id="set-export-csv">CSV</button><button class="btn-mini" id="set-export-json">JSON</button></div>
+      </div>
+      <div class="set-row">
+        <div class="set-copy"><div class="set-name">Import</div>
+          <div class="set-note">RateYourMusic, a spreadsheet or a pasted list.</div></div>
+        <button class="btn-mini" id="set-import">Import</button>
       </div>
     </div>
 
@@ -11869,6 +12029,7 @@ async function openAlbum(meta) {
   if (existing) updateDetailScore(existing.score);
   else { const el = document.getElementById('detail-current-score'); if (el) el.style.display = 'none'; }
   showDetailNote(existing ? existing.note : '');
+  if (window.Reviews) try { Reviews.open(currentAlbum); } catch (e) {}
   // Certification. Fires and forgets: it is a panel under the tracks and a
   // slow round trip for it must never hold up the page above it.
   if (window.CertPanel) try { CertPanel.open(currentAlbum); } catch (e) {}
@@ -12294,6 +12455,7 @@ function saveAlbum(meta, score) {
   if (shortlistHas(meta.id)) shortlistRemove(meta.id);
   if (window.Cloud) Cloud.syncRating('album', albKey, albums[albKey]);
   if (window.Cloud) Cloud.postToFeed(meta, score, albums[albKey].note);
+  if (window.Reviews) try { if (!prev) Reviews.tellFollowers(meta, score); Reviews.refresh(); } catch (e) {}
   if (window.Wallet) Wallet.recordRating();
   /* A referral pays on the tenth album, and the person who earned it is
      not thinking about referrals by then — so it settles here rather than
@@ -14860,6 +15022,13 @@ function handOff(btn, opts) {
     return;
   }
 
+  // A phone browser has a share sheet too, and it is what a thumb reaches for.
+  if (navigator.share && window.matchMedia && matchMedia('(pointer: coarse)').matches) {
+    navigator.share({ text: opts.text, url: opts.url, title: opts.title || 'VINALL' })
+      .then(function () { say('Shared'); }, function () { btn.textContent = idle; });
+    return;
+  }
+
   // A link is more useful on a clipboard than a sentence wrapped round it.
   var payload = opts.url || opts.text;
   if (!navigator.clipboard) { say('Copy failed'); return; }
@@ -15992,6 +16161,9 @@ const Cloud=(function(){
      reason to keep somebody signed in, hence the catch. */
   async function logout(){
     try{ if(isOn()) await pushAll(); }catch(e){}
+    // This device stops receiving the last account's pushes before it stops
+    // being that account — the rpc needs the session.
+    try{ if(window.PushCtl) await PushCtl.forget(); }catch(e){}
     try{await sb.auth.signOut();}catch(e){}
     user=null;
     wipeLocalAccountState();
@@ -17181,7 +17353,7 @@ async function drawProfile(host,prof,isOwner){
       }).join('')+'</div>';
   }
 
-  const shareUrl=Native.site+'?u='+prof.id;
+  const shareUrl=(prof.username&&window.ShareLinks)?ShareLinks.user(prof.username):Native.site+'?u='+prof.id;
   let actionBtn='';
   if(isOwner){actionBtn='<div style="display:flex;flex-direction:column;gap:8px;"><button class="btn-primary" id="prof-edit">Edit profile</button><button class="btn-mini" id="prof-share">'+(Native.on?'Share profile':'Copy share link')+'</button></div>';}
   else if(me){actionBtn='<div style="display:flex;gap:8px;"><button class="'+(following?'btn-mini':'btn-primary')+'" id="prof-follow">'+(following?'Following \u2713':'+ Follow')+'</button><button class="btn-mini" id="prof-message" data-uid="'+esc(prof.id)+'" data-uname="'+esc(prof.username||'')+'">Message</button></div>';}
@@ -17428,6 +17600,7 @@ async function renderPeople(){
   // says "log in to get your code" for a guest, which is a real answer, and
   // the following list below it is allowed to be slow without holding it up.
   if(window.Reach)try{Reach.render();}catch(e){}
+  if(window.PeopleKin)try{PeopleKin.render();}catch(e){}
   if(!me){document.getElementById('people-result').innerHTML='<div class="reco-note">Log in to follow people.</div>';fhost.innerHTML='';return;}
   fhost.innerHTML='<p class="reco-note">Loading\u2026</p>';
   await loadBlocks();
@@ -18354,8 +18527,8 @@ window.renderProfile=renderProfile;
 /* ================================================================
    13. NOTIFICATIONS + SUGGESTIONS
    ================================================================ */
-function notifText(n){const who=esc((n.data&&n.data.username)||'Someone');if(n.type==='follow')return who+' followed you';if(n.type==='suggestion'){const it=(n.data&&n.data.item)||{};const kind=(n.data&&n.data.kind)||'album';const label=kind==='list'?'the list':(kind==='song'?'the song':'the album');return who+' recommended '+label+' <b>'+esc(it.name||'')+'</b>'+(it.artist?' by '+esc(it.artist):'');}if(n.type==='groove_invite')return who+' invited you to a Groove';if(n.type==='blitz_challenge')return who+' challenged you to <b>Cover Fire</b>';if(n.type==='blitz_turn')return who+' scored <b>'+esc(String((n.data&&n.data.score)||0))+'</b> in Cover Fire \u2014 your go';if(n.type==='blitz_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' at Cover Fire'):o==='lost'?(who+' beat you at Cover Fire'):('You and '+who+' tied at Cover Fire');}if(n.type==='bid_war_challenge')return who+' challenged you to a <b>Bid War</b>';if(n.type==='bid_war_turn')return who+' has bid &mdash; your move';if(n.type==='bid_war_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' in a Bid War'):o==='lost'?(who+' beat you in a Bid War'):('Your Bid War with '+who+' ended level');}return who+' did something';}
-function notifEmoji(t){return t==='follow'?ICONS.people:t==='suggestion'?ICONS.note:t==='groove_invite'?ICONS.groove:(t==='bid_war_challenge'||t==='bid_war_turn'||t==='bid_war_result'||t==='blitz_challenge'||t==='blitz_turn'||t==='blitz_result')?ICONS.trophy:ICONS.bell;}
+function notifText(n){const who=esc((n.data&&n.data.username)||'Someone');if(n.type==='follow')return who+' followed you';if(n.type==='suggestion'){const it=(n.data&&n.data.item)||{};const kind=(n.data&&n.data.kind)||'album';const label=kind==='list'?'the list':(kind==='song'?'the song':'the album');return who+' recommended '+label+' <b>'+esc(it.name||'')+'</b>'+(it.artist?' by '+esc(it.artist):'');}if(n.type==='groove_invite')return who+' invited you to a Groove';if(n.type==='rated_too'){const it=(n.data&&n.data.item)||{};return who+' gave <b>'+esc(it.name||'a record')+'</b> '+esc(String(n.data.score))+(n.data.yours!=null?' — you gave it '+esc(String(n.data.yours)):'');}if(n.type==='review_like'){const it=(n.data&&n.data.item)||{};return who+' liked your review of <b>'+esc(it.name||'a record')+'</b>';}if(n.type==='blitz_challenge')return who+' challenged you to <b>Cover Fire</b>';if(n.type==='blitz_turn')return who+' scored <b>'+esc(String((n.data&&n.data.score)||0))+'</b> in Cover Fire \u2014 your go';if(n.type==='blitz_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' at Cover Fire'):o==='lost'?(who+' beat you at Cover Fire'):('You and '+who+' tied at Cover Fire');}if(n.type==='bid_war_challenge')return who+' challenged you to a <b>Bid War</b>';if(n.type==='bid_war_turn')return who+' has bid &mdash; your move';if(n.type==='bid_war_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' in a Bid War'):o==='lost'?(who+' beat you in a Bid War'):('Your Bid War with '+who+' ended level');}return who+' did something';}
+function notifEmoji(t){return t==='follow'?ICONS.people:(t==='suggestion'||t==='rated_too'||t==='review_like')?ICONS.note:t==='groove_invite'?ICONS.groove:(t==='bid_war_challenge'||t==='bid_war_turn'||t==='bid_war_result'||t==='blitz_challenge'||t==='blitz_turn'||t==='blitz_result')?ICONS.trophy:ICONS.bell;}
 
 async function renderNotifications(){
   const host=document.getElementById('notif-list');if(!host)return;
@@ -18367,10 +18540,10 @@ async function renderNotifications(){
     return !(n.actor_id && window.isBlocked && isBlocked(n.actor_id));
   });
   if(!list.length){host.innerHTML='<div class="act-empty">No notifications yet.</div>';return;}
-  host.innerHTML=list.map(function(n){const it=(n.data&&n.data.item)||{};const clickable=(n.type==='suggestion'&&it.id&&(n.data.kind==='album'));const grooveClick=(n.type==='groove_invite');const warId=(/^bid_war_/.test(n.type||'')&&n.data&&n.data.war_id)||'';return'<div class="act-item notif-item'+(n.read?'':' unread')+'"'+(clickable?' data-album="'+esc(it.id)+'"':'')+(grooveClick?' data-groove-invite="1"':'')+(warId?' data-war-notif="'+esc(warId)+'"':'')+'>'+
+  host.innerHTML=list.map(function(n){const it=(n.data&&n.data.item)||{};const clickable=(it.id&&((n.type==='suggestion'&&n.data.kind==='album')||n.type==='rated_too'||n.type==='review_like'));const grooveClick=(n.type==='groove_invite');const warId=(/^bid_war_/.test(n.type||'')&&n.data&&n.data.war_id)||'';return'<div class="act-item notif-item'+(n.read?'':' unread')+'"'+(clickable?' data-album="'+esc(it.id)+'"':'')+(grooveClick?' data-groove-invite="1"':'')+(warId?' data-war-notif="'+esc(warId)+'"':'')+'>'+
     '<span class="act-emoji">'+notifEmoji(n.type)+'</span>'+
     '<div><div class="act-text">'+notifText(n)+'</div><div class="act-time">'+esc(timeAgo(new Date(n.created_at).getTime()))+'</div></div></div>';}).join('');
-  host.querySelectorAll('[data-album]').forEach(function(el){el.addEventListener('click',function(){const n=list.find(function(x){return((x.data&&x.data.item)||{}).id===el.dataset.album;});const it=n&&n.data&&n.data.item;if(it){closeNotifPanel();openAlbum(it);}});});
+  host.querySelectorAll('[data-album]').forEach(function(el){el.addEventListener('click',function(){const n=list.find(function(x){return((x.data&&x.data.item)||{}).id===el.dataset.album;});const it=n&&n.data&&n.data.item;if(it){closeNotifPanel();if(n.type!=='suggestion'&&window.Reviews)Reviews.focusOn('*');openAlbum(it);}});});
   host.querySelectorAll('[data-groove-invite]').forEach(function(el){el.addEventListener('click',function(){closeNotifPanel();setMode('grooves');if(window.renderGrooves)renderGrooves();});});
   host.querySelectorAll('[data-war-notif]').forEach(function(el){el.addEventListener('click',function(){closeNotifPanel();setMode('wars');if(window.renderWars)renderWars();if(window.openBidWar)openBidWar(el.dataset.warNotif);});});
 }
@@ -37323,6 +37496,857 @@ window.track = function (name, props) {
     restart: function () { S = { step: 0, done: false }; save(); open(); },
     state: function () { return read(); }
   };
+})();
+</script>
+
+<div class="modal" id="imp-modal">
+  <div class="modal-panel" style="max-width:560px;">
+    <button class="modal-close" id="imp-close" aria-label="Close">&times;</button>
+    <div class="modal-head"><span class="mh-emoji" data-icon="list"></span><div><h2>Import ratings</h2></div></div>
+    <div id="imp-start">
+      <label class="imp-drop"><input type="file" id="imp-file" accept=".csv,.txt,.json,text/csv,application/json"><span>Choose a file</span><small>RateYourMusic export, any CSV, or a VINALL export</small></label>
+      <div class="imp-or">or paste</div>
+      <textarea id="imp-text" class="g-input" rows="6" placeholder="Frank Ocean - Blonde - 9.5&#10;Kendrick Lamar - good kid, m.A.A.d city - 94&#10;Rumours by Fleetwood Mac 4/5"></textarea>
+    </div>
+    <div id="imp-body" style="display:none;"></div>
+    <div class="imp-foot"><span id="imp-status" class="imp-status"></span><button class="btn-primary" id="imp-go">Read it</button></div>
+  </div>
+</div>
+
+<!-- ================================================================
+     THE OUTWARD LAYER — reviews, share links, push, your people, and getting
+     your ratings in and out.
+
+     Everything before this was about what happens inside VINALL once you are
+     in it. This is the half that reaches outside: a review somebody can read
+     without an account, a link that unfurls as the sleeve, a push that says
+     "charlie gave IGOR a 94 — you gave it 71", a person you should follow
+     found from your own scores, and a library that arrives on day one instead
+     of being typed in one record at a time.
+
+     REVIEWS ARE crate_feed ROWS. That table already holds exactly one row per
+     person per record, with the score and a note, publicly readable — which is
+     what a review is. So there is no reviews table: a review is a rating with
+     words on it, and the album page reads them the way AOTY lays them out.
+     Two things AOTY cannot print sit on every card: how close that person's
+     taste is to yours, and how their score has MOVED (the spine — see
+     CLAUDE.md). Likes ride feed_likes, which was parked unused when the heart
+     left the Crate; a like on a piece of writing is agreement with the writing,
+     which is the one thing a heart is honestly for.
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  var SHARE = 'https://vinall.xyz';
+  var REVIEW_MAX = 5000;
+  function sb() { return window.Cloud && Cloud.client ? Cloud.client() : null; }
+  function me() { return window.Cloud && Cloud.getUser ? Cloud.getUser() : null; }
+  function on() { return !!(window.Cloud && Cloud.isOn && Cloud.isOn()); }
+  function $(id) { return document.getElementById(id); }
+  function say(m) { if (window.toast) toast(m); }
+  function report(msg, extra) { try { if (window.reportIssue) reportIssue(msg, extra); } catch (e) {} }
+  function fold(s) { return String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ''); }
+  // PostgREST ilike with no wildcards: an exact, case-insensitive match.
+  function ilikeExact(s) { return String(s || '').replace(/[\\%_]/g, function (c) { return '\\' + c; }); }
+  function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+  function ago(iso) { return window.timeAgo ? timeAgo(new Date(iso).getTime()) : ''; }
+  function monthYear(t) { return new Date(t).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }); }
+  var _prof = null;
+  async function myProf() {
+    var u = me(); if (!u) return null;
+    if (_prof && _prof.id === u.id) return _prof;
+    try { _prof = await Cloud.fetchProfile(u.id); } catch (e) { _prof = null; }
+    return _prof;
+  }
+
+  /* ---- share links ---------------------------------------------------- */
+  // Always the canonical site: these leave the app, and a capacitor:// or
+  // localhost link is a link nobody else can open. The apex 308s to www and
+  // vercel.json routes the path to /api/share.
+  var ShareLinks = {
+    review: function (id) { return SHARE + '/r/' + id; },
+    album: function (id) { return SHARE + '/a/' + encodeURIComponent(id); },
+    user: function (name) { return SHARE + '/u/' + encodeURIComponent(name); }
+  };
+  window.ShareLinks = ShareLinks;
+
+  /* ---- deep links: /?album=<id>&n=<name>&ar=<artist>&review=<id>#reviews,
+          and /?dm=<user id> from a message push. ------------------------ */
+  function deepLink() {
+    var q = new URLSearchParams(location.search);
+    var albumId = q.get('album'), dm = q.get('dm');
+    if (!albumId && !dm) return;
+    var focus = q.get('review') || (location.hash === '#reviews' ? '*' : '');
+    var meta = { id: albumId, name: q.get('n') || '', artist: q.get('ar') || '', art: '' };
+    history.replaceState(null, '', location.pathname);
+    // Somebody who tapped a shared record has already chosen where to go.
+    if (window.dismissSplash) try { dismissSplash(); } catch (e) {}
+    var ready = (window.Cloud && Cloud.ready) || Promise.resolve();
+    Promise.race([ready, new Promise(function (r) { setTimeout(r, 2500); })]).then(function () {
+      if (dm) { if (on() && window.Messages) Messages.openThread(dm); return; }
+      var base = (window.Native && Native.api) || '';
+      // Resolved through the route directly, NOT spotifyGet: a failed optional
+      // lookup there raises the "can't reach the catalogue" gate, and this one
+      // only fills in a cover the page would otherwise load anyway.
+      fetch(base + '/api/catalogue?path=album&id=' + encodeURIComponent(albumId) +
+            '&name=' + encodeURIComponent(meta.name) + '&artist=' + encodeURIComponent(meta.artist))
+        .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+        .then(function (d) {
+          if (d) {
+            meta.name = meta.name || d.name || '';
+            var a0 = d.artists && d.artists[0];
+            meta.artist = meta.artist || (a0 && a0.name) || '';
+            meta.artistId = a0 && a0.id;
+            meta.art = (d.images && d.images[0] && d.images[0].url) || '';
+            meta.year = String(d.release_date || '').slice(0, 4);
+          }
+          Reviews.focusOn(focus);
+          openAlbum(meta);
+        });
+    });
+  }
+
+  /* ================= REVIEWS ============================================ */
+  var R = { album: null, tok: 0, rows: [], likes: {}, taste: {}, hist: {}, following: null,
+            sort: 'popular', focus: '', open: {}, posting: false };
+  var SORTS = [['popular', 'Popular'], ['recent', 'Recent'], ['high', 'Highest'], ['low', 'Lowest'], ['hot', 'Hot takes'], ['following', 'Following']];
+  var COLS = 'id,user_id,username,avatar_url,album_id,album_name,album_artist,album_art,score,note,created_at';
+
+  function idsFor(album) {
+    var ids = [String(album.id)];
+    try { var rec = findAlbumRec(loadAlbums(), album); if (rec && ids.indexOf(String(rec.id)) < 0) ids.push(String(rec.id)); } catch (e) {}
+    return ids;
+  }
+  function myRec() { try { return R.album ? findAlbumRec(loadAlbums(), R.album) : null; } catch (e) { return null; } }
+  function host() { return $('detail-reviews'); }
+
+  async function open(album) {
+    R.album = album; R.rows = []; R.likes = {}; R.taste = {}; R.hist = {}; R.open = {};
+    if (!R.focus) R.sort = 'popular';
+    var tok = ++R.tok, h = host(), c = sb();
+    if (!h) return;
+    if (!c) { h.innerHTML = ''; return; }
+    h.innerHTML = '<div class="rv-head"><h3 class="rv-title">Reviews</h3></div><div class="rv-loading"><i></i><i></i><i></i></div>';
+    var ids = idsFor(album);
+    var byId = c.from('crate_feed').select(COLS).in('album_id', ids).limit(1000);
+    // A record rated before the catalogue moved carries a Spotify id, the same
+    // record opened now carries Deezer's — same record, two keys (trap 4). The
+    // name is what both rows agree on.
+    var byName = album.name && album.artist
+      ? c.from('crate_feed').select(COLS).ilike('album_name', ilikeExact(album.name)).ilike('album_artist', ilikeExact(album.artist)).limit(1000)
+      : Promise.resolve({ data: [] });
+    var got = await Promise.all([byId, byName, window.loadBlocks ? loadBlocks() : null]);
+    if (tok !== R.tok) return;
+    var seen = {}, rows = [];
+    [got[0], got[1]].forEach(function (res) {
+      ((res && res.data) || []).forEach(function (r) {
+        if (seen[r.id] || r.score == null) return;
+        if (window.isBlocked && isBlocked(r.user_id)) return;
+        seen[r.id] = 1; rows.push(r);
+      });
+    });
+    // One person, one voice: a legacy row and a new row from the same account
+    // are the same opinion twice. Keep the newer.
+    var byUser = {};
+    rows.forEach(function (r) { var x = byUser[r.user_id]; if (!x || new Date(r.created_at) > new Date(x.created_at)) byUser[r.user_id] = r; });
+    R.rows = Object.keys(byUser).map(function (k) { return byUser[k]; });
+    paint();
+
+    var uids = R.rows.map(function (r) { return r.user_id; }).filter(function (u) { return !me() || u !== me().id; });
+    var extra = await Promise.all([
+      R.rows.length && Cloud.fetchLikes ? Cloud.fetchLikes(R.rows.map(function (r) { return r.id; })) : {},
+      me() && window.tasteFor && uids.length ? tasteFor(uids.slice(0, 60)) : {},
+      histories(c, ids, R.rows.map(function (r) { return r.user_id; })),
+      me() && R.following === null ? Cloud.followingList(me().id).then(function (l) { return l.map(function (p) { return p.id; }); }) : null
+    ]);
+    if (tok !== R.tok) return;
+    R.likes = extra[0] || {}; R.taste = extra[1] || {}; R.hist = extra[2] || {};
+    if (extra[3]) R.following = extra[3];
+    paint();
+    if (R.focus) {
+      var f = R.focus; R.focus = '';
+      var el = f !== '*' && $('rv-' + f);
+      if (el) { R.open[f] = true; paint(); el = $('rv-' + f); }
+      var target = el || h;
+      target.scrollIntoView({ behavior: 'smooth', block: el ? 'center' : 'start' });
+      // The tracklist and the completion panel land above this after it has
+      // painted and push it down the page, so look again once they have.
+      setTimeout(function () { if (tok === R.tok && document.contains(target)) target.scrollIntoView({ behavior: 'smooth', block: el ? 'center' : 'start' }); }, 1400);
+      if (el) { el.classList.add('is-focus'); setTimeout(function () { el.classList.remove('is-focus'); }, 2600); }
+    }
+  }
+  // Score history is in each person's `ratings` row, which RLS only shows for
+  // public rankings — so a friends-only account's card simply has no line.
+  async function histories(c, ids, uids) {
+    var out = {};
+    if (!uids.length) return out;
+    try {
+      var r = await c.from('ratings').select('user_id,data').eq('kind', 'album').in('item_id', ids).in('user_id', uids.slice(0, 200));
+      ((r && r.data) || []).forEach(function (x) {
+        var h = x.data && Array.isArray(x.data.history) ? x.data.history : null;
+        if (h && h.length > 1) out[x.user_id] = h;
+      });
+    } catch (e) {}
+    return out;
+  }
+
+  function likeCount(id) { return (R.likes[id] || []).length; }
+  function iLike(id) { var u = me(); return !!u && (R.likes[id] || []).indexOf(u.id) >= 0; }
+  function stats() {
+    var s = R.rows.map(function (r) { return r.score; });
+    var n = s.length, avg = n ? Math.round(s.reduce(function (a, b) { return a + b; }, 0) / n) : null;
+    var buckets = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    s.forEach(function (v) { buckets[Math.min(9, Math.floor(v / 10))]++; });
+    return { n: n, avg: avg, buckets: buckets };
+  }
+  function sorted(list, st) {
+    var a = list.slice();
+    var by = {
+      popular: function (x, y) { return likeCount(y.id) - likeCount(x.id) || (y.note || '').length - (x.note || '').length; },
+      recent: function (x, y) { return new Date(y.created_at) - new Date(x.created_at); },
+      high: function (x, y) { return y.score - x.score; },
+      low: function (x, y) { return x.score - y.score; },
+      hot: function (x, y) { return Math.abs(y.score - st.avg) - Math.abs(x.score - st.avg); }
+    }[R.sort];
+    if (R.sort === 'following') {
+      var f = R.following || [];
+      a = a.filter(function (r) { return f.indexOf(r.user_id) >= 0; });
+      by = function (x, y) { return new Date(y.created_at) - new Date(x.created_at); };
+    }
+    return a.sort(by);
+  }
+
+  function summaryHtml(st, mine) {
+    if (!st.n) return '<div class="rv-empty">No one has rated this yet.</div>';
+    var max = Math.max.apply(null, st.buckets) || 1;
+    var mb = mine ? Math.min(9, Math.floor(mine.score / 10)) : -1;
+    var bars = st.buckets.map(function (b, i) {
+      return '<i class="' + (i === mb ? 'is-you' : '') + '" style="height:' + Math.max(4, Math.round(b / max * 100)) + '%;--c:' + albumColor(i * 10 + 5) + '" title="' + (i * 10) + '–' + (i === 9 ? 100 : i * 10 + 9) + ': ' + b + '"></i>';
+    }).join('');
+    var you = '';
+    if (mine) {
+      var d = mine.score - st.avg;
+      you = '<div class="rv-you">You <b style="color:' + albumColor(mine.score) + '">' + mine.score + '</b>' +
+        (st.n > 1 && d ? ' <span class="' + (d > 0 ? 'up' : 'down') + '">' + (d > 0 ? '+' : '−') + Math.abs(d) + '</span>' : '') + '</div>';
+    }
+    return '<div class="rv-sum">' +
+      '<div class="rv-avg" style="--c:' + albumColor(st.avg) + '"><div class="rv-avg-n">' + st.avg + '</div><div class="rv-avg-k">VINALL score</div><div class="rv-avg-c">' + plural(st.n, 'rating') + '</div></div>' +
+      '<div class="rv-dist"><div class="rv-bars">' + bars + '</div><div class="rv-axis"><span>0</span><span>50</span><span>100</span></div>' + you + '</div>' +
+    '</div>';
+  }
+
+  function composerHtml(mine) {
+    if (!on()) return '<div class="rv-compose rv-compose-cta"><span>Log in to write a review.</span><button class="btn-mini" data-rv="login">Log in</button></div>';
+    if (!mine) return '<div class="rv-compose rv-compose-cta"><span>Rate it to review it.</span><button class="btn-primary" data-rv="rate">Rate</button></div>';
+    var note = mine.note || '';
+    return '<div class="rv-compose" style="--c:' + albumColor(mine.score) + '">' +
+      '<div class="rv-compose-score">' + mine.score + '</div>' +
+      '<div class="rv-compose-main"><textarea id="rv-text" maxlength="' + REVIEW_MAX + '" rows="' + (note ? 4 : 2) + '" placeholder="What makes it a ' + mine.score + '?">' + esc(note) + '</textarea>' +
+      '<div class="rv-compose-row"><span class="rv-count" id="rv-count">' + (note.length ? note.length + ' / ' + REVIEW_MAX : '') + '</span>' +
+      '<button class="btn-primary" data-rv="post" id="rv-post"' + (note ? '' : ' disabled') + '>' + (note ? 'Update' : 'Post review') + '</button></div></div></div>';
+  }
+
+  function moveHtml(uid) {
+    var h = R.hist[uid];
+    if (!h) return '';
+    var first = h[0], last = h[h.length - 1], d = last.s - first.s;
+    if (!d) return '';
+    return '<span class="rv-moved ' + (d > 0 ? 'up' : 'down') + '" title="' + h.map(function (x) { return x.s; }).join(' → ') + '">' +
+      (d > 0 ? '↑' : '↓') + Math.abs(d) + ' since ' + esc(monthYear(first.t)) + '</span>';
+  }
+
+  function cardHtml(r, st) {
+    var col = albumColor(r.score), note = String(r.note || '').trim();
+    var long = note.length > 420 && !R.open[r.id];
+    var mineRow = me() && r.user_id === me().id;
+    var tm = R.taste[r.user_id];
+    var dev = st.n > 2 ? r.score - st.avg : 0;
+    return '<article class="rv-card' + (mineRow ? ' is-mine' : '') + '" id="rv-' + esc(r.id) + '" style="--c:' + col + '">' +
+      '<header class="rv-who">' +
+        '<img class="rv-av" src="' + esc(window.avatarSrc ? avatarSrc(r.avatar_url) : (r.avatar_url || '')) + '" alt="" loading="lazy">' +
+        '<div class="rv-id"><button class="rv-name" data-rv="user" data-uid="' + esc(r.user_id) + '">' + esc(r.username || 'user') + '</button>' +
+          '<div class="rv-meta">' + (tm && window.tasteChip ? tasteChip(tm) : '') + '<span>' + esc(ago(r.created_at)) + '</span>' + moveHtml(r.user_id) +
+          (Math.abs(dev) >= 20 ? '<span class="rv-take">' + (dev > 0 ? 'Way above the room' : 'Way below the room') + '</span>' : '') + '</div></div>' +
+        '<div class="rv-score">' + r.score + '</div>' +
+      '</header>' +
+      '<div class="rv-body' + (long ? ' is-clamped' : '') + '">' + esc(note).replace(/\n/g, '<br>') + '</div>' +
+      (long ? '<button class="rv-more" data-rv="more" data-id="' + esc(r.id) + '">Read more</button>' : '') +
+      '<footer class="rv-acts">' +
+        '<button class="rv-like' + (iLike(r.id) ? ' is-on' : '') + '" data-rv="like" data-id="' + esc(r.id) + '"' + (mineRow ? ' disabled' : '') + ' aria-label="Like this review">' +
+          '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.6S2 10.1 2 5.9A3 3 0 0 1 8 4.4a3 3 0 0 1 6 1.5c0 4.2-6 7.7-6 7.7Z"/></svg><span>' + (likeCount(r.id) || '') + '</span></button>' +
+        '<button class="rv-share" data-rv="share" data-id="' + esc(r.id) + '">Share</button>' +
+      '</footer>' +
+    '</article>';
+  }
+
+  function paint() {
+    var h = host(); if (!h || !R.album) return;
+    var st = stats(), mine = myRec();
+    var withWords = R.rows.filter(function (r) { return String(r.note || '').trim().length > 0; });
+    var quiet = R.rows.filter(function (r) { return !String(r.note || '').trim().length; }).sort(function (x, y) { return y.score - x.score; });
+    var list = sorted(withWords, st);
+    var tabs = SORTS.filter(function (s) { return s[0] !== 'following' || (R.following && R.following.length); })
+      .map(function (s) { return '<button data-rv="sort" data-sort="' + s[0] + '" class="' + (R.sort === s[0] ? 'is-on' : '') + '">' + s[1] + '</button>'; }).join('');
+    var draft = $('rv-text') ? $('rv-text').value : null;
+    h.innerHTML =
+      '<div class="rv-head"><h3 class="rv-title">Reviews</h3><button class="btn-mini" data-rv="sharealbum">Share</button></div>' +
+      summaryHtml(st, mine) +
+      composerHtml(mine) +
+      (withWords.length ? '<div class="rv-sorts" role="tablist">' + tabs + '</div>' : '') +
+      '<div class="rv-list">' + (list.length ? list.map(function (r) { return cardHtml(r, st); }).join('')
+        : (withWords.length ? '<div class="rv-empty">Nobody you follow has reviewed this.</div>' : '')) + '</div>' +
+      (quiet.length ? '<div class="rv-quiet-h">' + plural(quiet.length, 'rating') + ' without a review</div><div class="rv-quiet">' +
+        quiet.slice(0, 40).map(function (r) {
+          return '<button class="rv-q" data-rv="user" data-uid="' + esc(r.user_id) + '" title="' + esc(r.username || '') + '" style="--c:' + albumColor(r.score) + '">' +
+            '<img src="' + esc(window.avatarSrc ? avatarSrc(r.avatar_url) : (r.avatar_url || '')) + '" alt="" loading="lazy"><b>' + r.score + '</b></button>';
+        }).join('') + (quiet.length > 40 ? '<span class="rv-q-more">+' + (quiet.length - 40) + '</span>' : '') + '</div>' : '');
+    // A repaint (likes arriving, a sort) must never throw away half a review.
+    if (draft !== null && $('rv-text')) { $('rv-text').value = draft; syncComposer(); }
+  }
+
+  function syncComposer() {
+    var t = $('rv-text'), b = $('rv-post'), n = $('rv-count'), rec = myRec();
+    if (!t || !b) return;
+    // Grows with the writing: a review box that scrolls inside itself hides
+    // the first half of what you are writing from you.
+    t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 360) + 'px';
+    var v = t.value.trim(), was = String((rec && rec.note) || '').trim();
+    b.disabled = R.posting || v === was;
+    b.textContent = R.posting ? 'Posting…' : (was ? (v ? 'Update' : 'Remove review') : 'Post review');
+    if (!was && !v) b.disabled = true;
+    if (n) n.textContent = t.value.length ? t.value.length + ' / ' + REVIEW_MAX : '';
+  }
+
+  async function postReview() {
+    var t = $('rv-text'), rec = myRec();
+    if (!t || !rec || R.posting) return;
+    var text = t.value.trim().slice(0, REVIEW_MAX);
+    if (text && window.hasSlur && hasSlur(text)) { say('Keep it about the record'); return; }
+    R.posting = true; syncComposer();
+    var albums = loadAlbums(), key = rec.id;
+    if (albums[key]) {
+      albums[key].note = text;
+      persist(ALBUMS_KEY, albums);
+      if (window.Cloud) {
+        Cloud.syncRating('album', key, albums[key]);
+        await Cloud.postToFeed({ id: key, name: albums[key].name, artist: albums[key].artist, art: albums[key].art }, albums[key].score, text);
+      }
+      if (window.showDetailNote) try { showDetailNote(text); } catch (e) {}
+      if (window.track) track('review_posted', { len: text.length });
+      if (window.buzz) buzz('good');
+    }
+    R.posting = false;
+    say(text ? 'Review posted' : 'Review removed');
+    open(R.album);
+  }
+
+  async function like(id, btn) {
+    if (!on()) { Cloud.openAuth(); return; }
+    var row = R.rows.find(function (r) { return r.id === id; });
+    if (!row || row.user_id === me().id) return;
+    var was = iLike(id), uid = me().id;
+    R.likes[id] = (R.likes[id] || []).filter(function (u) { return u !== uid; });
+    if (!was) R.likes[id].push(uid);
+    paint();
+    if (!was && window.buzz) buzz('tap');
+    var res = await Cloud.toggleLike(id);
+    if (res && res.error) { open(R.album); return; }
+    if (res && res.liked) {
+      var p = await myProf();
+      try {
+        await sb().from('notifications').insert({ user_id: row.user_id, actor_id: uid, type: 'review_like',
+          data: { username: (p && p.username) || 'someone', avatar_url: (p && p.avatar_url) || '',
+                  item: { id: row.album_id, name: row.album_name, artist: row.album_artist, art: row.album_art } } });
+      } catch (e) {}
+    }
+  }
+
+  function wire() {
+    var h = host();
+    if (!h || h._wired) return;
+    h._wired = true;
+    h.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-rv]');
+      if (!b) return;
+      var a = b.dataset.rv;
+      if (a === 'sort') { R.sort = b.dataset.sort; paint(); }
+      else if (a === 'more') { R.open[b.dataset.id] = true; paint(); }
+      else if (a === 'like') like(b.dataset.id, b);
+      else if (a === 'user') { if (window.viewUserProfile) viewUserProfile(b.dataset.uid); }
+      else if (a === 'rate') { var rb = $('rate-album-btn'); if (rb) rb.click(); }
+      else if (a === 'login') Cloud.openAuth();
+      else if (a === 'post') postReview();
+      else if (a === 'share') {
+        var r = R.rows.find(function (x) { return x.id === b.dataset.id; });
+        if (r) handOff(b, { url: ShareLinks.review(r.id), text: r.username + ' gave ' + r.album_name + ' ' + r.score, idle: 'Share' });
+      } else if (a === 'sharealbum') {
+        var mineRow = me() && R.rows.find(function (x) { return x.user_id === me().id; });
+        handOff(b, mineRow
+          ? { url: ShareLinks.review(mineRow.id), text: 'I gave ' + mineRow.album_name + ' ' + mineRow.score, idle: 'Share' }
+          : { url: ShareLinks.album(R.album.id), text: R.album.name + ' — ' + R.album.artist, idle: 'Share' });
+      }
+    });
+    h.addEventListener('input', function (e) { if (e.target.id === 'rv-text') syncComposer(); });
+  }
+
+  /* "charlie gave IGOR a 94 — you gave it 71." Sent to the people who follow
+     you AND have rated the same record, on your FIRST rating of it only — a
+     re-rate is not news to anybody else. Capped at three a day per recipient
+     from this device, because a rating session is twenty records and a
+     follower who shares half your library should not get ten pushes. */
+  async function tellFollowers(meta, score) {
+    if (!on()) return;
+    try {
+      var c = sb(), uid = me().id;
+      var f = await c.from('follows').select('follower_id').eq('following_id', uid);
+      var ids = ((f && f.data) || []).map(function (x) { return x.follower_id; });
+      if (!ids.length) return;
+      var r = await c.from('crate_feed').select('user_id,score').in('album_id', idsFor(meta)).in('user_id', ids.slice(0, 300));
+      var rows = ((r && r.data) || []).filter(function (x) { return x.score != null && x.user_id !== uid && !(window.isBlocked && isBlocked(x.user_id)); });
+      if (!rows.length) return;
+      var KEY = 'vinall_rated_too_cap', day = new Date().toISOString().slice(0, 10), cap = {};
+      try { cap = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+      if (cap.day !== day) cap = { day: day, n: {} };
+      rows = rows.filter(function (x) { return (cap.n[x.user_id] || 0) < 3; }).slice(0, 25);
+      if (!rows.length) return;
+      rows.forEach(function (x) { cap.n[x.user_id] = (cap.n[x.user_id] || 0) + 1; });
+      try { localStorage.setItem(KEY, JSON.stringify(cap)); } catch (e) {}
+      var p = await myProf();
+      await c.from('notifications').insert(rows.map(function (x) {
+        return { user_id: x.user_id, actor_id: uid, type: 'rated_too',
+          data: { username: (p && p.username) || 'someone', avatar_url: (p && p.avatar_url) || '', score: score, yours: x.score,
+                  item: { id: meta.id, name: meta.name, artist: meta.artist, art: meta.art || '' } } };
+      }));
+    } catch (e) {}
+  }
+
+  var Reviews = {
+    open: function (album) { wire(); open(album); },
+    refresh: function () { if (R.album && host() && host().offsetParent !== null) setTimeout(function () { open(R.album); }, 700); },
+    focusOn: function (f) { R.focus = f || ''; if (f) R.sort = 'recent'; },
+    tellFollowers: tellFollowers
+  };
+  window.Reviews = Reviews;
+
+  /* ================= YOUR KIND OF PEOPLE ================================
+     Following is the social graph and a new account has none of it, so the
+     Crate's Following feed opens empty and stays empty. The fix uses the one
+     thing VINALL computes that nobody else can: taste match. Everybody who has
+     rated what you have rated is a candidate; five shared records is the floor
+     the match itself uses; the order is the match. Each row says WHY in one
+     line — a record you both love, or one they love that you have not heard —
+     because "92%" alone is a horoscope (see Taste match in CLAUDE.md). */
+  var K = { at: 0, html: '', tok: 0 };
+  async function kin(force) {
+    var h = $('people-kin'), hh = $('people-kin-h');
+    if (!h) return;
+    if (!on()) { h.innerHTML = ''; if (hh) hh.style.display = 'none'; return; }
+    if (hh) hh.style.display = '';
+    if (!force && K.html && Date.now() - K.at < 10 * 60 * 1000) { h.innerHTML = K.html; wireKin(h); return; }
+    var tok = ++K.tok, c = sb(), uid = me().id;
+    var mine = loadAlbums();
+    var rated = Object.keys(mine).map(function (k) { return mine[k]; }).filter(function (a) { return a && a.score > 0; });
+    if (rated.length < 5) { h.innerHTML = '<div class="reco-note">Rate ' + (5 - rated.length) + ' more album' + (rated.length === 4 ? '' : 's') + ' to find people with your taste.</div>'; return; }
+    h.innerHTML = '<div class="reco-note">Finding your people…</div>';
+    try {
+      var ids = rated.sort(function (a, b) { return (b.ratedAt || b.savedAt || 0) - (a.ratedAt || a.savedAt || 0); }).slice(0, 150).map(function (a) { return a.id; });
+      var overlap = {}, PAGE = 1000;
+      for (var from = 0; from < 6000; from += PAGE) {
+        var r = await c.from('crate_feed').select('user_id').in('album_id', ids).range(from, from + PAGE - 1);
+        var rows = (r && r.data) || [];
+        rows.forEach(function (x) { if (x.user_id !== uid) overlap[x.user_id] = (overlap[x.user_id] || 0) + 1; });
+        if (rows.length < PAGE) break;
+      }
+      await (window.loadBlocks ? loadBlocks() : null);
+      var following = (await Cloud.followingList(uid)).map(function (p) { return p.id; });
+      var cands = Object.keys(overlap).filter(function (u) {
+        return overlap[u] >= 5 && following.indexOf(u) < 0 && !(window.isBlocked && isBlocked(u));
+      }).sort(function (a, b) { return overlap[b] - overlap[a]; }).slice(0, 40);
+      if (tok !== K.tok) return;
+      if (!cands.length) { h.innerHTML = '<div class="reco-note">Nobody shares enough of your records yet. Rate more and check back.</div>'; return; }
+      var tm = await tasteFor(cands);
+      var top = cands.filter(function (u) { return tm[u]; })
+        .sort(function (a, b) { return (tm[b].pct - tm[a].pct) || (tm[b].shared - tm[a].shared); }).slice(0, 6);
+      if (!top.length) { h.innerHTML = '<div class="reco-note">Nobody shares enough of your records yet. Rate more and check back.</div>'; return; }
+      var pr = await c.from('profiles').select('id,username,avatar_url').in('id', top);
+      var byId = {}; ((pr && pr.data) || []).forEach(function (p) { byId[p.id] = p; });
+      if (tok !== K.tok) return;
+      K.html = top.filter(function (u) { return byId[u]; }).map(function (u) {
+        var t = tm[u], p = byId[u], why = '';
+        if (t.agreed && t.agreed[0]) why = 'Both love <b>' + esc(t.agreed[0].name || 'a record') + '</b>';
+        else if (t.unheard && t.unheard[0]) why = 'Their ' + t.unheard[0].them + ': <b>' + esc(t.unheard[0].name || '') + '</b>';
+        else if (t.splits && t.splits[0]) why = 'Closest on <b>' + esc(t.splits[0].name || '') + '</b>';
+        return '<div class="kin-row" data-uid="' + esc(u) + '">' +
+          '<img src="' + esc(avatarSrc(p.avatar_url)) + '" alt="" loading="lazy">' +
+          '<div class="kin-id"><div class="nm">' + esc(p.username || 'user') + ' ' + tasteChip(t) + '</div>' + (why ? '<div class="kin-why">' + why + '</div>' : '') + '</div>' +
+          '<button class="btn-primary kin-follow" data-follow="' + esc(u) + '">Follow</button></div>';
+      }).join('');
+      K.at = Date.now();
+      h.innerHTML = K.html; wireKin(h);
+    } catch (e) {
+      h.innerHTML = '<div class="reco-note">Couldn’t look just now.</div>';
+    }
+  }
+  function wireKin(h) {
+    h.querySelectorAll('.kin-row').forEach(function (row) {
+      row.addEventListener('click', function (e) {
+        var f = e.target.closest('[data-follow]');
+        if (!f) { if (window.viewUserProfile) viewUserProfile(row.dataset.uid); return; }
+        e.stopPropagation();
+        if (f.disabled) return;
+        f.disabled = true; f.textContent = '…';
+        Cloud.follow(f.dataset.follow).then(function (res) {
+          if (res && res.error) { f.disabled = false; f.textContent = 'Follow'; return; }
+          f.textContent = 'Following ✓'; f.classList.remove('btn-primary'); f.classList.add('btn-mini');
+          if (window.buzz) buzz('good');
+          K.html = '';   // the next look should not offer them again
+        });
+      });
+    });
+  }
+  window.PeopleKin = { render: kin };
+
+  /* ================= PUSH ===============================================
+     Web push, opt in from Settings. The server half is api/push.js and the
+     database trigger in ..._20261004100000_push.sql. Not in the native app:
+     a WKWebView has no PushManager, and APNs needs its own native work. */
+  function b64u8(s) {
+    s = String(s).replace(/-/g, '+').replace(/_/g, '/');
+    var raw = atob(s + '==='.slice((s.length + 3) % 4)), out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+  function pushSupported() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+  function iosNeedsInstall() {
+    var ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    return ios && !window.matchMedia('(display-mode: standalone)').matches && !navigator.standalone;
+  }
+  async function currentSub() {
+    if (!pushSupported()) return null;
+    try { var reg = await navigator.serviceWorker.getRegistration(); return reg ? await reg.pushManager.getSubscription() : null; } catch (e) { return null; }
+  }
+  async function pushEnable() {
+    var reg = await navigator.serviceWorker.ready;
+    var perm = await Notification.requestPermission();
+    if (perm !== 'granted') return 'Blocked in your browser settings.';
+    var k = await fetch(((window.Native && Native.api) || '') + '/api/push').then(function (r) { return r.json(); }).catch(function () { return {}; });
+    if (!k || !k.key) return 'Not available yet.';
+    var sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u8(k.key) });
+    var j = sub.toJSON();
+    var r = await sb().rpc('push_subscribe', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth });
+    if (r && r.error) { report('Push: push_subscribe failed — apply 20261004100000_push.sql', { code: r.error.code }); try { await sub.unsubscribe(); } catch (e) {} return 'Not switched on yet.'; }
+    return '';
+  }
+  async function pushDisable() {
+    var sub = await currentSub();
+    if (!sub) return;
+    try { if (on()) await sb().rpc('push_unsubscribe', { p_endpoint: sub.endpoint }); } catch (e) {}
+    try { await sub.unsubscribe(); } catch (e) {}
+  }
+  async function paintPush() {
+    var g = $('set-push-group'), cb = $('set-push-on'), note = $('set-push-note');
+    if (!g || !cb) return;
+    var show = on() && !(window.Native && Native.on);
+    g.style.display = show ? '' : 'none';
+    if (!show) return;
+    if (!pushSupported()) {
+      cb.checked = false; cb.disabled = true;
+      note.textContent = iosNeedsInstall() ? 'Add VINALL to your Home Screen first.' : 'Not supported in this browser.';
+      return;
+    }
+    cb.disabled = false;
+    cb.checked = !!(await currentSub()) && Notification.permission === 'granted';
+    note.textContent = 'Follows, replies, ratings and your turn in games.';
+  }
+  window.PushCtl = { forget: pushDisable, paint: paintPush };
+
+  /* ================= EXPORT ============================================= */
+  function csvCell(v) { v = v == null ? '' : String(v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+  function iso(t) { return t ? new Date(t).toISOString().slice(0, 10) : ''; }
+  function download(name, text, type) {
+    var blob = new Blob([text], { type: type }), url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+  function exportRatings(fmt) {
+    var A = loadAlbums(), S = loadSongs();
+    var albums = Object.keys(A).map(function (k) { return A[k]; }).filter(function (a) { return a && a.score > 0; });
+    var songs = Object.keys(S).map(function (k) { return S[k]; }).filter(function (s) { return s && s.score > 0; });
+    var stamp = new Date().toISOString().slice(0, 10);
+    if (fmt === 'json') {
+      download('vinall-ratings-' + stamp + '.json', JSON.stringify({ app: 'VINALL', version: 1, exported_at: new Date().toISOString(), albums: albums, songs: songs }, null, 2), 'application/json');
+    } else {
+      var rows = [['type', 'artist', 'title', 'album', 'score', 'out_of', 'note', 'first_rated', 'last_rated', 'score_history']];
+      albums.forEach(function (a) { rows.push(['album', a.artist, a.name, a.name, a.score, 100, a.note || '', iso(a.savedAt), iso(a.ratedAt || a.savedAt), (a.history || []).map(function (h) { return h.s; }).join(' > ')]); });
+      songs.forEach(function (s) { rows.push(['song', s.artist, s.name, s.albumName || '', s.score, 10, '', iso(s.savedAt), iso(s.ratedAt || s.savedAt), (s.history || []).map(function (h) { return h.s; }).join(' > ')]); });
+      // BOM so Excel reads the accents as UTF-8 rather than mojibake.
+      download('vinall-ratings-' + stamp + '.csv', '﻿' + rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n'), 'text/csv;charset=utf-8');
+    }
+    say('Exported ' + plural(albums.length, 'album') + (songs.length ? ' and ' + plural(songs.length, 'song') : ''));
+  }
+
+  /* ================= IMPORT =============================================
+     A library arrives on day one instead of one record at a time — which is
+     what makes Taste Match, Depth and Your kind of people work for a new
+     account immediately. Reads, in order of how sure it can be:
+
+       a VINALL export (JSON)        exact
+       a RateYourMusic export (CSV)  its own columns, 0–10 in half stars
+       any CSV with a header         finds artist / album / rating columns
+       pasted lines                  "Frank Ocean - Blonde - 9.5",
+                                     "Blonde by Frank Ocean 94", "… 4/5"
+
+     Scale is read, never assumed: an explicit "/5" or "/10" wins, otherwise
+     the largest score in the file decides (≤5 stars, ≤10, else out of 100).
+     Every row is matched against the catalogue and SHOWN before anything is
+     written — a wrong match is a wrong opinion filed under your name. */
+  function parseCSV(text) {
+    var rows = [], row = [], cell = '', q = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (q) {
+        if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+        else cell += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === ',') { row.push(cell); cell = ''; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += ch;
+    }
+    if (cell.length || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (c) { return String(c).trim(); }); });
+  }
+  function num(s) { var m = /(-?\d+(?:\.\d+)?)/.exec(String(s || '')); return m ? parseFloat(m[1]) : NaN; }
+  function scaleAll(items, perLine) {
+    // A spreadsheet is one scale: if anything in it is over 10, all of it is
+    // out of 100 (an 8 there is a bad record, not an 80).
+    var whole = !perLine && items.some(function (x) { return !x.outOf && x.raw > 10; });
+    // Anything over 10 can only be out of 100, whatever else is in the file.
+    // The small ones decide among themselves: a list topping out at 5 is
+    // stars, otherwise tens — so "9.5" beside "94" is 95, not 10.
+    var small = items.filter(function (x) { return !x.outOf && !isNaN(x.raw) && x.raw <= 10; });
+    var max = small.reduce(function (m, x) { return Math.max(m, x.raw); }, 0);
+    var auto = max <= 5 ? 5 : 10;
+    items.forEach(function (x) {
+      var of = x.outOf || (whole || x.raw > 10 ? 100 : auto);
+      x.score = isNaN(x.raw) ? null : Math.max(1, Math.min(100, Math.round(x.raw / of * 100)));
+    });
+    return items.filter(function (x) { return x.score && x.album && x.artist; });
+  }
+  function parseImport(text) {
+    text = String(text || '').replace(/^﻿/, '').trim();
+    if (!text) return [];
+    if (/^[\[{]/.test(text)) {
+      try {
+        var j = JSON.parse(text);
+        var arr = Array.isArray(j) ? j : (j.albums || []);
+        return arr.map(function (a) { return { artist: a.artist || '', album: a.name || a.album || a.title || '', raw: +a.score, outOf: a.out_of || (j.app === 'VINALL' ? 100 : 0), note: a.note || '' }; })
+          .filter(function (x) { return x.album; }).map(function (x) { x.score = Math.round(x.raw / (x.outOf || 100) * 100); return x; })
+          .filter(function (x) { return x.score > 0; });
+      } catch (e) { /* not JSON after all */ }
+    }
+    var rows = parseCSV(text);
+    var head = (rows[0] || []).map(function (h) { return String(h).trim().toLowerCase(); });
+    var col = function (re) { for (var i = 0; i < head.length; i++) if (re.test(head[i])) return i; return -1; };
+    // RateYourMusic: First Name / Last Name / Title / Rating (0–10) / Review
+    if (col(/^first name$/) >= 0 && col(/^title$/) >= 0 && col(/^rating$/) >= 0) {
+      var fn = col(/^first name$/), ln = col(/^last name$/), ti = col(/^title$/), ra = col(/^rating$/), rv = col(/^review$/);
+      return scaleAll(rows.slice(1).map(function (r) {
+        return { artist: ((r[fn] || '') + ' ' + (ln >= 0 ? r[ln] || '' : '')).trim(), album: (r[ti] || '').trim(), raw: num(r[ra]), outOf: 10, note: rv >= 0 ? (r[rv] || '').trim() : '' };
+      }).filter(function (x) { return x.raw > 0; }));
+    }
+    var ai = col(/^(artist|artist name|artists|band)$/), bi = col(/^(album|album name|title|release|record|name)$/), si = col(/(rating|score|stars|my rating)/), ni = col(/^(review|note|notes|comment)$/);
+    if (ai >= 0 && bi >= 0 && si >= 0) {
+      var oi = col(/^(out_of|out of|max)$/);
+      var ki = col(/^type$/);
+      return scaleAll(rows.slice(1).filter(function (r) { return ki < 0 || !/song|track/i.test(r[ki] || ''); }).map(function (r) {
+        return { artist: (r[ai] || '').trim(), album: (r[bi] || '').trim(), raw: num(r[si]), outOf: oi >= 0 ? num(r[oi]) || 0 : (/\/\s*\d+/.test(r[si]) ? num(String(r[si]).split('/')[1]) : 0), note: ni >= 0 ? (r[ni] || '').trim() : '' };
+      }));
+    }
+    // Loose lines.
+    return scaleAll(text.split(/\r?\n/).map(function (line) {
+      line = line.replace(/^\s*(\d+[.)]|[-*•])\s+/, '').trim();
+      if (!line) return null;
+      var m = /^(.*?)[\s,;:\-–—|]*\(?\s*(\d+(?:\.\d+)?)\s*(?:\/\s*(\d+))?\s*\)?\s*$/.exec(line);
+      if (!m) return null;
+      var rest = m[1].trim(), artist = '', album = '';
+      var by = /^(.*)\s+by\s+(.*)$/i.exec(rest);
+      if (by) { album = by[1]; artist = by[2]; }
+      else {
+        // Dashes first: "Tyler, The Creator - IGOR" has a comma in the
+        // artist. Commas only when nothing better separates the two.
+        var parts = rest.split(/\s+[-–—|]\s+/).filter(Boolean);
+        if (parts.length < 2) parts = rest.split(/\t/).filter(Boolean);
+        if (parts.length < 2) parts = rest.split(/\s*,\s*/).filter(Boolean);
+        if (parts.length < 2) return null;
+        artist = parts[0]; album = parts.slice(1).join(' - ');
+      }
+      return { artist: artist.trim(), album: album.replace(/^["“]|["”]$/g, '').trim(), raw: parseFloat(m[2]), outOf: m[3] ? +m[3] : 0, note: '' };
+    }).filter(Boolean), true);
+  }
+  window.VinallImport = { parse: parseImport };   // for the console, and for checking a file somebody sends
+
+  var I = { items: [], tok: 0, busy: false };
+  function stripEd(s) { return fold(String(s || '').replace(/\s*[\(\[][^)\]]*(deluxe|remaster|edition|expanded|anniversary|version|explicit)[^)\]]*[\)\]]/gi, '')); }
+  async function resolveOne(x) {
+    var base = (window.Native && Native.api) || '';
+    try {
+      var r = await fetch(base + '/api/catalogue?path=search&type=album&limit=8&q=' + encodeURIComponent(x.artist + ' ' + x.album));
+      var j = r.ok ? await r.json() : null;
+      var items = (j && j.albums && j.albums.items) || [];
+      var want = stripEd(x.album), wa = fold(x.artist);
+      var artistOk = function (it) { return (it.artists || []).some(function (a) { var f = fold(a.name); return f === wa || f.indexOf(wa) === 0 || wa.indexOf(f) === 0; }); };
+      var best = items.find(function (it) { return stripEd(it.name) === want && artistOk(it); }) ||
+                 items.find(function (it) { return stripEd(it.name).indexOf(want) === 0 && artistOk(it); }) ||
+                 items.find(function (it) { return want.indexOf(stripEd(it.name)) === 0 && stripEd(it.name).length > 3 && artistOk(it); });
+      if (!best) return null;
+      return { id: String(best.id), name: best.name, artist: (best.artists && best.artists[0] && best.artists[0].name) || x.artist,
+               artistId: best.artists && best.artists[0] && best.artists[0].id, art: (best.images && (best.images[1] || best.images[0]) || {}).url || '',
+               year: String(best.release_date || '').slice(0, 4) };
+    } catch (e) { return undefined; }   // undefined = could not ask, null = asked and nothing fits
+  }
+  function openImport() {
+    if (!on()) { Cloud.openAuth(); return; }
+    I.items = []; I.tok++;
+    $('imp-text').value = '';
+    $('imp-file').value = '';
+    paintImport('start');
+    $('imp-modal').classList.add('open');
+  }
+  function paintImport(stage, extra) {
+    var b = $('imp-body'), go = $('imp-go'), st = $('imp-status');
+    $('imp-start').style.display = stage === 'start' ? '' : 'none';
+    b.style.display = stage === 'start' ? 'none' : '';
+    if (stage === 'start') { go.textContent = 'Read it'; go.disabled = false; st.textContent = ''; return; }
+    var have = loadAlbums(), replace = $('imp-replace') && $('imp-replace').checked;
+    var matched = I.items.filter(function (x) { return x.m; });
+    I.items.forEach(function (x) { x.had = x.m ? findAlbumRec(have, x.m) : null; });
+    var picked = I.items.filter(function (x) { return x.m && x.on && (!x.had || replace); });
+    b.innerHTML =
+      '<label class="imp-replace"><input type="checkbox" id="imp-replace"' + (replace ? ' checked' : '') + '> Replace scores I already have</label>' +
+      '<div class="imp-list">' + I.items.map(function (x, i) {
+        var stt = x.m === false ? '<span class="imp-st no">Not found</span>' : x.m === undefined ? '<span class="imp-st">' + (x.err ? 'Couldn’t check' : '…') + '</span>'
+          : x.had && !replace ? '<span class="imp-st had">Rated ' + x.had.score + '</span>' : '';
+        return '<label class="imp-row' + (x.m ? '' : ' is-off') + '">' +
+          '<input type="checkbox" data-imp="' + i + '"' + (x.m && x.on && (!x.had || replace) ? ' checked' : '') + (x.m && (!x.had || replace) ? '' : ' disabled') + '>' +
+          (x.m && x.m.art ? '<img src="' + esc(x.m.art) + '" alt="" loading="lazy">' : '<span class="imp-ph"></span>') +
+          '<span class="imp-t"><b>' + esc(x.m ? x.m.name : x.album) + '</b><small>' + esc(x.m ? x.m.artist : x.artist) + '</small></span>' +
+          stt + '<span class="imp-score" style="--c:' + albumColor(x.score) + '">' + x.score + '</span></label>';
+      }).join('') + '</div>';
+    var pending = I.items.filter(function (x) { return x.m === undefined && !x.err; }).length;
+    st.textContent = pending ? 'Matching ' + (I.items.length - pending) + ' of ' + I.items.length + '…'
+      : matched.length + ' of ' + I.items.length + ' matched' + (extra ? ' · ' + extra : '');
+    go.disabled = !!pending || !picked.length || I.busy;
+    go.textContent = I.busy ? 'Importing…' : 'Import ' + plural(picked.length, 'rating');
+  }
+  async function readImport() {
+    var text = $('imp-text').value;
+    var f = $('imp-file').files && $('imp-file').files[0];
+    if (f) text = await f.text();
+    var items = parseImport(text);
+    if (!items.length) { $('imp-status').textContent = 'Couldn’t find any ratings in that.'; return; }
+    if (items.length > 2000) items = items.slice(0, 2000);
+    I.items = items.map(function (x) { x.on = true; x.m = undefined; return x; });
+    var tok = ++I.tok;
+    paintImport('list');
+    // Three at a time: the catalogue route is shared by everybody, and a
+    // thousand parallel searches is how a whole app gets rate-limited.
+    var next = 0, lastPaint = 0;
+    async function worker() {
+      while (next < I.items.length && tok === I.tok) {
+        var x = I.items[next++];
+        var m = await resolveOne(x);
+        if (m === undefined) x.err = true;
+        x.m = m === undefined ? undefined : (m || false);
+        if (Date.now() - lastPaint > 250) { lastPaint = Date.now(); paintImport('list'); }
+      }
+    }
+    await Promise.all([worker(), worker(), worker()]);
+    if (tok === I.tok) paintImport('list');
+  }
+  async function commitImport() {
+    if (I.busy) return;
+    var replace = $('imp-replace') && $('imp-replace').checked;
+    var picked = I.items.filter(function (x) { return x.m && x.on && (!x.had || replace); });
+    if (!picked.length) return;
+    I.busy = true; paintImport('list');
+    var albums = loadAlbums(), now = Date.now(), uid = me().id, p = await myProf();
+    var ratingRows = [], feedRows = [];
+    picked.forEach(function (x) {
+      var prev = findAlbumRec(albums, x.m), key = (prev && prev.id) || x.m.id;
+      albums[key] = {
+        id: key, name: x.m.name, artist: x.m.artist, artistId: x.m.artistId || (prev && prev.artistId) || '',
+        art: x.m.art || (prev && prev.art) || '', year: x.m.year || (prev && prev.year) || '', genre: (prev && prev.genre) || '',
+        score: x.score, note: (prev && prev.note) || x.note || '',
+        savedAt: (prev && prev.savedAt) || now, ratedAt: now, history: pushScoreHistory(prev, x.score, now),
+        date: new Date(now).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }), imported: true
+      };
+      ratingRows.push({ user_id: uid, kind: 'album', item_id: key, data: albums[key], updated_at: new Date(now).toISOString() });
+      /* Into crate_feed so imported records count in the spread, the reviews
+         and taste match — but dated at the epoch, so three hundred of them do
+         not bury every follower's Crate feed for a week. */
+      feedRows.push({ user_id: uid, username: (p && p.username) || 'user_' + uid.slice(0, 8), avatar_url: (p && p.avatar_url) || '',
+        kind: 'album_rating', album_id: key, album_name: x.m.name, album_art: albums[key].art, album_artist: x.m.artist,
+        score: x.score, note: albums[key].note || '', created_at: '2000-01-01T00:00:00Z' });
+    });
+    persist(ALBUMS_KEY, albums);
+    var c = sb(), failed = 0;
+    for (var i = 0; i < ratingRows.length; i += 200) {
+      var a = await c.from('ratings').upsert(ratingRows.slice(i, i + 200), { onConflict: 'user_id,kind,item_id' });
+      var b = await c.from('crate_feed').upsert(feedRows.slice(i, i + 200), { onConflict: 'user_id,album_id' });
+      if ((a && a.error) || (b && b.error)) failed++;
+    }
+    if (failed) report('Import: some chunks failed to sync', { failed: failed });
+    I.busy = false;
+    if (window.renderAlbums) renderAlbums();
+    if (window.renderStats) renderStats();
+    if (window.track) track('ratings_imported', { n: picked.length });
+    if (window.buzz) buzz('big');
+    $('imp-modal').classList.remove('open');
+    say('Imported ' + plural(picked.length, 'rating'));
+    K.html = '';
+  }
+
+  function wireSettingsAndImport() {
+    var cb = $('set-push-on');
+    if (cb) cb.addEventListener('change', async function () {
+      var note = $('set-push-note');
+      cb.disabled = true;
+      if (cb.checked) {
+        var err = '';
+        try { err = await pushEnable(); } catch (e) { err = 'Couldn’t switch them on.'; }
+        if (err) { cb.checked = false; note.textContent = err; } else if (window.buzz) buzz('good');
+      } else await pushDisable();
+      cb.disabled = false;
+    });
+    var e1 = $('set-export-csv'), e2 = $('set-export-json'), im = $('set-import');
+    if (e1) e1.addEventListener('click', function () { exportRatings('csv'); });
+    if (e2) e2.addEventListener('click', function () { exportRatings('json'); });
+    if (im) im.addEventListener('click', openImport);
+    var sm = $('settings-modal');
+    if (sm) new MutationObserver(function () { if (sm.classList.contains('open')) paintPush(); }).observe(sm, { attributes: true, attributeFilter: ['class'] });
+
+    var m = $('imp-modal');
+    if (!m) return;
+    $('imp-close').addEventListener('click', function () { I.tok++; m.classList.remove('open'); });
+    m.addEventListener('click', function (e) { if (e.target === m) { I.tok++; m.classList.remove('open'); } });
+    $('imp-go').addEventListener('click', function () {
+      if ($('imp-start').style.display !== 'none') readImport(); else commitImport();
+    });
+    $('imp-body').addEventListener('change', function (e) {
+      if (e.target.id === 'imp-replace') { paintImport('list'); return; }
+      var i = e.target.dataset && e.target.dataset.imp;
+      if (i != null) { I.items[+i].on = e.target.checked; paintImport('list'); }
+    });
+  }
+
+  function init() {
+    wireSettingsAndImport();
+    deepLink();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
 </script>
 

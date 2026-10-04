@@ -833,6 +833,9 @@ Set in Vercel → Project → Settings → Environment Variables. Not in the rep
   `/api/album-market` return a 500 saying so until it is set; nothing else is
   affected.
 
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` — web push. See **The outward
+  layer**. Generate once with `node scripts/vapid-keys.mjs`.
+
 `REDIRECT_URI` is no longer read by anything and can be deleted from Vercel. It only mattered
 to the removed OAuth routes. Preview deploys therefore work fully, since `/api/app-token`
 needs no registered redirect.
@@ -2450,6 +2453,91 @@ then the tab says "Not switched on yet" and reports once to `client_errors`.
   and older picks keep playing from Deezer. No waveform for YouTube picks: the bars are a ruler.
 - Featured artists come from Deezer `contributors`, then `(feat. …)` in the title, then a typed
   name. Contributors are incomplete (SICKO MODE credits Travis Scott alone).
+
+## The outward layer — reviews, share links, push, your people, import/export
+
+One module near the bottom of `index.html` (`window.Reviews`, `ShareLinks`, `PeopleKin`,
+`PushCtl`, `VinallImport`), plus `api/share.js`, `api/push.js`, `api/_webpush.js`,
+`vercel.json` and `..._20261004100000_push.sql`. Everything before this was about what
+happens once somebody is inside VINALL; this is the half that reaches outside it.
+
+### Reviews are crate_feed rows
+
+AOTY's album page — the room's score, its spread, then what people wrote — under the
+tracklist (`#detail-reviews`). **There is no reviews table**: `crate_feed` already holds one
+public row per person per record with a score and a note, which is what a review is. The
+note is the review (5,000 chars), written from the composer on the album page.
+
+- Two things AOTY cannot print sit on every card: the reviewer's **taste match with you**
+  (`tasteFor`, one round trip) and **how their score has moved** (`↑16 since Mar 2026`, from
+  their `ratings` row's history — public rankings only, so RLS decides who has a line).
+- Sorts: Popular (likes), Recent, Highest, Lowest, **Hot takes** (furthest from the room's
+  average) and Following. Ratings with no words collapse into a strip of score pills.
+- **Likes are `feed_likes`**, parked since the heart left the Crate. A like on writing is
+  agreement with the writing, which is the one thing a heart is honestly for. Liking pays
+  nothing and sends a `review_like` notification.
+- Rows are fetched by id **and** by exact name + artist (`ilike` with no wildcards), then
+  deduped to one per person — the legacy-id trap (4) again: same record, two keys.
+
+### Share links: /r/, /a/, /u/
+
+`vercel.json` rewrites `/r/<crate_feed id>`, `/a/<album id>` and `/u/<username>` to
+`/api/share`, which renders a real page with Open Graph tags whose **image is the sleeve at
+1000px** (Deezer: swap the size in the path; Spotify-era: `00001e02` → `0000b273`). That is
+what makes a link in a group chat worth tapping. The page itself is a card with one button
+into the app (`/?album=…&review=…#reviews`, or `/?u=<id>`). Links are always built on
+`https://vinall.xyz`, never the current origin. `sw.js` skips these paths so a share page is
+never served stale. A `/u/` page for a private account shows the name and nothing else.
+
+`handOff()` now uses `navigator.share` on a touch browser too, not only in the app.
+
+### Push
+
+Web push with **no dependency**: `api/_webpush.js` is RFC 8291 (aes128gcm) and RFC 8292
+(VAPID) on Node's crypto, and `node api/_webpush.selfcheck.mjs` checks it byte-for-byte
+against **RFC 8291's own test vector** and decrypts its output the way a browser would.
+
+- **Every notification and DM row becomes a push** via a `pg_net` trigger that posts the
+  row's id to `/api/push` — so the rows definer functions insert (Bid War, Cover Fire) are
+  covered with no client code. The trigger skips the HTTP call entirely when the recipient
+  has no subscription, and swallows any failure: a notification matters more than its push.
+- **No shared secret, deliberately.** The route takes only an id, claims the row with
+  `pushed_at` in the same UPDATE that reads it, and only for rows under ten minutes old. A
+  hand-made call can at most deliver a real notification to its real recipient early.
+- `push_subscriptions` has **no write policy** (guarded): a device belongs to whoever
+  subscribed it last, via `push_subscribe()`, and `logout()` calls `push_unsubscribe()`
+  before signing out so the last person's pushes never reach the next person's phone.
+- Opt-in lives in Settings, web only. iOS needs VINALL added to the Home Screen first (and
+  says so). The native app has none — WKWebView has no PushManager; APNs is its own job.
+- **`rated_too`**: on your FIRST rating of a record, followers who rated it too get "charlie
+  gave IGOR 94 — you gave it 71". Capped at three a day per recipient from one device.
+
+Env: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (from `node scripts/vapid-keys.mjs`, generate
+ONCE — a new pair kills every subscription), `VAPID_SUBJECT`, and the existing
+`SUPABASE_SERVICE_ROLE_KEY`. Until they are set, `/api/push` answers 503 and the Settings
+toggle says "Not available yet". Until the migration is applied, it says "Not switched on
+yet" and reports once.
+
+### Your kind of people
+
+On the People page. Everybody who has rated what you have rated (your latest 150 records,
+via `crate_feed`) is a candidate; five shared records is the floor taste match already uses;
+the order is the match. Each row says **why** in one line — a record you both love, or one
+they love you have not heard — because a bare percentage is the horoscope Taste match was
+built to avoid. Private rankings are excluded by `tasteFor`, people you follow by design.
+
+### Export and import (Settings → Your ratings)
+
+Export is CSV (with a BOM so Excel reads accents) or JSON, built locally from the crate.
+Import reads a VINALL export, a RateYourMusic export (its own columns, 0–10), any CSV with
+artist/album/rating headers, or pasted lines. **Scale is read, never assumed**: an explicit
+`/5` or `/10` wins; in a spreadsheet anything over 10 makes the whole file out of 100; in
+pasted lines each value over 10 is out of 100 and the small ones decide stars-or-tens among
+themselves. Every row is matched against the catalogue **and shown before anything is
+written** — a wrong match is a wrong opinion filed under somebody's name.
+
+Imported ratings pay **no Discs** and go into `crate_feed` dated `2000-01-01`, so they count
+in spreads, reviews and taste match without burying everybody's Crate feed for a week.
 
 ## Settings
 
