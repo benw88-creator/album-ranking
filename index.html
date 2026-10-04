@@ -867,6 +867,10 @@ nav.modes button:active { transform: scale(0.94); }
        positioned with top/bottom 5px, and a static nav hands it some taller
        ancestor instead — a highlight bar running the height of the page. */
     position: relative;
+    /* relative honours the floating bar's left:50% / bottom / z-index from the
+       phone rule above — which shoved the bar half a screen right and over the
+       account menu. Reset all three. */
+    left: auto; bottom: auto; z-index: auto;
     transform: none;
     width: auto;
     max-width: none;
