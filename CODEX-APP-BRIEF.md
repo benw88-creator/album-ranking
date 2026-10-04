@@ -186,9 +186,8 @@ means rewriting your own instructions while working from them. Separate session.
 
 Flag these; do not invent answers.
 
-- **A real support address** to replace `spam30492@gmail.com` in `privacy.html`
-  and `terms.html`. Apple emails it during review and a dead mailbox is a
-  rejection. This blocks submission.
+- ~~A real support address~~ — done: `vinall.support@gmail.com` is in
+  `privacy.html` and `terms.html`.
 - **Apple Developer Program enrolment** — £79/yr in the UK, identity check, has a
   lead time. Google Play is a one-off $25.
 - **`supabase/migrations/20260916230000_listening_note_play.sql` has never been

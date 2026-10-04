@@ -4919,9 +4919,8 @@ admin may read back, via `recent_errors()`. Capped at 8 per session and deduped 
 message+line so one error in a loop cannot flood the table.
 
 `privacy.html` and `terms.html` are plain static pages, linked from the footer. The contact
-address is `spam30492@gmail.com`, set as a **temporary** stand-in — swap it for a real
-support address before any store submission or public launch, since this is the address people
-use to exercise data rights. `privacy.html` also covers imported listening history: what is
+address is **`vinall.support@gmail.com`** — the real support address, used for data-rights
+requests, App Review and `VAPID_SUBJECT`. `privacy.html` also covers imported listening history: what is
 stored, that the aggregation happens on the device, and that it is private to the account.
 
 ### Spotify attribution — the mark, and a link to the record
