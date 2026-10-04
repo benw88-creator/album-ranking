@@ -9653,6 +9653,13 @@ input, textarea, select, [contenteditable="true"],
 </script>
 </head>
 <body>
+<script>
+/* The address as it arrived, before anything can rewrite it. supabase-js
+   reads an auth link (#access_token=…&type=recovery, ?code=…) and cleans it out
+   of the address bar while it starts up — so the reset handler, which looked at
+   location AFTER that, found nothing and a reset link just opened the app. */
+window.__bootUrl = { search: location.search, hash: location.hash };
+</script>
 
 <!-- Crash reporting. Deliberately first, so it catches failures in everything
      below it. No third-party script and no signup: errors go straight into a
@@ -16457,6 +16464,14 @@ const Cloud=(function(){
   async function init(){
     if(!window.supabase||!window.supabase.createClient){console.warn('Supabase library not loaded \u2014 accounts disabled.');settleReady();return;}
     sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON);ready=true;
+    /* Supabase raises PASSWORD_RECOVERY itself when a recovery link signs
+       somebody in, whatever shape the link took. The branches below read the
+       URL; this is the backstop for when the library got there first. */
+    sb.auth.onAuthStateChange(function(ev){
+      if(ev!=='PASSWORD_RECOVERY')return;
+      if(window.dismissSplash)try{dismissSplash();}catch(e){}
+      setTimeout(function(){document.getElementById('auth-modal').classList.add('open');showAuthView('recovery');},250);
+    });
     document.getElementById('auth-close').addEventListener('click',closeAuth);
     document.getElementById('auth-modal').addEventListener('click',function(e){if(e.target===this)closeAuth();});
     document.getElementById('auth-toggle').addEventListener('click',function(){setMode(mode==='login'?'signup':'login');});
@@ -16534,8 +16549,9 @@ const Cloud=(function(){
        That last one is the common case — reset links are single-use and
        time-limited — and it silently did nothing, so the user landed on the
        normal app with no explanation and assumed the whole thing was broken. */
-    const hash = new URLSearchParams((location.hash || '').replace(/^#/, ''));
-    const query = new URLSearchParams(location.search || '');
+    const boot = window.__bootUrl || { search: location.search, hash: location.hash };
+    const hash = new URLSearchParams((boot.hash || location.hash || '').replace(/^#/, ''));
+    const query = new URLSearchParams(boot.search || location.search || '');
     const authErr = hash.get('error_description') || hash.get('error') ||
                     query.get('error_description') || query.get('error');
 
@@ -23576,7 +23592,8 @@ function playDismissAnimation(gateEl, callback) {
      code can call it directly the moment it decides a recovery link is real. */
   window.dismissSplash = dismiss;
   try {
-    var q = location.search + ' ' + location.hash;
+    var bu = window.__bootUrl || location;
+    var q = bu.search + ' ' + bu.hash;
     if (/token_hash=|type=recovery|error_description=|[?#&]error=/.test(q)) dismiss();
   } catch (e) {}
 })();
