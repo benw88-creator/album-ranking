@@ -5882,6 +5882,29 @@ html[data-motion="none"] .rv-bars i, html[data-motion="none"] .rv-card { animati
 .imp-score { flex: none; font: 700 16px var(--font-display); color: var(--c); min-width: 30px; text-align: right; }
 .imp-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
 .imp-status { font-size: 12.5px; color: var(--text-dim); }
+/* ---- Profile → Games ---- */
+.gs-card { padding: 16px; border-radius: 18px; background: var(--surface-2); border: 1px solid var(--border); }
+.gs-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; text-align: center; }
+.gs-sum b { display: block; font: 700 24px var(--font-display); letter-spacing: -0.03em; color: var(--gold); }
+.gs-sum span { font: 600 10px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
+.gs-head, .gs-row { display: grid; grid-template-columns: 1fr auto 46px 62px; gap: 10px; align-items: baseline; }
+.gs-head { padding: 0 0 6px; font: 600 10px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); border-bottom: 1px solid var(--border); }
+.gs-head span:nth-child(n+2) { text-align: right; }
+.gs-row { padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.gs-row.is-zero { opacity: .45; }
+.gs-name { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gs-best { font: 500 12.5px var(--font-mono); color: var(--text-dim); text-align: right; white-space: nowrap; }
+.gs-n { font: 700 15px var(--font-display); text-align: right; }
+.gs-when { font-size: 11.5px; color: var(--text-faint); text-align: right; white-space: nowrap; }
+.gs-sub { margin: 18px 0 4px; font: 600 10px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
+.gs-art { display: grid; grid-template-columns: minmax(0, 1fr) 40px; gap: 2px 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.gs-art-n { font-weight: 600; font-size: 14px; }
+.gs-art-g { grid-row: 2; font-size: 12px; color: var(--text-dim); }
+.gs-art-g i { font-style: normal; color: var(--text-faint); }
+.gs-art .gs-n { grid-row: span 2; align-self: center; }
+.gs-more summary { cursor: pointer; padding: 10px 0 2px; font: 600 13px var(--font-body); color: var(--gold); list-style: none; }
+.gs-more summary::-webkit-details-marker { display: none; }
+@media (max-width: 420px) { .gs-head, .gs-row { grid-template-columns: 1fr auto 36px; } .gs-when, .gs-head span:last-child { display: none; } }
 
 /* ---- SPOTIFY, FROM YOUR OWN DATA ------------------------------------------
    VINALL's language, not Spotify's: gold and the theme's accent, the drawn
@@ -13861,8 +13884,42 @@ const views = {
 let lastListMode = 'home';
 let currentMode = 'home';
 
+/* EVERY PAGE KEEPS ITS PLACE. Views are sections of one long document, so the
+   window's scroll position is shared between them — leaving the Crate halfway
+   down and opening Home used to land you halfway down Home, and coming back
+   threw away where you had been. Each view's position is saved as you leave
+   it and put back when you return, by nav, by code or by back/forward.
+
+   Two exceptions, both deliberate: a NEW album page starts at the top (it is
+   a different record from the last one), and tapping the tab you are already
+   on still scrolls to the top — the shortcut every phone app has taught.
+
+   The page may not be tall enough yet when a view renders asynchronously, so
+   the restore is retried briefly, and abandoned the moment the person scrolls
+   themselves. */
+try { history.scrollRestoration = 'manual'; } catch (e) {}
+var _viewScroll = {};
+var _scrollTok = 0;
+function restoreViewScroll(mode, y) {
+  var tok = ++_scrollTok, tries = 0;
+  function go() {
+    if (tok !== _scrollTok) return;
+    // instant: the page has scroll-behavior: smooth, and a restore should be
+    // a place you are already at, not a glide down to it.
+    window.scrollTo({ top: y, behavior: 'instant' });
+    if (Math.abs(window.scrollY - y) > 2 && tries++ < 12) setTimeout(go, 80);
+  }
+  requestAnimationFrame(go);
+}
+['wheel', 'touchstart', 'keydown'].forEach(function (ev) {
+  window.addEventListener(ev, function () { _scrollTok++; }, { passive: true });
+});
+
 function setMode(mode, fromCode) {
   if (!fromCode && mode !== currentMode && window.pushViewHistory) window.pushViewHistory(mode);
+  if (mode !== currentMode) _viewScroll[currentMode] = window.scrollY;
+  var _restoreY = (mode === 'album-detail' && fromCode !== 'pop') ? 0 : (_viewScroll[mode] || 0);
+  var _changed = mode !== currentMode || mode === 'album-detail';
   currentMode = mode;
   Object.keys(views).forEach(function (k) { views[k].style.display = (k === mode) ? 'block' : 'none'; });
   /* Replay the entrance every time rather than only on first show — the class
@@ -13927,6 +13984,7 @@ function setMode(mode, fromCode) {
   if (mode === 'profile' && window.renderAdminStats) window.renderAdminStats();
   if (mode === 'people' && window.renderPeople) window.renderPeople();
   if (mode === 'grooves' && window.renderGrooves) window.renderGrooves();
+  if (_changed) restoreViewScroll(mode, _restoreY);
 }
 window.goToView = setMode;
 
@@ -13975,7 +14033,7 @@ window.goToView = setMode;
       return;
     }
     var v = e.state && e.state.view;
-    if (v && views[v]) setMode(v, true);
+    if (v && views[v]) setMode(v, 'pop');
   });
 
   window.pushViewHistory = function (mode) {
@@ -14049,8 +14107,10 @@ document.getElementById('modes').addEventListener('click', function (e) {
   // it was the only one with no feedback at all. On iPhone this is the Taptic
   // engine; on the web it is nothing, which is what it always was.
   if (window.buzz && b.dataset.mode !== currentMode) buzz('tap');
+  // The tab you are already on: back to the top. Any other: where you left it.
+  var again = b.dataset.mode === currentMode;
   setMode(b.dataset.mode);
-  scrollViewToTop(b.dataset.mode);
+  if (again) scrollViewToTop(b.dataset.mode);
 });
 window.renderArtistHero = renderArtistHero;
 
@@ -14841,7 +14901,7 @@ function renderAuthArea(connected){
     try{const k='crate_best_'+gameType;if(score>parseInt(localStorage.getItem(k)||'0',10)){localStorage.setItem(k,String(score));if(window.Cloud)Cloud.push(k);}}catch(e){}
     // A round finished, not a modal opened — "most played" should mean rounds
     // you saw through, or abandoning a setup screen would count as playing.
-    if(window.notePlay)notePlay(gameType);
+    if(window.notePlay)notePlay(gameType,{artist:artistName,score:score});
     // Only perfect runs (5/5) count for the speed leaderboard — a fast wrong
     // answer shouldn't beat a slower flawless one.
     if(pct===1 && window.Cloud && Cloud.isOn && Cloud.isOn()){
@@ -16042,7 +16102,12 @@ const Cloud=(function(){
     const plays=maxByKey(a.plays,b.plays);
     const ea=a.ew,eb=b.ew;
     const ew=(!ea&&!eb)?null:(!ea?eb:(!eb?ea:((ea.rows||99)<=(eb.rows||99)?ea:eb)));
-    return{plays:plays,ew:ew};
+    const art={},aa=a.art||{},ab=b.art||{};
+    Object.keys(aa).concat(Object.keys(ab)).forEach(function(k){
+      if(art[k])return;
+      art[k]={g:maxByKey((aa[k]||{}).g,(ab[k]||{}).g),b:maxByKey((aa[k]||{}).b,(ab[k]||{}).b)};
+    });
+    return{plays:plays,ew:ew,last:maxByKey(a.last,b.last),art:art};
   }
 
   async function pullAndMerge(){
@@ -17553,6 +17618,7 @@ async function drawProfile(host,prof,isOwner){
           '<div class="dt-k">'+esc(t.k)+'</div>'+
           (t.sub?'<div class="dt-s">'+esc(t.sub)+'</div>':'')+'</div>';
       }).join('')+'</div>';
+    if(isOwner&&window.gamesStatsHtml)try{doneHtml+=gamesStatsHtml();}catch(e){}
   }
 
   const shareUrl=(prof.username&&window.ShareLinks)?ShareLinks.user(prof.username):Native.site+'?u='+prof.id;
@@ -24993,6 +25059,8 @@ function playDismissAnimation(gateEl, callback) {
       btn.textContent = 'Seal your bids';
       return;
     }
+    // A sealed board is a war played, whatever the result turns out to be.
+    if (window.notePlay) notePlay('bidwar');
     var w = res.data;
     _war = w;
     if (w && w.status === 'resolved') { showReveal(w); markWarRevealSeen(w.id); }
@@ -27368,8 +27436,9 @@ window.renderAdminStats = renderAdminStats;
     drop: 'Daily Drop', earworm: 'Earworm', higherlower: 'Higher or Lower',
     cover: 'Guess the Cover', coverx: 'Cover EXTREME',
     tracklist: 'Guess from Tracklist', year: 'Guess the Year',
-    blitz: 'Cover Fire', recall: 'Recall'
+    blitz: 'Cover Fire', recall: 'Recall', bidwar: 'Bid Wars'
   };
+  window.GAME_LABELS = GAME_LABELS;
 
   function readLog() {
     try { return JSON.parse(localStorage.getItem(GAMELOG_KEY)) || {}; }
@@ -27380,11 +27449,24 @@ window.renderAdminStats = renderAdminStats;
     if (window.Cloud && Cloud.push) Cloud.push(GAMELOG_KEY);
   }
 
-  window.notePlay = function (key) {
+  /* info is optional: { artist, score }. The artist games (cover, coverx,
+     tracklist, year) pass the artist they were played on, so the profile can
+     list every artist you have played and how often; a score is kept as that
+     artist's best for that game. "last" is when each game was last finished. */
+  window.notePlay = function (key, info) {
     if (!key || !GAME_LABELS[key]) return;
     var log = readLog();
     log.plays = log.plays || {};
     log.plays[key] = (log.plays[key] || 0) + 1;
+    log.last = log.last || {};
+    log.last[key] = Date.now();
+    var artist = info && String(info.artist || '').trim();
+    if (artist) {
+      log.art = log.art || {};
+      var a = log.art[artist] || (log.art[artist] = { g: {}, b: {} });
+      a.g[key] = (a.g[key] || 0) + 1;
+      if (typeof info.score === 'number' && info.score > (a.b[key] || 0)) a.b[key] = info.score;
+    }
     writeLog(log);
   };
 
@@ -27409,8 +27491,72 @@ window.renderAdminStats = renderAdminStats;
     return {
       plays: plays,
       favourite: topKey ? { key: topKey, label: GAME_LABELS[topKey], n: topN } : null,
-      earworm: log.ew || null
+      earworm: log.ew || null,
+      last: log.last || {},
+      artists: log.art || {}
     };
+  };
+
+  /* The profile's Games block. Every game, played or not, with its count and
+     its best — the bests were always being kept (crate_best_*, crate_blitz_best,
+     crate_hl_best, crate_recall_best, all in SYNC_KEYS) and simply never shown
+     here. Then every artist you have played the artist games on, most played
+     first, with which games and your best on each. Owner only: it is all local
+     data, the same line Depth draws. */
+  function lsNum(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }
+  function lsObj(k) { try { return JSON.parse(localStorage.getItem(k)) || {}; } catch (e) { return {}; } }
+  function maxOf(o) { var m = 0; Object.keys(o || {}).forEach(function (k) { if (+o[k] > m) m = +o[k]; }); return m; }
+  var ARTIST_GAMES = ['cover', 'coverx', 'tracklist', 'year'];
+  var SHORT = { cover: 'Cover', coverx: 'EXTREME', tracklist: 'Tracklist', year: 'Year' };
+  window.gamesStatsHtml = function () {
+    var log = window.gameLog();
+    var plays = log.plays || {}, last = log.last || {};
+    var hl = lsObj('crate_hl_best');
+    var best = {
+      cover: lsNum('crate_best_cover') ? lsNum('crate_best_cover') + '/5' : '',
+      coverx: lsNum('crate_best_coverx') ? lsNum('crate_best_coverx') + '/5' : '',
+      tracklist: lsNum('crate_best_tracklist') ? lsNum('crate_best_tracklist') + '/5' : '',
+      year: lsNum('crate_best_year') ? lsNum('crate_best_year') + '/5' : '',
+      blitz: lsNum('crate_blitz_best') ? lsNum('crate_blitz_best').toLocaleString('en-GB') + ' pts' : '',
+      higherlower: (hl.streams || hl.rating) ? [hl.streams ? hl.streams + ' streams' : '', hl.rating ? hl.rating + ' ratings' : ''].filter(Boolean).join(' · ') : '',
+      recall: maxOf(lsObj('crate_recall_best')) ? maxOf(lsObj('crate_recall_best')).toLocaleString('en-GB') + ' pts' : '',
+      earworm: log.earworm ? log.earworm.rows + '/6' : ''
+    };
+    var keys = Object.keys(GAME_LABELS);
+    var total = keys.reduce(function (n, k) { return n + (plays[k] || 0); }, 0);
+    var tried = keys.filter(function (k) { return plays[k]; }).length;
+    var rows = keys.slice().sort(function (a, b) { return (plays[b] || 0) - (plays[a] || 0); }).map(function (k) {
+      var n = plays[k] || 0;
+      return '<div class="gs-row' + (n ? '' : ' is-zero') + '"><span class="gs-name">' + esc(GAME_LABELS[k]) + '</span>' +
+        '<span class="gs-best">' + esc(best[k] || '') + '</span>' +
+        '<span class="gs-n">' + n.toLocaleString('en-GB') + '</span>' +
+        '<span class="gs-when">' + (last[k] && window.timeAgo ? esc(timeAgo(last[k])) : '') + '</span></div>';
+    }).join('');
+
+    var arts = log.artists || {};
+    var list = Object.keys(arts).map(function (name) {
+      var a = arts[name], n = 0;
+      ARTIST_GAMES.forEach(function (k) { n += (a.g && a.g[k]) || 0; });
+      return { name: name, n: n, g: a.g || {}, b: a.b || {} };
+    }).filter(function (a) { return a.n; }).sort(function (x, y) { return y.n - x.n || x.name.localeCompare(y.name); });
+    function artistRow(a) {
+      return '<div class="gs-art"><span class="gs-art-n">' + esc(a.name) + '</span>' +
+        '<span class="gs-art-g">' + ARTIST_GAMES.filter(function (k) { return a.g[k]; }).map(function (k) {
+          return esc(SHORT[k]) + ' ' + a.g[k] + (a.b[k] ? ' <i>best ' + a.b[k] + '/5</i>' : '');
+        }).join(' · ') + '</span><span class="gs-n">' + a.n + '</span></div>';
+    }
+    var artistsHtml = !list.length ? '<div class="reco-note">Play Guess the Cover, Tracklist or Year on an artist and they show up here.</div>'
+      : list.slice(0, 10).map(artistRow).join('') +
+        (list.length > 10 ? '<details class="gs-more"><summary>All ' + list.length + ' artists</summary>' + list.slice(10).map(artistRow).join('') + '</details>' : '');
+
+    return '<div class="prof-section-title" style="margin-top:26px;">Games</div>' +
+      '<div class="gs-card">' +
+        '<div class="gs-sum"><div><b>' + total.toLocaleString('en-GB') + '</b><span>games played</span></div>' +
+          '<div><b>' + tried + '/' + keys.length + '</b><span>games tried</span></div>' +
+          '<div><b>' + list.length + '</b><span>artists played</span></div></div>' +
+        '<div class="gs-head"><span>Game</span><span>Best</span><span>Played</span><span></span></div>' + rows +
+        '<div class="gs-sub">Artists</div>' + artistsHtml +
+      '</div>';
   };
 })();
 </script>
