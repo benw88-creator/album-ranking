@@ -15,7 +15,7 @@
  * never more than one load behind, and when you are, the app says so out loud.
  */
 
-const VERSION = 'vinall-v2';
+const VERSION = 'vinall-v3';
 const SHELL = VERSION + '-shell';
 const MEDIA = VERSION + '-media';
 
@@ -83,6 +83,9 @@ self.addEventListener('fetch', (event) => {
   // Share pages (/u/, /r/, /a/) are rendered per request from live data;
   // a cached one is somebody's old score.
   if (/^\/(u|r|a)\//.test(url.pathname)) return;
+  // The reset page must always be the live one: a cached copy is how a reset
+  // link ends up running last week's code.
+  if (url.pathname === '/reset.html') return;
 
   /* Navigations: serve the cached copy immediately, then fetch in the
      background and keep the new one for next time.

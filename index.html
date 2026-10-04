@@ -9663,6 +9663,19 @@ input, textarea, select, [contenteditable="true"],
    of the address bar while it starts up — so the reset handler, which looked at
    location AFTER that, found nothing and a reset link just opened the app. */
 window.__bootUrl = { search: location.search, hash: location.hash };
+/* A password-reset link belongs on /reset.html, which does nothing else and
+   so cannot be tripped by the splash, a cached build or this file's start-up
+   order. Forwarded here, before supabase-js can read the token, whatever
+   shape the email template sends. A bare ?code= is NOT forwarded: Google
+   sign-in returns one too. */
+(function () {
+  var p = new URLSearchParams(location.search), f = new URLSearchParams(location.hash.replace(/^#/, ''));
+  var type = p.get('type') || f.get('type');
+  var code = p.get('error_code') || f.get('error_code') || '';
+  if (type === 'recovery' || (p.get('token_hash') && !type) || /otp/.test(code)) {
+    location.replace('/reset.html' + location.search + location.hash);
+  }
+})();
 </script>
 
 <!-- Crash reporting. Deliberately first, so it catches failures in everything
@@ -16507,8 +16520,8 @@ const Cloud=(function(){
              already www, because Vercel has moved you there before this runs;
              in the app the origin is `capacitor://localhost`, which is not a
              web origin at all, so it is the canonical site or nothing. */
-          redirectTo: (Native.on ? 'https://www.vinall.xyz/'
-                                 : (location.origin + location.pathname))
+          redirectTo: (Native.on ? 'https://www.vinall.xyz/reset.html'
+                                 : (location.origin + '/reset.html'))
         });
         if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Send reset link';return;}
         errEl.style.color='var(--gold)';

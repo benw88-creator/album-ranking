@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Reset password — VINALL</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0a0908">
+<link rel="icon" href="/assets/icons/favicon-32.png" sizes="32x32">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<!--
+  THE PASSWORD RESET PAGE, and why it is its own page.
+
+  The reset used to be handled inside index.html, which meant a reset link had
+  to survive the splash screen, the service worker serving the previous build,
+  supabase-js stripping the token out of the address bar as it started, and the
+  app's own start-up order — and it failed on one of those every time it was
+  tried. This page does one thing: read the link, show the form, save the
+  password. index.html forwards any recovery link here before supabase-js can
+  touch it (the first script in its <body>), and sw.js never caches this path.
+
+  Every link shape Supabase can send is handled:
+    ?token_hash=…&type=recovery   verifyOtp — the scanner-proof one (CLAUDE.md)
+    ?code=…                       PKCE — only works in the browser that asked
+    #access_token=…&type=recovery implicit — supabase-js reads it on start
+    #error=… / ?error=…           expired or already used
+  and on any failure the page says which shape arrived, which is the one fact
+  that tells you whether the email template is the problem.
+-->
+<style>
+  :root { --bg:#0a0908; --surface:#151311; --surface-2:#1c1a17; --border:rgba(255,245,235,.09); --border-strong:rgba(255,245,235,.16);
+          --text:#f5efe6; --dim:rgba(245,239,230,.64); --faint:rgba(245,239,230,.42); --gold:#f5c842; --ember:#ff7a4d; --red:#e24b4a; --green:#4fb477; }
+  * { box-sizing:border-box; margin:0; }
+  body { min-height:100vh; min-height:100dvh; display:grid; place-items:center; padding:max(24px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));
+         background:radial-gradient(60% 50% at 20% 10%, rgba(245,200,66,.08), transparent 70%), radial-gradient(50% 40% at 90% 90%, rgba(255,122,77,.06), transparent 70%), var(--bg);
+         color:var(--text); font:16px/1.5 'IBM Plex Sans',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  .card { width:100%; max-width:400px; text-align:center; }
+  .disc { width:72px; height:72px; margin:0 auto 22px; border-radius:50%; position:relative;
+          background:repeating-radial-gradient(circle, rgba(255,255,255,.05) 0 1px, transparent 1px 3px), radial-gradient(circle at 38% 32%, #2a2724, #0b0a09 70%);
+          box-shadow:0 0 0 1px rgba(255,255,255,.06), 0 0 40px rgba(245,200,66,.18); animation:spin 6s linear infinite; }
+  .disc::after { content:''; position:absolute; inset:36%; border-radius:50%; background:radial-gradient(circle at 35% 35%, var(--ember), var(--gold) 70%); }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .disc { animation:none; } }
+  h1 { font:700 28px/1.1 'Instrument Sans',sans-serif; letter-spacing:-.03em; }
+  p.lede { color:var(--dim); margin-top:8px; }
+  form { margin-top:24px; display:flex; flex-direction:column; gap:10px; text-align:left; }
+  label { font:600 12px 'IBM Plex Mono',monospace; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); margin-top:4px; }
+  input { width:100%; padding:14px 16px; border-radius:14px; border:1px solid var(--border-strong); background:var(--surface-2); color:var(--text); font:16px 'IBM Plex Sans',sans-serif; outline:none; }
+  input:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(245,200,66,.15); }
+  button, .btn { display:block; width:100%; margin-top:10px; padding:15px; border:none; border-radius:999px; cursor:pointer; text-align:center; text-decoration:none;
+                 background:linear-gradient(120deg,var(--gold),var(--ember)); color:#0a0908; font:700 16px 'Instrument Sans',sans-serif; }
+  button:disabled { opacity:.55; cursor:default; }
+  .ghost { background:transparent; color:var(--dim); border:1px solid var(--border-strong); }
+  .msg { min-height:20px; font-size:14px; color:var(--red); margin-top:4px; }
+  .msg.ok { color:var(--green); }
+  .why { display:block; margin-top:8px; font:500 11px 'IBM Plex Mono',monospace; color:var(--faint); word-break:break-word; }
+  .wait { color:var(--dim); margin-top:18px; }
+  [hidden] { display:none !important; }
+  .brand { margin-top:28px; font:700 12px 'Instrument Sans',sans-serif; letter-spacing:.24em; color:var(--faint); }
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="disc" aria-hidden="true"></div>
+
+  <section id="v-checking">
+    <h1>Opening your link…</h1>
+    <p class="wait">One moment.</p>
+  </section>
+
+  <section id="v-form" hidden>
+    <h1>Choose a new password</h1>
+    <p class="lede" id="who">At least 8 characters.</p>
+    <form id="f-pass" autocomplete="on">
+      <input type="text" name="username" id="u-name" autocomplete="username" hidden>
+      <label for="p1">New password</label>
+      <input id="p1" type="password" autocomplete="new-password" minlength="8" required>
+      <label for="p2">Type it again</label>
+      <input id="p2" type="password" autocomplete="new-password" minlength="8" required>
+      <div class="msg" id="m-pass" role="alert"></div>
+      <button id="b-pass" type="submit">Save password</button>
+    </form>
+  </section>
+
+  <section id="v-done" hidden>
+    <h1>Password changed</h1>
+    <p class="lede">You're signed in.</p>
+    <a class="btn" href="/">Open VINALL</a>
+  </section>
+
+  <section id="v-bad" hidden>
+    <h1>That link didn't work</h1>
+    <p class="lede" id="bad-why">Reset links last an hour and work once. Send yourself a new one and open it straight away.</p>
+    <form id="f-mail">
+      <label for="em">Your email</label>
+      <input id="em" type="email" autocomplete="email" required>
+      <div class="msg" id="m-mail" role="status"></div>
+      <button id="b-mail" type="submit">Send a new link</button>
+      <a class="btn ghost" href="/">Back to VINALL</a>
+    </form>
+    <span class="why" id="shape"></span>
+  </section>
+
+  <div class="brand">VINALL</div>
+</main>
+
+<script src="/assets/supabase-js-2.45.4.min.js"></script>
+<script>
+(function () {
+  var URL_ = 'https://cqfxyebejpkyhswolrwi.supabase.co';
+  var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZnh5ZWJlanBreWhzd29scndpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMDI0MTYsImV4cCI6MjA5Njc3ODQxNn0.x9zL_qKAt465D-5Vw6bu8IIn-RxgUdfVbUoe1i4rsZs';
+  function $(id) { return document.getElementById(id); }
+  function show(v) { ['checking', 'form', 'done', 'bad'].forEach(function (k) { $('v-' + k).hidden = k !== v; }); }
+
+  // Read the link BEFORE the client exists: createClient strips the fragment.
+  var q = new URLSearchParams(location.search);
+  var h = new URLSearchParams(location.hash.replace(/^#/, ''));
+  var shape = q.get('token_hash') ? 'token_hash' : q.get('code') ? 'code' : h.get('access_token') ? 'fragment' : (q.get('error') || h.get('error')) ? 'error' : 'no token';
+  var err = h.get('error_description') || q.get('error_description') || h.get('error') || q.get('error');
+
+  if (!window.supabase || !window.supabase.createClient) { bad('The page could not load its sign-in library. Check your connection and reload.'); return; }
+  var sb = window.supabase.createClient(URL_, ANON, { auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true } });
+
+  function bad(why, raw) {
+    show('bad');
+    if (why) $('bad-why').textContent = why;
+    $('shape').textContent = 'link: ' + shape + (raw ? ' · ' + raw : '');
+    history.replaceState(null, '', location.pathname);
+  }
+  async function ready() {
+    var s = await sb.auth.getSession();
+    var user = s && s.data && s.data.session && s.data.session.user;
+    if (!user) return false;
+    history.replaceState(null, '', location.pathname);
+    $('who').textContent = 'For ' + (user.email || 'your account') + '. At least 8 characters.';
+    $('u-name').value = user.email || '';
+    show('form');
+    setTimeout(function () { $('p1').focus(); }, 50);
+    return true;
+  }
+
+  async function start() {
+    if (err) { bad(/expired|invalid|denied|otp/i.test(err) ? null : String(err).replace(/\+/g, ' '), String(err).replace(/\+/g, ' ')); return; }
+    try {
+      if (q.get('token_hash')) {
+        var r = await sb.auth.verifyOtp({ type: q.get('type') || 'recovery', token_hash: q.get('token_hash') });
+        if (r.error) { bad(null, r.error.message); return; }
+      } else if (q.get('code')) {
+        var c = await sb.auth.exchangeCodeForSession(q.get('code'));
+        if (c.error) {
+          bad('Open the link on the same phone or computer you asked for it on — or send a new one from here.', c.error.message);
+          return;
+        }
+      } else if (h.get('access_token')) {
+        // supabase-js is reading the fragment itself; give it a moment.
+        await new Promise(function (r) { setTimeout(r, 400); });
+      } else {
+        // Arrived with nothing: maybe already signed in from a previous open.
+        if (await ready()) return;
+        bad('This page needs the link from your reset email.');
+        return;
+      }
+      if (!(await ready())) bad(null, 'no session came back');
+    } catch (e) { bad(null, String((e && e.message) || e)); }
+  }
+
+  $('f-pass').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var p1 = $('p1').value, p2 = $('p2').value, m = $('m-pass'), b = $('b-pass');
+    m.className = 'msg';
+    if (p1.length < 8) { m.textContent = 'At least 8 characters.'; return; }
+    if (p1 !== p2) { m.textContent = 'Those two don\'t match.'; return; }
+    b.disabled = true; b.textContent = 'Saving…';
+    var r = await sb.auth.updateUser({ password: p1 });
+    if (r.error) {
+      b.disabled = false; b.textContent = 'Save password';
+      m.textContent = /different|same/i.test(r.error.message) ? 'That\'s your current password — pick a new one.' : r.error.message;
+      return;
+    }
+    show('done');
+  });
+
+  $('f-mail').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var em = $('em').value.trim(), m = $('m-mail'), b = $('b-mail');
+    if (!em) return;
+    b.disabled = true; b.textContent = 'Sending…';
+    var r = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.origin + '/reset.html' });
+    b.disabled = false; b.textContent = 'Send a new link';
+    if (r.error) { m.className = 'msg'; m.textContent = r.error.message; return; }
+    m.className = 'msg ok'; m.textContent = 'Sent — check your email.';
+  });
+
+  start();
+})();
+</script>
+</body>
+</html>

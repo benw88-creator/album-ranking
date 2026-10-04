@@ -5158,7 +5158,7 @@ has to be changed by hand in the dashboard:
 **Authentication → Emails → Reset Password**, replace the link with:
 
 ```
-<a href="{{ .SiteURL }}/?token_hash={{ .TokenHash }}&type=recovery">Reset your password</a>
+<a href="{{ .SiteURL }}/reset.html?token_hash={{ .TokenHash }}&type=recovery">Reset your password</a>
 ```
 
 Until that is done the old link shape still works — the `#type=recovery` and
