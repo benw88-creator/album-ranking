@@ -2539,6 +2539,55 @@ written** — a wrong match is a wrong opinion filed under somebody's name.
 Imported ratings pay **no Discs** and go into `crate_feed` dated `2000-01-01`, so they count
 in spreads, reviews and taste match without burying everybody's Crate feed for a week.
 
+## Spotify, from your own data
+
+`window.SpotifyBridge`, `#sp-modal`, `#sp-home`, `#sp-pill`, `api/spotify-match.js`,
+`api/_match.js` and `..._20261005100000_spotify_matches.sql` (optional — the import works
+without it, every row matched fresh). Spotify = your existing music, VINALL = where you rank
+it, Deezer = the catalogue underneath.
+
+**There is no Spotify login, on purpose.** A Spotify OAuth integration works for five people
+(Development Mode) and Spotify's terms forbid mixing their data with another catalogue — see
+"Spotify listening data: the hard limit". Instead people drop the zip from **Spotify →
+Account → Privacy → Download your data → Account data**: their own file, so no cap and no
+developer terms, and it is the whole library (YourLibrary.json, Playlist*.json,
+StreamingHistory*.json). The cost is the wait (up to five days), so the design is about the
+wait: a four-step guide with a button for the step that needs a link, and asking for the
+file arms the Home card, which says "it's probably in your inbox" after 36 hours.
+
+- **No unzipping.** A minimal zip reader (central directory + `DecompressionStream`
+  deflate-raw) takes the zip exactly as it arrives. ZIP64 or a browser without
+  DecompressionStream says "unzip it and drop the files" — loose JSON is accepted too.
+- **Destinations are things VINALL already has**: Liked Songs → Liked songs, saved albums →
+  the shortlist (For You's strongest signal), playlists → song lists (re-importing updates
+  the same list), streaming history → `VinalListening.importEvents`, the same fold and upload
+  the profile panel uses.
+- **Matching** (`api/_match.js`, `node api/_match.selfcheck.mjs`): an export has artist,
+  title, album and the Spotify URI — no ISRC, no duration — so a match is scored on title (edition
+  noise and feat. tails stripped), artist, album, and a **version penalty** (live, remix,
+  acoustic, covers, and any "(… Version)"/"(… Mix)" tail that is not single/album/explicit/
+  remaster). ≥80 with daylight over the runner-up is automatic; anything closer is shown as
+  "Is this the one?" with the candidates as sleeves; under 55 is named as not on Deezer.
+  Two recordings of one song on an album and its deluxe edition collapse before deciding.
+  Measured: Nikes, Dreams (2004 Remaster), Money Trees (Deluxe), HOLD UP, Paranoid Android
+  (OKNOTOK) all automatic; Come As You Are no longer confuses the Boom Box Version with the
+  album cut.
+- **The route searches three ways**, widest first: artist + title (25), then with the album
+  — Deezer's plain search does not put Beyoncé's studio "Halo" in its top results — then the
+  strict `artist:"" track:""` syntax, which sometimes returns nothing at all.
+- **Matched once for everybody**: `spotify_matches` caches by Spotify URI with RLS on and no
+  policies (written only by the route). "none" is re-asked after 30 days. A Deezer refusal
+  is `retry`, retried twice by the browser with backoff, then shown as "couldn't check".
+- **Nothing is written until matching finishes**, then in bulk: one persist per store,
+  chunked upserts. The job lives in localStorage as it runs, so closing the sheet or the tab
+  loses nothing — a pill shows progress, and reopening offers to carry on. Already-imported
+  URIs are remembered (`vinall_spotify_v1.imported`) and never matched twice.
+- **The other direction is "Find in Spotify"**: Spotify offers no way for another app to add
+  to someone's library without OAuth, so each song opens in Spotify search (no logo, plain
+  text — Deezer's terms forbid another service's mark beside their sleeves). Sources: your
+  9+, 8+, just rated, liked songs, or any song list (button on the list view). "Copy as a
+  list" for everything else.
+
 ## Settings
 
 A modal off the account menu (`openSettings`), holding **Motion**, a **clear-cached-data**

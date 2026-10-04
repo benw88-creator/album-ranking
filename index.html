@@ -5879,6 +5879,166 @@ html[data-motion="none"] .rv-bars i, html[data-motion="none"] .rv-card { animati
 .imp-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
 .imp-status { font-size: 12.5px; color: var(--text-dim); }
 
+/* ---- SPOTIFY, FROM YOUR OWN DATA ------------------------------------------
+   VINALL's language, not Spotify's: gold and the theme's accent, the drawn
+   record, sleeves at size. No Spotify green and no Spotify mark anywhere —
+   Deezer's terms forbid another service's mark beside their sleeves, and the
+   point is that this is VINALL taking your music in, not a Spotify widget. */
+#sp-modal .modal-panel { max-width: 520px; overflow-x: hidden; }
+.sp-h { font: 700 clamp(24px, 6.4vw, 30px)/1.08 var(--font-display); letter-spacing: -0.03em; text-align: center; margin: 0; }
+.sp-lede { text-align: center; color: var(--text-dim); font-size: 15px; margin: 8px auto 0; max-width: 34ch; }
+.sp-foot { text-align: center; color: var(--text-faint); font-size: 12.5px; margin-top: 14px; }
+.sp-wide { width: 100%; margin-top: 18px; padding: 15px; font-size: 16px; }
+.sp-cta { box-shadow: 0 10px 34px -10px var(--gold-glow); }
+.sp-link { display: block; margin: 14px auto 0; background: none; border: none; color: var(--gold); font: 600 14px var(--font-body); cursor: pointer; }
+.sp-send-link { color: var(--text-faint); font-weight: 500; font-size: 13px; }
+.sp-back { background: none; border: none; color: var(--text-dim); font: 600 13px var(--font-body); cursor: pointer; padding: 0; margin-bottom: 10px; }
+.sp-center { text-align: center; padding: 24px 0 8px; }
+
+/* The fan: seven sleeves arcing off a record, breathing. */
+.sp-fan { position: relative; height: 178px; margin: 0 auto 14px; display: grid; place-items: center; }
+.sp-fan img { position: absolute; width: 96px; height: 96px; border-radius: 12px; object-fit: cover;
+  box-shadow: 0 16px 40px rgba(0,0,0,.55); transform-origin: 50% 180%;
+  transform: rotate(calc(var(--i) * 11deg)) translateY(-8px);
+  animation: spFanIn .7s var(--ease) both, spFloat 6s ease-in-out infinite;
+  animation-delay: calc((var(--i) + 3) * 60ms), calc((var(--i) + 3) * -0.7s); z-index: calc(10 - var(--i) * var(--i)); }
+@keyframes spFanIn { from { opacity: 0; transform: rotate(0deg) translateY(30px) scale(.8); } }
+@keyframes spFloat { 50% { translate: 0 -5px; } }
+.sp-fan-disc { position: absolute; bottom: 0; width: 110px; height: 110px; border-radius: 50%; z-index: 0;
+  background: repeating-radial-gradient(circle, rgba(255,255,255,.05) 0 1px, transparent 1px 3px), radial-gradient(circle at 38% 32%, #2a2724, #0b0a09 70%);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 0 50px var(--gold-glow); animation: vinylSpin 6s linear infinite; }
+.sp-fan-disc::after { content: ''; position: absolute; inset: 37%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, var(--accent-2), var(--gold) 70%); }
+
+.sp-gets { list-style: none; padding: 0; margin: 20px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sp-gets li { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; padding: 12px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); }
+.sp-gets .sp-ic { grid-row: span 2; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, transparent); }
+.sp-gets b { font-size: 13.5px; } .sp-gets i { font-style: normal; font-size: 12px; color: var(--text-faint); }
+
+/* The drop: the one thing to do on this screen, so it is the biggest. */
+.sp-drop { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 16px; padding: 26px 16px; border-radius: 18px; cursor: pointer; text-align: center; isolation: isolate;
+  background: color-mix(in srgb, var(--gold) 6%, var(--surface-2)); border: 1.5px dashed color-mix(in srgb, var(--gold) 45%, var(--border-strong)); transition: transform .2s var(--ease), border-color .2s var(--ease), background .2s var(--ease); }
+.sp-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.sp-drop-t { font: 700 17px var(--font-display); }
+.sp-drop-s { font-size: 12.5px; color: var(--text-faint); }
+.sp-drop:hover, .sp-drop.is-over { border-style: solid; border-color: var(--gold); background: color-mix(in srgb, var(--gold) 12%, var(--surface-2)); transform: scale(1.01); }
+.sp-drop:focus-within { border-color: var(--gold); }
+.sp-drop.is-bad { border-color: var(--red, #e24b4a); animation: spShake .4s; }
+.sp-drop.is-bad .sp-drop-s { color: var(--red, #e24b4a); }
+@keyframes spShake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+.sp-steps { list-style: none; padding: 0; margin: 22px 0 0; display: flex; flex-direction: column; gap: 10px; }
+.sp-steps li { display: flex; gap: 14px; padding: 14px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--border); animation: rvIn .4s var(--ease) both; }
+.sp-steps li:nth-child(2) { animation-delay: .06s; } .sp-steps li:nth-child(3) { animation-delay: .12s; } .sp-steps li:nth-child(4) { animation-delay: .18s; }
+.sp-n { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font: 700 14px var(--font-display); color: #0a0908; background: var(--gold); }
+.sp-steps b { display: block; font-size: 15px; }
+.sp-steps b u { text-decoration-color: var(--gold); text-underline-offset: 3px; }
+.sp-steps small { display: block; color: var(--text-faint); font-size: 12.5px; margin-top: 3px; line-height: 1.45; }
+.sp-go { display: inline-block; margin-top: 10px; padding: 9px 18px; font-size: 14px; text-decoration: none; }
+.sp-asked { margin-top: 16px; text-align: center; font-size: 13px; color: var(--text-dim); }
+
+.sp-spin { width: 46px; height: 46px; margin: 0 auto 16px; border-radius: 50%; border: 3px solid var(--surface-3); border-top-color: var(--gold); animation: vinylSpin .8s linear infinite; }
+
+.sp-tally { display: flex; justify-content: center; gap: 20px; margin: 16px 0 6px; flex-wrap: wrap; }
+.sp-tally div { text-align: center; animation: rvIn .4s var(--ease) both; }
+.sp-tally b { display: block; font: 700 26px var(--font-display); letter-spacing: -0.03em; color: var(--gold); }
+.sp-tally span { font: 600 10.5px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
+.sp-opt { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 13px 14px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); cursor: pointer; }
+.sp-opt span { display: flex; flex-direction: column; } .sp-opt b { font-size: 15px; } .sp-opt small { font-size: 12.5px; color: var(--text-faint); }
+.sp-opt input, .sp-pl input { width: 20px; height: 20px; accent-color: var(--gold); flex: none; }
+.sp-pls-h { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 6px; font: 700 10.5px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
+.sp-pls-h .sp-link { margin: 0; font-size: 12.5px; }
+.sp-pls { max-height: 34vh; overflow-y: auto; border-radius: 14px; border: 1px solid var(--border); }
+.sp-pl { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.sp-pl:last-child { border-bottom: none; }
+.sp-pl-n { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+.sp-pl-c { font: 500 12px var(--font-mono); color: var(--text-faint); }
+
+/* The run: a ring, the honest counts, and the library pouring in. */
+.sp-run { text-align: center; padding-top: 6px; }
+.sp-ring { position: relative; width: 120px; height: 120px; margin: 0 auto 16px; }
+.sp-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.sp-ring circle { fill: none; stroke-width: 6; }
+.sp-ring .bg { stroke: var(--surface-3); }
+.sp-ring .fg { stroke: var(--gold); stroke-linecap: round; stroke-dasharray: 339.3; stroke-dashoffset: 339.3; transition: stroke-dashoffset .5s var(--ease); filter: drop-shadow(0 0 6px var(--gold-glow)); }
+.sp-ring-n { position: absolute; inset: 0; display: grid; place-items: center; font: 700 26px var(--font-display); letter-spacing: -0.03em; }
+.sp-run-s { margin-top: 6px; font-size: 13.5px; color: var(--text-dim); min-height: 20px; }
+.sp-run-s b { color: var(--text); }
+.sp-wall { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 20px; min-height: 120px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent); mask-image: linear-gradient(to bottom, #000 55%, transparent); }
+.sp-wall img { width: 100%; aspect-ratio: 1; border-radius: 8px; object-fit: cover; background: var(--surface-3); animation: spPop .45s var(--ease) both; }
+.sp-wall img.is-old { animation: none; }
+@keyframes spPop { from { opacity: 0; transform: scale(.4) rotate(-6deg); } 70% { transform: scale(1.06); } to { opacity: 1; transform: none; } }
+
+/* Review: one question at a time, the candidates as sleeves. */
+.sp-rv-h { display: flex; justify-content: space-between; align-items: baseline; font: 700 20px var(--font-display); padding-right: 48px; }
+.sp-rv-c { font: 500 12px var(--font-mono); color: var(--text-faint); }
+.sp-rv-want { margin-top: 14px; padding: 14px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); display: flex; flex-direction: column; animation: rvIn .3s var(--ease) both; }
+.sp-rv-want small { font: 600 10.5px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
+.sp-rv-want b { font-size: 17px; margin-top: 4px; } .sp-rv-want span { font-size: 13px; color: var(--text-dim); }
+.sp-rv-opts { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.sp-rv-o { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 14px; border: 1px solid var(--border-strong); background: transparent; color: var(--text); text-align: left; cursor: pointer; transition: border-color .15s var(--ease), transform .15s var(--ease); }
+.sp-rv-o:hover { border-color: var(--gold); } .sp-rv-o:active { transform: scale(.98); }
+.sp-rv-o img { width: 52px; height: 52px; border-radius: 9px; object-fit: cover; flex: none; background: var(--surface-3); color: transparent; }
+.sp-rv-o span { display: flex; flex-direction: column; min-width: 0; } .sp-rv-o b { font-size: 14.5px; } .sp-rv-o small { font-size: 12px; color: var(--text-faint); }
+.sp-rv-acts { display: flex; justify-content: space-between; } .sp-rv-acts .sp-link { margin: 14px 0 0; color: var(--text-dim); }
+
+/* Done: the sleeves assemble into a square and the number lands. */
+.sp-done { text-align: center; }
+.sp-mosaic { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; width: min(220px, 62vw); margin: 4px auto 20px; border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.55), 0 0 60px var(--gold-glow); }
+.sp-mosaic img { width: 100%; aspect-ratio: 1; object-fit: cover; animation: spTile .5s var(--ease) both; animation-delay: calc(var(--i) * 70ms); }
+@keyframes spTile { from { opacity: 0; transform: scale(.6); } }
+.sp-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
+.sp-chips span { padding: 7px 12px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); font-size: 13px; color: var(--text-dim); }
+.sp-chips b { color: var(--gold); font-family: var(--font-display); }
+.sp-miss { margin-top: 16px; text-align: left; }
+.sp-miss summary { cursor: pointer; font-size: 13px; color: var(--text-faint); text-align: center; list-style: none; }
+.sp-miss summary::-webkit-details-marker { display: none; }
+.sp-miss > div { margin-top: 10px; max-height: 30vh; overflow-y: auto; }
+.sp-miss-r { display: flex; flex-direction: column; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.sp-miss-r b { font-size: 13.5px; } .sp-miss-r span { font-size: 12px; color: var(--text-faint); }
+
+/* Find in Spotify. */
+.sp-tabs { margin-top: 16px; }
+.sp-tabs i { font-style: normal; opacity: .55; font-size: 11.5px; }
+.sp-send { margin-top: 8px; max-height: 50vh; overflow-y: auto; }
+.sp-send-r { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); transition: opacity .3s var(--ease); }
+.sp-send-r img { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; flex: none; background: var(--surface-3); }
+.sp-send-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sp-send-t b, .sp-send-t small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-send-t b { font-size: 14px; } .sp-send-t small { font-size: 12px; color: var(--text-faint); }
+.sp-send-sc { font: 700 15px var(--font-display); }
+.sp-send-go { text-decoration: none; flex: none; }
+.sp-send-r.is-done { opacity: .5; }
+
+/* Home: one card above Today, gone once used or dismissed. */
+.sp-card { position: relative; display: flex; align-items: center; gap: 14px; margin-bottom: 18px; padding: 14px 44px 14px 14px; border-radius: 18px; overflow: hidden;
+  background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 60%), var(--surface-2);
+  border: 1px solid color-mix(in srgb, var(--gold) 28%, var(--border)); animation: rvIn .45s var(--ease) both; }
+.sp-card.is-ready { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 34px -6px var(--gold-glow); }
+.sp-card-art { position: relative; width: 70px; height: 56px; flex: none; }
+.sp-card-art img { position: absolute; top: 4px; width: 48px; height: 48px; border-radius: 8px; object-fit: cover; box-shadow: 0 6px 18px rgba(0,0,0,.5);
+  left: calc(var(--i) * 11px); transform: rotate(calc((var(--i) - 1) * 8deg)); z-index: calc(3 - var(--i)); }
+.sp-card-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sp-card-t small { font: 700 10.5px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); }
+.sp-card-t b { font: 700 16px/1.2 var(--font-display); margin-top: 3px; }
+.sp-card-go { flex: none; padding: 10px 16px; font-size: 14px; }
+.sp-card-x { position: absolute; top: 6px; right: 8px; width: 30px; height: 30px; border: none; background: none; color: var(--text-faint); font-size: 18px; cursor: pointer; }
+@media (max-width: 480px) {
+  .sp-card { flex-wrap: wrap; } .sp-card-go { width: 100%; }
+  .sp-gets li { padding: 10px; column-gap: 8px; } .sp-gets .sp-ic { width: 26px; height: 26px; font-size: 12px; }
+}
+
+/* The import keeps going with the sheet shut; this is where it lives. */
+.sp-pill { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--nav-h, 64px) + 22px + env(safe-area-inset-bottom, 0px)); z-index: 155;
+  padding: 10px 18px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--gold) 40%, var(--border)); cursor: pointer;
+  background: color-mix(in srgb, var(--surface-2) 88%, transparent); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  color: var(--text); font: 600 13px var(--font-body); box-shadow: 0 10px 30px rgba(0,0,0,.45); animation: rvIn .35s var(--ease) both; }
+.sp-pill[hidden] { display: none; }
+@media (min-width: 700px) { .sp-pill { bottom: 24px; } }
+@media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) .sp-fan img, html:not([data-motion="full"]) .sp-fan-disc, html:not([data-motion="full"]) .sp-wall img { animation: none; } }
+html[data-motion="none"] .sp-fan img, html[data-motion="none"] .sp-fan-disc, html[data-motion="none"] .sp-wall img { animation: none; }
+
+
 .cc-post { width: 100%; margin-top: 14px; justify-content: center; }
 .cc-post:disabled { opacity: .45; cursor: default; filter: none; box-shadow: none; }
 /* YouTube. The player is on screen whenever it plays — YouTube's terms, and
@@ -10076,6 +10236,9 @@ window.discAmt = function (n) {
       <div class="dm-panel" id="dm-panel"></div>
     </div>
 
+    <!-- Spotify: one card, only until it has been used or waved away. -->
+    <div id="sp-home"></div>
+
     <!-- TODAY — the loop. First thing on the page, because everything else
          here is a record of what it already asked. -->
     <div class="today-block">
@@ -11118,6 +11281,11 @@ window.discAmt = function (n) {
           <div class="set-note">RateYourMusic, a spreadsheet or a pasted list.</div></div>
         <button class="btn-mini" id="set-import">Import</button>
       </div>
+      <div class="set-row">
+        <div class="set-copy"><div class="set-name">Spotify</div>
+          <div class="set-note">Liked songs, albums and playlists.</div></div>
+        <div style="display:flex;gap:6px;"><button class="btn-mini" id="set-spotify-in">Bring in</button><button class="btn-mini" id="set-spotify-out">Find in Spotify</button></div>
+      </div>
     </div>
 
     <div class="set-group">
@@ -11352,6 +11520,7 @@ window.discAmt = function (n) {
     <div id="listview-items" style="max-height:56vh; overflow-y:auto;"></div>
     <button class="btn-mini" id="listview-edit-btn" style="margin-top:14px; display:none;">Edit list</button>
     <button class="btn-mini" id="listview-suggest-btn" style="margin-top:14px;"><span data-icon="share"></span> Recommend</button>
+    <button class="btn-mini" id="listview-spotify-btn" style="margin-top:14px;display:none;">Find in Spotify</button>
   </div>
 </div>
 
@@ -18500,7 +18669,7 @@ async function fillListFromArtist(){
   });
 }
 async function saveListEdits(){const errEl=document.getElementById('list-error');const title=sanitizeText(document.getElementById('list-title-input').value,60);if(!title){errEl.textContent='Give your list a title.';return;}if(hasSlur(title)){errEl.textContent='Please keep the title respectful.';return;}_listEditing.title=title;const btn=document.getElementById('list-save-btn');btn.disabled=true;btn.textContent='Saving\u2026';const res=await Cloud.saveList(_listEditing);btn.disabled=false;btn.textContent='Save list';if(res.error){errEl.textContent=res.error;return;}closeListEditor();renderProfile();}
-function openListView(list,isOwner){document.getElementById('listview-title').textContent=list.title;document.getElementById('listview-meta').textContent=(list.items||[]).length+' '+(list.kind==='song'?'songs':'albums');const host=document.getElementById('listview-items');if(!(list.items||[]).length)host.innerHTML='<p class="reco-note">This list is empty.</p>';else host.innerHTML=list.items.map(function(it,i){return'<div class="ptop-row" data-open="'+esc(it.id)+'"><span class="song-mini-rank">'+(i+1)+'</span><img src="'+esc(it.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div><div class="nm">'+esc(it.name)+'</div><div class="ar">'+esc(it.artist||'')+'</div></div></div>';}).join('');if(list.kind==='album')host.querySelectorAll('[data-open]').forEach(function(el){el.addEventListener('click',function(){const it=list.items.find(function(x){return x.id===el.dataset.open;});if(it){document.getElementById('listview-modal').classList.remove('open');openAlbum(it);}});});document.getElementById('listview-edit-btn').style.display=isOwner?'inline-block':'none';document.getElementById('listview-edit-btn').onclick=function(){document.getElementById('listview-modal').classList.remove('open');openListEditor(list);};document.getElementById('listview-suggest-btn').onclick=function(){if(window.openSuggest){document.getElementById('listview-modal').classList.remove('open');openSuggest(list,'list');}};document.getElementById('list-del-btn').onclick=async function(){if(!_listEditing||!_listEditing.id)return;await Cloud.deleteList(_listEditing.id);closeListEditor();renderProfile();};document.getElementById('listview-modal').classList.add('open');}
+function openListView(list,isOwner){document.getElementById('listview-title').textContent=list.title;document.getElementById('listview-meta').textContent=(list.items||[]).length+' '+(list.kind==='song'?'songs':'albums');const host=document.getElementById('listview-items');if(!(list.items||[]).length)host.innerHTML='<p class="reco-note">This list is empty.</p>';else host.innerHTML=list.items.map(function(it,i){return'<div class="ptop-row" data-open="'+esc(it.id)+'"><span class="song-mini-rank">'+(i+1)+'</span><img src="'+esc(it.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div><div class="nm">'+esc(it.name)+'</div><div class="ar">'+esc(it.artist||'')+'</div></div></div>';}).join('');if(list.kind==='album')host.querySelectorAll('[data-open]').forEach(function(el){el.addEventListener('click',function(){const it=list.items.find(function(x){return x.id===el.dataset.open;});if(it){document.getElementById('listview-modal').classList.remove('open');openAlbum(it);}});});document.getElementById('listview-edit-btn').style.display=isOwner?'inline-block':'none';document.getElementById('listview-edit-btn').onclick=function(){document.getElementById('listview-modal').classList.remove('open');openListEditor(list);};const _spb=document.getElementById('listview-spotify-btn');if(_spb){_spb.style.display=(list.kind==='song'&&(list.items||[]).length&&window.SpotifyBridge)?'inline-block':'none';_spb.onclick=function(){document.getElementById('listview-modal').classList.remove('open');SpotifyBridge.send(list);};}document.getElementById('listview-suggest-btn').onclick=function(){if(window.openSuggest){document.getElementById('listview-modal').classList.remove('open');openSuggest(list,'list');}};document.getElementById('list-del-btn').onclick=async function(){if(!_listEditing||!_listEditing.id)return;await Cloud.deleteList(_listEditing.id);closeListEditor();renderProfile();};document.getElementById('listview-modal').classList.add('open');}
 
 (function wireProfile(){
   document.getElementById('pedit-close').addEventListener('click',closeProfileEdit);
@@ -32026,7 +32195,21 @@ window.renderAdminStats = renderAdminStats;
   function byArtist() { return _byArtist || {}; }
 
   window.VinalListening = { noteListen: noteListen, keyOf: keyOf,
-                            byArtist: byArtist, loadByArtist: byArtistFetch };
+                            byArtist: byArtist, loadByArtist: byArtistFetch,
+                            importEvents: importEvents };
+
+  /* The Spotify bridge hands its zip's streaming history straight here, so
+     one drop does the library AND the listening. Same fold, same upload, same
+     rules as the panel below. */
+  async function importEvents(events) {
+    if (!on() || !(await available())) return { kept: 0 };
+    var f = fold(events || []);
+    if (!f.rows.length) return { kept: 0 };
+    var up = await upload(f.rows);
+    _plays = null;
+    if (window.renderToday) try { window.renderToday(true); } catch (e) {}
+    return { kept: f.kept, unique: f.unique, done: up.done, error: up.error || null };
+  }
 
   async function upload(rows, onProgress) {
     var me = uid();
@@ -32080,10 +32263,8 @@ window.renderAdminStats = renderAdminStats;
               totalPlays.toLocaleString() + ' plays'
             : ', ' + totalPlays.toLocaleString() + ' plays in all') +
           '. VINALL uses this to notice things your ratings alone cannot show.</p>'
-        : '<p class="reco-note">Spotify will email you your full listening history, ' +
-          'and it goes back to the beginning — not just this year. Ask for it at ' +
-          '<b>Spotify &rarr; Privacy settings &rarr; Extended streaming history</b>. ' +
-          'It takes a few weeks to arrive. Unzip it and drop the JSON files here.</p>') +
+        : '<p class="reco-note">Bring in your Spotify — listening, liked songs and playlists in one drop. ' +
+          '<button class="btn-mini" id="lh-spotify" style="margin-left:6px;">Bring in Spotify</button></p>') +
       '<div class="g-field" style="max-width:460px;">' +
         '<input type="file" id="lh-file" accept=".json,application/json" multiple>' +
       '</div>' +
@@ -32096,6 +32277,8 @@ window.renderAdminStats = renderAdminStats;
           '<button class="btn-mini" id="lh-clear" style="margin-top:10px;color:var(--red);">Remove my listening history</button>'
         : '');
 
+    var lhs = document.getElementById('lh-spotify');
+    if (lhs) lhs.addEventListener('click', function () { if (window.SpotifyBridge) SpotifyBridge.open('intro'); });
     var input = document.getElementById('lh-file');
     var out = document.getElementById('lh-out');
 
@@ -38344,6 +38527,638 @@ window.track = function (name, props) {
   function init() {
     wireSettingsAndImport();
     deepLink();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
+<div class="modal" id="sp-modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="sp-close" aria-label="Close">&times;</button>
+    <div id="sp-body"></div>
+  </div>
+</div>
+<button class="sp-pill" id="sp-pill" hidden></button>
+
+<!-- ================================================================
+     SPOTIFY, FROM YOUR OWN DATA — "Spotify is my music, VINALL is where I
+     rank it."
+
+     WHY THIS DOES NOT LOG IN TO SPOTIFY. VINALL's Spotify app is in
+     Development Mode, capped at five authorised accounts since February 2026,
+     and Spotify's developer terms forbid mixing their data with another
+     service's catalogue — which, with Deezer underneath, is the whole app.
+     A Spotify login would work for five people and put the app key that
+     prices records for Bid Wars at risk. (See "Spotify listening data: the
+     hard limit" in CLAUDE.md.)
+
+     Every Spotify user can download their OWN data instead: Account →
+     Privacy → Download your data. That zip carries Liked Songs, saved
+     albums, every playlist and a year of listening. It is the person's file,
+     not Spotify's API, so there is no cap and no developer terms — and it is
+     the whole library, not a page of it.
+
+     The cost is the wait (Spotify says up to five days). So the hard part of
+     this feature is making the wait painless: the guide is four short steps
+     with a button for the one that needs a link, and asking for the file
+     arms a card on Home that comes back when it is probably in the inbox.
+
+     WHERE THINGS LAND — nothing new invented, every destination exists:
+       Liked Songs     → your Liked songs (the For You heart)
+       Saved albums    → your shortlist, For You's strongest signal
+       Playlists       → your lists, on your profile, in order
+       Listening       → listening_plays, which Today already reads
+
+     MATCHING is /api/spotify-match (api/_match.js decides). Every row is
+     matched to the same recording on Deezer; the doubtful ones are shown to
+     the person with the candidates, and the missing ones are named, not
+     hidden. Nothing is written until the matching is finished.
+
+     THE OTHER DIRECTION. Without Spotify's API nothing can add to somebody's
+     Spotify library, so "Find in Spotify" opens each song there — one tap,
+     honest about what it is. No Spotify logo anywhere: Deezer's terms forbid
+     another service's mark beside their sleeves.
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  var STATE_KEY = 'vinall_spotify_v1';
+  var PRIVACY_URL = 'https://www.spotify.com/account/privacy/';
+  var READY_AFTER = 36 * 3600 * 1000;      // when the Home card starts saying "it's probably in"
+  var BATCH = 10;
+
+  function $(id) { return document.getElementById(id); }
+  function on() { return !!(window.Cloud && Cloud.isOn && Cloud.isOn()); }
+  function me() { return window.Cloud && Cloud.getUser ? Cloud.getUser() : null; }
+  function sb() { return window.Cloud && Cloud.client ? Cloud.client() : null; }
+  function say(m) { if (window.toast) toast(m); }
+  function n(x) { return Number(x || 0).toLocaleString('en-GB'); }
+  function plural(x, w, ws) { return n(x) + ' ' + (x === 1 ? w : (ws || w + 's')); }
+  function report(m, x) { try { if (window.reportIssue) reportIssue(m, x); } catch (e) {} }
+  function small(art) { return String(art || '').replace(/\/(\d+)x\1-000000/, '/250x250-000000'); }
+
+  function readState() { try { return JSON.parse(localStorage.getItem(STATE_KEY)) || {}; } catch (e) { return {}; } }
+  function writeState(s) { try { localStorage.setItem(STATE_KEY, JSON.stringify(s)); } catch (e) { /* a full store just means no resume */ } }
+  function patch(p) { var s = readState(); Object.keys(p).forEach(function (k) { s[k] = p[k]; }); writeState(s); return s; }
+
+  /* ---- the zip ----------------------------------------------------------
+     A minimal reader so people can drop Spotify's zip exactly as it arrives:
+     "unzip it first" is the step that loses everybody on a phone. Central
+     directory → each wanted entry → stored, or deflate via the browser's own
+     DecompressionStream. No library; ZIP64 is not needed for this file and
+     is reported as "unzip it and drop the files" rather than guessed at. */
+  async function unzip(file, want) {
+    var buf = new Uint8Array(await file.arrayBuffer()), dv = new DataView(buf.buffer);
+    var eocd = -1;
+    for (var i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) { if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; } }
+    if (eocd < 0) throw new Error('not a zip');
+    var count = dv.getUint16(eocd + 10, true), off = dv.getUint32(eocd + 16, true);
+    if (off === 0xffffffff) throw new Error('zip64');
+    var out = {}, td = new TextDecoder();
+    for (var k = 0; k < count; k++) {
+      if (dv.getUint32(off, true) !== 0x02014b50) break;
+      var method = dv.getUint16(off + 10, true), csize = dv.getUint32(off + 20, true);
+      var nlen = dv.getUint16(off + 28, true), elen = dv.getUint16(off + 30, true), clen = dv.getUint16(off + 32, true);
+      var local = dv.getUint32(off + 42, true);
+      var name = td.decode(buf.subarray(off + 46, off + 46 + nlen));
+      off += 46 + nlen + elen + clen;
+      if (!want(name)) continue;
+      var start = local + 30 + dv.getUint16(local + 26, true) + dv.getUint16(local + 28, true);
+      var data = buf.subarray(start, start + csize);
+      if (method === 8) {
+        if (typeof DecompressionStream === 'undefined') throw new Error('no inflate');
+        data = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+      } else if (method !== 0) continue;
+      out[name] = td.decode(data);
+    }
+    return out;
+  }
+  var WANT = /(YourLibrary|Playlist\d*|StreamingHistory(_music_)?\d*|Streaming_History_Audio_[^/]*)\.json$/i;
+
+  /* ---- what is in it ---------------------------------------------------- */
+  function parseExport(files) {
+    var lib = { liked: [], albums: [], playlists: [], events: [] }, seen = {};
+    Object.keys(files).forEach(function (name) {
+      var j; try { j = JSON.parse(files[name]); } catch (e) { return; }
+      var base = name.split('/').pop();
+      if (/^YourLibrary\.json$/i.test(base)) {
+        (j.tracks || []).forEach(function (t) {
+          if (!t || !/^spotify:track:/.test(t.uri || '') || seen[t.uri]) return;
+          seen[t.uri] = 1; lib.liked.push({ u: t.uri, a: t.artist || '', t: t.track || '', b: t.album || '' });
+        });
+        (j.albums || []).forEach(function (a) {
+          if (a && /^spotify:album:/.test(a.uri || '')) lib.albums.push({ u: a.uri, a: a.artist || '', b: a.album || '', t: '' });
+        });
+      } else if (/^Playlist\d*\.json$/i.test(base)) {
+        (j.playlists || []).forEach(function (p) {
+          var items = (p.items || []).map(function (x) { return x && x.track; })
+            .filter(function (t) { return t && /^spotify:track:/.test(t.trackUri || ''); })
+            .map(function (t) { return { u: t.trackUri, a: t.artistName || '', t: t.trackName || '', b: t.albumName || '' }; });
+          if (items.length) lib.playlists.push({ name: String(p.name || 'Untitled').slice(0, 60), items: items, at: p.lastModifiedDate || '' });
+        });
+      } else if (Array.isArray(j)) {
+        lib.events = lib.events.concat(j);
+      }
+    });
+    lib.playlists.sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
+    return lib;
+  }
+
+  /* ---- the engine --------------------------------------------------------
+     One job at a time, kept in localStorage as it goes so closing the sheet,
+     or the tab, loses nothing: "Resume" carries on from the next unmatched
+     row. Two requests in flight, ten rows each — the route behind it shares
+     one Deezer rate limit with every VINALL visitor. */
+  var J = null;   // the live job: { opts, items, res, run, applied }
+  var UI = { stage: 'intro', lib: null, sel: null, recent: [], shown: [], reviewIdx: 0 };
+
+  function jobItems(lib, sel) {
+    // One row per Spotify URI, carrying every destination it belongs to.
+    var by = {}, list = [];
+    function add(it, kind, dest) {
+      var k = it.u;
+      if (!by[k]) { by[k] = { u: it.u, a: it.a, t: it.t, b: it.b, kind: kind, dest: [] }; list.push(by[k]); }
+      if (by[k].dest.indexOf(dest) < 0) by[k].dest.push(dest);
+    }
+    if (sel.liked) lib.liked.forEach(function (it) { add(it, 'track', 'liked'); });
+    if (sel.albums) lib.albums.forEach(function (it) { add(it, 'album', 'albums'); });
+    lib.playlists.forEach(function (p, i) { if (sel.pl[i]) p.items.forEach(function (it) { add(it, 'track', 'pl' + i); }); });
+    return list;
+  }
+
+  async function startJob() {
+    var lib = UI.lib, sel = UI.sel;
+    var items = jobItems(lib, sel);
+    J = { opts: { liked: sel.liked, albums: sel.albums,
+                  playlists: lib.playlists.map(function (p, i) { return sel.pl[i] ? { name: p.name, uris: p.items.map(function (x) { return x.u; }) } : null; }) },
+          items: items, res: {}, run: true, startedAt: Date.now() };
+    // Already brought in once: remembered, not matched again. Liked songs and
+    // albums then dedupe on the Deezer id, so a second import only adds.
+    var prev = readState().imported || {};
+    items.forEach(function (it) { var m = prev[it.u]; if (m && typeof m === 'object') J.res[it.u] = { status: 'ok', m: m, alts: [] }; });
+    UI.shown = []; UI.recent = [];
+    persistJob();
+    if (sel.history && lib.events.length && window.VinalListening && VinalListening.importEvents) {
+      J.history = 'running';
+      VinalListening.importEvents(lib.events).then(function (r) { J.history = r; persistJob(); paint(); })
+        .catch(function () { J.history = { error: true }; });
+    }
+    UI.stage = 'importing'; paint();
+    if (window.track) track('spotify_import_started', { tracks: items.length });
+    await runJob();
+  }
+  function persistJob() {
+    if (!J) { patch({ job: null }); return; }
+    patch({ job: { opts: J.opts, items: J.items, res: J.res, startedAt: J.startedAt, history: J.history && J.history !== 'running' ? J.history : null } });
+  }
+  function counts() {
+    var c = { total: J ? J.items.length : 0, done: 0, ok: 0, check: 0, none: 0 };
+    if (!J) return c;
+    J.items.forEach(function (it) {
+      var r = J.res[it.u];
+      if (!r || r.status === 'retry') return;
+      c.done++; c[r.status === 'ok' || r.status === 'picked' ? 'ok' : r.status === 'check' ? 'check' : 'none']++;
+    });
+    return c;
+  }
+  async function runJob() {
+    if (!J) return;
+    J.run = true;
+    var base = (window.Native && Native.api) || '';
+    for (var pass = 0; pass < 3 && J && J.run; pass++) {
+      var todo = J.items.filter(function (it) { var r = J.res[it.u]; return !r || r.status === 'retry'; });
+      if (!todo.length) break;
+      if (pass) await new Promise(function (r) { setTimeout(r, 2500 * pass); });
+      var batches = [];
+      ['track', 'album'].forEach(function (kind) {
+        var k = todo.filter(function (x) { return x.kind === kind; });
+        for (var i = 0; i < k.length; i += BATCH) batches.push({ kind: kind, items: k.slice(i, i + BATCH) });
+      });
+      var next = 0, lastSave = Date.now();
+      async function worker() {
+        while (J && J.run && next < batches.length) {
+          var b = batches[next++];
+          var res = null;
+          try {
+            var r = await fetch(base + '/api/spotify-match', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ kind: b.kind, items: b.items.map(function (x) { return { u: x.u, a: x.a, t: x.t, b: x.b }; }) }) });
+            res = r.ok ? await r.json() : null;
+          } catch (e) { res = null; }
+          if (!J) return;
+          ((res && res.results) || b.items.map(function (x) { return { u: x.u, status: 'retry' }; })).forEach(function (x) {
+            if (!x) return;
+            J.res[x.u] = { status: x.status, m: x.m || null, alts: x.alts || [] };
+            if (x.status === 'ok' && x.m && x.m.art) UI.recent.unshift(x.m);
+          });
+          if (UI.recent.length > 60) UI.recent.length = 60;
+          if (Date.now() - lastSave > 3000) { lastSave = Date.now(); persistJob(); }
+          paintProgress();
+        }
+      }
+      await Promise.all([worker(), worker()]);
+    }
+    if (!J || !J.run) { persistJob(); return; }
+    // Anything still unanswered after three passes is "couldn't check", which
+    // reads as unmatched rather than looping for ever.
+    J.items.forEach(function (it) { var r = J.res[it.u]; if (!r || r.status === 'retry') J.res[it.u] = { status: 'none', m: null, alts: [], failed: true }; });
+    persistJob();
+    var c = counts();
+    if (c.check) { UI.stage = 'review'; UI.reviewIdx = 0; } else { await applyJob(); UI.stage = 'done'; }
+    paint(); paintPill();
+  }
+
+  /* Write everything, once, in bulk. One persist per store and chunked
+     upserts — a thousand liked songs is two requests, not a thousand. */
+  async function applyJob() {
+    if (!J || J.applied) return;
+    J.applied = true;
+    var now = Date.now(), sum = { liked: 0, albums: 0, lists: 0, songs: 0, none: 0 };
+    var got = function (it) { var r = J.res[it.u]; return r && (r.status === 'ok' || r.status === 'picked') && r.m ? r.m : null; };
+    J.items.forEach(function (it) { if (!got(it)) sum.none++; });
+
+    if (J.opts.liked) {
+      var liked = loadLikedSongs(), rows = [];
+      J.items.forEach(function (it) {
+        var m = got(it);
+        if (!m || it.dest.indexOf('liked') < 0 || liked[m.id]) return;
+        liked[m.id] = { id: m.id, name: m.name, artist: m.artist, art: m.art, savedAt: now, from: 'spotify' };
+        rows.push({ user_id: me().id, track_key: m.id, name: m.name, artist: m.artist, art: m.art });
+        sum.liked++;
+      });
+      if (rows.length) {
+        persist(LIKED_SONGS_KEY, liked);
+        for (var i = 0; i < rows.length; i += 300) {
+          var r = await sb().from('liked_songs').upsert(rows.slice(i, i + 300), { onConflict: 'user_id,track_key' });
+          if (r && r.error) { report('Spotify import: liked_songs upsert failed', { code: r.error.code }); break; }
+        }
+      }
+    }
+    if (J.opts.albums) {
+      var sl = loadShortlist(), crate = loadAlbums(), added = 0;
+      J.items.forEach(function (it) {
+        var m = got(it);
+        if (!m || it.dest.indexOf('albums') < 0 || sl[m.id] || findAlbumRec(crate, m)) return;
+        sl[m.id] = { id: m.id, name: m.name, artist: m.artist, art: m.art, why: 'Saved in your Spotify', savedAt: now };
+        added++;
+      });
+      if (added) { persist(SHORTLIST_KEY, sl); if (window.renderShortlist) renderShortlist(); }
+      sum.albums = added;
+    }
+    var st = readState(), lists = st.lists || {};
+    for (var p = 0; p < J.opts.playlists.length; p++) {
+      var pl = J.opts.playlists[p];
+      if (!pl) continue;
+      var seenId = {}, items = [];
+      pl.uris.forEach(function (u) {
+        var r = J.res[u];
+        if (!r || !(r.status === 'ok' || r.status === 'picked') || !r.m || seenId[r.m.id]) return;
+        seenId[r.m.id] = 1; items.push({ id: r.m.id, name: r.m.name, artist: r.m.artist, art: r.m.art });
+      });
+      if (!items.length) continue;
+      // The same playlist imported again updates its list rather than making a second one.
+      var res = await Cloud.saveList({ id: lists[pl.name] || undefined, title: pl.name, kind: 'song', items: items });
+      if (res && res.error && lists[pl.name]) res = await Cloud.saveList({ title: pl.name, kind: 'song', items: items });
+      if (res && res.data && res.data.id) lists[pl.name] = res.data.id;
+      if (res && !res.error) { sum.lists++; sum.songs += items.length; }
+    }
+    var imported = st.imported || {};
+    J.items.forEach(function (it) { var m = got(it); if (m) imported[it.u] = { id: m.id, name: m.name, artist: m.artist, art: m.art }; });
+    sum.history = J.history && J.history.kept ? J.history.kept : 0;
+    sum.covers = J.items.map(got).filter(function (m) { return m && m.art; }).slice(0, 9).map(function (m) { return m.art; });
+    sum.unmatched = J.items.filter(function (it) { return !got(it); }).slice(0, 200).map(function (it) { return { a: it.a, t: it.t || it.b, failed: !!(J.res[it.u] && J.res[it.u].failed) }; });
+    patch({ lists: lists, imported: imported, importedAt: now, summary: sum, job: null });
+    if (window.track) track('spotify_import_done', { liked: sum.liked, albums: sum.albums, lists: sum.lists, none: sum.none });
+    if (window.buzz) buzz('big');
+    if (window.renderProfile && window.currentMode === 'profile') renderProfile();
+    paintHome();
+  }
+
+  /* ---- the sheet -------------------------------------------------------- */
+  function open(stage) {
+    if (!on()) { Cloud.openAuth(); return; }
+    var st = readState();
+    if (J && J.run) UI.stage = 'importing';
+    else if (J && !J.applied && counts().check) UI.stage = 'review';
+    else if (stage) UI.stage = stage;
+    else if (st.job && st.job.items && st.job.items.length) UI.stage = 'resume';
+    else if (UI.stage === 'done' || UI.stage === 'importing') UI.stage = 'intro';
+    paint();
+    $('sp-modal').classList.add('open');
+    paintPill();
+  }
+  function close() { $('sp-modal').classList.remove('open'); if (UI.stage === 'done') { UI.stage = 'intro'; J = null; } paintPill(); }
+
+  function heroCovers() {
+    var pool = (window.VinalPool && VinalPool.albums) || [];
+    var picks = [0, 7, 3, 12, 5, 18, 9].map(function (i) { return pool[i] && small(pool[i][6]); }).filter(Boolean);
+    return '<div class="sp-fan" aria-hidden="true">' + picks.map(function (u, i) {
+      return '<img src="' + esc(u) + '" alt="" style="--i:' + (i - 3) + '" loading="lazy">';
+    }).join('') + '<span class="sp-fan-disc"></span></div>';
+  }
+
+  function paint() {
+    var b = $('sp-body');
+    if (!b) return;
+    var st = readState();
+    var s = UI.stage, html = '';
+    if (s === 'intro') {
+      html = heroCovers() +
+        '<h2 class="sp-h">Bring your Spotify in.</h2>' +
+        '<p class="sp-lede">Everything you\'ve saved, ready to rate.</p>' +
+        '<ul class="sp-gets">' +
+          '<li><span class="sp-ic">♥</span><b>Liked Songs</b><i>become your likes</i></li>' +
+          '<li><span class="sp-ic">◎</span><b>Saved albums</b><i>lined up to rate</i></li>' +
+          '<li><span class="sp-ic">≡</span><b>Playlists</b><i>become your lists</i></li>' +
+          '<li><span class="sp-ic">▶</span><b>Listening</b><i>makes Today smarter</i></li>' +
+        '</ul>' +
+        '<label class="sp-drop" id="sp-drop"><input type="file" id="sp-file" accept=".zip,.json,application/zip,application/json" multiple>' +
+          '<span class="sp-drop-t">Drop your Spotify zip</span><span class="sp-drop-s">or tap to choose it</span></label>' +
+        '<button class="sp-link" data-sp="guide">' + (st.requestedAt ? 'How to download it again' : 'Don\'t have it yet? It takes two minutes to ask for') + ' →</button>' +
+        (st.summary ? '<p class="sp-foot">Last brought in ' + esc(new Date(st.importedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })) + '. Doing it again only adds what\'s new.</p>' : '') +
+        '<button class="sp-link sp-send-link" data-sp="send">Send songs the other way →</button>';
+    } else if (s === 'guide') {
+      html = '<button class="sp-back" data-sp="intro">← Back</button>' +
+        '<h2 class="sp-h">Get your Spotify file</h2>' +
+        '<p class="sp-lede">Spotify will email it to you. Ask once, then carry on — we\'ll remind you.</p>' +
+        '<ol class="sp-steps">' +
+          '<li><span class="sp-n">1</span><div><b>Open Spotify\'s privacy page</b><a class="btn-primary sp-go" href="' + PRIVACY_URL + '" target="_blank" rel="noopener" data-sp="opened">Open it ↗</a><small>Log in if it asks.</small></div></li>' +
+          '<li><span class="sp-n">2</span><div><b>Tick <u>Account data</u>, then Request data</b><small>Near the bottom, under Download your data. Leave the other boxes — they take a month.</small></div></li>' +
+          '<li><span class="sp-n">3</span><div><b>Confirm the email Spotify sends</b><small>Usually within a minute.</small></div></li>' +
+          '<li><span class="sp-n">4</span><div><b>Drop the zip here when it arrives</b><small>Spotify says up to five days; it\'s often sooner.' +
+            (/iP(hone|ad)/.test(navigator.userAgent) ? ' On iPhone it saves to Files → Downloads.' : '') + '</small></div></li>' +
+        '</ol>' +
+        (st.requestedAt
+          ? '<div class="sp-asked">Asked ' + esc(new Date(st.requestedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })) + ' · we\'ll show it on Home when it\'s likely in.</div><button class="btn-mini sp-wide" data-sp="intro">I\'ve got the zip</button>'
+          : '<button class="btn-primary sp-wide" data-sp="requested">I\'ve asked for it</button>');
+    } else if (s === 'reading') {
+      html = '<div class="sp-center"><div class="sp-spin"></div><h2 class="sp-h">Opening your Spotify…</h2></div>';
+    } else if (s === 'choose') {
+      var L = UI.lib, sel = UI.sel, prev = st.imported || {};
+      var fresh = function (arr) { return arr.filter(function (x) { return !prev[x.u]; }).length; };
+      var plRows = L.playlists.map(function (p, i) {
+        return '<label class="sp-pl"><input type="checkbox" data-pl="' + i + '"' + (sel.pl[i] ? ' checked' : '') + '><span class="sp-pl-n">' + esc(p.name) + '</span><span class="sp-pl-c">' + n(p.items.length) + '</span></label>';
+      }).join('');
+      var total = jobItems(L, sel).length;
+      html = '<h2 class="sp-h">Here\'s your Spotify.</h2>' +
+        '<div class="sp-tally">' +
+          (L.liked.length ? '<div><b>' + n(L.liked.length) + '</b><span>liked songs</span></div>' : '') +
+          (L.albums.length ? '<div><b>' + n(L.albums.length) + '</b><span>saved albums</span></div>' : '') +
+          (L.playlists.length ? '<div><b>' + n(L.playlists.length) + '</b><span>playlists</span></div>' : '') +
+          (L.events.length ? '<div><b>' + n(L.events.length) + '</b><span>plays</span></div>' : '') +
+        '</div>' +
+        (L.liked.length ? '<label class="sp-opt"><input type="checkbox" data-opt="liked"' + (sel.liked ? ' checked' : '') + '><span><b>Liked Songs</b><small>' + (fresh(L.liked) < L.liked.length ? n(fresh(L.liked)) + ' new · ' : '') + 'become your likes</small></span></label>' : '') +
+        (L.albums.length ? '<label class="sp-opt"><input type="checkbox" data-opt="albums"' + (sel.albums ? ' checked' : '') + '><span><b>Saved albums</b><small>lined up to rate</small></span></label>' : '') +
+        (L.events.length ? '<label class="sp-opt"><input type="checkbox" data-opt="history"' + (sel.history ? ' checked' : '') + '><span><b>Listening history</b><small>makes Today smarter</small></span></label>' : '') +
+        (L.playlists.length ? '<div class="sp-pls-h"><span>Playlists → lists</span><button class="sp-link" data-sp="plall">' + (sel.pl.every(Boolean) ? 'None' : 'All') + '</button></div><div class="sp-pls">' + plRows + '</div>' : '') +
+        '<button class="btn-primary sp-wide sp-cta" data-sp="start"' + (total || (sel.history && L.events.length) ? '' : ' disabled') + '>' +
+          (total ? 'Bring in ' + plural(total, 'record') : 'Bring in my listening') + '</button>';
+    } else if (s === 'importing') {
+      html = '<div class="sp-run"><div class="sp-ring" id="sp-ring"><svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="54"/><circle class="fg" id="sp-ring-fg" cx="60" cy="60" r="54"/></svg><div class="sp-ring-n" id="sp-ring-n">0%</div></div>' +
+        '<h2 class="sp-h" id="sp-run-h">Matching your music…</h2><div class="sp-run-s" id="sp-run-s"></div></div>' +
+        '<div class="sp-wall" id="sp-wall"></div>' +
+        '<p class="sp-foot">You can close this — it keeps going.</p>';
+    } else if (s === 'review') {
+      html = reviewHtml();
+    } else if (s === 'resume') {
+      var sj = st.job, cj = sj.items.filter(function (it) { return sj.res && sj.res[it.u] && sj.res[it.u].status !== 'retry'; }).length;
+      html = '<div class="sp-center"><h2 class="sp-h">Pick up where you left off?</h2><p class="sp-lede">' + n(cj) + ' of ' + n(sj.items.length) + ' already matched.</p>' +
+        '<button class="btn-primary sp-wide" data-sp="resume">Carry on</button><button class="sp-link" data-sp="discard">Start again</button></div>';
+    } else if (s === 'done') {
+      var sm = st.summary || {};
+      html = '<div class="sp-done">' +
+        '<div class="sp-mosaic">' + (sm.covers || []).map(function (u, i) { return '<img src="' + esc(u) + '" alt="" style="--i:' + i + '">'; }).join('') + '</div>' +
+        '<h2 class="sp-h">Your Spotify is in.</h2>' +
+        '<div class="sp-chips">' +
+          (sm.liked ? '<span><b>' + n(sm.liked) + '</b> liked</span>' : '') +
+          (sm.albums ? '<span><b>' + n(sm.albums) + '</b> albums to rate</span>' : '') +
+          (sm.lists ? '<span><b>' + n(sm.lists) + '</b> ' + (sm.lists === 1 ? 'list' : 'lists') + '</span>' : '') +
+          (sm.history ? '<span><b>' + n(sm.history) + '</b> plays</span>' : '') +
+        '</div>' +
+        '<button class="btn-primary sp-wide sp-cta" data-sp="rate">Start rating</button>' +
+        (sm.none ? '<details class="sp-miss"><summary>' + plural(sm.none, 'record') + ' not on Deezer</summary><div>' +
+          (sm.unmatched || []).map(function (x) { return '<div class="sp-miss-r"><b>' + esc(x.t) + '</b><span>' + esc(x.a) + (x.failed ? ' · couldn\'t check' : '') + '</span></div>'; }).join('') +
+          '</div></details>' : '') +
+        '</div>';
+    } else if (s === 'send') {
+      html = sendHtml();
+    }
+    b.innerHTML = html;
+    b.dataset.stage = s;
+    if (s === 'importing') paintProgress(true);
+  }
+
+  function paintProgress(full) {
+    var c = counts(), pct = c.total ? Math.floor(c.done / c.total * 100) : 0;
+    var fg = $('sp-ring-fg');
+    if (fg) fg.style.strokeDashoffset = String(339.3 * (1 - pct / 100));
+    if ($('sp-ring-n')) $('sp-ring-n').textContent = pct + '%';
+    if ($('sp-run-h')) $('sp-run-h').textContent = c.done < c.total ? 'Matching ' + n(c.total) + ' records…' : 'Bringing them in…';
+    if ($('sp-run-s')) $('sp-run-s').innerHTML = '<b>' + n(c.ok) + '</b> matched' + (c.check ? ' · <b>' + n(c.check) + '</b> to check' : '') + (c.none ? ' · <b>' + n(c.none) + '</b> not on Deezer' : '');
+    var wall = $('sp-wall');
+    if (wall) {
+      // New covers arrive at the front and push the wall along — the library
+      // visibly pouring in, which is the whole point of watching this.
+      if (full) wall.innerHTML = UI.shown.map(function (m) { return '<img src="' + esc(small(m.art)) + '" alt="" class="is-old">'; }).join('');
+      var fresh = UI.recent.splice(0, UI.recent.length);
+      for (var i = Math.min(fresh.length, 24) - 1; i >= 0; i--) {
+        var img = document.createElement('img');
+        img.src = small(fresh[i].art); img.alt = '';
+        img.style.animationDelay = (i * 40) + 'ms';
+        wall.insertBefore(img, wall.firstChild);
+        UI.shown.unshift(fresh[i]);
+      }
+      while (wall.children.length > 24) wall.removeChild(wall.lastChild);
+      if (UI.shown.length > 24) UI.shown.length = 24;
+    }
+    paintPill();
+  }
+
+  function reviewQueue() { return J ? J.items.filter(function (it) { var r = J.res[it.u]; return r && r.status === 'check'; }) : []; }
+  function reviewHtml() {
+    var q = reviewQueue(), it = q[0];
+    if (!it) return '';
+    var r = J.res[it.u];
+    return '<div class="sp-rv">' +
+      '<div class="sp-rv-h"><span>Is this the one?</span><span class="sp-rv-c">' + n(q.length) + ' left</span></div>' +
+      '<div class="sp-rv-want"><small>From your Spotify</small><b>' + esc(it.t || it.b) + '</b><span>' + esc(it.a) + (it.t && it.b ? ' · ' + esc(it.b) : '') + '</span></div>' +
+      '<div class="sp-rv-opts">' + (r.alts || []).map(function (m, i) {
+        return '<button class="sp-rv-o" data-pick="' + i + '"><img src="' + esc(small(m.art)) + '" alt="" onerror="this.removeAttribute(\x27src\x27)"><span><b>' + esc(m.name) + '</b><small>' + esc(m.artist) + (m.album ? ' · ' + esc(m.album) : '') + '</small></span></button>';
+      }).join('') + '</div>' +
+      '<div class="sp-rv-acts"><button class="sp-link" data-sp="skip">None of these</button><button class="sp-link" data-sp="skipall">Skip the rest</button></div>' +
+    '</div>';
+  }
+  async function resolve(pick) {
+    var it = reviewQueue()[0];
+    if (!it) return;
+    var r = J.res[it.u];
+    if (pick == null) J.res[it.u] = { status: 'none', m: null, alts: [] };
+    else J.res[it.u] = { status: 'picked', m: r.alts[pick], alts: [] };
+    persistJob();
+    if (!reviewQueue().length) { await applyJob(); UI.stage = 'done'; }
+    paint();
+  }
+
+  /* ---- the other direction ------------------------------------------------ */
+  var SEND = { src: 'nine', done: {} };
+  function sendSources() {
+    var S = loadSongs(), songs = Object.keys(S).map(function (k) { return S[k]; }).filter(function (s) { return s && s.score > 0; });
+    var liked = loadLikedSongs();
+    return {
+      nine: songs.filter(function (s) { return s.score >= 9; }).sort(function (a, b) { return b.score - a.score; }),
+      eight: songs.filter(function (s) { return s.score >= 8; }).sort(function (a, b) { return b.score - a.score; }),
+      recent: songs.slice().sort(function (a, b) { return (b.ratedAt || b.savedAt || 0) - (a.ratedAt || a.savedAt || 0); }).slice(0, 30),
+      liked: Object.keys(liked).map(function (k) { return liked[k]; }).sort(function (a, b) { return (b.savedAt || 0) - (a.savedAt || 0); }),
+      list: SEND.list ? SEND.list.items : []
+    };
+  }
+  function findUrl(s) { return 'https://open.spotify.com/search/' + encodeURIComponent((s.name + ' ' + (s.artist || '')).trim()); }
+  function sendHtml() {
+    var src = sendSources(), rows = src[SEND.src] || [];
+    var tabs = [['nine', 'Your 9+'], ['eight', 'Your 8+'], ['recent', 'Just rated'], ['liked', 'Liked']];
+    if (SEND.list) tabs.unshift(['list', SEND.list.title]);
+    return '<button class="sp-back" data-sp="intro">← Back</button>' +
+      '<h2 class="sp-h">Find in Spotify</h2>' +
+      '<p class="sp-lede">Each one opens in Spotify — save it there.</p>' +
+      '<div class="rv-sorts sp-tabs">' + tabs.map(function (t) { return '<button data-src="' + t[0] + '" class="' + (SEND.src === t[0] ? 'is-on' : '') + '">' + esc(t[1]) + ' <i>' + n((src[t[0]] || []).length) + '</i></button>'; }).join('') + '</div>' +
+      (rows.length ? '<div class="sp-send">' + rows.slice(0, 200).map(function (s, i) {
+        var done = SEND.done[s.id];
+        return '<div class="sp-send-r' + (done ? ' is-done' : '') + '"><img src="' + esc(small(s.art || '')) + '" alt="" loading="lazy">' +
+          '<span class="sp-send-t"><b>' + esc(s.name) + '</b><small>' + esc(s.artist || '') + '</small></span>' +
+          (typeof s.score === 'number' ? '<span class="sp-send-sc" style="color:' + songColor(s.score) + '">' + s.score + '</span>' : '') +
+          '<a class="btn-mini sp-send-go" href="' + esc(findUrl(s)) + '" target="_blank" rel="noopener" data-send="' + esc(s.id) + '">' + (done ? 'Opened ✓' : 'Open') + '</a></div>';
+      }).join('') + '</div><button class="btn-mini sp-wide" data-sp="copy">Copy as a list</button>'
+        : '<p class="sp-foot">Nothing here yet.</p>');
+  }
+  function openSend(list) {
+    SEND.list = list || null;
+    SEND.src = list ? 'list' : 'nine';
+    UI.stage = 'send';
+    if (!on()) { paint(); $('sp-modal').classList.add('open'); return; }
+    open('send');
+  }
+
+  /* ---- reading the drop ---------------------------------------------------- */
+  async function readFiles(fileList) {
+    var files = Array.prototype.slice.call(fileList || []);
+    if (!files.length) return;
+    UI.stage = 'reading'; paint();
+    var texts = {}, err = '';
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      try {
+        if (/\.zip$/i.test(f.name) || f.type === 'application/zip') Object.assign(texts, await unzip(f, function (nm) { return WANT.test(nm); }));
+        else if (/\.json$/i.test(f.name)) texts[f.name] = await f.text();
+      } catch (e) {
+        err = String(e && e.message) === 'zip64' || String(e && e.message) === 'no inflate'
+          ? 'This browser can\'t open that zip. Unzip it and drop the files inside.' : 'That doesn\'t look like Spotify\'s zip.';
+      }
+    }
+    var lib = parseExport(texts);
+    if (!lib.liked.length && !lib.albums.length && !lib.playlists.length && !lib.events.length) {
+      UI.stage = 'intro'; paint();
+      var d = $('sp-drop'); if (d) { d.classList.add('is-bad'); d.querySelector('.sp-drop-s').textContent = err || 'Nothing from Spotify in that. It\'s the file called my_spotify_data.zip.'; }
+      return;
+    }
+    UI.lib = lib;
+    UI.sel = { liked: !!lib.liked.length, albums: !!lib.albums.length, history: !!lib.events.length, pl: lib.playlists.map(function () { return false; }) };
+    patch({ requestedAt: null });
+    UI.stage = 'choose'; paint();
+    if (window.buzz) buzz('good');
+  }
+
+  /* ---- Home card, and the pill ------------------------------------------- */
+  function paintHome() {
+    var h = $('sp-home');
+    if (!h) return;
+    var st = readState();
+    if (!on() || st.dismissedAt || (st.importedAt && !(J && !J.applied))) { h.innerHTML = ''; return; }
+    var waiting = st.requestedAt && !st.importedAt, likely = waiting && Date.now() - st.requestedAt > READY_AFTER;
+    var pool = (window.VinalPool && VinalPool.albums) || [];
+    var covers = [3, 0, 12].map(function (i) { return pool[i] && small(pool[i][6]); }).filter(Boolean);
+    h.innerHTML = '<div class="sp-card' + (likely ? ' is-ready' : '') + '">' +
+      '<div class="sp-card-art" aria-hidden="true">' + covers.map(function (u, i) { return '<img src="' + esc(u) + '" alt="" style="--i:' + i + '">'; }).join('') + '</div>' +
+      '<div class="sp-card-t"><small>' + (waiting ? (likely ? 'It\'s probably in your inbox' : 'On its way from Spotify') : 'Your Spotify, in VINALL') + '</small>' +
+        '<b>' + (waiting ? (likely ? 'Your Spotify file should be ready' : 'Your file is on its way') : 'Bring your library with you') + '</b></div>' +
+      '<button class="btn-primary sp-card-go" data-sp="' + (waiting ? 'intro' : 'home') + '">' + (waiting ? 'Drop it in' : 'Bring it in') + '</button>' +
+      '<button class="sp-card-x" data-sp="dismiss" aria-label="Not now">×</button></div>';
+  }
+  function paintPill() {
+    var p = $('sp-pill');
+    if (!p) return;
+    var modalOpen = $('sp-modal') && $('sp-modal').classList.contains('open');
+    var running = J && J.run && !J.applied, rev = J && !J.applied && !J.run && reviewQueue().length;
+    if (modalOpen || (!running && !rev)) { p.hidden = true; return; }
+    var c = counts();
+    p.hidden = false;
+    p.innerHTML = rev ? 'Spotify · ' + plural(rev, 'match', 'matches') + ' to check' : 'Bringing in Spotify · ' + (c.total ? Math.floor(c.done / c.total * 100) : 0) + '%';
+  }
+
+  /* ---- wiring --------------------------------------------------------------- */
+  function wire() {
+    var m = $('sp-modal'), body = $('sp-body');
+    if (!m || m._wired) return;
+    m._wired = true;
+    $('sp-close').addEventListener('click', close);
+    m.addEventListener('click', function (e) { if (e.target === m) close(); });
+    body.addEventListener('change', function (e) {
+      var t = e.target;
+      if (t.id === 'sp-file') { readFiles(t.files); return; }
+      if (t.dataset.opt) { UI.sel[t.dataset.opt] = t.checked; paint(); }
+      if (t.dataset.pl != null) { UI.sel.pl[+t.dataset.pl] = t.checked; paint(); }
+    });
+    ['dragenter', 'dragover'].forEach(function (ev) { body.addEventListener(ev, function (e) { var d = e.target.closest && e.target.closest('#sp-drop'); if (d) { e.preventDefault(); d.classList.add('is-over'); } }); });
+    body.addEventListener('dragleave', function (e) { var d = e.target.closest && e.target.closest('#sp-drop'); if (d) d.classList.remove('is-over'); });
+    body.addEventListener('drop', function (e) { var d = e.target.closest && e.target.closest('#sp-drop'); if (!d) return; e.preventDefault(); readFiles(e.dataTransfer.files); });
+    body.addEventListener('click', function (e) {
+      var pick = e.target.closest('[data-pick]');
+      if (pick) { resolve(+pick.dataset.pick); return; }
+      var src = e.target.closest('[data-src]');
+      if (src) { SEND.src = src.dataset.src; paint(); return; }
+      var sendA = e.target.closest('[data-send]');
+      if (sendA) { SEND.done[sendA.dataset.send] = 1; setTimeout(paint, 300); return; }
+      var b = e.target.closest('[data-sp]');
+      if (!b) return;
+      var a = b.dataset.sp;
+      if (a === 'guide' || a === 'intro') { UI.stage = a; paint(); }
+      else if (a === 'opened') { /* the link itself opens Spotify */ }
+      else if (a === 'requested') { patch({ requestedAt: Date.now(), dismissedAt: null }); if (window.buzz) buzz('good'); paint(); paintHome(); }
+      else if (a === 'plall') { var all = UI.sel.pl.every(Boolean); UI.sel.pl = UI.sel.pl.map(function () { return !all; }); paint(); }
+      else if (a === 'start') startJob();
+      else if (a === 'skip') resolve(null);
+      else if (a === 'skipall') { reviewQueue().forEach(function (it) { J.res[it.u] = { status: 'none', m: null, alts: [] }; }); persistJob(); applyJob().then(function () { UI.stage = 'done'; paint(); }); }
+      else if (a === 'rate') { close(); if (window.setMode) setMode('foryou'); }
+      else if (a === 'resume') { var sj = readState().job; J = { opts: sj.opts, items: sj.items, res: sj.res || {}, run: true, startedAt: sj.startedAt, history: sj.history }; UI.stage = 'importing'; paint(); runJob(); }
+      else if (a === 'discard') { J = null; patch({ job: null }); UI.stage = 'intro'; paint(); }
+      else if (a === 'send') openSend(null);
+      else if (a === 'copy') {
+        var rows = sendSources()[SEND.src] || [];
+        handOff(b, { text: rows.map(function (s) { return s.artist + ' – ' + s.name; }).join('\n'), idle: 'Copy as a list', copied: 'Copied ✓' });
+      }
+    });
+    // The Home card and the pill live outside the sheet.
+    var home = $('sp-home');
+    if (home) home.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-sp]');
+      if (!b) return;
+      if (b.dataset.sp === 'dismiss') { patch({ dismissedAt: Date.now() }); paintHome(); return; }
+      open('intro');
+    });
+    var pill = $('sp-pill');
+    if (pill) pill.addEventListener('click', function () { open(); });
+    var si = $('set-spotify-in'), so = $('set-spotify-out');
+    function fromSettings(fn) { return function () { var s = $('settings-modal'); if (s) s.classList.remove('open'); fn(); }; }
+    if (si) si.addEventListener('click', fromSettings(function () { open('intro'); }));
+    if (so) so.addEventListener('click', fromSettings(function () { openSend(null); }));
+  }
+
+  window.SpotifyBridge = { open: open, send: openSend, paintHome: paintHome, parse: parseExport };
+
+  function init() {
+    wire();
+    paintHome();
+    if (window.Cloud && Cloud.ready) Cloud.ready.then(function () { paintHome(); });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
