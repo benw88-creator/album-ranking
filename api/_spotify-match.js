@@ -1,4 +1,4 @@
-// /api/spotify-match — Spotify library rows (from the person's own data
+// /api/catalogue?path=spotify-match — Spotify library rows (from the person's own data
 // download, never Spotify's API) → the same records on Deezer.
 //
 // POST { kind: 'track' | 'album', items: [{ u, a, t, b }] }   (max 10)
@@ -16,7 +16,6 @@
 // refusal comes back as 'retry' for the browser to send again later rather
 // than as a "no match" it would believe.
 
-import { cors } from './_cors.js';
 import { scoreTrack, scoreAlbum, decide, trackOut, albumOut, base } from './_match.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
@@ -71,8 +70,10 @@ async function matchOne(kind, it) {
   return { status: d.status, m: trackOut(d.best), alts: d.status === 'check' ? d.alts.map(trackOut) : [] };
 }
 
-export default async function handler(req, res) {
-  if (cors(req, res)) return;
+// Served through /api/catalogue (path=spotify-match), which has already
+// answered CORS. It is not its own route because Vercel Hobby allows twelve
+// functions and this would be the thirteenth — see the note in CLAUDE.md.
+export async function spotifyMatch(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }

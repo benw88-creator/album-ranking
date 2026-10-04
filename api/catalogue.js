@@ -163,6 +163,7 @@ async function fullAlbum(id) {
 }
 
 import { cors } from './_cors.js';
+import { spotifyMatch } from './_spotify-match.js';
 import {
   pickArtist, classifyRelease, dedupeReleases, countsForCompletion, dedupeArtists, rankArtists, rankTracks,
 } from './_artists.js';
@@ -195,6 +196,9 @@ export default async function handler(req, res) {
   if (cors(req, res)) return;
   const q = req.query || {};
   const path = String(q.path || '');
+  // Spotify data-download matching lives here rather than in its own route:
+  // Vercel Hobby caps a project at twelve functions.
+  if (path === 'spotify-match') return spotifyMatch(req, res);
   try {
     // ---- album -----------------------------------------------------------
     // /api/catalogue?path=album&id=<deezer id>

@@ -38570,7 +38570,7 @@ window.track = function (name, props) {
        Playlists       → your lists, on your profile, in order
        Listening       → listening_plays, which Today already reads
 
-     MATCHING is /api/spotify-match (api/_match.js decides). Every row is
+     MATCHING is /api/catalogue?path=spotify-match (api/_match.js decides). Every row is
      matched to the same recording on Deezer; the doubtful ones are shown to
      the person with the candidates, and the missing ones are named, not
      hidden. Nothing is written until the matching is finished.
@@ -38742,7 +38742,7 @@ window.track = function (name, props) {
           var b = batches[next++];
           var res = null;
           try {
-            var r = await fetch(base + '/api/spotify-match', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            var r = await fetch(base + '/api/catalogue?path=spotify-match', { method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ kind: b.kind, items: b.items.map(function (x) { return { u: x.u, a: x.a, t: x.t, b: x.b }; }) }) });
             res = r.ok ? await r.json() : null;
           } catch (e) { res = null; }

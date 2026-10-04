@@ -795,6 +795,18 @@ than as no wipe at all.
 there needs an owner stamp checked *before* the merge — after is too late, the upload has
 already been queued.
 
+### 11. Twelve functions, and the thirteenth fails the whole deploy
+
+Vercel Hobby allows **twelve** serverless functions per project — every file in `api/` whose
+name does not start with `_`. A thirteenth does not fail quietly: the ENTIRE deploy is
+rejected, so the site keeps serving the previous build and nothing in the push goes live,
+including unrelated fixes. It happened with `api/spotify-match.js` (2026-10-05).
+
+**Before adding a route, count:** `ls api | grep -v '^_' | wc -l`. If it is twelve, put the
+logic in an `_`-prefixed module and dispatch to it from an existing route by `path=` — the
+way Spotify matching rides `/api/catalogue?path=spotify-match`. After any push that adds a
+file under `api/`, check the commit status (`gh api repos/benw88-creator/album-ranking/commits/<sha>/status`).
+
 ## The traps, continued: a fifth source-order loss and a fifth silent no-op
 
 `.song-slider { width: 80px }` in a `max-width: 560px` block sat **after** the new slider
@@ -2541,7 +2553,7 @@ in spreads, reviews and taste match without burying everybody's Crate feed for a
 
 ## Spotify, from your own data
 
-`window.SpotifyBridge`, `#sp-modal`, `#sp-home`, `#sp-pill`, `api/spotify-match.js`,
+`window.SpotifyBridge`, `#sp-modal`, `#sp-home`, `#sp-pill`, `api/_spotify-match.js` (served as `/api/catalogue?path=spotify-match`),
 `api/_match.js` and `..._20261005100000_spotify_matches.sql` (optional — the import works
 without it, every row matched fresh). Spotify = your existing music, VINALL = where you rank
 it, Deezer = the catalogue underneath.
