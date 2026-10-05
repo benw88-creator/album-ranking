@@ -5882,6 +5882,28 @@ html[data-motion="none"] .rv-bars i, html[data-motion="none"] .rv-card { animati
 .imp-score { flex: none; font: 700 16px var(--font-display); color: var(--c); min-width: 30px; text-align: right; }
 .imp-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
 .imp-status { font-size: 12.5px; color: var(--text-dim); }
+/* ---- Support (Buy Me a Coffee) — web only ---- */
+html.is-native .bmc, html.is-native .bmc-link { display: none !important; }
+.bmc { display: flex; align-items: center; gap: 16px; margin: 34px 0 8px; padding: 18px 20px; border-radius: 20px; text-decoration: none; color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--border); transition: border-color .2s var(--ease), transform .2s var(--ease); }
+.bmc:hover { border-color: color-mix(in srgb, var(--gold) 45%, var(--border)); }
+.bmc:active { transform: scale(.985); }
+.bmc-disc { flex: none; width: 46px; height: 46px; border-radius: 50%; position: relative;
+  background: repeating-radial-gradient(circle, rgba(255,255,255,.05) 0 1px, transparent 1px 3px), radial-gradient(circle at 38% 32%, #2a2724, #0b0a09 70%);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.06); }
+.bmc-disc::after { content: ''; position: absolute; inset: 36%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, var(--accent-2), var(--gold) 70%); }
+.bmc:hover .bmc-disc { animation: vinylSpin 2.4s linear infinite; }
+.bmc-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.bmc-t small { font: 600 10.5px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
+.bmc-t b { font: 600 15.5px/1.35 var(--font-display); letter-spacing: -0.01em; }
+.bmc-go { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 11px 18px; border-radius: 999px; font: 700 14px var(--font-display);
+  color: #0a0908; background: linear-gradient(120deg, var(--gold), var(--accent-2)); }
+.bmc-go i { font-style: normal; transition: transform .2s var(--ease); }
+.bmc:hover .bmc-go i { transform: translateX(3px); }
+@media (max-width: 560px) { .bmc { flex-wrap: wrap; } .bmc-go { width: 100%; justify-content: center; } }
+@media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) .bmc:hover .bmc-disc { animation: none; } }
+a.bmc-link:not(.set-row) { color: var(--text-faint); text-decoration: none; }
+a.bmc-link:not(.set-row):hover { color: var(--gold); }
 /* ---- Profile → Games ---- */
 .gs-card { padding: 16px; border-radius: 18px; background: var(--surface-2); border: 1px solid var(--border); }
 .gs-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; text-align: center; }
@@ -9686,6 +9708,7 @@ input, textarea, select, [contenteditable="true"],
    of the address bar while it starts up — so the reset handler, which looked at
    location AFTER that, found nothing and a reset link just opened the app. */
 window.__bootUrl = { search: location.search, hash: location.hash };
+if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) document.documentElement.classList.add('is-native');
 /* A password-reset link belongs on /reset.html, which does nothing else and
    so cannot be tripped by the splash, a cached build or this file's start-up
    order. Forwarded here, before supabase-js can read the token, whatever
@@ -10364,6 +10387,15 @@ window.discAmt = function (n) {
     <!-- Discovery, not daily. Recommendations and release-watching are things
          you go looking for; neither needs to sit under the diary every time
          somebody opens the app to answer one question. -->
+
+    <!-- Support. Web only (html.is-native hides it): Apple rejects tip links
+         to an outside payment page. Deezer's terms bar receiving money in
+         connection with their catalogue — a known, accepted risk (2026-10). -->
+    <a class="bmc" href="https://buymeacoffee.com/ben2" target="_blank" rel="noopener">
+      <span class="bmc-disc" aria-hidden="true"></span>
+      <span class="bmc-t"><small>Made by one person</small><b>VINALL is free. If it's earned a place in your week, buy me a coffee.</b></span>
+      <span class="bmc-go">Buy me a coffee <i aria-hidden="true">→</i></span>
+    </a>
   </section>
 
   <!-- ============================ THE CRATE ============================ -->
@@ -10823,6 +10855,7 @@ window.discAmt = function (n) {
     <a href="/terms.html">Terms</a>
     <span>&middot;</span>
     <span class="foot-note">VINALL &mdash; the place for music.</span>
+    <a class="bmc-link" href="https://buymeacoffee.com/ben2" target="_blank" rel="noopener">Support VINALL</a>
     <!-- Spotify's Developer Policy requires attribution wherever their content
          is displayed, and every piece of artwork in this app is theirs. Apple
          will not raise this; Spotify can.
@@ -11337,6 +11370,11 @@ window.discAmt = function (n) {
 
     <div class="set-group">
       <div class="shop-section-title">Offline data</div>
+      <div class="set-row bmc-link">
+        <div class="set-copy"><div class="set-name">Support VINALL</div>
+          <div class="set-note">Free, and built by one person.</div></div>
+        <a class="btn-mini" href="https://buymeacoffee.com/ben2" target="_blank" rel="noopener">Buy me a coffee</a>
+      </div>
       <div class="set-row">
         <div class="set-copy">
           <div class="set-name">Clear cached app data</div>
