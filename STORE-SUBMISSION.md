@@ -55,6 +55,23 @@ Verified in a Release build on the simulator: **BUILD SUCCEEDED**, Xcode's own
 `-validate-for-store` passed, search and the Deezer preview player both work
 cross-origin from `capacitor://localhost`, and the login sheet reaches Supabase.
 
+### Re-verified 2026-10-06
+
+- **Google Fonts is gone.** The three families actually used (Instrument Sans,
+  IBM Plex Sans, IBM Plex Mono — Instrument Serif was loaded and never used)
+  are self-hosted under `assets/fonts/`, latin + latin-ext, 205KB. No request
+  leaves for Google, and the app has its own typeface offline. The privacy
+  policy needed nothing for it.
+- **Discogs: decided live.** The Score mode picker is visible and Discogs is in
+  `privacy.html`. The stale "parked" comment in the markup was corrected.
+- **Notifications are in the privacy policy now** — web push stores a browser
+  push endpoint (deleted on toggle-off and on logout); the app's reminders are
+  local and store nothing. Neither was mentioned before.
+- **Buy Me a Coffee is web-only** (`html.is-native` hides all three links), so
+  the binary contains no payment or tipping path for guideline 3.1.1 to ask
+  about. Keep it that way.
+- The cold-launch black screen (~4-5s) is still there. Not a rejection.
+
 ---
 
 ## What is actually being submitted

@@ -26,12 +26,10 @@
 <meta name="apple-mobile-web-app-title" content="VINALL">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Every cover and every sign-in: open both connections while the page parses. -->
 <link rel="preconnect" href="https://cdn-images.dzcdn.net">
 <link rel="preconnect" href="https://cqfxyebejpkyhswolrwi.supabase.co" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="/assets/fonts/fonts.css" rel="stylesheet">
 <style>
 /* ============================================================
    VINALL — REDESIGNED UI  (vinal-28)
@@ -11663,10 +11661,9 @@ window.discAmt = function (n) {
   <div class="modal-panel">
     <button class="modal-close" id="war-new-close" aria-label="Close">&times;</button>
     <div class="modal-head"><span class="mh-emoji" data-icon="trophy"></span><div><h2>Start a war</h2></div></div>
-    <!-- Market mode is parked, not deleted. The picker is hidden and every war
-         is created as `streams`; the server, the mode column, _discogs.js and
-         /api/album-market are all still in place, so bringing it back is
-         removing the `display:none` and nothing else. -->
+    <!-- Both modes are live: Streams (kworb) and Score (Discogs, which is in
+         privacy.html for that reason). Hiding Score again is display:none on
+         #war-mode; the server and /api/album-market do not care. -->
     <div class="hl-mode" id="war-mode" style="margin-bottom:12px;">
       <button data-war-mode="streams" class="active">Streams</button>
       <button data-war-mode="market">Score</button>
