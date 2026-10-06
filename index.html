@@ -28,6 +28,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Every cover and every sign-in: open both connections while the page parses. -->
+<link rel="preconnect" href="https://cdn-images.dzcdn.net">
+<link rel="preconnect" href="https://cqfxyebejpkyhswolrwi.supabase.co" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
@@ -1920,6 +1923,9 @@ html[data-motion="none"] .card { animation: none; }
   font-weight: 700;
   line-height: 1;
   color: var(--score, #fff);
+  /* Above the art-wrap scrim. Without it the ::after gradient, which comes
+     later in paint order, laid 85% black OVER the score it exists to lift. */
+  z-index: 1;
   text-shadow: 0 2px 12px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.6);
   letter-spacing: -0.04em;
 }
@@ -12122,7 +12128,7 @@ function renderSuggestions() {
   }
   suggestionsEl.innerHTML = suggestions.map(function (s, i) {
     return '<div class="suggestion" data-i="' + i + '">' +
-      '<img src="' + s.art + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+      '<img src="' + thumb(s.art,320) + '" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">' +
       '<div class="s-meta"><div class="s-name">' + esc(s.name) + '</div>' +
       '<div class="s-artist">' + esc(s.artist) + (s.year ? ' · ' + s.year : '') + '</div></div>' +
       '<span class="s-tag">' + esc(s.type || 'album') + '</span>' +
@@ -12995,7 +13001,7 @@ window.removeSong = removeSong;
     var pick = { src: src || '', key: null };
     if (window.Covers && opts.artist && opts.album) pick = Covers.srcFor(opts.artist, opts.album, src);
     return '<span class="' + cls + '"' + (opts.style ? ' style="' + opts.style + '"' : '') + '>' +
-      '<img src="' + esc(pick.src) + '"' + (pick.key ? ' data-cover-key="' + esc(pick.key) + '"' : '') +
+      '<img src="' + esc(thumb(pick.src, 320)) + '"' + (pick.key ? ' data-cover-key="' + esc(pick.key) + '"' : '') +
       ' alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
       '</span>';
   }
@@ -13593,7 +13599,7 @@ async function _buildRecommendations(grid, emptyEl, status) {
   grid.innerHTML = top.map(function (r, i) {
     return '<div class="card" data-reco="' + i + '">' +
       '<div class="art-wrap">' +
-      '<img class="art" src="' + r.art + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+      '<img class="art" src="' + thumb(r.art,320) + '" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">' +
       '</div>' +
       '<div class="card-body"><div class="card-name">' + esc(r.name) + '</div>' +
       '<div class="card-artist">' + esc(r.artist) + (r.year ? ' \u00b7 ' + r.year : '') + '</div></div></div>';
@@ -14121,28 +14127,37 @@ function applyAlbumSize(){
 
 let albumFilter='',songFilter='';
 
+/* True when the list's view is hidden. Its own view's switch renders it. */
+function onScreenSkip(el){const v=el&&el.closest('.view');return !!(v&&v.style.display==='none');}
 function renderAlbums(){
-  const all=Object.values(loadAlbums());
   const grid=document.getElementById('albums-grid');
+  /* Off screen it waits: setMode('albums') renders on the way in. Rebuilding a
+     hidden grid on every rating and every background merge threw away every
+     decoded cover, which is what the next visit then had to redraw blank. */
+  if(onScreenSkip(grid))return;
+  const all=Object.values(loadAlbums());
   const emptyEl=document.getElementById('albums-empty');
   document.getElementById('albums-title').textContent=all.length?('Your album rankings \u00b7 '+all.length):'Your album rankings';
   applyAlbumSize();
-  if(!all.length){grid.innerHTML='';emptyEl.style.display='block';return;}
+  if(!all.length){grid.innerHTML='';grid._html='';emptyEl.style.display='block';return;}
   const rankMap={};
   all.slice().sort(function(a,b){return b.score-a.score;}).forEach(function(a,i){rankMap[a.id]=i+1;});
   const f=albumFilter.toLowerCase();
   let list=f?all.filter(function(a){return(a.name||'').toLowerCase().indexOf(f)!==-1||(a.artist||'').toLowerCase().indexOf(f)!==-1||(a.genre||'').toLowerCase().indexOf(f)!==-1;}):all;
   const mode=(document.getElementById('albums-sort')||{}).value||'score';
   list=sortAlbumList(list,mode);
-  if(!list.length){grid.innerHTML='';emptyEl.style.display='block';emptyEl.querySelector('h3').textContent='No matches';emptyEl.querySelector('p').textContent='Nothing in your rankings matches \u201C'+albumFilter+'\u201D.';return;}
+  if(!list.length){grid.innerHTML='';grid._html='';emptyEl.style.display='block';emptyEl.querySelector('h3').textContent='No matches';emptyEl.querySelector('p').textContent='Nothing in your rankings matches \u201C'+albumFilter+'\u201D.';return;}
   emptyEl.style.display='none';
-  grid.innerHTML=list.map(function(a){
+  // Device pixels a tile actually needs: ~320 for a phone's three across,
+  // up to ~600 for a large tile on a retina desktop.
+  const artPx=innerWidth<700?(albumSize==='l'?500:320):({s:320,m:400,l:600}[albumSize]||400);
+  const html=list.map(function(a){
     const col=albumColor(a.score);
     const glow=col.replace('rgb(','rgba(').replace(')',',0.22)');
     return '<div class="card" data-id="'+a.id+'" style="--score:'+col+'; --score-glow:'+glow+';">'+
       '<div class="art-wrap">'+
       '<div class="rank-badge">#'+rankMap[a.id]+'</div>'+
-      '<img class="art" src="'+a.art+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+      '<img class="art" src="'+thumb(a.art,artPx)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">'+
       '<div class="art-score">'+a.score+'<span>/100</span></div>'+
       '</div>'+
       '<div class="card-body"><div class="card-name">'+esc(a.name)+'</div>'+
@@ -14151,6 +14166,10 @@ function renderAlbums(){
       '<button class="del-btn" data-del="'+a.id+'" aria-label="Remove">'+ICONS.trash+'</button></div>'+
       '</div></div>';
   }).join('');
+  /* Same output, same DOM: the cards, their covers and their listeners are all
+     still valid, so leave them. A merge that changed nothing changes nothing. */
+  if(grid._html===html)return;
+  grid._html=html;grid.innerHTML=html;
   grid.querySelectorAll('.card').forEach(function(el){
     el.addEventListener('click',function(ev){
       if(ev.target.closest('[data-del]')){
@@ -14304,21 +14323,22 @@ function renderAlbums(){
 })();
 
 function renderSongs(){
-  const all=Object.values(loadSongs());
   const host=document.getElementById('songs-list');
+  if(onScreenSkip(host))return;
+  const all=Object.values(loadSongs());
   const emptyEl=document.getElementById('songs-empty');
   document.getElementById('songs-title').textContent=all.length?('Your song rankings \u00b7 '+all.length):'Your song rankings';
-  if(!all.length){host.innerHTML='';emptyEl.style.display='block';return;}
+  if(!all.length){host.innerHTML='';host._html='';emptyEl.style.display='block';return;}
   const f=songFilter.toLowerCase();
   let filtered=f?all.filter(function(s){return(s.name||'').toLowerCase().indexOf(f)!==-1||(s.artist||'').toLowerCase().indexOf(f)!==-1||(s.albumName||'').toLowerCase().indexOf(f)!==-1;}):all;
-  if(!filtered.length){host.innerHTML='';emptyEl.style.display='block';emptyEl.querySelector('h3').textContent='No matches';emptyEl.querySelector('p').textContent='Nothing in your songs matches \u201C'+songFilter+'\u201D.';return;}
+  if(!filtered.length){host.innerHTML='';host._html='';emptyEl.style.display='block';emptyEl.querySelector('h3').textContent='No matches';emptyEl.querySelector('p').textContent='Nothing in your songs matches \u201C'+songFilter+'\u201D.';return;}
   emptyEl.style.display='none';
   const mode=(document.getElementById('songs-sort')||{}).value||'score';
   const songs=sortSongList(filtered,mode);
-  host.innerHTML=songs.map(function(s,i){
+  const html=songs.map(function(s,i){
     return '<div class="song-row" style="--score:'+songColor(s.score)+';">'+
       '<div class="idx">'+(i+1)+'</div>'+
-      '<img src="'+s.art+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+      '<img src="'+thumb(s.art,160)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">'+
       '<div class="song-meta"><div class="song-name">'+esc(s.name)+'</div>'+
       '<div class="song-sub">'+esc(s.artist)+' \u00b7 '+esc(s.albumName)+'</div></div>'+
       '<div class="song-rate">'+
@@ -14333,6 +14353,8 @@ function renderSongs(){
         '<button data-topadd-do="all">Top 10</button>'+
       '</div></div>';
   }).join('');
+  if(host._html===html)return;
+  host._html=html;host.innerHTML=html;
   host.querySelectorAll('[data-topadd]').forEach(function(b){
     b.addEventListener('click',function(ev){
       ev.stopPropagation();
@@ -14455,6 +14477,19 @@ function renderStats(){
 }
 
 function esc(str){return String(str||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
+/* A cover at the size it is drawn. Album art is stored at 1000x1000 and a
+   grid tile is ~105px: decoding hundreds of 4MB bitmaps is what made iOS drop
+   them and redraw the Crate as blank frames on scroll. Asks the CDN for a
+   smaller copy (Deezer takes any NxN, Spotify has a 300 variant, Apple takes
+   any NxNbb), only ever SHRINKS, and leaves an unknown url exactly as it was. */
+function thumb(u,px){
+  u=String(u||'');px=px||320;
+  return u
+    .replace(/\/(\d+)x\1-000000-/,function(m,n){return +n>px?'/'+px+'x'+px+'-000000-':m;})
+    .replace(/\/(\d+)x\1bb\./,function(m,n){return +n>px?'/'+px+'x'+px+'bb.':m;})
+    .replace(px<=320?'ab67616d0000b273':'\u0000','ab67616d00001e02');
+}
+window.thumb=thumb;
 
 /* Cursor-reactive card spotlight — single delegated listener, works for all
    cards regardless of when they were rendered (grids re-render constantly). */
@@ -15579,7 +15614,7 @@ function openMissing(artistId){
   const host=document.getElementById('missing-list');
   host.innerHTML=rec.list.length
     ? rec.list.map(function(s){return'<div class="ptop-row" data-miss="'+esc(s.id)+'">'+
-        '<img src="'+esc(s.art||'')+'" alt="" loading="lazy">'+
+        '<img src="'+thumb(esc(s.art||''),320)+'" alt="" decoding="async" loading="lazy">'+
         '<div style="flex:1;"><div class="nm">'+esc(s.name)+kindChip(s)+'</div>'+
         (s.year?'<div class="ar">'+esc(s.year)+(s.tracks?' \u00b7 '+s.tracks+' tracks':'')+'</div>':'')+'</div>'+
         '<span class="suggest-send">Rate it</span></div>';}).join('')
@@ -15678,7 +15713,7 @@ function drawCompletion(){
   const chips=list.length?list.map(function(s){
     const done=ratedBases[baseAlbumTitle(s.name)];
     return'<div class="comp-chip'+(done?' done':'')+'" data-album="'+esc(s.id)+'">'+
-      '<img class="comp-art" src="'+esc(s.art||'')+'" alt="" loading="lazy">'+
+      '<img class="comp-art" src="'+thumb(esc(s.art||''),320)+'" alt="" decoding="async" loading="lazy">'+
       '<span class="comp-tick">'+(done?'\u2713':'\u25CB')+'</span>'+
       '<span class="comp-nm">'+esc(s.name)+'</span>'+
       '<span class="comp-yr">'+esc(s.year||'')+'</span></div>';
@@ -15894,7 +15929,7 @@ async function pickNewrelArtist(artist) {
         const grid = document.getElementById('newrel-recent-grid');
         grid.innerHTML = mostRecent.map(function (r, i) {
           return '<div class="card" data-recent="' + i + '"><div class="art-wrap">' +
-            '<img class="art" src="' + r.art + '" alt="" onerror="this.style.visibility=\'hidden\'"></div>' +
+            '<img class="art" src="' + thumb(r.art,320) + '" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'"></div>' +
             '<div class="card-body"><div class="card-name">' + esc(r.name) + '</div>' +
             '<div class="card-artist">' + esc(fmtRelDate(r.date)) + '</div></div></div>';
         }).join('');
@@ -15911,7 +15946,7 @@ async function pickNewrelArtist(artist) {
     const grid = document.getElementById('newrel-upcoming-grid');
     grid.innerHTML = upcoming.map(function (r, i) {
       return '<div class="card" data-up="' + i + '"><div class="art-wrap">' +
-        '<img class="art" src="' + r.art + '" alt="" onerror="this.style.visibility=\'hidden\'"></div>' +
+        '<img class="art" src="' + thumb(r.art,320) + '" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'"></div>' +
         '<div class="card-body"><div class="card-name">' + esc(r.name) + '</div>' +
         '<div class="card-artist"><span style="color:var(--gold);font-weight:700;">Drops ' + esc(fmtRelDate(r.date)) + '</span></div></div></div>';
     }).join('');
@@ -17213,7 +17248,7 @@ function tasteMatchHtml(tm,uname){
   }
   function row(r,right){
     return'<div class="tm-row">'+
-      '<img src="'+esc(r.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+      '<img src="'+thumb(esc(r.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">'+
       '<div class="tm-nm"><b>'+esc(r.name||'Unknown')+'</b><span>'+esc(r.artist||'')+'</span></div>'+
       right+'</div>';
   }
@@ -17432,7 +17467,7 @@ async function drawProfile(host,prof,isOwner){
     }
   }catch(e){masters=[];}
 
-  function albumSlot(t,i){if(t)return'<div class="top3-slot" data-slot="'+i+'"><img src="'+esc(t.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div class="rank">#'+(i+1)+'</div></div>';return'<div class="top3-slot" data-slot="'+i+'">'+(isOwner?'+ pick #'+(i+1):'\u2014')+'</div>';}
+  function albumSlot(t,i){if(t)return'<div class="top3-slot" data-slot="'+i+'"><img src="'+thumb(esc(t.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'"><div class="rank">#'+(i+1)+'</div></div>';return'<div class="top3-slot" data-slot="'+i+'">'+(isOwner?'+ pick #'+(i+1):'\u2014')+'</div>';}
   const slots=[0,1,2].map(function(i){return albumSlot(top3[i],i);}).join('');
   /* A LIST IS AN ORDER, and these two were the only ones you could not put in
      one. Reordering happens HERE rather than in the edit modal: the order is
@@ -17441,7 +17476,7 @@ async function drawProfile(host,prof,isOwner){
      a grip on somebody else's list is a control that cannot do anything. */
   function songItems(arr,own){return arr.map(function(s,i){return'<div class="song-mini'+(own?' sort-row':'')+'" data-i="'+i+'">'+
     (own?'<span class="drag-grip" aria-hidden="true"></span>':'')+
-    '<span class="song-mini-rank">'+(i+1)+'</span><img src="'+esc(s.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div style="min-width:0;"><div class="song-mini-name">'+esc(s.name)+'</div><div class="song-mini-artist">'+esc(s.artist||'')+'</div></div></div>';}).join('');}
+    '<span class="song-mini-rank">'+(i+1)+'</span><img src="'+thumb(esc(s.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'"><div style="min-width:0;"><div class="song-mini-name">'+esc(s.name)+'</div><div class="song-mini-artist">'+esc(s.artist||'')+'</div></div></div>';}).join('');}
   function songRows(arr,emptyMsg,id,own){if(!arr.length)return'<div class="reco-note">'+emptyMsg+'</div>';
     return'<div class="song-mini-list"'+(id?' id="'+id+'"':'')+'>'+songItems(arr,own)+'</div>'+
       (own&&arr.length>1?'<div class="reco-note reorder-hint">Drag the handle, or press and hold a row, to reorder.</div>':'');}
@@ -17579,7 +17614,7 @@ async function drawProfile(host,prof,isOwner){
   if(lists.length||isOwner){
     listsHtml='<div class="prof-section-row"><div class="prof-section-title" style="margin:0;">Lists</div>'+(isOwner?'<button class="btn-mini" id="prof-add-list">+ New list</button>':'')+'</div>';
     if(!lists.length)listsHtml+='<div class="reco-note">'+(isOwner?'Create a list like \u201CBest Drake albums\u201D.':'No lists yet.')+'</div>';
-    else listsHtml+='<div class="lists-wrap" id="prof-lists">'+lists.map(function(l){const covers=(l.items||[]).slice(0,4).map(function(it){return'<img src="'+esc(it.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">';}).join('');return'<div class="list-card" data-list="'+esc(l.id)+'"><div class="list-covers">'+(covers||'<span class="list-empty">empty</span>')+'</div><div class="list-title">'+esc(l.title)+'</div><div class="list-meta">'+(l.items||[]).length+' '+(l.kind==='song'?'songs':'albums')+'</div></div>';}).join('')+'</div>';
+    else listsHtml+='<div class="lists-wrap" id="prof-lists">'+lists.map(function(l){const covers=(l.items||[]).slice(0,4).map(function(it){return'<img src="'+thumb(esc(it.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">';}).join('');return'<div class="list-card" data-list="'+esc(l.id)+'"><div class="list-covers">'+(covers||'<span class="list-empty">empty</span>')+'</div><div class="list-title">'+esc(l.title)+'</div><div class="list-meta">'+(l.items||[]).length+' '+(l.kind==='song'?'songs':'albums')+'</div></div>';}).join('')+'</div>';
   }
 
   const favArtist = prof.fav_artist || null;
@@ -17740,7 +17775,7 @@ async function drawProfile(host,prof,isOwner){
       const list=albumsArr.slice().sort(function(a,b){return b.score-a.score;});
       grid.innerHTML=list.map(function(a){return'<div class="card" data-pid="'+esc(a.id)+'" style="--score:'+albumColor(a.score)+';">'+
         '<div class="art-wrap">'+
-        '<img class="art" src="'+esc(a.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+        '<img class="art" src="'+thumb(esc(a.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">'+
         '<div class="art-score">'+a.score+'<span>/100</span></div>'+
         '</div>'+
         '<div class="card-body"><div class="card-name">'+esc(a.name)+'</div><div class="card-artist">'+esc(a.artist)+'</div></div></div>';}).join('');
@@ -17946,14 +17981,14 @@ function drawVisibilitySeg(){
 function closeProfileEdit(){document.getElementById('pedit-modal').classList.remove('open');}
 function drawEditTop3(){
   const host=document.getElementById('pedit-top3');
-  host.innerHTML=[0,1,2].map(function(i){const t=_profileEditing.top3[i];if(t)return'<div class="top3-slot" data-eslot="'+i+'" style="width:84px;height:84px;"><img src="'+esc(t.art||'')+'"><div class="rank">#'+(i+1)+'</div><button class="rm" data-rm="'+i+'">&times;</button></div>';return'<div class="top3-slot" data-eslot="'+i+'" style="width:84px;height:84px;">+ #'+(i+1)+'</div>';}).join('');
+  host.innerHTML=[0,1,2].map(function(i){const t=_profileEditing.top3[i];if(t)return'<div class="top3-slot" data-eslot="'+i+'" style="width:84px;height:84px;"><img src="'+thumb(esc(t.art||''),320)+'"><div class="rank">#'+(i+1)+'</div><button class="rm" data-rm="'+i+'">&times;</button></div>';return'<div class="top3-slot" data-eslot="'+i+'" style="width:84px;height:84px;">+ #'+(i+1)+'</div>';}).join('');
   host.querySelectorAll('[data-eslot]').forEach(function(el){el.addEventListener('click',function(e){if(e.target.closest('[data-rm]')){e.stopPropagation();_profileEditing.top3.splice(+e.target.closest('[data-rm]').dataset.rm,1);drawEditTop3();return;}openPicker('album',function(item){_profileEditing.top3[+el.dataset.eslot]=item;_profileEditing.top3=_profileEditing.top3.filter(Boolean).slice(0,3);drawEditTop3();});});});
 }
 function drawEditSongs(){drawSongEditor('songsNow','pedit-songs-now',5);drawSongEditor('songsAll','pedit-songs-all',10);}
 function drawSongEditor(key,hostId,max){
   const host=document.getElementById(hostId);if(!host)return;
   const arr=_profileEditing[key];
-  let html=arr.map(function(s,i){return'<div class="song-edit-row sort-row" data-i="'+i+'"><span class="drag-grip" aria-hidden="true"></span><span class="song-mini-rank">'+(i+1)+'</span><img src="'+esc(s.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div style="flex:1;min-width:0;"><div class="song-mini-name">'+esc(s.name)+'</div><div class="song-mini-artist">'+esc(s.artist||'')+'</div></div><button class="rm-row" data-rm="'+i+'">&times;</button></div>';}).join('');
+  let html=arr.map(function(s,i){return'<div class="song-edit-row sort-row" data-i="'+i+'"><span class="drag-grip" aria-hidden="true"></span><span class="song-mini-rank">'+(i+1)+'</span><img src="'+thumb(esc(s.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'"><div style="flex:1;min-width:0;"><div class="song-mini-name">'+esc(s.name)+'</div><div class="song-mini-artist">'+esc(s.artist||'')+'</div></div><button class="rm-row" data-rm="'+i+'">&times;</button></div>';}).join('');
   if(arr.length<max)html+='<button class="btn-mini song-add" data-add="1" style="margin-top:6px;">+ Add song</button>';
   host.innerHTML=html;
   host.querySelectorAll('[data-rm]').forEach(function(b){b.addEventListener('click',function(){arr.splice(+b.dataset.rm,1);drawSongEditor(key,hostId,max);});});
@@ -17983,7 +18018,7 @@ async function runPickerSearch(q){
   host.innerHTML='<p class="reco-note">Searching\u2026</p>';
   const results=await searchItems(q,_pickerKind);
   if(!results.length){host.innerHTML='<p class="reco-note">No results.</p>';return;}
-  host.innerHTML=results.map(function(r,i){return'<div class="ptop-row" data-i="'+i+'"><img src="'+esc(r.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div><div class="nm">'+esc(r.name)+'</div><div class="ar">'+esc(r.artist||'')+(r.year?' \u00b7 '+r.year:'')+'</div></div></div>';}).join('');
+  host.innerHTML=results.map(function(r,i){return'<div class="ptop-row" data-i="'+i+'"><img src="'+thumb(esc(r.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'"><div><div class="nm">'+esc(r.name)+'</div><div class="ar">'+esc(r.artist||'')+(r.year?' \u00b7 '+r.year:'')+'</div></div></div>';}).join('');
   host.querySelectorAll('[data-i]').forEach(function(el){el.addEventListener('click',function(){const item=results[+el.dataset.i];if(_pickerCb)_pickerCb(item);closePicker();});});
 }
 
@@ -18424,7 +18459,7 @@ function drawListItems(){
     return'<div class="song-edit-row sort-row" data-i="'+i+'">'+
       '<span class="drag-grip" aria-hidden="true"></span>'+
       '<span class="song-mini-rank">'+(i+1)+'</span>'+
-      '<img src="'+esc(it.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+      '<img src="'+thumb(esc(it.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">'+
       '<div style="flex:1;min-width:0;"><div class="song-mini-name">'+esc(it.name)+'</div>'+
       '<div class="song-mini-artist">'+esc(it.artist||'')+'</div></div>'+
       '<button class="rm-row" data-rm="'+i+'">&times;</button></div>';
@@ -18717,7 +18752,7 @@ async function fillListFromArtist(){
   });
 }
 async function saveListEdits(){const errEl=document.getElementById('list-error');const title=sanitizeText(document.getElementById('list-title-input').value,60);if(!title){errEl.textContent='Give your list a title.';return;}if(hasSlur(title)){errEl.textContent='Please keep the title respectful.';return;}_listEditing.title=title;const btn=document.getElementById('list-save-btn');btn.disabled=true;btn.textContent='Saving\u2026';const res=await Cloud.saveList(_listEditing);btn.disabled=false;btn.textContent='Save list';if(res.error){errEl.textContent=res.error;return;}closeListEditor();renderProfile();}
-function openListView(list,isOwner){document.getElementById('listview-title').textContent=list.title;document.getElementById('listview-meta').textContent=(list.items||[]).length+' '+(list.kind==='song'?'songs':'albums');const host=document.getElementById('listview-items');if(!(list.items||[]).length)host.innerHTML='<p class="reco-note">This list is empty.</p>';else host.innerHTML=list.items.map(function(it,i){return'<div class="ptop-row" data-open="'+esc(it.id)+'"><span class="song-mini-rank">'+(i+1)+'</span><img src="'+esc(it.art||'')+'" alt="" onerror="this.style.visibility=\'hidden\'"><div><div class="nm">'+esc(it.name)+'</div><div class="ar">'+esc(it.artist||'')+'</div></div></div>';}).join('');if(list.kind==='album')host.querySelectorAll('[data-open]').forEach(function(el){el.addEventListener('click',function(){const it=list.items.find(function(x){return x.id===el.dataset.open;});if(it){document.getElementById('listview-modal').classList.remove('open');openAlbum(it);}});});document.getElementById('listview-edit-btn').style.display=isOwner?'inline-block':'none';document.getElementById('listview-edit-btn').onclick=function(){document.getElementById('listview-modal').classList.remove('open');openListEditor(list);};const _spb=document.getElementById('listview-spotify-btn');if(_spb){_spb.style.display=(list.kind==='song'&&(list.items||[]).length&&window.SpotifyBridge)?'inline-block':'none';_spb.onclick=function(){document.getElementById('listview-modal').classList.remove('open');SpotifyBridge.send(list);};}document.getElementById('listview-suggest-btn').onclick=function(){if(window.openSuggest){document.getElementById('listview-modal').classList.remove('open');openSuggest(list,'list');}};document.getElementById('list-del-btn').onclick=async function(){if(!_listEditing||!_listEditing.id)return;await Cloud.deleteList(_listEditing.id);closeListEditor();renderProfile();};document.getElementById('listview-modal').classList.add('open');}
+function openListView(list,isOwner){document.getElementById('listview-title').textContent=list.title;document.getElementById('listview-meta').textContent=(list.items||[]).length+' '+(list.kind==='song'?'songs':'albums');const host=document.getElementById('listview-items');if(!(list.items||[]).length)host.innerHTML='<p class="reco-note">This list is empty.</p>';else host.innerHTML=list.items.map(function(it,i){return'<div class="ptop-row" data-open="'+esc(it.id)+'"><span class="song-mini-rank">'+(i+1)+'</span><img src="'+thumb(esc(it.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'"><div><div class="nm">'+esc(it.name)+'</div><div class="ar">'+esc(it.artist||'')+'</div></div></div>';}).join('');if(list.kind==='album')host.querySelectorAll('[data-open]').forEach(function(el){el.addEventListener('click',function(){const it=list.items.find(function(x){return x.id===el.dataset.open;});if(it){document.getElementById('listview-modal').classList.remove('open');openAlbum(it);}});});document.getElementById('listview-edit-btn').style.display=isOwner?'inline-block':'none';document.getElementById('listview-edit-btn').onclick=function(){document.getElementById('listview-modal').classList.remove('open');openListEditor(list);};const _spb=document.getElementById('listview-spotify-btn');if(_spb){_spb.style.display=(list.kind==='song'&&(list.items||[]).length&&window.SpotifyBridge)?'inline-block':'none';_spb.onclick=function(){document.getElementById('listview-modal').classList.remove('open');SpotifyBridge.send(list);};}document.getElementById('listview-suggest-btn').onclick=function(){if(window.openSuggest){document.getElementById('listview-modal').classList.remove('open');openSuggest(list,'list');}};document.getElementById('list-del-btn').onclick=async function(){if(!_listEditing||!_listEditing.id)return;await Cloud.deleteList(_listEditing.id);closeListEditor();renderProfile();};document.getElementById('listview-modal').classList.add('open');}
 
 (function wireProfile(){
   document.getElementById('pedit-close').addEventListener('click',closeProfileEdit);
@@ -19103,7 +19138,7 @@ window.handleGrooveLink=handleGrooveLink;
 
     div.innerHTML =
       /* full-bleed art */
-      '<img class="cf-art" src="' + esc(post.album_art||'') + '" alt="" onerror="this.style.opacity=0.2">' +
+      '<img class="cf-art" src="' + thumb(esc(post.album_art||''),500) + '" alt="" decoding="async" onerror="this.style.opacity=0.2">' +
       '<div class="cf-overlay"></div>' +
       /* user pill top-left */
       '<div class="cf-user">' +
@@ -19452,7 +19487,7 @@ window.handleGrooveLink=handleGrooveLink;
     if(!items.length){host.innerHTML='';return;}
     host.innerHTML=items.slice(0,12).map(function(it){
       return '<div class="crate-trending-row sl-row" data-sl="'+esc(it.id)+'">'+
-        '<img class="crate-trending-art" src="'+esc(it.art||'')+'" alt="" onerror="this.style.opacity=0">'+
+        '<img class="crate-trending-art" src="'+thumb(esc(it.art||''),320)+'" alt="" decoding="async" onerror="this.style.opacity=0">'+
         '<div style="min-width:0;"><div class="crate-trending-name">'+esc(it.name)+'</div>'+
         '<div class="crate-trending-meta">'+esc(it.artist||'')+(it.why?' · '+esc(it.why):'')+'</div></div>'+
         '<button class="sl-drop" data-sl-drop="'+esc(it.id)+'" aria-label="Remove">&times;</button>'+
@@ -19477,7 +19512,7 @@ window.handleGrooveLink=handleGrooveLink;
     trendingEl.innerHTML=trending.map(function(a){
       const col=albumColor(a.avg);
       return'<div class="crate-trending-row" data-open-trending="'+esc(JSON.stringify({id:a.id,name:a.name,art:a.art,artist:a.artist}))+'">'+
-        '<img class="crate-trending-art" src="'+esc(a.art||'')+'" alt="" onerror="this.style.opacity=0">'+
+        '<img class="crate-trending-art" src="'+thumb(esc(a.art||''),320)+'" alt="" decoding="async" onerror="this.style.opacity=0">'+
         '<div><div class="crate-trending-name">'+esc(a.name)+'</div>'+
         '<div class="crate-trending-meta">'+esc(a.artist)+' · '+a.n+' rating'+(a.n>1?'s':'')+'</div></div>'+
         '<div class="crate-trending-score" style="--score:'+col+'">'+a.avg+'</div>'+
@@ -22456,7 +22491,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         '<div class="ln-day-name">' + d.toLocaleDateString(undefined, { weekday: 'short' }) + '</div>' +
         '<div class="ln-day-art"' + tint + '>' +
           (e && e.pick && e.pick.art
-            ? '<img src="' + esc(e.pick.art) + '" alt="" onerror="this.remove()">'
+            ? '<img src="' + thumb(esc(e.pick.art),320) + '" alt="" decoding="async" onerror="this.remove()">'
             : '') +
         '</div>' +
         '<div class="ln-day-mood">' + (m ? m.label : (e ? 'logged' : '—')) + '</div>' +
@@ -22508,7 +22543,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
           '</div>' +
           (e.pick
             ? '<div class="ln-entry-pick">' +
-                '<img src="' + esc(e.pick.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+                '<img src="' + thumb(esc(e.pick.art || ''),320) + '" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">' +
                 '<div><div class="ln-picked-name">' + esc(e.pick.name) + '</div>' +
                 '<div class="ln-picked-artist">' + esc(e.pick.artist || '') + '</div></div>' +
               '</div>'
@@ -24186,7 +24221,7 @@ function playDismissAnimation(gateEl, callback) {
     if (silent) row.style.animation = 'none';
     row.innerHTML =
       '<div class="drop-row-head">' +
-        '<img class="drop-row-art" src="' + esc(guess.art || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
+        '<img class="drop-row-art" src="' + thumb(esc(guess.art || ''),320) + '" alt="" decoding="async" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
         '<div class="drop-row-id"><div class="drop-row-name">' + esc(guess.name) + '</div>' +
         '<div class="drop-row-artist">' + esc(guess.artist) + '</div></div>' +
       '</div>' +
@@ -24337,7 +24372,7 @@ function playDismissAnimation(gateEl, callback) {
     }
     elSugg.innerHTML = items.map(function (it, i) {
       return '<div class="g-sugg-item' + (it.used ? ' used' : '') + '" role="option" data-i="' + i + '">' +
-        '<img src="' + esc(it.r.art || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
+        '<img src="' + thumb(esc(it.r.art || ''),320) + '" alt="" decoding="async" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
         '<div><div class="g-sugg-name">' + esc(it.r.name) + '</div>' +
         '<div class="g-sugg-genre">' + esc(it.r.artist) + (it.used ? ' · already guessed' : '') + '</div></div></div>';
     }).join('');
@@ -24953,7 +24988,7 @@ function playDismissAnimation(gateEl, callback) {
       _recs.map(function (r) {
         var v = Number(_bids[r.album_id]) || 0;
         return '<div class="war-rec' + (v > 0 ? ' staked' : '') + '">' +
-          '<img src="' + esc2(r.art || '') + '" alt="" loading="lazy">' +
+          '<img src="' + thumb(esc2(r.art || ''),320) + '" alt="" decoding="async" loading="lazy">' +
           '<div class="war-rec-meta"><div class="war-rec-nm">' + esc2(r.name) + '</div>' +
           '<div class="war-rec-ar">' + esc2(r.artist) + '</div></div>' +
           '<div class="war-rec-chips' + (v > 0 ? '' : ' none') + '">' + v + '</div></div>';
@@ -26206,7 +26241,7 @@ window.renderAdminStats = renderAdminStats;
     return '<article class="cc-card' + (lead ? ' cc-lead' : '') + '" data-mid="' + esc(m.id) + '" style="--cc:' + hue(m.category) + '">' +
       (st.sort === 'top' ? '<div class="cc-rank' + (rank <= 3 ? ' top' : '') + '">#' + rank + '</div>' : '') +
       '<button class="cc-art" type="button" data-cc-play aria-label="Play ' + esc(m.track_name) + '">' +
-        '<img src="' + esc(m.art || '') + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.opacity=0">' +
+        '<img src="' + thumb(esc(m.art || ''),320) + '" alt="" decoding="async" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.opacity=0">' +
         '<span class="cc-art-btn">' + IC_PLAY + IC_PAUSE + '</span></button>' +
       '<div class="cc-head">' +
         '<span class="cc-cat">' + esc(c.one) + (m.featuring ? ' <b>&middot; ' + esc(m.featuring) + '</b>' : '') + '</span>' +
@@ -32730,7 +32765,7 @@ window.track = function (name, props) {
     return '<div class="sugg-row" data-key="' + esc(r.key) + '">' +
       count +
       (r.art
-        ? '<img class="sugg-art" src="' + esc(r.art) + '" alt="" loading="lazy" ' +
+        ? '<img class="sugg-art" src="' + thumb(esc(r.art),320) + '" alt="" decoding="async" loading="lazy" ' +
           'onerror="this.style.visibility=\'hidden\'">'
         : '<span class="sugg-art"></span>') +
       '<div class="sugg-meta">' +
@@ -33520,7 +33555,7 @@ window.track = function (name, props) {
       ? '<button type="button" class="td-art-play" data-todayplay="' + esc2(item.id || '') +
           '" data-name="' + esc2(item.name || '') + '" data-artist="' + esc2(item.artist || '') +
           '" aria-label="Play ' + esc2(item.name || '') + '">' +
-          '<img src="' + esc2(art) + '" alt="" loading="lazy">' +
+          '<img src="' + thumb(esc2(art),500) + '" alt="" decoding="async" loading="lazy">' +
           '<span class="td-play-ico"><span class="td-tri"></span><span class="td-bars"></span></span>' +
         '</button>'
       : '';
@@ -34061,7 +34096,7 @@ window.track = function (name, props) {
     }
     host.innerHTML = real.map(function (r) {
       return '<div class="lore-row">' +
-        (r.item_art ? '<img src="' + esc2(r.item_art) + '" alt="" loading="lazy">' : '<div class="lore-noart"></div>') +
+        (r.item_art ? '<img src="' + thumb(esc2(r.item_art),320) + '" alt="" decoding="async" loading="lazy">' : '<div class="lore-noart"></div>') +
         '<div class="lore-body">' +
           '<div class="lore-item">' + esc2(r.item_name) + '<span class="lore-ar"> · ' + esc2(r.item_artist || '') + '</span></div>' +
           '<div class="lore-q">' + esc2(r.question_text) + '</div>' +
@@ -35241,7 +35276,7 @@ window.track = function (name, props) {
   function swap(k, url) {
     try {
       document.querySelectorAll('img[data-cover-key="' + k + '"]').forEach(function (im) {
-        im.src = url;
+        im.src = window.thumb ? thumb(url, 320) : url;
         im.removeAttribute('data-cover-key');
       });
     } catch (e) {}
@@ -37407,7 +37442,7 @@ window.track = function (name, props) {
       '<div class="onb-grid">' + list.map(function (a) {
         var img = (a.images && a.images[0] && a.images[0].url) || '';
         return '<button class="onb-ar" data-ar="' + esc(key(a)) + '">' +
-          '<span class="onb-ar-img">' + (img ? '<img src="' + esc(img) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '') + '</span>' +
+          '<span class="onb-ar-img">' + (img ? '<img src="' + thumb(esc(img),320) + '" alt="" decoding="async" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '') + '</span>' +
           '<span class="onb-ar-n">' + esc(a.name) + '</span></button>';
       }).join('') + '</div>' +
       '<div class="onb-count" id="onb-count"></div>',
@@ -38542,7 +38577,7 @@ window.track = function (name, props) {
           : x.had && !replace ? '<span class="imp-st had">Rated ' + x.had.score + '</span>' : '';
         return '<label class="imp-row' + (x.m ? '' : ' is-off') + '">' +
           '<input type="checkbox" data-imp="' + i + '"' + (x.m && x.on && (!x.had || replace) ? ' checked' : '') + (x.m && (!x.had || replace) ? '' : ' disabled') + '>' +
-          (x.m && x.m.art ? '<img src="' + esc(x.m.art) + '" alt="" loading="lazy">' : '<span class="imp-ph"></span>') +
+          (x.m && x.m.art ? '<img src="' + thumb(esc(x.m.art),320) + '" alt="" decoding="async" loading="lazy">' : '<span class="imp-ph"></span>') +
           '<span class="imp-t"><b>' + esc(x.m ? x.m.name : x.album) + '</b><small>' + esc(x.m ? x.m.artist : x.artist) + '</small></span>' +
           stt + '<span class="imp-score" style="--c:' + albumColor(x.score) + '">' + x.score + '</span></label>';
       }).join('') + '</div>';

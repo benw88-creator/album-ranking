@@ -1534,6 +1534,31 @@ is four to six times slower than these.
    holding a change nothing else knows about; nothing does that, and anything
    new must not start.
 
+## Covers are drawn at the size they are shown — `thumb()`
+
+Reported as the Crate grid scrolling into blank card frames on an iPhone. Every
+cover is stored at **1000x1000** (`images[0]` off the catalogue) and the grid
+draws it into a ~105px tile: ~4MB decoded per cover, so a crate of a hundred
+records is hundreds of MB of bitmaps, iOS evicts them, and scrolling back
+redraws empty frames while they decode again.
+
+`thumb(url, px)`, beside `esc()`, asks the CDN for a smaller copy — Deezer takes
+any `NxN`, legacy Spotify urls have a 300 variant (`00001e02`), Apple takes any
+`NxNbb` — only ever shrinks, and returns an unknown url untouched. Every list and
+grid wraps its `<img>` in it (320 for tiles, 160 for song rows, 500 for the
+Crate feed's full cards; the album grid picks by its S/M/L size). 320 is 17KB
+where 1000 is 107KB. **A new list of covers should go through `thumb()`.** A
+single large image (album page, For You, a game's reveal) should not.
+
+`renderAlbums` and `renderSongs` also **skip the rebuild when the HTML would be
+identical** (`el._html`) or the view is hidden (`onScreenSkip`) — every rating and
+every once-a-minute background merge used to replace the whole grid, throwing
+away every decoded cover. Their own `setMode` branch renders them on the way in.
+Anything that empties the list must reset `_html`, which the empty states do.
+
+The score on each cover had been under the art-wrap's `::after` scrim the whole
+time — 85% black laid over the number it exists to lift. `z-index: 1`.
+
 ## The artist utility — `api/_artists.js`
 
 A reusable module rather than a patch in the route, because new artist data keeps
