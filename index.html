@@ -676,17 +676,6 @@ button:active { transform: scale(0.96); }
 }
 .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 0 24px var(--gold-glow); }
 
-.btn-spotify {
-  background: var(--surface-3);
-  color: var(--text);
-  border: 1px solid var(--border-strong);
-  padding: 10px 18px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.btn-spotify:hover { background: var(--surface-4); border-color: var(--gold); color: var(--gold); }
 
 .btn-ghost {
   background: transparent;
@@ -926,8 +915,6 @@ nav.modes .nav-icon { width: 21px; height: 21px; }
    with text; .ui-icon-lg is for modal-head-scale replacements of what used
    to be a big 28px emoji, .ui-icon-md for mid-size standalone spots. */
 .ui-icon { width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.15em; }
-.ui-icon-md { width: 22px; height: 22px; }
-.ui-icon-lg { width: 30px; height: 30px; }
 .disc-coin { width: 0.9em; height: 0.9em; vertical-align: -0.12em; margin-left: 1px; }
 
 /* ---- SHOP ENTRY POINT — always visible, whether logged in or not ---- */
@@ -1795,7 +1782,6 @@ html[data-motion="none"] .view.enter { animation: none; }
 .shop-swatch { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; border: 1px solid var(--border-strong); }
 .shop-item-info { flex: 1; min-width: 0; }
 .shop-item-name { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
-.shop-item-desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 .shop-item-cost { font-family: var(--font-mono); font-size: 12px; color: var(--text-faint); margin-top: 4px; }
 .shop-item button { flex-shrink: 0; }
 
@@ -2013,7 +1999,6 @@ html[data-motion="none"] .card { animation: none; }
   margin-top: 10px; gap: 8px;
 }
 /* Remove old score display from card-row since we show it on art */
-.card-score { display: none; }
 .bar { display: none; }  /* Removed — score on art replaces it */
 
 .del-btn {
@@ -2427,21 +2412,6 @@ button.idx.loading { opacity: 0.6; }
   #detail-note { grid-column: 1 / -1; }
   .back-link { margin-bottom: var(--s3); padding: 8px 14px; font-size: var(--t-sm); }
   .tracks-head { margin-bottom: var(--s3); font-size: var(--t-xs); }
-}
-.detail-album-rate { display: flex; align-items: center; gap: 16px; max-width: 460px; }
-.detail-album-rate input[type=range] {
-  -webkit-appearance: none; appearance: none;
-  flex: 1; height: 4px; border-radius: 2px;
-  background: var(--surface-4); outline: none;
-}
-.detail-album-rate input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: 20px; height: 20px; border-radius: 50%;
-  background: var(--gold); border: 2px solid var(--bg); cursor: pointer;
-}
-.detail-album-rate input[type=range]::-moz-range-thumb {
-  width: 20px; height: 20px; border-radius: 50%;
-  background: var(--gold); border: 2px solid var(--bg); cursor: pointer;
 }
 .detail-album-score {
   font-family: var(--font-display); font-size: 36px;
@@ -3156,7 +3126,6 @@ html[data-motion="none"] .modal-panel { animation: none; }
    adrift rather than as part of the title. */
 @media (max-width: 699px) {
   .modal-head { gap: var(--s3); margin-bottom: var(--s4); padding-right: 46px; }
-  .modal-head .ui-icon-lg { width: 22px; height: 22px; }
   .mh-emoji { font-size: 22px; }
   .modal-head h2 { font-size: var(--t-h2); }
 }
@@ -4327,7 +4296,6 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 @keyframes shakeX { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); } }
 @keyframes confettiFly { from { transform: translate(-50%,-50%) translate(0,0) scale(1); opacity: 1; } to { transform: translate(-50%,-50%) translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; } }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes trophyPop { 0% { transform: scale(0) rotate(-30deg); } 60% { transform: scale(1.2) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
 @keyframes cfFall { from { transform: translate(0,0) rotate(0); opacity: 1; } to { transform: translate(var(--cx), var(--cy)) rotate(var(--cr)); opacity: 0; } }
 @keyframes tPop { 0% { transform: scale(1); } 50% { transform: scale(1.06); } 100% { transform: scale(1); } }
 .fade-up { animation: fadeUp 0.3s ease both; }
@@ -5350,28 +5318,29 @@ body.entering-done #artist-hero {
    the top of this file keeps on for everyone — a slow highlight crossing a
    50px pill, no large-area movement, nothing to trigger on. */
 .groove-role.pres {
-  background: linear-gradient(100deg,
+  background: linear-gradient(90deg,
     #7a5c10 0%, #c9a227 16%, #f7e08a 30%, #fffbe6 38%,
     #f0cf63 46%, #c9a227 64%, #7a5c10 100%);
-  background-size: 320% 100%;
+  background-size: 160px 100%;
   color: #2a1f04;
   border: 1px solid rgba(255,242,186,0.55);
   box-shadow: 0 0 12px rgba(212,175,55,0.35), inset 0 1px 0 rgba(255,255,255,0.45);
   animation: roleSheen 4.5s linear infinite;
 }
 .groove-role.vp {
-  background: linear-gradient(100deg,
+  background: linear-gradient(90deg,
     #626973 0%, #a7b0bb 16%, #e9eef4 30%, #ffffff 38%,
     #ccd4de 46%, #a7b0bb 64%, #626973 100%);
-  background-size: 320% 100%;
+  background-size: 160px 100%;
   color: #1d2127;
   border: 1px solid rgba(233,238,244,0.5);
   box-shadow: 0 0 10px rgba(190,202,216,0.28), inset 0 1px 0 rgba(255,255,255,0.5);
   animation: roleSheen 6s linear infinite;
 }
 @keyframes roleSheen {
-  from { background-position: 320% 50%; }
-  to   { background-position: 0% 50%; }
+  /* One tile in pixels, 90deg, matching end stops: the loop is seamless. */
+  from { background-position: 160px 50%; }
+  to   { background-position: 0 50%; }
 }
 .groove-acts { display: flex; gap: 6px; flex-shrink: 0; }
 .groove-kick { color: var(--text-faint); }
@@ -6587,7 +6556,6 @@ html[data-motion="none"] .colb-tick circle, html[data-motion="none"] .colb-tick 
 .tm-d.up { color: var(--green, #4fb477); }
 .tm-d.down { color: var(--red); }
 .tm-add { flex-shrink: 0; }
-.tm-note { font-size: 12px; line-height: 1.5; color: var(--text-faint); margin-top: 10px; }
 /* The compact form, for a row in a list: "78% · 31". It has to survive being
    put next to a username at 360px, so it never wraps and never grows. */
 .tm-chip {
@@ -6955,7 +6923,6 @@ html[data-motion="none"] .games-grid > .game-card .gc-emoji { animation: none; }
   border-radius: var(--radius); padding: 20px; margin-bottom: 14px;
   transition: opacity 0.24s var(--ease), transform 0.24s var(--ease);
 }
-.td-card.td-gone { opacity: 0; transform: translateY(-6px); }
 .td-kicker {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em;
   color: var(--gold); margin-bottom: 8px; font-weight: 600;
@@ -8203,7 +8170,6 @@ button.rw-day {
   transition: background 0.12s, border-color 0.12s;
 }
 .sp-link:hover { background: var(--surface-4); border-color: var(--border-strong); }
-.sp-inline { display: inline-flex; align-items: center; gap: 6px; }
 .site-foot a { color: var(--text-dim); text-decoration: none; }
 .site-foot a:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .foot-note { margin-left: auto; }
@@ -9163,7 +9129,6 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
   font-family: var(--font-display); font-weight: 800; letter-spacing: -.035em;
   font-size: clamp(25px, 7vw, 38px); line-height: 1.08;
 }
-.onb-p { color: var(--text-dim); font-size: 15px; line-height: 1.5; margin-top: 10px; }
 .onb-note { color: var(--text-faint); font-size: 12.5px; margin-top: 12px; }
 
 /* Each step slides up as it arrives, once. A tutorial with something moving
@@ -9255,31 +9220,10 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
 }
 .onb-score span { font-size: 14px; color: var(--text-faint); }
 
-/* Quick picks and search results share one chip. */
-.onb-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-.onb-chip {
-  display: inline-flex; align-items: center; gap: 8px;
-  border: 1px solid var(--border-strong); background: var(--surface-2);
-  color: var(--text); border-radius: 999px; padding: 9px 14px;
-  font: 600 13px var(--font-body); cursor: pointer; max-width: 100%;
-  transition: border-color .18s var(--ease), background .18s var(--ease), transform .12s var(--ease);
-}
-.onb-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.onb-chip small { color: var(--text-faint); font-weight: 500; }
-.onb-chip:active { transform: scale(.96); }
-.onb-chip.on { border-color: var(--gold); background: var(--gold-dim); color: var(--gold); }
-.onb-chip.on small { color: inherit; opacity: .75; }
 /* The pick has to LOOK like it landed — this is the one beat somebody does
    three times in a row, and a border changing colour is not an answer. The
    chip pops, a tick lifts off it, and a counter under the row says how many
    are in. */
-.onb-chip.on::after {
-  content: '✓'; font-size: 12px; line-height: 1; opacity: 0;
-  animation: onbTickIn .26s var(--ease) .04s forwards;
-}
-.onb-chip.just { animation: onbPop .34s var(--ease); }
-.onb-chip.nope { animation: onbNope .34s var(--ease); }
-@keyframes onbTickIn { to { opacity: 1; } }
 @keyframes onbPop {
   0%   { transform: scale(1); }
   38%  { transform: scale(1.09); box-shadow: 0 0 0 6px var(--gold-dim); }
@@ -9308,22 +9252,7 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
   font: 700 12px var(--font-body); letter-spacing: .06em; text-transform: uppercase;
   color: var(--gold);
 }
-@media (prefers-reduced-motion: reduce) {
-  .onb-chip.just, .onb-chip.nope, .onb-chip.on::after { animation: none; }
-  .onb-chip.on::after { opacity: 1; }
-}
 
-.onb-find { width: 100%; margin-top: 16px; }
-.onb-results { margin-top: 10px; max-height: 44vh; overflow-y: auto; }
-.onb-row {
-  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
-  padding: 9px 4px; background: none; border: 0; border-bottom: 1px solid var(--border);
-  color: var(--text); cursor: pointer;
-}
-.onb-row img { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
-.onb-row b { display: block; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.onb-row i { display: block; font-style: normal; font-size: 12px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.onb-row > div { min-width: 0; flex: 1; }
 
 /* The shop beat. Real rows, real prices, a real purchase. */
 .onb-buy {
@@ -9350,27 +9279,10 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
 }
 .onb-wallet span { font-size: 13px; color: var(--text-dim); }
 
-.onb-recap { display: grid; gap: 8px; margin-top: 18px; }
-.onb-recap div {
-  display: flex; align-items: center; gap: 10px;
-  border: 1px solid var(--border); border-radius: 12px;
-  background: var(--surface-2); padding: 11px 14px; font-size: 14px;
-  animation: onbIn .4s var(--ease) both;
-}
-.onb-recap div:nth-child(2) { animation-delay: .08s; }
-.onb-recap div:nth-child(3) { animation-delay: .16s; }
-.onb-recap div:nth-child(4) { animation-delay: .24s; }
-.onb-recap div:nth-child(5) { animation-delay: .32s; }
-.onb-recap b { margin-left: auto; font-family: var(--font-mono); font-size: 13px; color: var(--gold); }
 
 /* Skip is a text link and appears only from the shop beat on, which is where
    the brief puts it: before that the flow is short enough that there is
    nothing worth skipping. */
-.onb-skip {
-  display: block; margin: 14px auto 0; background: none; border: 0;
-  color: var(--text-faint); font: 500 13px var(--font-body);
-  text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 8px;
-}
 .onb-err { color: var(--red); font-size: 13px; margin-top: 10px; min-height: 17px; }
 
 /* ---- welcome: the mark, the word, one line ----------------------------- */
@@ -9380,7 +9292,6 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
   font-size: clamp(38px, 13vw, 62px); letter-spacing: -.05em; line-height: 1;
   margin-top: 4px;
 }
-.onb-lede { color: var(--text-dim); font-size: 16px; margin-top: 14px; }
 
 /* ---- username, and the badge it earns ---------------------------------- */
 .onb-user { margin-top: 20px; font-size: 16px; text-align: center; }
@@ -26456,10 +26367,10 @@ window.renderAdminStats = renderAdminStats;
   function removePick(id) {
     var m = st.byId[id];
     if (!m || m.user_id !== me()) return;
-    var go = window.ask ? ask({ title: 'Remove your pick?',
+    var go = ask({ title: 'Remove your pick?',
       body: '<b>' + esc(m.track_name) + '</b> &middot; ' + esc((CAT[m.category] || CATS[0]).one) +
             '<br>Everyone who agreed with it goes with it.',
-      confirm: 'Remove pick', danger: true }) : Promise.resolve(confirm('Remove your pick?'));
+      confirm: 'Remove pick', danger: true });
     go.then(async function (ok) {
       if (!ok) return;
       if (pl.id === id) stop();

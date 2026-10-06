@@ -692,6 +692,12 @@ tutorial they had already done.
 
 ## The traps that keep recurring
 
+**`node scripts/traps.mjs` before every push.** It checks the mechanical ones below
+(route count, `--font-display`, percentage gradient loops, `.gc-best`, `notePlay` keys,
+the `views` map, fabricated Spotify URIs, `i.scdn.co`, native dialogs, unhandled
+`writeText`, and `LADDER`/`MAX_SCORE` against their SQL twins) and exits 1 if one
+fires. When a new trap is written up here and it can be grepped for, add it there too.
+
 Each of these has now been shipped **more than once**, in different parts of the file, by
 somebody who had already read the warning about the previous instance. They are listed
 together because that is the only form in which they are actually useful: scattered through
