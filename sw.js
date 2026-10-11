@@ -15,7 +15,7 @@
  * never more than one load behind, and when you are, the app says so out loud.
  */
 
-const VERSION = 'vinall-v3';
+const VERSION = 'vinall-v4';
 const SHELL = VERSION + '-shell';
 const MEDIA = VERSION + '-media';
 
@@ -25,9 +25,12 @@ const MEDIA = VERSION + '-media';
 const PRECACHE = [
   '/offline.html',
   '/manifest.webmanifest',
-  '/assets/icons/icon-192.png',
-  '/assets/icons/icon-512.png',
-  '/assets/icons/apple-touch-icon.png'
+  '/assets/icons/browser-192.png?v=official',
+  '/assets/icons/browser-512.png?v=official',
+  '/assets/icons/apple-touch-icon.png?v=official',
+  '/assets/icons/favicon.ico?v=official',
+  '/assets/interactions.css?v=1',
+  '/assets/interactions.js?v=1'
 ];
 
 self.addEventListener('install', (event) => {
@@ -45,7 +48,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        keys.filter((k) => k !== SHELL && k !== MEDIA).map((k) => caches.delete(k))
+        keys.filter((k) => k.startsWith('vinall-') && k !== SHELL && k !== MEDIA).map((k) => caches.delete(k))
       ))
       .then(() => self.clients.claim())
   );
@@ -108,11 +111,9 @@ self.addEventListener('fetch', (event) => {
      First visit still goes to the network, because there is nothing to
      serve. Offline still falls back the same way. */
   if (req.mode === 'navigate') {
-    event.respondWith((async () => {
-      const cache = await caches.open(SHELL);
-      const hit = await cache.match(req);
-
-      const fresh = fetch(req).then(async (res) => {
+    const cacheReady = caches.open(SHELL);
+    const cached = cacheReady.then((cache) => cache.match(req));
+    const fresh = Promise.all([cacheReady, cached]).then(([cache, hit]) => fetch(req).then(async (res) => {
         if (!res || !res.ok) return res;
         // Only keep a good response. The first version cached whatever came
         // back, so a 404 got stored and would then be served as the offline
@@ -133,9 +134,15 @@ self.addEventListener('fetch', (event) => {
           clients.forEach((c) => c.postMessage('vinall-sw-updated'));
         }
         return res;
-      }).catch(() => null);
-
-      if (hit) return hit;                 // instant, and the fetch runs on
+      })).catch(() => null);
+    // respondWith resolves immediately on a cache hit. Without waitUntil the
+    // browser may terminate the worker before the refresh or cache write finishes.
+    event.waitUntil(fresh.then(() => {}));
+    event.respondWith((async () => {
+      const hit = await cached;
+      // Keep the comparison body's stream untouched while the response clone
+      // is consumed by the page before the slower background fetch finishes.
+      if (hit) return hit.clone();
       const net = await fresh;             // first visit there is nothing yet
       if (net) return net;
       return (await caches.match('/offline.html')) || new Response(
@@ -149,18 +156,16 @@ self.addEventListener('fetch', (event) => {
   // Static media: serve from cache, and refresh it in the background so a
   // replaced asset is picked up on the visit after next.
   if (isMedia(url)) {
-    event.respondWith(
-      caches.match(req).then((hit) => {
-        const net = fetch(req).then((res) => {
+    const cached = caches.match(req);
+    const net = fetch(req).then(async (res) => {
           if (res && res.ok) {
             const copy = res.clone();
-            caches.open(MEDIA).then((c) => c.put(req, copy)).catch(() => {});
+            await caches.open(MEDIA).then((c) => c.put(req, copy)).catch(() => {});
           }
           return res;
-        }).catch(() => hit);
-        return hit || net;
-      })
-    );
+        }).catch(async () => (await cached) || Response.error());
+    event.waitUntil(net.then(() => {}));
+    event.respondWith(cached.then((hit) => hit || net));
     return;
   }
 
@@ -179,8 +184,8 @@ self.addEventListener('push', (event) => {
     body: d.body || '',
     tag: d.tag || undefined,
     renotify: !!d.tag,
-    icon: '/assets/icons/icon-192.png',
-    badge: '/assets/icons/icon-192.png',
+    icon: '/assets/icons/browser-192.png?v=official',
+    badge: '/assets/icons/browser-192.png?v=official',
     image: d.image || undefined,
     data: { url: d.url || '/' },
   }));

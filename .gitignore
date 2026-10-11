@@ -10,6 +10,10 @@ supabase/.temp/
 
 # Tooling
 node_modules/
+scripts/test-results/
+scripts/playwright-report/
+scripts/audit-artifacts/
+scripts/.browsers/
 
 # OS junk
 Thumbs.db

@@ -1,0 +1,14 @@
+{
+  "name": "vinall-local-checks",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node check-scripts.mjs && node traps.mjs && node test-service-worker.mjs",
+    "test": "playwright test",
+    "serve": "node serve.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "sharp": "0.35.5"
+  }
+}

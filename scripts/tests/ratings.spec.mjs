@@ -1,0 +1,48 @@
+import { test, expect, start } from './fixtures.mjs';
+test('rating edits preserve history, and deletion requires confirmation', async ({ page }) => {
+  await start(page, { seeded: true });
+  await page.evaluate(() => goToView('albums'));
+  await page.locator('.card[data-id="100"]').click();
+  await page.locator('#rate-album-btn').click();
+  await page.locator('#rate-slider').fill('90');
+  await page.locator('#rate-note').fill('Local regression test');
+  await page.locator('#rate-save-btn').click();
+  await expect(page.locator('#rate-view')).not.toHaveClass(/open/);
+  expect(await page.evaluate(() => loadAlbums()['100'].score)).toBe(90);
+  expect(await page.evaluate(() => loadAlbums()['100'].note)).toBe('Local regression test');
+  expect(await page.evaluate(() => loadAlbums()['100'].history.length)).toBeGreaterThan(0);
+  await page.evaluate(() => goToView('albums'));
+  await page.locator('.card[data-id="100"] [data-del]').click();
+  await expect(page.locator('#ask-modal')).toHaveClass(/open/);
+  await page.locator('#ask-no').click();
+  expect(await page.evaluate(() => !!loadAlbums()['100'])).toBeTruthy();
+  await page.locator('.card[data-id="100"] [data-del]').click();
+  await page.locator('#ask-yes').click();
+  await expect.poll(() => page.evaluate(() => !!loadAlbums()['100'])).toBeFalsy();
+});
+test('a failed sign-in restores the form and shows the backend error', async ({ page }) => {
+  await start(page);
+  await page.evaluate(() => goToView('profile'));
+  await page.locator('#prof-login').click();
+  await page.locator('#auth-email').fill('local-test@example.test');
+  await page.locator('#auth-pass').fill('wrong-password');
+  await page.route('**/auth/v1/token?**', route => route.fulfill({ status: 400, json: { code: 'invalid_credentials', msg: 'Invalid login credentials' } }));
+  await page.locator('#auth-submit').click();
+  await expect(page.locator('#auth-error')).toContainText('Invalid login credentials');
+  await expect(page.locator('#auth-submit')).toBeEnabled();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#auth-modal')).not.toHaveClass(/open/);
+});
+test('nested confirmations keep their parent open and restore its focus', async ({ page }) => {
+  await start(page);
+  await page.evaluate(() => goToView('profile'));
+  await page.locator('#prof-login').click();
+  await page.locator('#auth-pass').focus();
+  await page.evaluate(() => { window.confirmationAnswer = null; ask({ title: 'Local confirmation', danger: true }).then(v => { window.confirmationAnswer = v; }); });
+  await expect(page.locator('#ask-no')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#ask-modal')).not.toHaveClass(/open/);
+  await expect(page.locator('#auth-modal')).toHaveClass(/open/);
+  await expect(page.locator('#auth-pass')).toBeFocused();
+  expect(await page.evaluate(() => confirmationAnswer)).toBe(false);
+});

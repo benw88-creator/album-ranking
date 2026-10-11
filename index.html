@@ -6,22 +6,17 @@
 <!-- viewport-fit=cover lets the page paint under the notch and home
      indicator; the safe-area insets further down put the content back
      inside them. Without cover, iOS letterboxes the page in black. -->
-<!-- user-scalable=no and maximum-scale=1 turn off pinch zoom and, with the
-     touch-action rule in the stylesheet, the double-tap magnify that was
-     firing by accident on the album page and in the games. This is a fixed
-     mobile-first layout with its own type scale that clamps up rather than
-     down, so there is nothing a zoom reveals that the layout does not
-     already give you — and an accidental 2x on a bottom sheet is not a
-     feature. Safari on the open web ignores this; a webview honours it. -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>VINALL — Music Ranker</title>
+<!-- Keep pinch zoom available. touch-action: manipulation removes accidental
+     double-tap delays without removing a low-vision user's browser controls. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>VINALL</title>
 <meta name="description" content="Rate, rank and discover the albums and songs you love.">
 <meta name="theme-color" content="#0a0908">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9IiMwYTA5MDgiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMzMzMzNkIiBzdHJva2Utd2lkdGg9IjEuMiIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMyNjI2MmUiIHN0cm9rZS13aWR0aD0iMSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE5IiBmaWxsPSJub25lIiBzdHJva2U9IiMyNjI2MmUiIHN0cm9rZS13aWR0aD0iMSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjEwIiBmaWxsPSIjRjVDODQyIi8+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMi4yIiBmaWxsPSIjMGEwOTA4Ii8+PC9zdmc+Cg==">
+<link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico?v=official">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=official">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png?v=official">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png?v=official">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="VINALL">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -8919,10 +8914,9 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
 }
 /* A horizontal range inside a vertical snap-scroller will happily claim a
    vertical drag that starts on it, which on a card where the slider spans the
-   width is a large dead zone the feed will not scroll from. pan-x hands the
-   vertical axis back to the feed and keeps the horizontal drag the slider
-   actually wants. */
-.fy-rate input[type="range"] { touch-action: pan-x; }
+   width is a large dead zone the feed will not scroll from. pan-y gives the
+   browser the vertical axis while native range input handles horizontal drag. */
+.fy-rate input[type="range"] { touch-action: pan-y; }
 .fy-rate input[type="range"] {
   flex: 1 1 auto; min-width: 0;
   -webkit-appearance: none; appearance: none;
@@ -9057,7 +9051,7 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .fy-eq i, .fy-card.needs-tap .fy-cue { animation: none; }
-  .fy-feed { scroll-snap-type: none; }
+  .fy-feed { scroll-behavior: auto; }
 }
 
 /* A four-track EP in a list headed "albums left" reads as a bug in the list
@@ -9574,21 +9568,21 @@ input, textarea, select, [contenteditable="true"],
   .modal-panel { margin-bottom: env(safe-area-inset-bottom); }
 }
 </style>
+<link rel="stylesheet" href="/assets/interactions.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
      the native app, and a hang with no connection at all — in an app whose
      whole 4.2 argument is that its assets are inside the binary. Off the
      disk it parses in milliseconds and works with the radio off.
-     Pinned at 2.45.4, the exact version the CDN tag pinned, so this is a
-     change of origin and nothing else. Upgrading means a new file beside
-     this one and a new src — never an edit in place, so the version on the
-     page is always the version in the name.
+     Pinned at 2.117.3. The 2.45.4 client's startup/auto-refresh locks raised
+     unhandled errors in Firefox; this release uses Supabase's documented
+     session coordination fix. Keep versioned assets immutable.
      Re-fetch with:
-       curl -L -o assets/supabase-js-2.45.4.min.js \
-         https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js
-     sha256 96277ec00e19df476d7396a8a2586b41ed1033dcf680f5aa79b0c556059792b8 -->
-<script src="/assets/supabase-js-2.45.4.min.js"></script>
+       curl -L -o assets/supabase-js-2.117.3.min.js \
+         https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js
+     sha256 d6a5c4414a5d4ce646d9c1de223aa7067d3ff664c15394ffeb7fcffc763354a3 -->
+<script src="/assets/supabase-js-2.117.3.min.js"></script>
 <script>
 /* Motion preference, applied before the first paint so the splash and the
    dashboard entrance both see it. Three states: follow the system (the
@@ -10342,7 +10336,8 @@ window.discAmt = function (n) {
         <span class="fy-push-arrow" aria-hidden="true"></span><span id="fy-push-label">Push</span>
       </button>
     </div>
-    <div class="fy-feed" id="fy-feed"></div>
+    <p id="fy-key-hint" class="fy-key-hint">Use ↑ and ↓ to change posts</p>
+    <div class="fy-feed" id="fy-feed" tabindex="0" role="region" aria-label="For You feed" aria-describedby="fy-key-hint"></div>
   </section>
 
   <section id="view-crate" class="view" style="display:none;">
@@ -12161,10 +12156,18 @@ document.addEventListener('click', function (e) { if (!e.target.closest('.search
    ================================================================ */
 let currentAlbum = null;
 
-async function openAlbum(meta) {
+var _albumOpenTok = 0;
+async function openAlbum(meta, fromHistory) {
+  var albumTok = ++_albumOpenTok;
   closeSuggestions();
   searchInput.value = '';
-  setMode('album-detail', true);
+  // Albums need real history entries too. Previously opening one skipped the
+  // push, so Back from the next tab jumped over the album to Home.
+  if (!fromHistory && currentMode === 'album-detail' && currentAlbum && currentAlbum.id !== meta.id) {
+    try { history.pushState({ vinall: 1, view: 'album-detail', album: meta }, ''); } catch (e) {}
+  }
+  setMode('album-detail', fromHistory ? 'pop' : false);
+  try { history.replaceState(Object.assign({}, history.state, { vinall: 1, view: 'album-detail', album: meta }), ''); } catch (e) {}
   const coverEl = document.getElementById('detail-cover');
   coverEl.crossOrigin = 'anonymous';
   coverEl.src = meta.art || '';
@@ -12175,8 +12178,8 @@ async function openAlbum(meta) {
   if (meta.art) {
     const probe = new Image();
     probe.crossOrigin = 'anonymous';
-    probe.onload = function () { extractDominantColor(probe, applyAlbumTint); };
-    probe.onerror = function () { applyAlbumTint(null); };
+    probe.onload = function () { if (albumTok === _albumOpenTok) extractDominantColor(probe, applyAlbumTint); };
+    probe.onerror = function () { if (albumTok === _albumOpenTok) applyAlbumTint(null); };
     probe.src = meta.art;
   }
 
@@ -12208,6 +12211,7 @@ async function openAlbum(meta) {
     const data = await spotifyGet('/albums/' + encodeURIComponent(meta.id) +
       '?name=' + encodeURIComponent(meta.name || '') +
       '&artist=' + encodeURIComponent(meta.artist || ''), { priority: true });
+    if (albumTok !== _albumOpenTok) return;
     // Now the real Deezer url is known, point the credit button at the record
     // rather than at a search for it.
     if (spBtn && data && data.link) spBtn.href = data.link;
@@ -12217,6 +12221,7 @@ async function openAlbum(meta) {
     compUnratedOnly = true;      // every album page opens showing what is left
     primeCompletion(currentAlbum);
   } catch (e) {
+    if (albumTok !== _albumOpenTok) return;
     if (e.message === 'not-authenticated') return;
     document.getElementById('detail-tracks').innerHTML = '<div class="sugg-empty">Couldn’t load tracks — ' + esc(spotifyErrorMessage(e)) + '</div>';
   }
@@ -13835,6 +13840,7 @@ const views = {
 };
 let lastListMode = 'home';
 let currentMode = 'home';
+window.currentMode = currentMode;
 
 /* EVERY PAGE KEEPS ITS PLACE. Views are sections of one long document, so the
    window's scroll position is shared between them — leaving the Crate halfway
@@ -13863,23 +13869,37 @@ function restoreViewScroll(mode, y) {
   }
   requestAnimationFrame(go);
 }
-['wheel', 'touchstart', 'keydown'].forEach(function (ev) {
+['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(function (ev) {
   window.addEventListener(ev, function () { _scrollTok++; }, { passive: true });
 });
 
 function setMode(mode, fromCode) {
+  // An unknown destination must not hide every view or poison saved history.
+  if (!views[mode]) return;
   if (!fromCode && mode !== currentMode && window.pushViewHistory) window.pushViewHistory(mode);
   if (mode !== currentMode) _viewScroll[currentMode] = window.scrollY;
   var _restoreY = (mode === 'album-detail' && fromCode !== 'pop') ? 0 : (_viewScroll[mode] || 0);
   var _changed = mode !== currentMode || mode === 'album-detail';
   currentMode = mode;
+  window.currentMode = mode;
+  var pageNames = { albums: 'Albums', songs: 'Songs', crate: 'The Crate', choice: 'Community Choice', foryou: 'For You', games: 'Games', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves', 'album-detail': 'Album' };
+  document.title = mode === 'home' ? 'VINALL' : 'VINALL — ' + (pageNames[mode] || 'Discover');
   Object.keys(views).forEach(function (k) { views[k].style.display = (k === mode) ? 'block' : 'none'; });
-  /* Replay the entrance every time rather than only on first show — the class
-     is removed and the reflow forced, which is the same idiom the timer bar in
-     Cover Fire needs and for the same reason: without it both changes land in
-     one computed style and the browser sees nothing to animate. */
+  /* A fade keeps geometry and fixed descendants stable. A transformed view
+     changed WebKit's hit testing between pointer-down and pointer-up; forcing
+     a reflow to restart it also delayed every repeated navigation. */
   var _v = views[mode];
-  if (_v) { _v.classList.remove('enter'); void _v.offsetWidth; _v.classList.add('enter'); }
+  if (_v && _changed) {
+    _v.classList.remove('enter');
+    // Cancel an interrupted entrance without a synchronous layout flush.
+    if (_v._entrance) _v._entrance.cancel();
+    if (_v.animate && !(window.motionReduced && motionReduced())) {
+      _v._entrance = _v.animate([
+        { opacity: 0 },
+        { opacity: 1 }
+      ], { duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    }
+  }
   // Repaints --section, which the background washes and every section heading
   // read from. One attribute, and the whole page changes temperature.
   document.body.dataset.section = mode;
@@ -13893,6 +13913,7 @@ function setMode(mode, fromCode) {
     var on = m === mode ||
       (m === 'albums' && CRATE_GROUP.indexOf(mode) !== -1);
     b.classList.toggle('active', on);
+    if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
   if (window.positionNavIndicator) window.positionNavIndicator();
   if (mode === 'home' || mode === 'albums' || mode === 'songs') lastListMode = mode;
@@ -13962,11 +13983,17 @@ window.goToView = setMode;
   // ours to consume rather than walking off the page. Watched with an
   // observer instead of being wired at each open() site: there are a dozen
   // of those and a thirteenth would forget to do it.
-  var depth = 0;
+  var depth = 0, consumingClose = false;
   var obs = new MutationObserver(function () {
     var n = openLayers().length;
     if (n > depth) {
       try { history.pushState({ vinall: 1, layer: 1, view: currentMode }, ''); } catch (e) {}
+    }
+    // A close button consumes the same entry that hardware Back would have.
+    // Leaving it behind made the next Back look like it did nothing.
+    if (n < depth && history.state && history.state.layer && !consumingClose) {
+      consumingClose = true;
+      history.back();
     }
     depth = n;
   });
@@ -13975,6 +14002,7 @@ window.goToView = setMode;
   });
 
   window.addEventListener('popstate', function (e) {
+    if (consumingClose) { consumingClose = false; return; }
     var layers = openLayers();
     if (layers.length) {
       // Close the top sheet and stop. The entry this consumed was the one
@@ -13985,7 +14013,8 @@ window.goToView = setMode;
       return;
     }
     var v = e.state && e.state.view;
-    if (v && views[v]) setMode(v, 'pop');
+    if (v === 'album-detail' && e.state.album) openAlbum(e.state.album, true);
+    else if (v && views[v]) setMode(v, 'pop');
   });
 
   window.pushViewHistory = function (mode) {
@@ -16417,14 +16446,22 @@ const Cloud=(function(){
     }catch(e){}
   }
 
-  let mode='login';
+  let mode='login', authFocusTimer=null;
   function showAuthView(v){
     document.getElementById('auth-view-main').style.display=v==='main'?'block':'none';
     document.getElementById('auth-view-forgot').style.display=v==='forgot'?'block':'none';
     document.getElementById('auth-view-recovery').style.display=v==='recovery'?'block':'none';
-    if(v==='forgot')setTimeout(function(){const e=document.getElementById('auth-reset-email');if(e){e.value=document.getElementById('auth-email').value||'';e.focus();}},260);
-    else if(v==='recovery')setTimeout(function(){document.getElementById('auth-newpass').focus();},260);
-    else setTimeout(function(){document.getElementById('auth-email').focus();},260);
+    clearTimeout(authFocusTimer);
+    const id=v==='forgot'?'auth-reset-email':v==='recovery'?'auth-newpass':'auth-email';
+    if(v==='forgot')document.getElementById(id).value=document.getElementById('auth-email').value||'';
+    authFocusTimer=setTimeout(function(){
+      const modal=document.getElementById('auth-modal'), active=document.activeElement;
+      // A delayed autofocus must not take back a field the person has already
+      // chosen or focus behind a newer confirmation sheet.
+      if(!modal.classList.contains('open')||modal.inert)return;
+      if(active&&modal.contains(active)&&active.matches('input,textarea,select')&&active.getClientRects().length)return;
+      const input=document.getElementById(id);if(input)input.focus();
+    },260);
   }
   function openAuth(){
     document.getElementById('auth-error').textContent='';
@@ -16434,6 +16471,7 @@ const Cloud=(function(){
     if(window.VinalDither)window.VinalDither.playAuth();
   }
   function closeAuth(){
+    clearTimeout(authFocusTimer);
     document.getElementById('auth-modal').classList.remove('open');
     if(window.VinalDither)window.VinalDither.pauseAuth();
   }
@@ -17166,7 +17204,9 @@ const BAD_WORDS=['nigger','faggot','retard','kike','spic','chink','cunt'];
 function hasSlur(s){const n=String(s||'').toLowerCase().replace(/[^a-z]/g,'');return BAD_WORDS.some(function(w){return n.indexOf(w)!==-1;});}
 function validUsername(u){return/^[a-zA-Z0-9_]{3,20}$/.test(u);}
 
+var _profileRenderTok = 0;
 async function renderProfile(){
+  const profileTok = ++_profileRenderTok;
   const host=document.getElementById('profile-body');if(!host)return;
   const params=new URLSearchParams(location.search);
   const publicId=params.get('u');
@@ -17174,8 +17214,9 @@ async function renderProfile(){
   if(publicId&&(!me||me.id!==publicId)){
     host.innerHTML='<p class="reco-note">Loading profile\u2026</p>';
     const prof=await Cloud.fetchProfile(publicId);
+    if(profileTok!==_profileRenderTok)return;
     if(!prof){host.innerHTML='<div class="empty"><span class="emoji">'+ICONS.person+'</span><h3>Profile not found</h3><p>This user doesn\u2019t exist or hasn\u2019t set up a profile.</p></div>';return;}
-    await drawProfile(host,prof,false);return;
+    await drawProfile(host,prof,false,profileTok);return;
   }
   if(!me){
     host.innerHTML='<div class="empty"><span class="emoji">'+ICONS.person+'</span><h3>Your profile</h3><p>Log in to create a public profile.</p><button class="btn-primary" id="prof-login" style="margin-top:8px;">Log in / Sign up</button></div>';
@@ -17183,8 +17224,9 @@ async function renderProfile(){
   }
   host.innerHTML='<p class="reco-note">Loading your profile\u2026</p>';
   let prof=await Cloud.fetchProfile(me.id);
+  if(profileTok!==_profileRenderTok)return;
   if(!prof)prof={id:me.id,username:'user_'+me.id.slice(0,8),bio:'',avatar_url:'',top3:[]};
-  await drawProfile(host,prof,true);
+  await drawProfile(host,prof,true,profileTok);
 }
 
 /* Taste match, the block that only exists on somebody else's profile.
@@ -17416,7 +17458,7 @@ function aboutYouHtml(albumsObj, songsObj, prof, isOwner) {
   return title + '<div class="ay-card">' + lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join('') + '</div>';
 }
 
-async function drawProfile(host,prof,isOwner){
+async function drawProfile(host,prof,isOwner,profileTok){
   const me=Cloud.getUser&&Cloud.getUser();
   function safe(p,fallback){
     try{return Promise.resolve(p).catch(function(){return fallback;});}
@@ -17433,6 +17475,7 @@ async function drawProfile(host,prof,isOwner){
     isOwner?Promise.resolve(Object.values(window.loadLikedSongs?loadLikedSongs():{}))
            :(prof.likes_public?safe(Cloud.fetchLikedSongs(prof.id),[]):Promise.resolve(null))
   ]);
+  if(profileTok!==_profileRenderTok)return;
   const albumsObj=jobs[0].albums||{},songsObj=jobs[0].songs||{};
   const counts=jobs[1]||{followers:0,following:0};
   const netWorth=(jobs[2]&&jobs[2].data&&Number(jobs[2].data.net_worth))||0;
@@ -17658,6 +17701,7 @@ async function drawProfile(host,prof,isOwner){
   const frameCls = (window.Wallet && prof.active_frame && Wallet.FRAMES[prof.active_frame])
     ? ' fr-'+prof.active_frame : '';
 
+  if(profileTok!==_profileRenderTok)return;
   host.innerHTML=
     favBannerHtml+
     '<div class="prof-head"'+bannerStyle+'>'+
@@ -17932,7 +17976,7 @@ async function tasteFor(ids){
 window.tasteFor=tasteFor;
 function personRow(p,tm){return'<div class="ptop-row" data-uid="'+esc(p.id)+'"><img src="'+esc(avatarSrc(p.avatar_url))+'" alt=""><div style="flex:1;min-width:0;"><div class="nm">'+esc(p.username||'user')+'</div>'+(p.bio?'<div class="ar">'+esc(p.bio.slice(0,60))+'</div>':'')+' </div>'+tasteChip(tm)+'<span style="color:var(--text-faint);font-size:18px;">\u2192</span></div>';}
 function wirePersonRows(host){host.querySelectorAll('[data-uid]').forEach(function(el){el.addEventListener('click',function(){viewUserProfile(el.dataset.uid);});});}
-function viewUserProfile(uid){const url=location.pathname+'?u='+uid;history.pushState(null,'',url);setMode('profile');renderProfile();}
+function viewUserProfile(uid){const url=location.pathname+'?u='+encodeURIComponent(uid);history.pushState({vinall:1,view:'profile'},'',url);setMode('profile',true);}
 async function doPeopleSearch(uname){
   const host=document.getElementById('people-result');const me=Cloud.getUser&&Cloud.getUser();
   if(!uname){host.innerHTML='';return;}
@@ -35109,8 +35153,8 @@ window.track = function (name, props) {
         album: (album && album.meta && album.meta.name) || '',
         artwork: (album && album.meta && album.meta.art) ? [{ src: album.meta.art, sizes: '512x512', type: 'image/jpeg' }] : []
       });
-      navigator.mediaSession.setActionHandler('play', function () { toggle(); });
-      navigator.mediaSession.setActionHandler('pause', function () { toggle(); });
+      navigator.mediaSession.setActionHandler('play', function () { if (el && el.paused) toggle(); });
+      navigator.mediaSession.setActionHandler('pause', function () { if (el && !el.paused) toggle(); });
       navigator.mediaSession.setActionHandler('nexttrack', function () { next(false); });
       navigator.mediaSession.setActionHandler('previoustrack', prev);
     } catch (e) {}
@@ -35132,9 +35176,9 @@ window.track = function (name, props) {
   // Space is the universal play/pause, but not while somebody is typing
   // or while a slider has focus — the rating sliders live on these rows.
   document.addEventListener('keydown', function (ev) {
-    if (ev.code !== 'Space' || !cur) return;
+    if (ev.code !== 'Space' || !cur || ev.defaultPrevented || document.querySelector('.modal.open, .activity.open')) return;
     var t = ev.target, tag = t && t.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable) || (t && t.closest && t.closest('button, a, [role="button"], [role="slider"]'))) return;
     ev.preventDefault(); toggle();
   });
 
@@ -35654,7 +35698,8 @@ window.track = function (name, props) {
      in it. Playback and the feed are unrelated concerns and now have a token
      each. */
   var _items = [], _tok = 0, _feedTok = 0, _unlocked = false, _playing = null, _io = null;
-  var _settle = 0, _scrollWired = false;
+  var _settle = 0, _scrollWired = false, _activeCard = 0, _navTarget = null, _rebuild = false;
+  function desktopFeed() { return window.matchMedia('(hover: hover) and (pointer: fine)').matches; }
   var _pools = { partial: [], yours: [], shortlist: [], discovery: [], pushed: [], wander: [] };
   var _widen = 0;          // how far out expand() has already reached
   var _remote = null;      // the discovery half, still in the post
@@ -36411,7 +36456,7 @@ window.track = function (name, props) {
           '<button class="fy-title" data-open="' + i + '">' + esc(c.title || '') + '</button>' +
         '</div>' +
         '<div class="fy-sub">' + esc(c.artist || '') +
-          (c.albumName ? ' &middot; <span class="fy-alb" data-open="' + i + '">' + esc(c.albumName) + '</span>' : '') +
+          (c.albumName ? ' &middot; <button class="fy-alb" data-open="' + i + '">' + esc(c.albumName) + '</button>' : '') +
         '</div>' +
       '</div>' +
       '<div class="fy-rate">' +
@@ -36427,7 +36472,7 @@ window.track = function (name, props) {
 
   async function playCard(i) {
     var c = _items[i], host = el('fy-feed');
-    if (!c || !host || _playing === i) return;
+    if (!c || !host || _playing === i || document.hidden || document.body.dataset.section !== 'foryou') return;
     stopAll();
     _playing = i;
     var card = host.querySelector('.fy-card[data-i="' + i + '"]');
@@ -36455,10 +36500,11 @@ window.track = function (name, props) {
          One retry through a real lookup, which is what `fresh` is for. */
       try { ok = await VinalAudio.play(trackOf(c), CLIP_S, { fresh: true }); } catch (e) { ok = false; }
       if (mine !== _tok) return;
+      if (ok === 'blocked') { _unlocked = false; _playing = null; if (card) card.classList.add('needs-tap'); return; }
       if (!ok) { if (card) card.classList.add('no-clip'); _playing = null; return; }
     }
     _unlocked = true;
-    if (card) card.classList.add('is-playing');
+    if (card) { card.classList.remove('needs-tap', 'no-clip'); card.classList.add('is-playing'); }
   }
 
   function stopAll() {
@@ -36470,7 +36516,7 @@ window.track = function (name, props) {
     _playing = null;
     var host = el('fy-feed');
     if (!host) return;
-    host.querySelectorAll('.fy-card').forEach(function (n) {
+    host.querySelectorAll('.fy-card.is-playing, .fy-card.is-loading, .fy-card.no-clip').forEach(function (n) {
       n.classList.remove('is-playing', 'is-loading', 'no-clip');
     });
   }
@@ -36529,7 +36575,10 @@ window.track = function (name, props) {
       added.forEach(function (n) { if (_io) _io.observe(n); });
       markSeenSongs(more);
     } catch (e) { /* a failed top-up is a shorter feed, not a broken one */ }
-    finally { _topping = false; }
+    finally {
+      _topping = false;
+      if (_rebuild && !_busy) { _rebuild = false; build(true); }
+    }
   }
 
   function markSeenSongs(list) {
@@ -36553,18 +36602,35 @@ window.track = function (name, props) {
      off getBoundingClientRect rather than offsetTop: offsetTop is relative to
      the offsetParent, which is not necessarily the scroller. */
   function settle() {
-    _settle = 0;
+    clearTimeout(_settle); _settle = 0;
     var host = el('fy-feed');
-    if (!host || document.body.dataset.section !== 'foryou') return;
-    var hr = host.getBoundingClientRect(), mid = hr.top + hr.height / 2;
-    var best = -1, bd = 1e9;
-    host.querySelectorAll('.fy-card').forEach(function (n) {
-      var i = parseInt(n.dataset.i, 10);
-      if (isNaN(i) || i < 0) return;
-      var r = n.getBoundingClientRect(), d = Math.abs((r.top + r.height / 2) - mid);
-      if (d < bd) { bd = d; best = i; }
-    });
-    if (best >= 0 && best !== _playing) playCard(best);
+    if (!host || !host.clientHeight || document.hidden || document.body.dataset.section !== 'foryou') return;
+    // Equal-height posts make this constant-time. Reading every post's box
+    // was progressively more expensive the further an endless feed went.
+    var cards = host.children;
+    var at = Math.min(cards.length - 1, Math.max(0, Math.round(host.scrollTop / host.clientHeight)));
+    var card = cards[at];
+    if (!card || !card.classList.contains('fy-card')) return;
+    // During a keyboard glide the observer can see intermediate posts. Only
+    // the destination owns playback, even when another key interrupts it.
+    if (_navTarget != null && (at !== _navTarget || Math.abs(host.scrollTop - at * host.clientHeight) > 2)) return;
+    _navTarget = null; _activeCard = at;
+    var i = parseInt(card.dataset.i, 10);
+    if (i < 0) { stopAll(); topUp(); return; }
+    if (i >= _items.length - LOOKAHEAD) topUp();
+    if (i >= 0 && i !== _playing) playCard(i);
+  }
+
+  function navigatePost(step) {
+    var host = el('fy-feed');
+    if (!host || !host.querySelector('.fy-card') || !host.clientHeight) return;
+    var from = _navTarget == null ? Math.round(host.scrollTop / host.clientHeight) : _navTarget;
+    var to = Math.max(0, Math.min(host.children.length - 1, from + step));
+    if (to === from) return;
+    _navTarget = to;
+    stopAll();
+    host.scrollTo({ top: to * host.clientHeight, behavior: window.motionReduced && motionReduced() ? 'instant' : 'smooth' });
+    clearTimeout(_settle); _settle = setTimeout(settle, 160);
   }
 
   function observe(host) {
@@ -36575,18 +36641,34 @@ window.track = function (name, props) {
     if (!_scrollWired) {
       _scrollWired = true;
       host.addEventListener('scroll', function () {
+        if (document.body.dataset.section !== 'foryou') return;
         if (_settle) clearTimeout(_settle);
         _settle = setTimeout(settle, 140);
       }, { passive: true });
+      host.addEventListener('scrollend', settle);
+      host.addEventListener('wheel', function (e) {
+        // Keep pinch-to-zoom and touch scrolling. A laptop wheel/trackpad
+        // must never trigger the native snap engine alongside arrow keys.
+        if (desktopFeed() && !e.ctrlKey) e.preventDefault();
+      }, { passive: false });
+      host.addEventListener('touchstart', function () { _navTarget = null; }, { passive: true });
+      document.addEventListener('keydown', function (e) {
+        if (e.defaultPrevented || !desktopFeed() || document.body.dataset.section !== 'foryou' ||
+            (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        var t = e.target;
+        if (t && t.closest && t.closest('input, textarea, select, button, a, [contenteditable]:not([contenteditable="false"]), [role="slider"], [role="combobox"], [role="listbox"], [role="menu"]')) return;
+        if (document.querySelector('.modal.open, .activity.open, .onb.open')) return;
+        e.preventDefault();
+        if (!e.repeat) navigatePost(e.key === 'ArrowDown' ? 1 : -1);
+      });
     }
     _io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
-        if (!en.isIntersecting) return;
+        if (!en.isIntersecting || en.intersectionRatio < 0.6 || document.body.dataset.section !== 'foryou' || document.hidden) return;
         var i = parseInt(en.target.dataset.i, 10);
         if (isNaN(i)) return;
         // The end card. Reaching it asks once more rather than being final.
-        if (i < 0) { topUp(); return; }
-        if (i >= _items.length - LOOKAHEAD) topUp();
+        if (i < 0) { if (!_settle) settle(); return; }
         /* IT TRIES. This used to be `if (!_unlocked) return;`, so nothing in
            the feed played until somebody had guessed that the sleeve was a
            play button — which is the reported "playback sometimes requires
@@ -36598,9 +36680,9 @@ window.track = function (name, props) {
            NotAllowedError comes back as 'blocked' and lights the cue. Once one
            card has played, `_unlocked` is true and the rest of the session
            needs nothing. The cost of being wrong is a rejected promise. */
-        playCard(i);
+        if (!_settle) settle();
       });
-    }, { threshold: 0.6 });
+    }, { root: host, threshold: 0.6 });
     host.querySelectorAll('.fy-card').forEach(function (n) { _io.observe(n); });
   }
 
@@ -36610,7 +36692,7 @@ window.track = function (name, props) {
      search field is not on every viewport, and the bar's height is a token. */
   function fitFeed() {
     var host = el('fy-feed'), nav = document.querySelector('nav.modes');
-    if (!host) return;
+    if (!host || !host.getClientRects().length) return;
     /* THE FEED RUNS TO THE BOTTOM OF THE WINDOW AND UNDER THE NAV.
 
        It used to stop ABOVE the floating bar, which cost the card ~90px of
@@ -36647,8 +36729,14 @@ window.track = function (name, props) {
     if (document.hidden) return;
     var top = host.getBoundingClientRect().top;
     var vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
-    var h = Math.round(vh - top);
-    if (h > 320 && h > window.innerHeight * 0.45) host.style.height = h + 'px';
+    var h = Math.round(vh + ((window.visualViewport && window.visualViewport.offsetTop) || 0) - top);
+    var oldHeight = host.clientHeight;
+    var post = oldHeight ? Math.round(host.scrollTop / oldHeight) : _activeCard;
+    if (h >= 180 && Math.abs(h - oldHeight) > 1) {
+      host.style.height = h + 'px';
+      _navTarget = null;
+      host.scrollTo({ top: post * host.clientHeight, behavior: 'instant' });
+    }
 
     // What the card has to clear at the bottom: the bar's own height plus the
     // gap it floats above the edge, plus air.
@@ -36665,7 +36753,7 @@ window.track = function (name, props) {
       // tray 34px behind it. A hidden bar has zero height, which is the test
       // that actually works here.
       var r = n.getBoundingClientRect();
-      if (r.height && r.bottom > top) floor = Math.max(floor, Math.round((vh - r.top) + 14));
+      if (r.height && r.top > top && r.bottom > top) floor = Math.max(floor, Math.round((vh - r.top) + 14));
     });
     host.style.setProperty('--fy-floor', floor + 'px');
 
@@ -36688,15 +36776,14 @@ window.track = function (name, props) {
     var w = card.clientWidth
           - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
     var avail = card.clientHeight
-          - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0)
-          - floor;
+          - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
     ['.fy-meta', '.fy-rate'].forEach(function (sel) {
       var n = card.querySelector(sel);
       if (n) avail -= n.getBoundingClientRect().height;
     });
     avail -= (parseFloat(cs.rowGap) || 0) * 2;
     var side = Math.min(w, avail, card.clientHeight * 0.78);
-    host.style.setProperty('--fy-art', Math.max(150, Math.floor(side)) + 'px');
+    host.style.setProperty('--fy-art', Math.max(72, Math.floor(side)) + 'px');
   }
   /* Debounced, because iOS fires a burst of these through a rotation or an
      app switch and only the last one is a real viewport. */
@@ -36716,6 +36803,27 @@ window.track = function (name, props) {
   window.addEventListener('focus', refit);
 
   function wire(host) {
+    // A range changes on touch-down, before the browser knows whether the
+    // gesture is a horizontal score drag or a vertical feed swipe. Put that
+    // tentative change back when vertical scrolling cancels the pointer.
+    var rangeGesture = null;
+    host.addEventListener('pointerdown', function (e) {
+      var range = e.target.closest('[data-rate]');
+      if (range && e.pointerType === 'touch') rangeGesture = { input: range, value: range.value, id: e.pointerId, x: e.clientX, y: e.clientY, horizontal: false };
+    }, true);
+    host.addEventListener('pointermove', function (e) {
+      var g = rangeGesture;
+      if (!g || g.id !== e.pointerId) return;
+      var dx = Math.abs(e.clientX - g.x), dy = Math.abs(e.clientY - g.y);
+      if (dx > 6 && dx > dy) g.horizontal = true;
+    }, { passive: true });
+    host.addEventListener('pointercancel', function (e) {
+      var g = rangeGesture;
+      if (!g || g.id !== e.pointerId) return;
+      if (!g.horizontal) { g.input.value = g.value; g.input.dispatchEvent(new Event('input', { bubbles: true })); }
+      rangeGesture = null;
+    });
+    host.addEventListener('pointerup', function () { rangeGesture = null; });
     host.addEventListener('click', function (e) {
       var t = e.target.closest('[data-play],[data-open],[data-save],[data-push],[data-suggest],[data-like]');
       if (!t) return;
@@ -36849,16 +36957,21 @@ window.track = function (name, props) {
 
   async function build(force) {
     var host = el('fy-feed');
-    if (!host || _busy) return;
+    if (!host) return;
+    if (_busy || _topping) { if (force) _rebuild = true; return; }
     if (_built && !force) return;
     // stopAll() pauses VinalAudio and clears _playing/_tok; wiping the DOM
     // below does neither by itself, since the audio element is not scoped to
     // this feed's markup — it kept playing under the fresh cards, which is
     // what a manual refresh or the >10s rebuild both looked like.
     stopAll();
+    if (_io) { _io.disconnect(); _io = null; }
+    clearTimeout(_settle); _settle = 0; _navTarget = null; _activeCard = 0;
+    host.scrollTo({ top: 0, behavior: 'instant' });
     _busy = true;
     var mine = ++_feedTok;
     host.innerHTML = '<div class="fy-loading">Finding songs for you&hellip;</div>';
+    host.setAttribute('aria-busy', 'true');
     try {
       _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0;
       _ctx = buildContext();
@@ -36902,13 +37015,16 @@ window.track = function (name, props) {
       markSeenSongs(first);
       fitFeed();
       _built = true;
-      observe(host);
+      if (document.body.dataset.section === 'foryou') observe(host);
       window.ForYou._last = { ctx: _ctx, pools: _pools };
       // The rest of the page, behind the card that is already on screen.
       topUp();
     } catch (e) {
       host.innerHTML = '<div class="reco-note">Couldn’t build your feed just now.</div>';
-    } finally { _busy = false; }
+    } finally {
+      _busy = false; host.removeAttribute('aria-busy');
+      if (_rebuild) { _rebuild = false; build(true); }
+    }
   }
 
   function render(force) {
@@ -36927,6 +37043,7 @@ window.track = function (name, props) {
     // and logged out, and the banner appears and disappears above it.
     fitFeed();
     paintQuota();
+    if (desktopFeed() && document.activeElement && document.activeElement.closest('#modes')) host.focus({ preventScroll: true });
     /* THE OBSERVER DOES NOT SURVIVE LEAVING, AND NOTHING PUT IT BACK.
 
        leave() disconnects it — correctly, so a hidden feed cannot start a
@@ -36943,7 +37060,7 @@ window.track = function (name, props) {
 
   // Leaving the tab must silence it: setMode only changes `display`, and an
   // <audio> element does not care that the card holding it is hidden.
-  function leave() { stopAll(); if (_io) { _io.disconnect(); _io = null; } _leftAt = Date.now(); }
+  function leave() { stopAll(); clearTimeout(_settle); _settle = 0; _navTarget = null; if (_io) { _io.disconnect(); _io = null; } _leftAt = Date.now(); }
 
   /* ---- the tabs, and pushing a record -----------------------------------
      `setFeed` rebuilds rather than filtering: the two feeds have different
@@ -39336,4 +39453,5 @@ window.track = function (name, props) {
 </div>
 
 </body>
+<script src="/assets/interactions.js?v=1"></script>
 </html>

@@ -1,5 +1,36 @@
 # VINALL
 
+## Prelaunch polish (2026-10-11)
+
+See `PRELAUNCH-AUDIT.md` for the local regression suite and verification limits.
+The initial audit was development-only. The owner subsequently approved pushing
+and releasing the tested changes on 2026-10-11. Keep live Supabase data unchanged:
+this release has no migration or backend data operation.
+
+`assets/interactions.css` and `assets/interactions.js` hold the shared interaction
+polish. They load after the established stylesheet/markup; keep safe-area rules
+intact. Page transitions are opacity-only: even a small whole-view transform
+changed fixed containing blocks and reproduced WebKit clicks landing on a
+different element on release. Use the existing game-specific motion for games.
+The launch requirement respects reduced motion, including ambient animation;
+this supersedes the earlier policy that kept small ambient motion running.
+Mandatory For You snapping stays enabled in reduced mode.
+
+For You desktop detection uses primary fine pointer + hover, independently of
+viewport width. Wheel is suppressed only there; touch stays native. Playback
+settles against the feed scroller, and keyboard targets skip intermediate posts.
+Never replace pan-y on its range with pan-x: that blocks vertical swipes. Pointer
+cancellation restores the value changed tentatively at touch-down.
+
+The browser Supabase bundle is now pinned at 2.117.3 with its hash in index.html.
+2.45.4 reproduced an unhandled Navigator LockManager error in Firefox. Browser
+icons now derive from the owner's supplied official logo, not the earlier
+generated store mark. Native store icons remain separate assets.
+
+Tooling is under `scripts/`, excluded from Vercel output. No root package.json,
+new serverless route or schema change was added. Run `npm run check` and
+`npm test` from scripts/ for the reproducible local audit.
+
 Album-ranking web app (renamed from Vinal to VINALL), live at https://vinall.xyz.
 
 **The domain was `wildcrate.xyz` and is now `vinall.xyz`.** One wrinkle that is not

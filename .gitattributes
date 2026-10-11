@@ -1,0 +1,2 @@
+# Preserve the published SDK bytes, including whitespace in template literals.
+assets/supabase-js-2.117.3.min.js -text -whitespace

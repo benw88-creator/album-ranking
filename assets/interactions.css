@@ -1,0 +1,71 @@
+/* Shared launch polish. Keep the existing palette, geometry and game motion. */
+:root { --ease-interaction: cubic-bezier(.2,.8,.2,1); }
+button {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: 160ms;
+  transition-timing-function: var(--ease-interaction);
+}
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--section, var(--gold)); outline-offset: 4px;
+}
+.fy-feed:focus-visible { outline-offset: -3px; }
+.fy-key-hint { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .fy-key-hint { display: block; position: absolute; bottom: 8px; left: 0; right: 0; z-index: 7; pointer-events: none; text-align: center; color: var(--text-dim); font-size: 12px; }
+  .game-card:hover { transform: translateY(-3px); }
+}
+.fy-feed { min-height: 180px; overflow-anchor: none; touch-action: pan-y pinch-zoom; }
+.fy-loading { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; }
+.fy-loading::before { content: ''; width: min(65%, 240px); aspect-ratio: 1; border-radius: 14px; background: var(--surface-2); animation: fyPlaceholder 1.4s ease-in-out infinite alternate; }
+@keyframes fyPlaceholder { to { opacity: .45; } }
+.fy-card { scroll-snap-align: start; }
+.fy-like, .fy-refresh-btn, .modal-close { min-width: 44px; min-height: 44px; }
+.fy-push-btn, #fy-seg button, .fy-save { min-height: 44px; }
+.fy-sub { overflow-wrap: anywhere; }
+.crate-tabs { max-width: 100%; }
+.crate-tabs button { min-height: 44px; min-width: 0; }
+@media (max-width: 399px) {
+  .crate-tabs { display: flex; }
+  .crate-tabs button { flex: 1; padding-inline: 8px; font-size: 12px; }
+}
+.cc-chip { min-height: 44px; }
+.fy-alb { border: 0; background: none; color: inherit; font: inherit; }
+.modal-panel { overscroll-behavior: contain; }
+html.layer-open { overflow-y: hidden; }
+body.layer-open { overflow-y: hidden; }
+.modal:not(.open) { pointer-events: none; }
+@supports (transition-behavior: allow-discrete) {
+  .modal {
+    opacity: 0;
+    transition: opacity 180ms var(--ease-interaction), display 180ms allow-discrete;
+  }
+  .modal.open { opacity: 1; }
+  @starting-style { .modal.open { opacity: 0; } }
+}
+@media (hover: none) {
+  .game-card:hover { transform: none; }
+  .game-card:active { transform: scale(.98); }
+}
+@media (max-width: 359px) {
+  .fy-tabs { gap: 6px; padding-inline: 8px; }
+  .fy-seg button { padding-inline: 9px; }
+  .fy-push-btn { padding-inline: 10px; }
+  .fy-rate { padding-inline: 10px; gap: 8px; }
+  .fy-save { padding-inline: 12px; }
+  .modal-panel { padding-inline: 16px; }
+}
+@media (max-width: 699px) { .fy-key-hint { display: none; } }
+/* Snapping is a navigation rule, not a decorative animation. Keep it in
+   reduced mode; only the glide and ambient/large-area motion are removed. */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) { scroll-behavior: auto; }
+  html:not([data-motion="full"]) *, html:not([data-motion="full"]) *::before, html:not([data-motion="full"]) *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important; scroll-behavior: auto !important;
+  }
+}
+html[data-motion="none"] { scroll-behavior: auto; }
+html[data-motion="none"] *, html[data-motion="none"] *::before, html[data-motion="none"] *::after {
+  animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+  transition-duration: .01ms !important; scroll-behavior: auto !important;
+}

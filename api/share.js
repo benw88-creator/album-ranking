@@ -63,15 +63,15 @@ const words = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); retur
 function page({ title, desc, image, url, body, cta }) {
   return `<!doctype html><html lang="en-GB"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>${esc(title)}</title>
+<title>${title === 'VINALL' ? 'VINALL' : 'VINALL — ' + esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
 <meta property="og:site_name" content="VINALL"><meta property="og:type" content="website">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">
 <meta property="og:url" content="${esc(SITE + url)}">
 ${image ? `<meta property="og:image" content="${esc(image)}"><meta property="og:image:width" content="1000"><meta property="og:image:height" content="1000"><meta name="twitter:image" content="${esc(image)}">` : ''}
 <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">
-<meta name="theme-color" content="#0a0908"><link rel="icon" href="/assets/icons/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#0a0908"><link rel="icon" href="/assets/icons/favicon.ico?v=official"><link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png?v=official">
+<link href="/assets/fonts/fonts.css" rel="stylesheet">
 <style>
 :root{--bg:#0a0908;--text:#f5efe6;--dim:rgba(245,239,230,.62);--faint:rgba(245,239,230,.4);--gold:#f5c842}
 *{box-sizing:border-box;margin:0}
