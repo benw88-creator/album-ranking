@@ -15,7 +15,7 @@
  * never more than one load behind, and when you are, the app says so out loud.
  */
 
-const VERSION = 'vinall-v4';
+const VERSION = 'vinall-v5';
 const SHELL = VERSION + '-shell';
 const MEDIA = VERSION + '-media';
 
@@ -25,12 +25,12 @@ const MEDIA = VERSION + '-media';
 const PRECACHE = [
   '/offline.html',
   '/manifest.webmanifest',
-  '/assets/icons/browser-192.png?v=official',
-  '/assets/icons/browser-512.png?v=official',
-  '/assets/icons/apple-touch-icon.png?v=official',
-  '/assets/icons/favicon.ico?v=official',
-  '/assets/interactions.css?v=1',
-  '/assets/interactions.js?v=1'
+  '/assets/icons/browser-192.png?v=official-transparent-2',
+  '/assets/icons/browser-512.png?v=official-transparent-2',
+  '/assets/icons/apple-touch-icon.png?v=official-transparent-2',
+  '/assets/icons/favicon.ico?v=official-transparent-2',
+  '/assets/interactions.css?v=2',
+  '/assets/interactions.js?v=2'
 ];
 
 self.addEventListener('install', (event) => {
@@ -184,8 +184,8 @@ self.addEventListener('push', (event) => {
     body: d.body || '',
     tag: d.tag || undefined,
     renotify: !!d.tag,
-    icon: '/assets/icons/browser-192.png?v=official',
-    badge: '/assets/icons/browser-192.png?v=official',
+    icon: '/assets/icons/browser-192.png?v=official-transparent-2',
+    badge: '/assets/icons/browser-192.png?v=official-transparent-2',
     image: d.image || undefined,
     data: { url: d.url || '/' },
   }));

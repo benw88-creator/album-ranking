@@ -12,11 +12,11 @@
 <title>VINALL</title>
 <meta name="description" content="Rate, rank and discover the albums and songs you love.">
 <meta name="theme-color" content="#0a0908">
-<link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico?v=official">
+<link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico?v=official-transparent-2">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=official">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png?v=official">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png?v=official">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=official-transparent-2">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png?v=official-transparent-2">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png?v=official-transparent-2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="VINALL">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1813,15 +1813,12 @@ html[data-motion="none"] .view.enter { animation: none; }
   transition: transform 0.22s var(--ease), box-shadow 0.22s;
   /* Score-coloured top border  */
   border-top: 3px solid var(--score, var(--border-strong));
-  /* Promote to its own layer so the spotlight repaint never triggers a reflow of siblings */
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  animation: cardIn 0.5s var(--ease) both;
+  /* Release transform when entrance ends so hover/press can own it. */
+  animation: cardIn 0.5s var(--ease) backwards;
 }
 @keyframes cardIn {
-  from { opacity: 0; transform: translateY(16px) translateZ(0) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) translateZ(0) scale(1); }
+  from { opacity: 0; translate: 0 16px; scale: 0.97; }
+  to   { opacity: 1; translate: 0 0; scale: 1; }
 }
 /* Staggered entrance for the first screenful of cards in any grid — every
    re-render (switching tabs, re-sorting) replays it, which is the point:
@@ -1863,8 +1860,6 @@ html[data-motion="none"] .card { animation: none; }
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.4s var(--ease);
-  will-change: opacity;
-  transform: translateZ(0);
   background: radial-gradient(
     220px circle at var(--mx, 50%) var(--my, 50%),
     rgba(255,255,255,0.10),
@@ -1878,8 +1873,7 @@ html[data-motion="none"] .card { animation: none; }
   position: relative;
   aspect-ratio: 1;
   overflow: hidden;
-  contain: paint;
-  transform: translateZ(0);
+  isolation: isolate;
 }
 .card .art {
   width: 100%; height: 100%;
@@ -1887,8 +1881,6 @@ html[data-motion="none"] .card { animation: none; }
   display: block;
   background: var(--surface-3);
   transition: transform 0.4s var(--ease);
-  will-change: transform;
-  backface-visibility: hidden;
 }
 .card:hover .art { transform: scale(1.04) translateZ(0); }
 
@@ -3942,7 +3934,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
   aspect-ratio: 1;
   cursor: pointer;
   background: var(--surface-3);
-  animation: cfCardIn 0.4s var(--ease) both;
+  animation: cfCardIn 0.4s var(--ease) backwards;
   /* glow pulse on hover using score colour */
   transition: transform 0.25s var(--ease),
               box-shadow 0.25s;
@@ -3954,8 +3946,8 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
               0 0 32px var(--cf-glow, transparent);
 }
 @keyframes cfCardIn {
-  from { opacity: 0; transform: scale(0.92) translateY(16px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from { opacity: 0; translate: 0 16px; scale: 0.92; }
+  to   { opacity: 1; translate: 0 0; scale: 1; }
 }
 
 /* Full-bleed album art */
@@ -5374,7 +5366,7 @@ body.entering-done #artist-hero {
 
 /* The options arrive rather than appearing, which makes a fresh card feel
    dealt. Cheap: one animation, staggered by nth-child. */
-.td-opts .td-opt { animation: tdOptIn 0.34s var(--ease) both; }
+.td-opts .td-opt { animation: tdOptIn 0.34s var(--ease) backwards; }
 .td-opts .td-opt:nth-child(1) { animation-delay: 0.03s; }
 .td-opts .td-opt:nth-child(2) { animation-delay: 0.07s; }
 .td-opts .td-opt:nth-child(3) { animation-delay: 0.11s; }
@@ -5501,7 +5493,7 @@ body.entering-done #artist-hero {
   background: linear-gradient(160deg, color-mix(in srgb, var(--cc) 8%, var(--surface)) 0%, var(--surface) 60%);
   border: 1px solid var(--border);
   transition: border-color .25s, box-shadow .35s var(--ease);
-  animation: ccIn .5s var(--ease) both;
+  animation: ccIn .5s var(--ease) backwards;
 }
 @keyframes ccIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .cc-card.is-playing {
@@ -9568,7 +9560,7 @@ input, textarea, select, [contenteditable="true"],
   .modal-panel { margin-bottom: env(safe-area-inset-bottom); }
 }
 </style>
-<link rel="stylesheet" href="/assets/interactions.css?v=1">
+<link rel="stylesheet" href="/assets/interactions.css?v=2">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -10106,27 +10098,6 @@ window.discAmt = function (n) {
   <div class="activity-head"><h3>Notifications</h3><button class="activity-close" id="notif-close" aria-label="Close">&times;</button></div>
   <div class="activity-list" id="notif-list"></div>
 </aside>
-<div id="artist-hero" class="artist-hero artist-hero-expanded" style="display:none;">
-  <!-- Two copies of one photo, and the bed is the whole reason the banner
-       survives the source. Deezer's artist pictures are square, whatever the
-       label supplied, and the resolution swings from 1000px to an upscaled
-       thumbnail — so a sharp image stretched across a wide band is sometimes
-       going to be soft. The bed is that same photo blurred and scaled past the
-       edges, so a short or low-res source lands ON something in its own colours
-       instead of on a letterbox. -->
-  <img class="artist-hero-bed" id="artist-hero-bed" alt="" aria-hidden="true" referrerpolicy="no-referrer">
-  <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer" crossorigin="anonymous">
-  <div class="artist-hero-duotone" aria-hidden="true"></div>
-  <canvas class="artist-hero-canvas" id="artist-hero-canvas" aria-hidden="true" style="display:none;"></canvas>
-  <div class="artist-hero-fade"></div>
-  <div class="artist-hero-content wrap">
-    <div class="artist-hero-words">
-      <div class="artist-hero-eyebrow">Favourite artist</div>
-      <div class="artist-hero-name" id="artist-hero-name"></div>
-      <div class="artist-hero-meta" id="artist-hero-meta"></div>
-    </div>
-  </div>
-</div>
 
 <div class="wrap">
 
@@ -10202,6 +10173,27 @@ window.discAmt = function (n) {
   <!-- ============================ TODAY ============================ -->
   <!-- ============================ HOME ============================ -->
   <section id="view-home" class="view">
+    <div id="artist-hero" class="artist-hero artist-hero-expanded" style="display:none;">
+  <!-- Two copies of one photo, and the bed is the whole reason the banner
+       survives the source. Deezer's artist pictures are square, whatever the
+       label supplied, and the resolution swings from 1000px to an upscaled
+       thumbnail — so a sharp image stretched across a wide band is sometimes
+       going to be soft. The bed is that same photo blurred and scaled past the
+       edges, so a short or low-res source lands ON something in its own colours
+       instead of on a letterbox. -->
+  <img class="artist-hero-bed" id="artist-hero-bed" alt="" aria-hidden="true" referrerpolicy="no-referrer">
+  <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer" crossorigin="anonymous">
+  <div class="artist-hero-duotone" aria-hidden="true"></div>
+  <canvas class="artist-hero-canvas" id="artist-hero-canvas" aria-hidden="true" style="display:none;"></canvas>
+  <div class="artist-hero-fade"></div>
+  <div class="artist-hero-content wrap">
+    <div class="artist-hero-words">
+      <div class="artist-hero-eyebrow">Favourite artist</div>
+      <div class="artist-hero-name" id="artist-hero-name"></div>
+      <div class="artist-hero-meta" id="artist-hero-meta"></div>
+    </div>
+  </div>
+</div>
     <!-- Anything waiting to be claimed, at the very top and nowhere else on
          this page. It only exists when there is something to take, so it is
          never furniture — and it saves a trip to Rewards for the one action
@@ -12173,7 +12165,7 @@ async function openAlbum(meta, fromHistory) {
   coverEl.src = meta.art || '';
   document.getElementById('detail-name').textContent = meta.name;
   document.getElementById('detail-artist').textContent = meta.artist + (meta.year ? ' · ' + meta.year : '');
-  document.getElementById('detail-tracks').innerHTML = '<div class="sugg-empty">Loading tracks…</div>';
+  document.getElementById('detail-tracks').innerHTML = '<div class="sugg-empty loading-dots" role="status">Loading tracks…</div>';
   applyAlbumTint(null); // reset while new art loads
   if (meta.art) {
     const probe = new Image();
@@ -12970,8 +12962,10 @@ window.removeSong = removeSong;
 
   async function rpc(name, args) {
     if (!sb()) return { error: 'offline' };
+    const owner=window.Cloud&&Cloud.getUser()&&Cloud.getUser().id;
     try {
       var r = await sb().rpc(name, args || {});
+      if((window.Cloud&&Cloud.getUser()&&Cloud.getUser().id)!==owner)return {error:'Account changed'};
       return r.error ? { error: r.error.message } : { data: r.data };
     } catch (e) { return { error: String((e && e.message) || e) }; }
   }
@@ -13636,109 +13630,46 @@ async function fetchArtistImage(artistId, artistName) {
 
 let _heroBuilt = false;
 let _heroArtistKey = null;
-/* Show/hide the artist hero by animating its height rather than toggling
-   display, so the page below eases into place instead of jumping. */
-/* THE HERO MOVES THE SEARCH FIELD, AND THAT IS THE "SEARCH TELEPORTS" BUG.
-
-   #artist-hero is a sibling ABOVE <header>, so expanding it pushes the header,
-   the search field and everything else down. Measured at 375px: the search
-   input's top goes from 96 to 300 — a 204px jump, with the field sliding out
-   from under whatever was typing into it.
-
-   And it lands late by construction. renderArtistHero() awaits fetchProfile
-   and then fetchArtistImage, so on a cold load it resolves a second or two in
-   — which is exactly when somebody who opened the app to look something up is
-   halfway through a word. Nothing about it looked like a search bug, because
-   it is not one: the search field is innocent and is simply standing on
-   something that moves.
-
-   Two rules, and both are needed:
-
-   1. NOTHING RESIZES THE HERO WHILE THE SEARCH IS BEING USED. The change is
-      queued and applied when the field is done with, which is the only moment
-      at which moving it costs nobody anything.
-
-   2. WHEN IT DOES RESIZE, THE SCROLL IS COMPENSATED. If the page is scrolled
-      at all, growing a block above the viewport shifts everything you are
-      looking at downwards for no reason. Adding the delta back to scrollTop
-      means the content under your eyes does not move — only the space above
-      it, which you cannot see. At scrollY 0 there is nothing to compensate and
-      nothing needs it, because the hero is then the thing you are looking at.
-*/
-var _heroPending = null;
-
-function searchBusy() {
-  var inp = document.getElementById('search-input');
-  if (inp && document.activeElement === inp) return true;
-  var sg = document.getElementById('suggestions');
-  return !!(sg && sg.classList.contains('open'));
-}
-
-function heroResize(hero, fn) {
-  if (searchBusy()) { _heroPending = { hero: hero, fn: fn }; watchHeroPending(); return; }
-  var before = hero.getBoundingClientRect().height;
-  var y = window.scrollY || window.pageYOffset || 0;
-  fn();
-  // Measured after the class change but before the transition runs, so this is
-  // the height it is heading for rather than the one it has.
-  var after = hero.classList.contains('artist-hero-hidden') ? 0 : hero.offsetHeight;
-  var d = after - before;
-  if (y > 0 && d) { try { window.scrollTo(0, Math.max(0, y + d)); } catch (e) {} }
-}
-
-/* A PENDING RESIZE WATCHES FOR ITS OWN MOMENT rather than waiting to be told.
-
-   The first version hung this on `blur` plus a document click, and it did not
-   fire: `blur` does not happen at all if the person never leaves the field —
-   they type, the results come, they tap a result — and it does not fire for a
-   programmatic blur of an already-blurred input either, which is how this was
-   caught. The resize then sat pending forever and the hero never appeared.
-
-   A poll is the right shape here precisely because the pending state is rare
-   and transient: nothing is running in the overwhelming majority of sessions,
-   the timer exists for a second or two at most, and it stops itself. There is
-   no event that reliably means "the search is finished with", so waiting for
-   one is waiting for something that may never come. */
-var _heroWatch = null;
-function flushHeroPending() {
-  if (!_heroPending) { if (_heroWatch) { clearInterval(_heroWatch); _heroWatch = null; } return; }
-  if (searchBusy()) return;
-  var p = _heroPending; _heroPending = null;
-  if (_heroWatch) { clearInterval(_heroWatch); _heroWatch = null; }
-  heroResize(p.hero, p.fn);
-}
-function watchHeroPending() {
-  if (_heroWatch) return;
-  _heroWatch = setInterval(flushHeroPending, 350);
-}
-
+/* The banner belongs to Home below shared navigation. Its slot is reserved
+   before any profile/image fetch; asynchronous media never moves the Island. */
+var _heroRequest = 0;
 function showArtistHero(hero) {
-  heroResize(hero, function () {
-    hero.style.display = 'block';
-    hero.classList.add('artist-hero-hidden');
-    void hero.offsetWidth;               // commit the zero-height state first
-    hero.classList.remove('artist-hero-hidden');
-  });
+  hero.style.display = 'block';
+  hero.classList.remove('artist-hero-empty');
+  hero.classList.remove('artist-hero-hidden');
 }
 function hideArtistHero(hero) {
-  heroResize(hero, function () { hero.classList.add('artist-hero-hidden'); });
+  // Keep a useful, stable slot rather than an invisible gap for accounts
+  // without a favourite. Guests do not show the slot at all.
+  hero.style.display = 'block';
+  hero.classList.remove('artist-hero-hidden');
+  hero.classList.add('artist-hero-empty');
+  document.getElementById('artist-hero-name').textContent='Make Home yours.';
+  document.getElementById('artist-hero-meta').innerHTML='<button class="btn-mini" id="hero-choose-artist">Choose your favourite artist</button>';
+  document.getElementById('hero-choose-artist').onclick=function(){openFavArtistPicker();};
 }
 async function renderArtistHero() {
+  const hero = document.getElementById('artist-hero');
+  if (!hero) return;
+  // Reserve geometry even when the intro defers painting the photo.
+  if(window.Cloud&&Cloud.isOn&&Cloud.isOn())hero.style.display='block';
   var busy = window.__introBusyUntil || 0;
   if (Date.now() < busy) {
     clearTimeout(renderArtistHero._wait);
     renderArtistHero._wait = setTimeout(renderArtistHero, busy - Date.now() + 60);
     return;
   }
-  const hero = document.getElementById('artist-hero');
-  if (!hero) return;
 
   if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) {
-    hideArtistHero(hero); _heroBuilt = false; _heroArtistKey = null; return;
+    ++_heroRequest; hero.style.display = 'none'; _heroBuilt = false; _heroArtistKey = null; return;
   }
   const me = Cloud.getUser();
+  const request = ++_heroRequest;
+  // Reserve the signed-in Home slot while profile and image requests settle.
+  hero.style.display = 'block';
   let prof = null;
   try { prof = await Cloud.fetchProfile(me.id); } catch (e) {}
+  if (request !== _heroRequest || !Cloud.getUser() || Cloud.getUser().id !== me.id) return;
   const fav = prof && prof.fav_artist;
 
   if (!fav || !fav.id) { hideArtistHero(hero); _heroBuilt = false; _heroArtistKey = null; return; }
@@ -13747,6 +13678,7 @@ async function renderArtistHero() {
   // Prefer the image already saved on the profile (avoids an extra API call);
   // only hit Spotify if we don't have one cached on the favourite itself.
   const img = fav.image || await fetchArtistImage(fav.id, fav.name);
+  if (request !== _heroRequest || !Cloud.getUser() || Cloud.getUser().id !== me.id) return;
   if (!img) { hideArtistHero(hero); return; }
 
   document.getElementById('artist-hero-bg').src = img;
@@ -13876,10 +13808,12 @@ function restoreViewScroll(mode, y) {
 function setMode(mode, fromCode) {
   // An unknown destination must not hide every view or poison saved history.
   if (!views[mode]) return;
-  if (!fromCode && mode !== currentMode && window.pushViewHistory) window.pushViewHistory(mode);
+  if ((!fromCode || fromCode === 'nav') && mode !== currentMode && window.pushViewHistory) window.pushViewHistory(mode);
   if (mode !== currentMode) _viewScroll[currentMode] = window.scrollY;
   var _restoreY = (mode === 'album-detail' && fromCode !== 'pop') ? 0 : (_viewScroll[mode] || 0);
   var _changed = mode !== currentMode || mode === 'album-detail';
+  const previousMode=currentMode;
+  Object.keys(views).forEach(function (k) { if (views[k]._entrance) { views[k]._entrance.cancel(); views[k]._entrance = null; } });
   currentMode = mode;
   window.currentMode = mode;
   var pageNames = { albums: 'Albums', songs: 'Songs', crate: 'The Crate', choice: 'Community Choice', foryou: 'For You', games: 'Games', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves', 'album-detail': 'Album' };
@@ -13889,17 +13823,6 @@ function setMode(mode, fromCode) {
      changed WebKit's hit testing between pointer-down and pointer-up; forcing
      a reflow to restart it also delayed every repeated navigation. */
   var _v = views[mode];
-  if (_v && _changed) {
-    _v.classList.remove('enter');
-    // Cancel an interrupted entrance without a synchronous layout flush.
-    if (_v._entrance) _v._entrance.cancel();
-    if (_v.animate && !(window.motionReduced && motionReduced())) {
-      _v._entrance = _v.animate([
-        { opacity: 0 },
-        { opacity: 1 }
-      ], { duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' });
-    }
-  }
   // Repaints --section, which the background washes and every section heading
   // read from. One attribute, and the whole page changes temperature.
   document.body.dataset.section = mode;
@@ -13929,7 +13852,7 @@ function setMode(mode, fromCode) {
     if (window.renderToday) window.renderToday();
     if (window.renderDiary) window.renderDiary();
   }
-  else { const h = document.getElementById('artist-hero'); if (h) h.style.display = 'none'; }
+  // Home owns its banner; hiding the view leaves shared navigation untouched.
   if (mode === 'crate' && window.renderCrate) window.renderCrate();
   if (mode === 'choice' && window.renderChoice) window.renderChoice();
   if (mode === 'albums') renderAlbums();
@@ -13957,7 +13880,14 @@ function setMode(mode, fromCode) {
   if (mode === 'profile' && window.renderAdminStats) window.renderAdminStats();
   if (mode === 'people' && window.renderPeople) window.renderPeople();
   if (mode === 'grooves' && window.renderGrooves) window.renderGrooves();
-  if (_changed) restoreViewScroll(mode, _restoreY);
+  if (_changed) {
+    _v.classList.remove('enter');
+    // Assemble the page before choosing its entrance. Tall ranking lists
+    // use a fade so a clip does not allocate a whole-list backing surface.
+    if (window.VinallTransitions) _v._entrance=VinallTransitions.enter(_v,previousMode,mode);
+    else if (_v.animate && !(window.motionReduced && motionReduced())) _v._entrance=_v.animate([{opacity:0},{opacity:1}],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'});
+    restoreViewScroll(mode, _restoreY);
+  }
 }
 window.goToView = setMode;
 
@@ -14040,23 +13970,28 @@ function positionNavIndicator() {
      pill by the gap between the border and the padding — a few pixels off
      the button it is meant to sit under, on every screen size at once,
      because it was never a viewport-specific number to begin with. */
-  indicator.style.width = active.offsetWidth + 'px';
-  indicator.style.transform = 'translateX(' + active.offsetLeft + 'px)';
-  /* The pill takes the destination's own hue, read off the button rather than
-     mapped here — the map lives in one place, in the CSS beside the buttons,
-     and a second copy of it in JS is a second copy to drift. Empty on a build
-     where those properties are gone, and the CSS fallback covers that. */
-  const hue = getComputedStyle(active).getPropertyValue('--nav-c-dim').trim();
-  indicator.style.setProperty('--nav-ind', hue || '');
+  // Button geometry changes with fonts/viewport, not with the selected view.
+  // Reading it on every switch forced a layout of the newly-visible crate.
+  if(!positionNavIndicator._geometry){
+    positionNavIndicator._geometry=new Map();
+    nav.querySelectorAll('button[data-mode]').forEach(function(button){positionNavIndicator._geometry.set(button,{width:button.offsetWidth,left:button.offsetLeft});});
+  }
+  const geometry=positionNavIndicator._geometry.get(active);
+  indicator.style.width = geometry.width + 'px';
+  indicator.style.transform = 'translateX(' + geometry.left + 'px)';
+  // Section colours already match the primary nav groups in CSS. Inheriting
+  // the live variable avoids a style flush and updates correctly with themes.
+  indicator.style.removeProperty('--nav-ind');
 }
 window.positionNavIndicator = positionNavIndicator;
-window.addEventListener('resize', positionNavIndicator);
-window.addEventListener('load', positionNavIndicator);
+function refitNavIndicator(){positionNavIndicator._geometry=null;positionNavIndicator();}
+window.addEventListener('resize', refitNavIndicator);
+window.addEventListener('load', refitNavIndicator);
 positionNavIndicator();
 // Button widths can shift slightly once the webfont swaps in over the
 // fallback font (font-display:swap) — reposition once that settles so the
 // indicator doesn't sit a few px off on first paint.
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(positionNavIndicator);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(refitNavIndicator);
 
 /* A NAV TAP ALWAYS LANDS AT THE TOP OF ITS DESTINATION — the same place you
    would be if you had just opened it. Pressing the tab you are already on is
@@ -14090,7 +14025,7 @@ document.getElementById('modes').addEventListener('click', function (e) {
   if (window.buzz && b.dataset.mode !== currentMode) buzz('tap');
   // The tab you are already on: back to the top. Any other: where you left it.
   var again = b.dataset.mode === currentMode;
-  setMode(b.dataset.mode);
+  setMode(b.dataset.mode, 'nav');
   if (again) scrollViewToTop(b.dataset.mode);
 });
 window.renderArtistHero = renderArtistHero;
@@ -14161,7 +14096,13 @@ function renderAlbums(){
      hidden grid on every rating and every background merge threw away every
      decoded cover, which is what the next visit then had to redraw blank. */
   if(onScreenSkip(grid))return;
-  const all=Object.values(loadAlbums());
+  const data=loadAlbums();
+  const mode=(document.getElementById('albums-sort')||{}).value||'score';
+  const artPx=innerWidth<700?(albumSize==='l'?500:320):({s:320,m:400,l:600}[albumSize]||400);
+  const previous=grid._renderInput;
+  if(previous&&previous.raw===_crateCache.albums.raw&&previous.filter===albumFilter&&previous.mode===mode&&previous.size===albumSize&&previous.artPx===artPx)return;
+  grid._renderInput={raw:_crateCache.albums.raw,filter:albumFilter,mode:mode,size:albumSize,artPx:artPx};
+  const all=Object.values(data);
   const emptyEl=document.getElementById('albums-empty');
   document.getElementById('albums-title').textContent=all.length?('Your album rankings \u00b7 '+all.length):'Your album rankings';
   applyAlbumSize();
@@ -14170,20 +14111,18 @@ function renderAlbums(){
   all.slice().sort(function(a,b){return b.score-a.score;}).forEach(function(a,i){rankMap[a.id]=i+1;});
   const f=albumFilter.toLowerCase();
   let list=f?all.filter(function(a){return(a.name||'').toLowerCase().indexOf(f)!==-1||(a.artist||'').toLowerCase().indexOf(f)!==-1||(a.genre||'').toLowerCase().indexOf(f)!==-1;}):all;
-  const mode=(document.getElementById('albums-sort')||{}).value||'score';
   list=sortAlbumList(list,mode);
   if(!list.length){grid.innerHTML='';grid._html='';emptyEl.style.display='block';emptyEl.querySelector('h3').textContent='No matches';emptyEl.querySelector('p').textContent='Nothing in your rankings matches \u201C'+albumFilter+'\u201D.';return;}
   emptyEl.style.display='none';
   // Device pixels a tile actually needs: ~320 for a phone's three across,
   // up to ~600 for a large tile on a retina desktop.
-  const artPx=innerWidth<700?(albumSize==='l'?500:320):({s:320,m:400,l:600}[albumSize]||400);
   const html=list.map(function(a){
     const col=albumColor(a.score);
     const glow=col.replace('rgb(','rgba(').replace(')',',0.22)');
-    return '<div class="card" data-id="'+a.id+'" style="--score:'+col+'; --score-glow:'+glow+';">'+
+    return '<div class="card" role="group" tabindex="0" aria-label="'+esc(a.name)+'" data-id="'+a.id+'" style="--score:'+col+'; --score-glow:'+glow+';">'+
       '<div class="art-wrap">'+
       '<div class="rank-badge">#'+rankMap[a.id]+'</div>'+
-      '<img class="art" src="'+thumb(a.art,artPx)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">'+
+      '<img class="art" src="'+thumb(a.art,artPx)+'" alt="" loading="lazy" decoding="async" onerror="this.style.visibility=\'hidden\'">'+
       '<div class="art-score">'+a.score+'<span>/100</span></div>'+
       '</div>'+
       '<div class="card-body"><div class="card-name">'+esc(a.name)+'</div>'+
@@ -14196,8 +14135,10 @@ function renderAlbums(){
      still valid, so leave them. A merge that changed nothing changes nothing. */
   if(grid._html===html)return;
   grid._html=html;grid.innerHTML=html;
-  grid.querySelectorAll('.card').forEach(function(el){
-    el.addEventListener('click',function(ev){
+  if(!grid._clickWired){
+    grid._clickWired=true;
+    grid.addEventListener('click',function(ev){
+      const el=ev.target.closest('.card[data-id]');if(!el||!grid.contains(el))return;
       if(ev.target.closest('[data-del]')){
         ev.stopPropagation();
         /* This used to delete on one tap with nothing in between, on a button
@@ -14216,7 +14157,7 @@ function renderAlbums(){
       }
       const a=loadAlbums()[el.dataset.id];if(a)openAlbum(a);
     });
-  });
+  }
 }
 
 /* ---- a preview, from The Crate --------------------------------------
@@ -14523,17 +14464,16 @@ window.thumb=thumb;
   let raf = null, pendingEl = null, pendingX = 0, pendingY = 0;
   function apply(){
     raf = null;
-    if (!pendingEl) return;
-    pendingEl.style.setProperty('--mx', pendingX + 'px');
-    pendingEl.style.setProperty('--my', pendingY + 'px');
+    if (!pendingEl || !pendingEl.isConnected) return;
+    const rect = pendingEl.getBoundingClientRect();
+    pendingEl.style.setProperty('--mx', (pendingX - rect.left) + 'px');
+    pendingEl.style.setProperty('--my', (pendingY - rect.top) + 'px');
   }
   document.addEventListener('pointermove', function (e) {
+    if (e.pointerType !== 'mouse' || !matchMedia('(hover: hover) and (pointer: fine)').matches || (window.motionReduced && motionReduced())) return;
     const card = e.target.closest && e.target.closest('.card');
     if (!card) return;
-    const rect = card.getBoundingClientRect();
-    pendingEl = card;
-    pendingX = e.clientX - rect.left;
-    pendingY = e.clientY - rect.top;
+    pendingEl = card; pendingX = e.clientX; pendingY = e.clientY;
     if (!raf) raf = requestAnimationFrame(apply);
   }, { passive: true });
   // Reset the spotlight position when the pointer leaves a card, otherwise a
@@ -14985,7 +14925,7 @@ function renderAuthArea(connected){
   function close(){modal.classList.remove('open');}
 
   async function loadBoard(){
-    listHost.innerHTML='<p class="reco-note">Loading\u2026</p>';
+    listHost.innerHTML='<p class="reco-note loading-dots" role="status">Loading\u2026</p>';
     if(!window.Cloud||!Cloud.isOn||!Cloud.isOn()){
       listHost.innerHTML='<div class="reco-note">Log in to see global times.</div>';
       return;
@@ -16033,7 +15973,7 @@ const Cloud=(function(){
      touched at all: they are public facts about records, expensive to refetch,
      and identical for everybody. */
   const OWNER_KEY = 'vinall_local_owner';
-  const OWNED_PREFIX = /^(crate_|vinal_drop2_|vinal_earworm2_)/;
+  const OWNED_PREFIX = /^(crate_|vinal_drop2_|vinal_earworm2_|vinall_spotify_v1$)/;
   const OWNED_KEEP = { 'crate_today_auto': 1, 'crate_home_folds': 1 };
 
   function wipeLocalAccountState(){
@@ -16053,11 +15993,18 @@ const Cloud=(function(){
     try{prev=localStorage.getItem(OWNER_KEY);}catch(e){}
     const foreign = !!prev && prev !== uid;
     if(foreign) wipeLocalAccountState();
+    // The legacy flag is only adopted when its stamped owner is this account.
+    // An unowned legacy file cannot safely be attributed to whoever signs in.
+    if(prev === uid && !localStorage.getItem('crate_spotify_import_v1')) {
+      const legacy = lsGet('vinall_spotify_v1');
+      if(legacy) lsSetRaw('crate_spotify_import_v1',legacy);
+    }
+    try{localStorage.removeItem('vinall_spotify_v1');}catch(e){}
     try{localStorage.setItem(OWNER_KEY,uid);}catch(e){}
     return foreign;
   }
 
-  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best','crate_foryou_songs','crate_foryou_seen','crate_onboard_v1','crate_liked_songs_v1'];
+  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best','crate_foryou_songs','crate_foryou_seen','crate_onboard_v1','crate_liked_songs_v1','crate_spotify_import_v1'];
   const pending={};
   function isOn(){return!!(sb&&user);}
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
@@ -16121,8 +16068,27 @@ const Cloud=(function(){
   }
 
   async function pullAndMerge(){
-    let rows=[];try{const res=await sb.from('app_state').select('key,value').eq('user_id',user.id);rows=res.data||[];}catch(e){return;}
+    if(!isOn()) return false;
+    const owner=user.id;
+    let rows=[];try{const res=await sb.from('app_state').select('key,value').eq('user_id',owner);if(res.error)return false;rows=res.data||[];}catch(e){return false;}
+    if(!user || user.id !== owner) return false;
     const cloud={};rows.forEach(function(r){cloud[r.key]=r.value;});
+    // Completed imports win over older device prompts. Merge the imported
+    // catalogue map and playlist ids so independent imports both survive.
+    const localImport=lsGet('crate_spotify_import_v1')||{};
+    const remoteImport=cloud['crate_spotify_import_v1']||{};
+    const localStamp=Math.max(localImport.updatedAt||0,localImport.importedAt||0,localImport.requestedAt||0);
+    const remoteStamp=Math.max(remoteImport.updatedAt||0,remoteImport.importedAt||0,remoteImport.requestedAt||0);
+    const mergedImport=Object.assign({},remoteStamp>localStamp?localImport:remoteImport,remoteStamp>localStamp?remoteImport:localImport);
+    mergedImport.importedAt=Math.max(localImport.importedAt||0,remoteImport.importedAt||0)||null;
+    const newerImport=(remoteImport.importedAt||0)>(localImport.importedAt||0)?remoteImport:localImport;
+    const olderImport=newerImport===remoteImport?localImport:remoteImport;
+    if(newerImport.summary)mergedImport.summary=newerImport.summary;
+    mergedImport.imported=Object.assign({},olderImport.imported||{},newerImport.imported||{});
+    mergedImport.lists=Object.assign({},olderImport.lists||{},newerImport.lists||{});
+    // Jobs stay on their originating device; only completed status is shared.
+    mergedImport.job=localImport.job||null;
+    if(Object.keys(localImport).length||Object.keys(remoteImport).length)lsSetRaw('crate_spotify_import_v1',mergedImport);
     const mAlb=mergeItemMap(lsGet('crate_albums_v1')||{},cloud['crate_albums_v1']||{});
     const mSng=mergeItemMap(lsGet('crate_songs_v1')||{},cloud['crate_songs_v1']||{});
     lsSetRaw('crate_albums_v1',mAlb);lsSetRaw('crate_songs_v1',mSng);
@@ -16203,10 +16169,34 @@ const Cloud=(function(){
     Promise.all(changed.map(pushKey)).catch(function () {});
   }
 
-  async function pushKey(key){if(!isOn())return;const value=lsGet(key);if(value===null)return;try{await sb.from('app_state').upsert({user_id:user.id,key:key,value:value,updated_at:new Date().toISOString()});}catch(e){}}
+  async function pushKey(key){
+    if(!isOn()||SYNC_KEYS.indexOf(key)===-1)return false;
+    const owner=user.id;
+    let value=lsGet(key);if(value===null)return true;
+    if(key==='crate_spotify_import_v1'){value=Object.assign({},value);delete value.job;}
+    try{const res=await sb.from('app_state').upsert({user_id:owner,key:key,value:value,updated_at:new Date().toISOString()});return !res.error;}catch(e){return false;}
+  }
   // Seventeen small upserts have no reason to queue behind each other.
   async function pushAll(){await Promise.all(SYNC_KEYS.map(pushKey));}
-  function push(key){if(!isOn())return;if(SYNC_KEYS.indexOf(key)===-1)return;clearTimeout(pending[key]);pending[key]=setTimeout(function(){pushKey(key);},600);}
+  function push(key){if(!isOn())return;if(SYNC_KEYS.indexOf(key)===-1)return;const owner=user.id;clearTimeout(pending[key]);pending[key]=setTimeout(function(){if(user&&user.id===owner)pushKey(key);},600);}
+  function resetAccountCaches(){
+    Object.keys(pending).forEach(function(k){clearTimeout(pending[k]);delete pending[k];});
+    ++_heroRequest;_heroBuilt=false;_heroArtistKey=null;
+    const hero=document.getElementById('artist-hero');
+    if(hero){
+      hero.style.display='none';delete hero.dataset.artistId;
+      hero.querySelectorAll('img').forEach(function(img){img.removeAttribute('src');});
+      document.getElementById('artist-hero-name').textContent='';
+      document.getElementById('artist-hero-meta').innerHTML='';
+    }
+    if(window.VinalListening&&VinalListening.reset)VinalListening.reset();
+    if(window.CollectionWorth&&CollectionWorth.reset)CollectionWorth.reset();
+    if(window.VinallLore&&VinallLore.reset)VinallLore.reset();
+    if(window.ForYou&&ForYou.reset)ForYou.reset();
+    if(window.SpotifyBridge&&SpotifyBridge.reset)SpotifyBridge.reset();
+    if(window.resetDraw)resetDraw();
+    document.dispatchEvent(new CustomEvent('vinall:account-reset'));
+  }
 
   /* Devices only reconciled at login, so a phone left open on the sofa could
      sit on yesterday's ratings all day and then push them back over newer
@@ -16218,8 +16208,11 @@ const Cloud=(function(){
     if (document.hidden || !isOn()) return;
     if (Date.now() - _lastMerge < 60000) return;
     _lastMerge = Date.now();
-    pullAndMerge().then(function () {
+    pullAndMerge().then(function (ok) {
+      if(ok===false||!isOn())return;
       try {
+        if(window.VinalListening)VinalListening.reset();
+        document.dispatchEvent(new CustomEvent('vinall:account-ready'));
         if (window.renderStats) renderStats();
         if (window.renderAlbums) renderAlbums();
         if (window.renderSongs) renderSongs();
@@ -16229,6 +16222,8 @@ const Cloud=(function(){
 
   async function refreshUI(){
     const el=document.getElementById('auth-area');if(!el)return;
+    const ticket=(refreshUI._token||0)+1, owner=user&&user.id;
+    refreshUI._token=ticket;
     /* The header bar is laid out differently for the two states and CSS has no
        way to ask whether somebody is signed in, so it is told. Logged out
        there is no balance to show and no notification to receive, which is
@@ -16240,6 +16235,7 @@ const Cloud=(function(){
        took were exactly what the wordmark was short of at 375px. */
     if(user){
       let avatarUrl='';try{const p=await fetchProfile(user.id);if(p&&p.avatar_url)avatarUrl=p.avatar_url;}catch(e){}
+      if(refreshUI._token!==ticket||(user&&user.id)!==owner)return;
       const initial=esc((user.email||'?').charAt(0).toUpperCase());
       acct.innerHTML='<button id="acct-avatar-btn" class="acct-avatar" aria-label="Account menu">'+(avatarUrl?'<img src="'+esc(avatarUrl)+'" alt="" onerror="this.style.display=\'none\';this.parentNode.textContent=\''+initial+'\'">':initial)+'</button>'+
         '<div class="acct-menu" id="acct-menu">'+
@@ -16299,6 +16295,7 @@ const Cloud=(function(){
   document.addEventListener('click',function(){const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');});
 
   async function onAuthed(u){
+    if(!user||user.id!==u.id)resetAccountCaches();
     user=u;
     /* BEFORE refreshUI and before the merge. refreshUI paints the crate, and
        pullAndMerge would upload it — both of those have to happen against the
@@ -16323,6 +16320,10 @@ const Cloud=(function(){
         (window.Wallet?Promise.resolve(Wallet.load()).catch(function(){}):Promise.resolve())
       ]);
     }catch(e){}
+    if(!user || user.id!==u.id)return;
+    if(window.SpotifyBridge && SpotifyBridge.hydrate)await SpotifyBridge.hydrate();
+    if(!user || user.id!==u.id)return;
+    document.dispatchEvent(new CustomEvent('vinall:account-ready'));
     // Not awaited: a slow diff must never hold up the rest of the login.
     reconcileRatings();
     /* Same rule: not awaited. A referral code claims itself and settles in
@@ -16343,7 +16344,7 @@ const Cloud=(function(){
       so nothing plays or scrolls by itself) so the FIRST time somebody opens
       For You this session it is already built rather than starting a fresh
       "Finding songs for you" — the fetch happens once, in the background,
-      instead of once per visit. */ForYou.build();}if(currentMode==='profile'&&window.renderProfile)renderProfile();}catch(e){}
+      instead of once per visit. */ForYou.preload();}if(currentMode==='profile'&&window.renderProfile)renderProfile();}catch(e){}
     flashSaved();
   }
   /* Reconcile, not backfill — and the difference is the whole point.
@@ -16434,7 +16435,9 @@ const Cloud=(function(){
     try{ if(window.PushCtl) await PushCtl.forget(); }catch(e){}
     try{await sb.auth.signOut();}catch(e){}
     user=null;
+    resetAccountCaches();
     wipeLocalAccountState();
+    document.dispatchEvent(new CustomEvent('vinall:account-ready'));
     try{localStorage.removeItem(OWNER_KEY);}catch(e){}
     if(window.Wallet&&Wallet.reset)Wallet.reset();
     refreshUI();
@@ -16443,6 +16446,8 @@ const Cloud=(function(){
         if(typeof window[fn]==='function')window[fn]();
       });
       if(window.paintUnlocks)paintUnlocks(false);
+      if(currentMode==='profile'&&window.renderProfile)renderProfile();
+      if(currentMode==='home'&&window.renderToday)renderToday(true);
     }catch(e){}
   }
 
@@ -16569,6 +16574,14 @@ const Cloud=(function(){
        somebody in, whatever shape the link took. The branches below read the
        URL; this is the backstop for when the library got there first. */
     sb.auth.onAuthStateChange(function(ev){
+      if(ev==='SIGNED_OUT' && user){
+        user=null;resetAccountCaches();wipeLocalAccountState();
+        try{localStorage.removeItem(OWNER_KEY);}catch(e){}
+        if(window.Wallet&&Wallet.reset)Wallet.reset();
+        // Keep auth callbacks synchronous; refresh outside the SDK's lock.
+        setTimeout(function(){refreshUI();document.dispatchEvent(new CustomEvent('vinall:account-ready'));},0);
+        return;
+      }
       if(ev!=='PASSWORD_RECOVERY')return;
       if(window.dismissSplash)try{dismissSplash();}catch(e){}
       setTimeout(function(){document.getElementById('auth-modal').classList.add('open');showAuthView('recovery');},250);
@@ -17141,7 +17154,7 @@ const Cloud=(function(){
     }catch(e){return null;}
   }
 
-  return{init:init,ready:readyPromise,push:push,isOn:isOn,openAuth:openAuth,syncUI:refreshUI,logout:logout,
+  return{init:init,ready:readyPromise,push:push,flush:pushKey,refresh:pullAndMerge,isOn:isOn,openAuth:openAuth,syncUI:refreshUI,logout:logout,
          getUser:getUser,client:client,fetchProfile:fetchProfile,saveProfile:saveProfile,uploadAvatar:uploadAvatar,
          findByUsername:findByUsername,follow:follow,unfollow:unfollow,isFollowing:isFollowing,
          followCounts:followCounts,followingList:followingList,followersList:followersList,fetchUserRatings:fetchUserRatings,
@@ -17212,7 +17225,7 @@ async function renderProfile(){
   const publicId=params.get('u');
   const me=window.Cloud&&Cloud.getUser&&Cloud.getUser();
   if(publicId&&(!me||me.id!==publicId)){
-    host.innerHTML='<p class="reco-note">Loading profile\u2026</p>';
+    host.innerHTML='<p class="reco-note loading-dots" role="status">Loading profile\u2026</p>';
     const prof=await Cloud.fetchProfile(publicId);
     if(profileTok!==_profileRenderTok)return;
     if(!prof){host.innerHTML='<div class="empty"><span class="emoji">'+ICONS.person+'</span><h3>Profile not found</h3><p>This user doesn\u2019t exist or hasn\u2019t set up a profile.</p></div>';return;}
@@ -17222,7 +17235,7 @@ async function renderProfile(){
     host.innerHTML='<div class="empty"><span class="emoji">'+ICONS.person+'</span><h3>Your profile</h3><p>Log in to create a public profile.</p><button class="btn-primary" id="prof-login" style="margin-top:8px;">Log in / Sign up</button></div>';
     const b=document.getElementById('prof-login');if(b)b.addEventListener('click',function(){Cloud.openAuth();});return;
   }
-  host.innerHTML='<p class="reco-note">Loading your profile\u2026</p>';
+  host.innerHTML='<p class="reco-note loading-dots" role="status">Loading your profile\u2026</p>';
   let prof=await Cloud.fetchProfile(me.id);
   if(profileTok!==_profileRenderTok)return;
   if(!prof)prof={id:me.id,username:'user_'+me.id.slice(0,8),bio:'',avatar_url:'',top3:[]};
@@ -17875,7 +17888,7 @@ async function openFollowModal(uid,which,username){
   const modal=document.getElementById('follow-modal');
   document.getElementById('follow-modal-title').textContent=(which==='followers'?'Followers':'Following');
   const listEl=document.getElementById('follow-modal-list');
-  listEl.innerHTML='<p class="reco-note">Loading\u2026</p>';
+  listEl.innerHTML='<p class="reco-note loading-dots" role="status">Loading\u2026</p>';
   modal.classList.add('open');
   await (window.loadBlocks?loadBlocks():Promise.resolve());
   const people=(which==='followers'?await Cloud.followersList(uid):await Cloud.followingList(uid))
@@ -17895,7 +17908,7 @@ async function renderPeople(){
   if(window.Reach)try{Reach.render();}catch(e){}
   if(window.PeopleKin)try{PeopleKin.render();}catch(e){}
   if(!me){document.getElementById('people-result').innerHTML='<div class="reco-note">Log in to follow people.</div>';fhost.innerHTML='';return;}
-  fhost.innerHTML='<p class="reco-note">Loading\u2026</p>';
+  fhost.innerHTML='<p class="reco-note loading-dots" role="status">Loading\u2026</p>';
   await loadBlocks();
   // Blocked people disappear from your lists rather than being hidden
   // behind a notice, which is what a block is supposed to feel like.
@@ -18826,7 +18839,7 @@ function notifEmoji(t){return t==='follow'?ICONS.people:(t==='suggestion'||t==='
 async function renderNotifications(){
   const host=document.getElementById('notif-list');if(!host)return;
   if(!Cloud.isOn()){host.innerHTML='<div class="act-empty">Log in to get notifications.</div>';return;}
-  host.innerHTML='<div class="act-empty">Loading\u2026</div>';
+  host.innerHTML='<div class="act-empty loading-dots" role="status">Loading\u2026</div>';
   await (window.loadBlocks ? loadBlocks() : Promise.resolve());
   // A block that still lets someone reach your notifications is not a block.
   const list=(await Cloud.fetchNotifications()).filter(function(n){
@@ -18853,7 +18866,7 @@ function openSuggest(item,kind){
   document.getElementById('suggest-item-sub').textContent=kind==='list'?'List':(item.artist||'');
   document.getElementById('suggest-item-img').src=(kind==='list'?((item.items&&item.items[0]&&item.items[0].art)||''):(item.art||''));
   document.getElementById('suggest-error').textContent='';
-  document.getElementById('suggest-list').innerHTML='<p class="reco-note">Loading people you follow\u2026</p>';
+  document.getElementById('suggest-list').innerHTML='<p class="reco-note loading-dots" role="status">Loading people you follow\u2026</p>';
   document.getElementById('suggest-modal').classList.add('open');
   loadSuggestTargets();
 }
@@ -18884,7 +18897,7 @@ let _currentGroove=null,_grooveInviteTimer=null;
 async function renderGrooves(){
   const listHost=document.getElementById('groove-list');const invHost=document.getElementById('groove-invites');if(!listHost)return;
   if(!Cloud.isOn()){invHost.innerHTML='';listHost.innerHTML='<div class="empty"><span class="emoji">'+ICONS.groove+'</span><h3>Grooves</h3><p>Log in to create groups with your mates.</p><button class="btn-primary" id="groove-login" style="margin-top:8px;">Log in</button></div>';const b=document.getElementById('groove-login');if(b)b.addEventListener('click',function(){Cloud.openAuth();});return;}
-  listHost.innerHTML='<p class="reco-note">Loading\u2026</p>';invHost.innerHTML='';
+  listHost.innerHTML='<p class="reco-note loading-dots" role="status">Loading\u2026</p>';invHost.innerHTML='';
   const{member,invites}=await Cloud.myGrooves();
   if(invites.length){invHost.innerHTML='<h3 class="prof-section-title" style="margin-top:8px;">Invites</h3>'+invites.map(function(g){return'<div class="groove-card invite" data-ginvite="'+esc(g.id)+'"><div class="groove-ic">'+ICONS.groove+'</div><div style="flex:1;"><div class="groove-nm">'+esc(g.name)+'</div><div class="groove-meta">You\u2019ve been invited</div></div><button class="btn-mini groove-accept" data-acc="'+esc(g.id)+'">Accept</button><button class="btn-mini groove-decline" data-dec="'+esc(g.id)+'">Decline</button></div>';}).join('');invHost.querySelectorAll('.groove-accept').forEach(function(b){b.addEventListener('click',async function(){b.textContent='\u2026';await Cloud.acceptGrooveInvite(b.dataset.acc);renderGrooves();});});invHost.querySelectorAll('.groove-decline').forEach(function(b){b.addEventListener('click',async function(){b.textContent='\u2026';await Cloud.leaveGroove(b.dataset.dec);renderGrooves();});});}
   if(!member.length){listHost.innerHTML='<div class="empty"><span class="emoji">'+ICONS.groove+'</span><h3>No Grooves yet</h3><p>Create one and invite your mates.</p></div>';return;}
@@ -18897,7 +18910,7 @@ async function openGroove(grooveId){
   _currentGroove=g;
   document.getElementById('groove-name').textContent=g.name;
   document.getElementById('groove-invite-panel').style.display='none';
-  document.getElementById('groove-members').innerHTML='<p class="reco-note">Loading members\u2026</p>';
+  document.getElementById('groove-members').innerHTML='<p class="reco-note loading-dots" role="status">Loading members\u2026</p>';
   document.getElementById('groove-modal').classList.add('open');
   const me=Cloud.getUser();
   // The block list has to be in memory before the filter below means anything.
@@ -19642,7 +19655,7 @@ window.handleGrooveLink=handleGrooveLink;
     document.getElementById('ap-hero-artist').textContent=_currentMeta.artist||'';
     document.getElementById('ap-avg-score').textContent='—';
     document.getElementById('ap-avg-count').textContent='';
-    document.getElementById('ap-ratings-list').innerHTML='<div class="reco-note">Loading…</div>';
+    document.getElementById('ap-ratings-list').innerHTML='<div class="reco-note loading-dots" role="status">Loading…</div>';
     document.getElementById('ap-comment-list').innerHTML='';
     modal.classList.add('open');
 
@@ -20974,6 +20987,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   const DAILY_RATING_CAP = 5;
   const DISCS_PER_RATING = 3;
 
+  var _walletRevision=0;
   let state = {
     discs: 0, streak_current: 0, streak_best: 0, streak_last_date: null,
     streak_freezes: 1, owned_themes: ['classic'], active_theme: 'classic',
@@ -21338,14 +21352,19 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   }
 
   async function load() {
+    const owner=window.Cloud&&Cloud.getUser()&&Cloud.getUser().id;
+    const revision=_walletRevision;
     // Prices first, and *before* the signed-in guard: shop_items is publicly
     // readable, and a logged-out visitor browsing the Shop was being shown the
     // stale fallback costs baked into the maps above.
     await loadPrices();
+    if(!owner||!Cloud.getUser()||Cloud.getUser().id!==owner)return state;
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { loaded = false; return state; }
     try {
       const me = Cloud.getUser();
       const prof = me && await Cloud.fetchProfile(me.id);
+      if(!Cloud.getUser()||Cloud.getUser().id!==owner)return state;
+      if(revision!==_walletRevision)return state;
       if (prof) {
         state = {
           discs: prof.discs || 0,
@@ -21397,6 +21416,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   function applyWallet(w) {
     if (!w) return;
+    ++_walletRevision;
     if (w.discs != null) state.discs = w.discs;
     if (w.streak_current != null) state.streak_current = w.streak_current;
     if (w.streak_best != null) state.streak_best = w.streak_best;
@@ -21628,7 +21648,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      the client is told what it won and never asked. A browser that chose its
      own prize would be a browser that always drew a Mythic. */
   async function spin() {
+    const owner=Cloud.getUser()&&Cloud.getUser().id;
     const res = await rpc('wallet_spin');
+    if(!owner||!Cloud.getUser()||Cloud.getUser().id!==owner)return {error:'Account changed'};
     if (res.error) return { error: res.error };
     applyWallet(res.data);
     /* Equip a first one automatically. Winning a producer tag and seeing
@@ -23543,7 +23565,21 @@ function playDismissAnimation(gateEl, callback) {
   if (window.buzz) buzz('good');
 
   // 1. Wind it up, and lift the furniture off.
-  if (vinyl) vinyl.classList.add('is-winding');
+  // Retiming the existing compositor animation preserves the current angle.
+  // Replacing its CSS duration reset the phase on desktop and visibly jumped.
+  var rotation = vinyl && vinyl.getAnimations && vinyl.getAnimations().filter(function (a) { return a.animationName === 'vinylSpin'; })[0];
+  function rampRotation(rate, duration) {
+    if (!rotation) return;
+    const from = rotation.playbackRate, started = performance.now();
+    function step(now) {
+      if (done || !gateEl.isConnected) return;
+      const p = Math.min(1, (now - started) / duration);
+      rotation.updatePlaybackRate(from + (rate - from) * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  rampRotation(10, 300);
   gateEl.classList.add('is-handing');
   mark.classList.add('is-receiving');
 
@@ -23557,7 +23593,7 @@ function playDismissAnimation(gateEl, callback) {
         frame you are asked to believe they are the same object. Dropping
         `is-winding` at 820ms returns it to the 6s idle for the last stretch,
         so what arrives is a record at rest against a mark that is idling. */
-  setTimeout(function () { if (vinyl) vinyl.classList.remove('is-winding'); }, 820);
+  setTimeout(function () { rampRotation(1, 200); }, 820);
 
   /* 4. The handoff is a CROSSFADE over the last 160ms of the flight, not a
         swap 60ms before the end.
@@ -24769,7 +24805,7 @@ function playDismissAnimation(gateEl, callback) {
     }
 
     subscribeWars();
-    act.innerHTML = '<p class="reco-note">Loading&hellip;</p>';
+    act.innerHTML = '<p class="reco-note loading-dots" role="status">Loading&hellip;</p>';
     chal.innerHTML = ''; hist.innerHTML = '';
 
     var wars = await myWars();
@@ -25522,7 +25558,7 @@ async function renderAdminStats() {
   try { prof = await Cloud.fetchProfile(Cloud.getUser().id); } catch (e) {}
   if (!prof || !prof.is_admin) return;      // silent for everyone else
 
-  host.innerHTML = '<h3 class="prof-section-title">Stats</h3><p class="reco-note">Loading…</p>';
+  host.innerHTML = '<h3 class="prof-section-title">Stats</h3><p class="reco-note loading-dots" role="status">Loading…</p>';
 
   var s = null, qs = [], errs = [];
   try {
@@ -27701,25 +27737,30 @@ window.renderAdminStats = renderAdminStats;
   }
 
   async function loadMine(force) {
+    const owner=uid(),generation=_rev;
+    if(!owner)return [];
     if (_mine && !force) return _mine;
     try {
       var r = await sb().from('collection')
         .select('album_id,name,artist,art,price,bought_at,via_pick')
         .eq('user_id', uid()).order('price', { ascending: false });
+      if(uid()!==owner||generation!==_rev)return [];
       _mine = r.data || [];
-    } catch (e) { _mine = []; }
+    } catch (e) { if(uid()!==owner||generation!==_rev)return [];_mine = []; }
     return _mine;
   }
 
   async function loadMarket(force) {
+    const owner=uid(),generation=_rev;
     if (_market && !force) return _market;
     var t = await token();
     if (!t) return (_market = []);
     try {
       var r = await fetch(Native.api+'/api/collection-prices', { headers: { Authorization: 'Bearer ' + t } });
       var j = await r.json();
+      if(uid()!==owner||generation!==_rev)return [];
       _market = j.items || [];
-    } catch (e) { _market = []; }
+    } catch (e) { if(uid()!==owner||generation!==_rev)return [];_market = []; }
     return _market;
   }
 
@@ -27889,8 +27930,10 @@ window.renderAdminStats = renderAdminStats;
 
   async function fetchWorth() {
     if (!on()) return null;
+    const owner=uid(),generation=_rev;
     try {
       var r = await sb().rpc('collection_net_worth');
+      if(uid()!==owner||generation!==_rev)return null;
       _worth = (r.data && Number(r.data.net_worth)) || 0;
     } catch (e) { _worth = null; }
     if (typeof window.renderStats === 'function') window.renderStats();
@@ -27898,6 +27941,7 @@ window.renderAdminStats = renderAdminStats;
   }
 
   window.CollectionWorth = {
+    reset: function () { ++_rev;++_sweep;_mine=null;_market=null;_board=null;_results=null;_worth=null;_worthTried=false;_ratedIdx=null;busy=false;clearTimeout(_qTimer);const body=el('col-body');if(body)body.innerHTML=''; },
     get: function () {
       if (_worth == null && !_worthTried && on()) { _worthTried = true; fetchWorth(); }
       return _worth;
@@ -28582,7 +28626,7 @@ window.renderAdminStats = renderAdminStats;
   var WIN_INDEX = 62;    // far enough in that it reads as a real run
   var SPIN_MS = 5200;
 
-  var items = null, busy = false;
+  var items = null, busy = false, poolRequest = null, spinToken = 0, renderToken = 0, reelAnimation = null, landed = false;
 
   function el(id) { return document.getElementById(id); }
   function W() { return window.Wallet; }
@@ -28591,12 +28635,13 @@ window.renderAdminStats = renderAdminStats;
   // draws from, so what goes past is the real set of prizes and the published
   // percentages are the ones actually being walked.
   async function loadItems(force) {
-    if (items && !force) return items;
-    try {
-      var r = await Cloud.client().from('spin_items').select('key,kind,label,amount,ref,weight,tier');
-      items = r.data || [];
-    } catch (e) { items = []; }
-    return items;
+    if (items && items.length && !force) return items;
+    if(poolRequest)return poolRequest;
+    poolRequest=(async function(){
+      try{const r=await Cloud.client().from('spin_items').select('key,kind,label,amount,ref,weight,tier');
+        if(r.error)throw new Error(r.error.message);items=r.data||[];return items;
+      }catch(e){return [];}finally{poolRequest=null;}
+    })();return poolRequest;
   }
 
   function swatchFor(it) {
@@ -28696,11 +28741,13 @@ window.renderAdminStats = renderAdminStats;
      it cannot deliver. */
   var _freeSpin = null;
   async function checkFree() {
+    const ticket=spinToken,owner=Cloud.getUser()&&Cloud.getUser().id;
     try {
       if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) { _freeSpin = false; return; }
       var r = await Cloud.client().rpc('spin_free_available');
       // A database without ..._20260916140000 applied answers with an error,
       // and the button quietly goes back to costing 5,000.
+      if(ticket!==spinToken||!Cloud.getUser()||Cloud.getUser().id!==owner)return;
       _freeSpin = r.error ? false : !!r.data;
     } catch (e) { _freeSpin = false; }
     paintBalance();
@@ -28713,7 +28760,7 @@ window.renderAdminStats = renderAdminStats;
       ? 'Admin — free spins'
       : discAmt(st.discs || 0);
     var go = el('draw-go');
-    go.disabled = !st.is_admin && !_freeSpin && (st.discs || 0) < COST;
+    go.disabled = busy || !Cloud.isOn() || (!st.is_admin && !_freeSpin && (st.discs || 0) < COST);
     if (!busy) go.innerHTML = spinLabel();
     /* Said on the button, not discovered in the result. A free spin that
        quietly pays a quarter reads as the machine short-changing you; one that
@@ -28805,9 +28852,11 @@ window.renderAdminStats = renderAdminStats;
       el('draw-result').innerHTML = '<div class="dr-sub">Log in to spend Discs.</div>';
       return;
     }
-    if (busy) return;                    // never reset a strip mid-flight
-    resetStrip();
+    if (busy || landed) { paintBalance(); return; }
+    const ticket=++renderToken;
     var pool = await loadItems();
+    if(busy||landed||ticket!==renderToken||!Cloud.isOn())return;
+    resetStrip();
     // A resting strip so the window is never empty before the first spin.
     el('draw-strip').innerHTML = buildStrip(pool, weightedPick(pool)).slice(0, 20).map(tileHTML).join('');
     paintOdds(pool);
@@ -28828,31 +28877,28 @@ window.renderAdminStats = renderAdminStats;
   }
 
   async function spin() {
-    if (busy) return;
-    var pool = await loadItems();
-    if (!pool.length) return;
-
-    /* Answer the tap before anything else happens. The round trip and five
-       seconds of reel used to start with the button sitting there inert,
-       which made the whole thing feel like it had not registered the press. */
-    busy = true;
-    var go = el('draw-go');
-    go.classList.remove('arming'); void go.offsetWidth; go.classList.add('arming');
+    if (busy || !Cloud.isOn()) return;
+    // Lock before the first await. Pool loading and wallet replies can overlap
+    // with rerenders, balance refreshes and double clicks.
+    busy=true;landed=false;++renderToken;
+    const ticket=++spinToken, owner=Cloud.getUser().id;
+    var go=el('draw-go');go.disabled=true;go.textContent='Preparing…';
+    var pool=await loadItems();
+    if(ticket!==spinToken)return;
+    if(!pool.length){busy=false;paintBalance();el('draw-result').textContent='Couldn’t load the prizes. Please try again.';return;}
     if (window.ripple) ripple(go);
     if (window.buzz) buzz('tap');
-    go.disabled = true;
     go.textContent = 'Spinning…';
     resetStrip();
     el('draw-window').classList.add('spinning');
-
-    var res = await W().spin();
-    if (res.error) {
-      busy = false;
-      el('draw-window').classList.remove('spinning');
-      go.textContent = spinLabel();
-      paintBalance();
-      el('draw-result').innerHTML = '<div class="dr-sub">' + esc(res.error) + '</div>';
-      if (window.reportIssue) reportIssue('wallet_spin failed', { error: res.error });
+    el('draw-result').setAttribute('aria-busy','true');
+    let res;
+    try{res=await W().spin();}catch(e){res={error:e.message||'Couldn’t complete the spin.'};}
+    if(ticket!==spinToken||!Cloud.getUser()||Cloud.getUser().id!==owner)return;
+    if(!res || res.error || !res.data){
+      busy=false;el('draw-window').classList.remove('spinning');paintBalance();
+      el('draw-result').removeAttribute('aria-busy');
+      el('draw-result').textContent=(res&&res.error)||'Couldn’t complete the spin. Please try again.';
       return;
     }
     var won = res.data;
@@ -28862,20 +28908,24 @@ window.renderAdminStats = renderAdminStats;
     var strip = el('draw-strip');
     strip.innerHTML = buildStrip(pool, winner).map(tileHTML).join('');
 
-    // Land the winning tile under the needle, minus a few pixels of jitter so
-    // it never stops perfectly centred twice running.
-    var windowW = el('draw-window').offsetWidth;
-    var jitter = (Math.random() * 2 - 1) * (TILE * 0.28);
-    var target = (WIN_INDEX * TILE) + (TILE / 2) - (windowW / 2) + jitter;
-
-    // Force the browser to take the reset transform before the real one, or
-    // the two collapse into a single style recalculation and nothing moves.
-    void strip.offsetWidth;
-    strip.style.transition = 'transform ' + SPIN_MS + 'ms cubic-bezier(.12,.72,.12,1)';
-    strip.style.transform = 'translate3d(' + (-target) + 'px,0,0)';
-
-    setTimeout(function () {
-      busy = false;
+    // Measure the actual tile stride instead of assuming the stylesheet never
+    // changes. Centre relative to the content box, not the outer border.
+    var jitter=(Math.random()*2-1)*TILE*.20;
+    function landing(){
+      const tile=strip.children[WIN_INDEX];
+      return tile.offsetLeft+tile.offsetWidth/2-el('draw-window').clientWidth/2+jitter;
+    }
+    strip.style.position='relative';
+    var target=landing();
+    var duration=(window.motionReduced&&motionReduced())?0:SPIN_MS;
+    let completed=false;
+    function finishSpin(){
+      if(completed||ticket!==spinToken)return;completed=true;
+      strip.style.transition='none';
+      strip.style.transform='translate3d('+(-landing())+'px,0,0)';
+      if(reelAnimation){reelAnimation.cancel();reelAnimation=null;}
+      busy=false;landed=true;
+      el('draw-result').removeAttribute('aria-busy');
       var wnd = el('draw-window');
       wnd.classList.remove('spinning');
       wnd.classList.add('landed', 'hit-' + (won.tier || 'common'));
@@ -28932,7 +28982,7 @@ window.renderAdminStats = renderAdminStats;
         (value ? '<div class="dr-val">' + value + '</div>' : '') +
         (freeNote ? '<div class="dr-free">' + esc(freeNote) + '</div>' : '');
 
-      applyFeedback(won);
+      if(document.body.dataset.section==='rewards'&&!document.hidden)applyFeedback(won);
       // The free spin has just been taken, so the button has to stop offering
       // it. The server said which it was in `won.free`; asking again is one
       // cheap call and cannot disagree with the row that was actually written.
@@ -28945,8 +28995,21 @@ window.renderAdminStats = renderAdminStats;
          sibling of #rewards-body precisely so a re-render cannot touch the
          strip. The Market reads album_picks from Wallet state when you switch
          to it, which applyWallet() has already updated. */
-    }, SPIN_MS + 40);
+    }
+    if(duration&&strip.animate){
+      reelAnimation=strip.animate([{transform:'translate3d(0,0,0)'},{transform:'translate3d('+(-target)+'px,0,0)'}],{duration:duration,easing:'cubic-bezier(.12,.72,.12,1)',fill:'forwards'});
+      reelAnimation.finished.then(finishSpin,function(){});
+    }else finishSpin();
+    // A background tab or unsupported animation must still display its result.
+    setTimeout(finishSpin,duration+150);
   }
+  if(window.ResizeObserver)new ResizeObserver(function(){
+    if(busy||!landed)return;
+    const strip=el('draw-strip'),tile=strip.children[WIN_INDEX];if(!tile)return;
+    const target=tile.offsetLeft+tile.offsetWidth/2-el('draw-window').clientWidth/2;
+    strip.style.transform='translate3d('+(-target)+'px,0,0)';
+  }).observe(el('draw-window'));
+  window.resetDraw=function(){++spinToken;++renderToken;busy=false;landed=false;items=null;_freeSpin=null;if(reelAnimation){reelAnimation.cancel();reelAnimation=null;}resetStrip();el('draw-go').disabled=true;el('draw-result').removeAttribute('aria-busy');};
 
   /* The payoff scales with the tier, so a Mythic does not land with the same
      weight as 400 Discs. The gap between Legendary and Mythic is deliberately
@@ -30339,7 +30402,7 @@ window.renderAdminStats = renderAdminStats;
   async function paintLobby() {
     var host = el('blitz-matches');
     if (!on()) { host.innerHTML = '<div class="reco-note">Log in to challenge somebody. Solo still works.</div>'; return; }
-    host.innerHTML = '<div class="reco-note">Loading…</div>';
+    host.innerHTML = '<div class="reco-note loading-dots" role="status">Loading…</div>';
     var rows = [];
     try { rows = await Cloud.blitzList(); } catch (e) {}
     var me = meId();
@@ -30664,7 +30727,7 @@ window.renderAdminStats = renderAdminStats;
     if (!on()) { Cloud.openAuth(); return; }
     var host = el('blitz-opps');
     host.style.display = '';
-    host.innerHTML = '<div class="reco-note">Loading…</div>';
+    host.innerHTML = '<div class="reco-note loading-dots" role="status">Loading…</div>';
     var people = [];
     try { people = await Cloud.followingList(meId()); } catch (e) {}
     await (window.loadBlocks ? loadBlocks() : Promise.resolve());
@@ -32145,6 +32208,8 @@ window.renderAdminStats = renderAdminStats;
   var card = document.getElementById('recall-card');
   if (card) card.addEventListener('click', function () { open(); });
   window.paintRecallCard = paintCard;
+  document.addEventListener('vinall:account-reset',function(){serverState=null;++cardTok;});
+  document.addEventListener('vinall:account-ready',paintCard);
   window.openRecall = open;
   paintCard();
 
@@ -32291,20 +32356,24 @@ window.renderAdminStats = renderAdminStats;
 
   /* ---- store ----------------------------------------------------------- */
 
-  var _plays = null;
+  var _plays = null, _listeningOwner = null, _listeningRevision=0;
+  function resetListening(){++_listeningRevision;_plays=null;_available=null;_byArtist=null;_byArtistAt=0;_noteFailed=false;_listeningOwner=uid();}
+  function listeningOwner(){const owner=uid();if(owner!==_listeningOwner)resetListening();return owner;}
 
   // Does the table exist and can this person read it? One cheap head query,
   // used both to gate the panel and to keep a missing migration from looking
   // like a broken feature.
   var _available = null;
   async function available() {
+    const owner=listeningOwner();
     if (_available !== null) return _available;
     if (!on()) return false;                          // don't cache for a guest
     try {
       var r = await sb().from('listening_plays')
         .select('k', { count: 'exact', head: true }).eq('user_id', uid());
+      if(uid()!==owner)return false;
       _available = !r.error;
-    } catch (e) { _available = false; }
+    } catch (e) { if(uid()!==owner)return false;_available = false; }
     return _available;
   }
 
@@ -32321,15 +32390,23 @@ window.renderAdminStats = renderAdminStats;
   }
 
   async function listeningPlays(force) {
+    const owner=listeningOwner();
+    const revision=_listeningRevision;
     if (_plays && !force) return _plays;
     if (!on() || !(await available())) return [];
     try {
-      var r = await sb().from('listening_plays')
-        .select('k,track,artist,album,track_uri,plays,ms_played,first_played,last_played')
-        .eq('user_id', uid()).order('plays', { ascending: false }).limit(1500);
-      _plays = r.data || [];
-    } catch (e) { _plays = []; }
-    return _plays;
+      const rows=[];
+      for(let from=0;from<1500;from+=1000){
+        if(uid()!==owner||revision!==_listeningRevision)return [];
+        const res=await sb().from('listening_plays').select('k,track,artist,album,track_uri,plays,ms_played,first_played,last_played').eq('user_id',owner).order('plays',{ascending:false}).order('k').range(from,Math.min(from+999,1499));
+        if(res.error)return [];
+        rows.push(...(res.data||[]));
+        if(!res.data||res.data.length<Math.min(1000,1500-from))break;
+      }
+      if(uid()!==owner||revision!==_listeningRevision)return [];
+      _plays=rows;
+    } catch (e) { if(uid()!==owner||revision!==_listeningRevision)return [];_plays = []; }
+    return _plays || [];
   }
   window.listeningPlays = listeningPlays;
 
@@ -32362,7 +32439,7 @@ window.renderAdminStats = renderAdminStats;
         }
         return;
       }
-      _plays = null;                       // the cached top slice is now stale
+      ++_listeningRevision;_plays=null;_byArtist=null;_byArtistAt=0;
     } catch (e) {}
   }
   /* Plays per ARTIST, for the For You feed's one behavioural signal.
@@ -32375,6 +32452,8 @@ window.renderAdminStats = renderAdminStats;
      weight and nothing else, where one that throws takes the feed down. */
   var _byArtist = null, _byArtistAt = 0;
   async function byArtistFetch() {
+    const owner=listeningOwner();
+    const revision=_listeningRevision;
     if (_byArtist && Date.now() - _byArtistAt < 300000) return _byArtist;
     var out = {};
     try {
@@ -32383,13 +32462,21 @@ window.renderAdminStats = renderAdminStats;
       // first pipe — the same key rule this module already owns, read rather
       // than re-derived from the artist column, so a row imported under a
       // slightly different spelling still lands in one bucket.
-      var r = await sb().from('listening_plays').select('k,plays').limit(4000);
-      (r.data || []).forEach(function (row) {
+      const rows=[];
+      for(let from=0;from<CAP;from+=1000){
+        if(uid()!==owner||revision!==_listeningRevision)return {};
+        const res=await sb().from('listening_plays').select('k,plays').eq('user_id',owner).order('plays',{ascending:false}).order('k').range(from,from+999);
+        if(res.error)return {};
+        rows.push(...(res.data||[]));
+        if(!res.data||res.data.length<1000)break;
+      }
+      rows.forEach(function (row) {
         var a = String(row.k || '').split('|')[0];
         if (!a) return;
         out[a] = (out[a] || 0) + (row.plays || 0);
       });
     } catch (e) { /* no table yet is a real and normal state here */ }
+    if(uid()!==owner||revision!==_listeningRevision)return {};
     _byArtist = out; _byArtistAt = Date.now();
     return out;
   }
@@ -32397,9 +32484,9 @@ window.renderAdminStats = renderAdminStats;
   // Empty until the fetch above has landed, which degrades the ordering
   // rather than breaking it — the same arrangement as CollectionWorth.mine()
   // and VinalLore.items() returning empty until their owners have loaded.
-  function byArtist() { return _byArtist || {}; }
+  function byArtist() { listeningOwner(); return _byArtist || {}; }
 
-  window.VinalListening = { noteListen: noteListen, keyOf: keyOf,
+  window.VinalListening = { reset: resetListening, noteListen: noteListen, keyOf: keyOf,
                             byArtist: byArtist, loadByArtist: byArtistFetch,
                             importEvents: importEvents };
 
@@ -32407,11 +32494,14 @@ window.renderAdminStats = renderAdminStats;
      one drop does the library AND the listening. Same fold, same upload, same
      rules as the panel below. */
   async function importEvents(events) {
-    if (!on() || !(await available())) return { kept: 0 };
+    const owner=listeningOwner();
+    if (!on() || !(await available())) return { kept: 0, error: 'Listening history is unavailable. Please try again.' };
+    if(uid()!==owner)return {error:'Account changed'};
     var f = fold(events || []);
     if (!f.rows.length) return { kept: 0 };
     var up = await upload(f.rows);
-    _plays = null;
+    if(uid()!==owner)return {error:'Account changed'};
+    ++_listeningRevision;_plays = null; _byArtist=null; _byArtistAt=0;
     if (window.renderToday) try { window.renderToday(true); } catch (e) {}
     return { kept: f.kept, unique: f.unique, done: up.done, error: up.error || null };
   }
@@ -32419,18 +32509,34 @@ window.renderAdminStats = renderAdminStats;
   async function upload(rows, onProgress) {
     var me = uid();
     var now = new Date().toISOString();
+    // A smaller or overlapping export must not erase the richer account copy.
+    // Page the existing aggregates because the Data API caps response sizes.
+    const existing={};
+    for(let from=0;;from+=1000){
+      if(uid()!==me)return {error:'Account changed',done:0};
+      const res=await sb().from('listening_plays').select('k,plays,ms_played,first_played,last_played').eq('user_id',me).order('k').range(from,from+999);
+      if(res.error)return {error:res.error.message,done:0};
+      (res.data||[]).forEach(function(row){existing[row.k]=row;});
+      if(!res.data||res.data.length<1000)break;
+    }
     var payload = rows.slice(0, CAP).map(function (r) {
+      const old=existing[r.k]||{};
+      const first=old.first_played?Date.parse(old.first_played):null;
+      const last=old.last_played?Date.parse(old.last_played):null;
+      const firstAt=first==null?r.first_played:r.first_played==null?first:Math.min(first,r.first_played);
+      const lastAt=last==null?r.last_played:r.last_played==null?last:Math.max(last,r.last_played);
       return {
         user_id: me, k: r.k, track: r.track, artist: r.artist,
         album: r.album, track_uri: r.track_uri,
-        plays: r.plays, ms_played: r.ms_played,
-        first_played: r.first_played ? new Date(r.first_played).toISOString() : null,
-        last_played:  r.last_played  ? new Date(r.last_played).toISOString()  : null,
+        plays: Math.max(r.plays,old.plays||0), ms_played: Math.max(r.ms_played,old.ms_played||0),
+        first_played: firstAt!=null ? new Date(firstAt).toISOString() : null,
+        last_played: lastAt!=null ? new Date(lastAt).toISOString() : null,
         source: 'spotify-export', updated_at: now
       };
     });
     var done = 0;
     for (var i = 0; i < payload.length; i += CHUNK) {
+      if(uid()!==me)return {error:'Account changed',done:done};
       var slice = payload.slice(i, i + CHUNK);
       var r = await sb().from('listening_plays')
         .upsert(slice, { onConflict: 'user_id,k' });
@@ -32490,7 +32596,7 @@ window.renderAdminStats = renderAdminStats;
     if (input) input.addEventListener('change', async function () {
       var files = Array.prototype.slice.call(input.files || []);
       if (!files.length) return;
-      out.innerHTML = '<p class="reco-note">Reading ' + files.length + ' file' +
+      out.innerHTML = '<p class="reco-note loading-dots" role="status">Reading ' + files.length + ' file' +
         (files.length === 1 ? '' : 's') + '…</p>';
 
       var events = [], bad = 0;
@@ -32754,7 +32860,7 @@ window.track = function (name, props) {
     // price sweep's _sweep and the player's loadTok.
     var mine = ++tok;
     var host = el('sugg-list');
-    if (!rows.length) host.innerHTML = '<div class="sugg-empty">Loading\u2026</div>';
+    if (!rows.length) host.innerHTML = '<div class="sugg-empty loading-dots" role="status">Loading\u2026</div>';
     var got = await Cloud.suggestionList(mode, q, 40);
     if (mine !== tok) return;
     rows = got;
@@ -33043,6 +33149,7 @@ window.track = function (name, props) {
   var DAY = 86400000;
   var _lore = null;      // this user's answers, keyed for fast lookup
   var _loreList = [];
+  var _todayRequest=0, _loreGeneration=0;
 
   function albums() { try { return window.loadAlbums ? loadAlbums() : {}; } catch (e) { return {}; } }
   function songs() { try { return window.loadSongs ? loadSongs() : {}; } catch (e) { return {}; } }
@@ -33283,12 +33390,14 @@ window.track = function (name, props) {
   // ---- storage ------------------------------------------------------------
 
   async function loadLore(force) {
+    const owner=me()&&me().id,request=_loreGeneration;
     if (_lore && !force) return _loreList;
-    _lore = {}; _loreList = [];
     if (!on()) return _loreList;
     try {
       var r = await sb().from('lore_answers').select('*')
         .eq('user_id', me().id).order('created_at', { ascending: false }).limit(400);
+      if(!me()||me().id!==owner||request!==_loreGeneration)return [];
+      _lore = {};
       _loreList = r.data || [];
       _loreList.forEach(function (x) { _lore[answeredKey(x.item_kind, x.item_id, x.question_id)] = x; });
     } catch (e) {}
@@ -33297,6 +33406,7 @@ window.track = function (name, props) {
 
   async function saveAnswer(item, q, choice, opts) {
     if (!on()) { Cloud.openAuth(); return { error: 'not logged in' }; }
+    const owner=me().id,generation=_loreGeneration;
     opts = opts || {};
     var row = {
       user_id: me().id,
@@ -33311,6 +33421,7 @@ window.track = function (name, props) {
       var r = await sb().from('lore_answers')
         .upsert(row, { onConflict: 'user_id,item_kind,item_id,question_id' }).select().single();
       if (r.error) return { error: r.error.message };
+      if(!me()||me().id!==owner||generation!==_loreGeneration)return {error:'Account changed'};
       _lore = _lore || {};
       _lore[answeredKey(item.kind, item.id, q.id)] = r.data;
       _loreList.unshift(r.data);
@@ -33324,12 +33435,14 @@ window.track = function (name, props) {
   // rather than a soft "changed my mind" flag.
   async function removeAnswer(item, q) {
     if (!on()) return { error: 'not logged in' };
+    const owner=me().id,generation=_loreGeneration;
     try {
       var r = await sb().from('lore_answers').delete()
         .eq('user_id', me().id)
         .eq('item_kind', item.kind).eq('item_id', item.id)
         .eq('question_id', q.id);
       if (r.error) return { error: r.error.message };
+      if(!me()||me().id!==owner||generation!==_loreGeneration)return {error:'Account changed'};
       if (_lore) delete _lore[answeredKey(item.kind, item.id, q.id)];
       _loreList = _loreList.filter(function (x) {
         return !(x.item_kind === item.kind && x.item_id === item.id && x.question_id === q.id);
@@ -33510,7 +33623,8 @@ window.track = function (name, props) {
         itemStrip(item) + '<div class="td-row"><button class="td-next" type="button">Next →</button></div>';
       card.querySelector('.td-next').addEventListener('click', function () { advance(); });
       if (window.buzz) buzz(v === was ? 'good' : 'big');
-      setTimeout(function () { advance(); }, 2200);
+      const generation=_queueGen,index=_qi;
+      setTimeout(function () { if(generation===_queueGen&&index===_qi)advance(); }, 2200);
     });
   }
 
@@ -33828,6 +33942,7 @@ window.track = function (name, props) {
        deleted and the question returns to the pool on the next rebuild. So
        the only thing that should retire an Undo is another answer taking its
        place, or the undo happening. */
+    if(!on())return;
     _qi++;
     if (_qi >= _queue.length) {
       // Endless: the finders re-run, and anything just answered drops out.
@@ -33845,7 +33960,7 @@ window.track = function (name, props) {
     var entry = _queue[_qi];
     var d = entry && entry.d;
     var card = slot.querySelector('.td-card');
-    if (!card) return;
+    if (!card || !entry) return;
 
     var dismiss = slot.querySelector('.td-dismiss');
     if (dismiss) dismiss.addEventListener('click', function () { advance(); });
@@ -33966,7 +34081,8 @@ window.track = function (name, props) {
          stay is to reach "Add a note". No bar, because a countdown asks you to
          watch a clock instead of reading the card. */
       after.addEventListener('click', stopAuto);
-      autoTimer = setTimeout(function () { autoTimer = null; advance(); }, AUTO_MS);
+      const generation=_queueGen,index=_qi;
+      autoTimer = setTimeout(function () { autoTimer = null; if(generation===_queueGen&&index===_qi)advance(); }, AUTO_MS);
     }
 
     slot.querySelectorAll('.td-opt').forEach(function (btn) {
@@ -34079,6 +34195,7 @@ window.track = function (name, props) {
   // Leaving the tab and coming back keeps your place in the stack; Refresh
   // reshuffles it. Only a new day, or an empty stack, rebuilds on its own.
   async function renderToday(force) {
+    const request=++_todayRequest,owner=me()&&me().id;
     var stamp = new Date().toDateString();
     var host = stackEl();
     if (!host) return;
@@ -34098,10 +34215,12 @@ window.track = function (name, props) {
     host.innerHTML = '<p class="reco-note">Having a look through your crate…</p>';
     host.style.height = '';
     await loadLore(force);
+    if(request!==_todayRequest||!me()||me().id!==owner)return;
     // Listening data is optional: no import, no rows, and the two listening
     // finders simply contribute nothing.
     try { _plays = window.listeningPlays ? await window.listeningPlays(force) : []; }
     catch (e) { _plays = []; }
+    if(request!==_todayRequest||!me()||me().id!==owner)return;
     _queue = buildQueue();
     _qi = 0;
     _queueGen++;
@@ -34125,7 +34244,7 @@ window.track = function (name, props) {
     var host = document.getElementById('lore-list');
     if (!host) return;
     if (!on()) { host.innerHTML = '<div class="reco-note">Log in to start building your lore.</div>'; return; }
-    host.innerHTML = '<p class="reco-note">Loading…</p>';
+    host.innerHTML = '<p class="reco-note loading-dots" role="status">Loading…</p>';
     await loadLore(true);
     var real = _loreList.filter(function (r) { return !r.skipped && (r.choice || r.note); });
     var head = document.getElementById('lore-count');
@@ -34211,7 +34330,7 @@ window.track = function (name, props) {
   function loreCount() {
     return (_loreList || []).filter(function (r) { return r && !r.skipped && r.choice; }).length;
   }
-  window.VinallLore = { load: loadLore, save: saveAnswer, questions: QUESTIONS, count: loreCount,
+  window.VinallLore = { reset:function(){++_todayRequest;++_loreGeneration;++_queueGen;_lore=null;_loreList=[];_plays=[];_queue=[];_qi=0;clearUndoable();const host=stackEl();if(host){host.innerHTML='';host.style.height='';delete host.dataset.built;}if(window.TodayPreview)TodayPreview.stop();}, load: loadLore, save: saveAnswer, questions: QUESTIONS, count: loreCount,
                         items: function () { return _loreList || []; } };
 })();
 
@@ -34258,7 +34377,7 @@ window.track = function (name, props) {
     void panel.offsetWidth;
     panel.classList.add('in');
     toggle.setAttribute('aria-expanded', 'true');
-    panel.innerHTML = '<div class="dm-title">Daily Missions</div><div class="reco-note">Loading…</div>';
+    panel.innerHTML = '<div class="dm-title">Daily Missions</div><div class="reco-note loading-dots" role="status">Loading…</div>';
     await render();
   }
 
@@ -35492,7 +35611,7 @@ window.track = function (name, props) {
       host.innerHTML = '<div class="reco-note">Log in to get your Reach code.</div>';
       return;
     }
-    host.innerHTML = '<p class="reco-note">Loading…</p>';
+    host.innerHTML = '<p class="reco-note loading-dots" role="status">Loading…</p>';
 
     var st = null, code = null;
     try {
@@ -35683,6 +35802,8 @@ window.track = function (name, props) {
   var CLIP_S = 30;
 
   var _built = false, _busy = false, _topping = false;
+  var _dataStamp = '', _builtAt = 0, _visited = false, _preloadTimer = null;
+  function feedStamp(){return ['crate_albums_v1','crate_songs_v1','crate_shortlist_v1','crate_liked_songs_v1'].map(function(k){return localStorage.getItem(k)||'';}).join('|');}
   var _leftAt = 0;   // when leave() last ran — see render()'s 10s rule
   /* TWO TOKENS, AND THEY WERE ONE — WHICH IS WHY THE FEED WAS NOT INFINITE.
 
@@ -35746,6 +35867,7 @@ window.track = function (name, props) {
       keys.sort(function (a, b) { return obj[b] - obj[a]; }).slice(SEEN_CAP).forEach(function (x) { delete obj[x]; });
     }
     try { localStorage.setItem(k, JSON.stringify(obj)); } catch (e) {}
+    if(window.Cloud)Cloud.push(k);
   }
 
   /* ---- the context every signal reads --------------------------------
@@ -36372,7 +36494,7 @@ window.track = function (name, props) {
 
   async function drawSongs(count) {
     var out = [];
-    await warmHeads();
+    if(document.body.dataset.section==='foryou')await warmHeads();
     /* A BATCH ENDS WHEN EVERY POOL HAS BEEN TRIED, NOT AFTER FOUR MISSES.
 
        It was a global `dry < 4`: four draws that produced nothing, from any
@@ -36508,7 +36630,7 @@ window.track = function (name, props) {
   }
 
   function stopAll() {
-    try { VinalAudio.stop(); } catch (e) {}
+    if (_playing !== null) try { VinalAudio.stop(); } catch (e) {}
     /* Bumped here as well as in VinalAudio, so a playCard already past its
        await returns at its next token check instead of painting `is-playing`
        onto a card in a feed nobody is looking at any more. */
@@ -36527,7 +36649,7 @@ window.track = function (name, props) {
      starts the audio, and a scroll listener on a snapping container fires
      dozens of times for one flick. */
   async function topUp() {
-    if (_topping || !_built) return;
+    if (_topping || !_built || document.body.dataset.section !== 'foryou' || document.hidden) return;
     var host = el('fy-feed');
     if (!host) return;
     _topping = true;
@@ -36974,6 +37096,9 @@ window.track = function (name, props) {
     host.setAttribute('aria-busy', 'true');
     try {
       _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0;
+      if(window.Cloud&&Cloud.isOn()&&window.VinalListening)await VinalListening.loadByArtist();
+      if(mine!==_feedTok)return;
+      _dataStamp=feedStamp();
       _ctx = buildContext();
       _pools = localPools(_ctx);
 
@@ -36994,7 +37119,7 @@ window.track = function (name, props) {
       Object.keys(_pools).forEach(function (p) {
         (_pools[p] || []).slice(0, 12).forEach(function (a) { seenA[a.id] = Date.now(); });
       });
-      writeSeen(SEEN_ALBUMS, seenA);
+      if(document.body.dataset.section==='foryou')writeSeen(SEEN_ALBUMS, seenA);
 
       var first = await drawSongs(FIRST_PAGE);
       if (mine !== _feedTok) return;
@@ -37008,13 +37133,13 @@ window.track = function (name, props) {
             ? '<h3>Nothing pushed yet</h3>'
             : '<h3>Nothing to play yet</h3><p>Rate a few records and this fills up with songs worth hearing.</p>') +
           '</div>';
-        _built = true; return;
+        _built = true; _builtAt=Date.now(); return;
       }
       _items = first;
       host.innerHTML = first.map(cardHtml).join('');
-      markSeenSongs(first);
+      if(document.body.dataset.section==='foryou')markSeenSongs(first);
       fitFeed();
-      _built = true;
+      _built = true; _builtAt=Date.now();
       if (document.body.dataset.section === 'foryou') observe(host);
       window.ForYou._last = { ctx: _ctx, pools: _pools };
       // The rest of the page, behind the card that is already on screen.
@@ -37030,13 +37155,11 @@ window.track = function (name, props) {
   function render(force) {
     var host = el('fy-feed');
     if (!host) return;
-    /* Away for a moment (checked a rating, glanced at a notification) comes
-       straight back to the exact card and scroll position — nothing here
-       tears that down. Away for more than 10s is long enough that "for you"
-       should mean something fresher, so that visit gets a real rebuild
-       instead. The threshold is measured from when leave() actually ran, not
-       from anything guessed at render time. */
-    if (!force && _leftAt && (Date.now() - _leftAt > 10000)) force = true;
+    /* Preserve warmed cards across short visits. Refresh on changed account
+       inputs, explicit refresh or a five-minute cache expiry; time spent on
+       another tab alone must not throw away the preloaded first page. */
+    if(!force && _built && (_dataStamp!==feedStamp() || Date.now()-_builtAt>300000))force=true;
+    _visited=true;
     _leftAt = 0;
     if (!_built) { build(force); return; }
     // Re-measured on every entry: the header is a different height logged in
@@ -37054,13 +37177,15 @@ window.track = function (name, props) {
        it was no observer at all. Re-attaching also restarts whatever is on
        screen, because an IntersectionObserver reports intersecting elements as
        soon as it is given them. */
+    if(force){build(true);return;}
+    if(_ctx){writeSeen(SEEN_ALBUMS,_ctx.seenAlbums);markSeenSongs(_items);}
     if (!_io) observe(host);
-    if (force) build(true);
+    topUp();
   }
 
   // Leaving the tab must silence it: setMode only changes `display`, and an
   // <audio> element does not care that the card holding it is hidden.
-  function leave() { stopAll(); clearTimeout(_settle); _settle = 0; _navTarget = null; if (_io) { _io.disconnect(); _io = null; } _leftAt = Date.now(); }
+  function leave() { stopAll(); clearTimeout(_settle); _settle = 0; _navTarget = null; if (_io) { _io.disconnect(); _io = null; } if(_visited)_leftAt = Date.now(); }
 
   /* ---- the tabs, and pushing a record -----------------------------------
      `setFeed` rebuilds rather than filtering: the two feeds have different
@@ -37181,7 +37306,24 @@ window.track = function (name, props) {
     try { VinalAudio.on('end', function () { stopAll(); }); } catch (e) {}
   });
 
+  function preload(){
+    clearTimeout(_preloadTimer);
+    if(document.hidden || (navigator.connection && (navigator.connection.saveData || /(^|-)2g$/.test(navigator.connection.effectiveType))))return;
+    if(_built||_busy)return;
+    _preloadTimer=setTimeout(function(){if(!document.hidden&&!_built&&!_busy)build();},250);
+  }
+  function resetFeed(){
+    clearTimeout(_preloadTimer);stopAll();if(_io){_io.disconnect();_io=null;}
+    ++_feedTok;_built=false;_visited=false;_leftAt=0;_dataStamp='';
+    _rebuild=!!(_busy||_topping);
+    _items=[];_ctx=null;
+    const host=el('fy-feed');if(host)host.innerHTML='';
+  }
+  function scheduleWarm(){if(window.Cloud&&Cloud.ready)Cloud.ready.then(preload);else preload();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scheduleWarm);else scheduleWarm();
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)preload();});
   window.ForYou = {
+    preload:preload, reset:resetFeed,
     render: render, build: build, leave: leave, stop: stopAll, topUp: topUp, refit: refit,
     setFeed: setFeed, push: doPush, quota: paintQuota,
     SIGNALS: SIGNALS, MIX: MIX, rank: rank, explain: explain,
@@ -38862,7 +39004,8 @@ window.track = function (name, props) {
 (function () {
   'use strict';
 
-  var STATE_KEY = 'vinall_spotify_v1';
+  var STATE_KEY = 'crate_spotify_import_v1';
+  var hydrated = false;
   var PRIVACY_URL = 'https://www.spotify.com/account/privacy/';
   var READY_AFTER = 36 * 3600 * 1000;      // when the Home card starts saying "it's probably in"
   var BATCH = 10;
@@ -38878,8 +39021,8 @@ window.track = function (name, props) {
   function small(art) { return String(art || '').replace(/\/(\d+)x\1-000000/, '/250x250-000000'); }
 
   function readState() { try { return JSON.parse(localStorage.getItem(STATE_KEY)) || {}; } catch (e) { return {}; } }
-  function writeState(s) { try { localStorage.setItem(STATE_KEY, JSON.stringify(s)); } catch (e) { /* a full store just means no resume */ } }
-  function patch(p) { var s = readState(); Object.keys(p).forEach(function (k) { s[k] = p[k]; }); writeState(s); return s; }
+  function writeState(s, sync) { if(sync!==false)s.updatedAt=Date.now(); try { localStorage.setItem(STATE_KEY, JSON.stringify(s)); } catch (e) { /* a full store just means no resume */ } if(sync!==false&&on())Cloud.push(STATE_KEY); }
+  function patch(p) { var s = readState(); Object.keys(p).forEach(function (k) { s[k] = p[k]; }); writeState(s,Object.keys(p).some(function(k){return k!=='job';})); return s; }
 
   /* ---- the zip ----------------------------------------------------------
      A minimal reader so people can drop Spotify's zip exactly as it arrives:
@@ -38980,8 +39123,9 @@ window.track = function (name, props) {
     persistJob();
     if (sel.history && lib.events.length && window.VinalListening && VinalListening.importEvents) {
       J.history = 'running';
-      VinalListening.importEvents(lib.events).then(function (r) { J.history = r; persistJob(); paint(); })
-        .catch(function () { J.history = { error: true }; });
+      const job=J;
+      job.historyPromise=VinalListening.importEvents(lib.events).then(function (r) { if(J===job){job.history = r; persistJob(); paint();} })
+        .catch(function () { if(J===job)job.history = { error: true }; });
     }
     UI.stage = 'importing'; paint();
     if (window.track) track('spotify_import_started', { tracks: items.length });
@@ -39003,9 +39147,10 @@ window.track = function (name, props) {
   }
   async function runJob() {
     if (!J) return;
+    const job=J, owner=me()&&me().id;
     J.run = true;
     var base = (window.Native && Native.api) || '';
-    for (var pass = 0; pass < 3 && J && J.run; pass++) {
+    for (var pass = 0; pass < 3 && J===job && job.run && me() && me().id===owner; pass++) {
       var todo = J.items.filter(function (it) { var r = J.res[it.u]; return !r || r.status === 'retry'; });
       if (!todo.length) break;
       if (pass) await new Promise(function (r) { setTimeout(r, 2500 * pass); });
@@ -39016,7 +39161,7 @@ window.track = function (name, props) {
       });
       var next = 0, lastSave = Date.now();
       async function worker() {
-        while (J && J.run && next < batches.length) {
+        while (J===job && job.run && me() && me().id===owner && next < batches.length) {
           var b = batches[next++];
           var res = null;
           try {
@@ -39024,7 +39169,7 @@ window.track = function (name, props) {
               body: JSON.stringify({ kind: b.kind, items: b.items.map(function (x) { return { u: x.u, a: x.a, t: x.t, b: x.b }; }) }) });
             res = r.ok ? await r.json() : null;
           } catch (e) { res = null; }
-          if (!J) return;
+          if (J!==job || !job.run || !me() || me().id!==owner) return;
           ((res && res.results) || b.items.map(function (x) { return { u: x.u, status: 'retry' }; })).forEach(function (x) {
             if (!x) return;
             J.res[x.u] = { status: x.status, m: x.m || null, alts: x.alts || [] };
@@ -39037,13 +39182,13 @@ window.track = function (name, props) {
       }
       await Promise.all([worker(), worker()]);
     }
-    if (!J || !J.run) { persistJob(); return; }
+    if (J!==job || !job.run || !me() || me().id!==owner) return;
     // Anything still unanswered after three passes is "couldn't check", which
     // reads as unmatched rather than looping for ever.
     J.items.forEach(function (it) { var r = J.res[it.u]; if (!r || r.status === 'retry') J.res[it.u] = { status: 'none', m: null, alts: [], failed: true }; });
     persistJob();
     var c = counts();
-    if (c.check) { UI.stage = 'review'; UI.reviewIdx = 0; } else { await applyJob(); UI.stage = 'done'; }
+    if (c.check) { UI.stage = 'review'; UI.reviewIdx = 0; } else { await applyJob(); if(J!==job || !me() || me().id!==owner)return; UI.stage = 'done'; }
     paint(); paintPill();
   }
 
@@ -39051,6 +39196,9 @@ window.track = function (name, props) {
      upserts — a thousand liked songs is two requests, not a thousand. */
   async function applyJob() {
     if (!J || J.applied) return;
+    const job=J, owner=me()&&me().id;
+    if(job.historyPromise)await job.historyPromise;
+    if(J!==job||!me()||me().id!==owner)return;
     J.applied = true;
     var now = Date.now(), sum = { liked: 0, albums: 0, lists: 0, songs: 0, none: 0 };
     var got = function (it) { var r = J.res[it.u]; return r && (r.status === 'ok' || r.status === 'picked') && r.m ? r.m : null; };
@@ -39068,11 +39216,13 @@ window.track = function (name, props) {
       if (rows.length) {
         persist(LIKED_SONGS_KEY, liked);
         for (var i = 0; i < rows.length; i += 300) {
+          if(J!==job || !me() || me().id!==owner)return;
           var r = await sb().from('liked_songs').upsert(rows.slice(i, i + 300), { onConflict: 'user_id,track_key' });
           if (r && r.error) { report('Spotify import: liked_songs upsert failed', { code: r.error.code }); break; }
         }
       }
     }
+    if(J!==job || !me() || me().id!==owner)return;
     if (J.opts.albums) {
       var sl = loadShortlist(), crate = loadAlbums(), added = 0;
       J.items.forEach(function (it) {
@@ -39086,6 +39236,7 @@ window.track = function (name, props) {
     }
     var st = readState(), lists = st.lists || {};
     for (var p = 0; p < J.opts.playlists.length; p++) {
+      if(J!==job || !me() || me().id!==owner)return;
       var pl = J.opts.playlists[p];
       if (!pl) continue;
       var seenId = {}, items = [];
@@ -39097,16 +39248,20 @@ window.track = function (name, props) {
       if (!items.length) continue;
       // The same playlist imported again updates its list rather than making a second one.
       var res = await Cloud.saveList({ id: lists[pl.name] || undefined, title: pl.name, kind: 'song', items: items });
+      if(J!==job || !me() || me().id!==owner)return;
       if (res && res.error && lists[pl.name]) res = await Cloud.saveList({ title: pl.name, kind: 'song', items: items });
       if (res && res.data && res.data.id) lists[pl.name] = res.data.id;
       if (res && !res.error) { sum.lists++; sum.songs += items.length; }
     }
+    if(J!==job || !me() || me().id!==owner)return;
     var imported = st.imported || {};
     J.items.forEach(function (it) { var m = got(it); if (m) imported[it.u] = { id: m.id, name: m.name, artist: m.artist, art: m.art }; });
     sum.history = J.history && J.history.kept ? J.history.kept : 0;
+    sum.historyError=!!(J.history&&J.history.error);
     sum.covers = J.items.map(got).filter(function (m) { return m && m.art; }).slice(0, 9).map(function (m) { return m.art; });
     sum.unmatched = J.items.filter(function (it) { return !got(it); }).slice(0, 200).map(function (it) { return { a: it.a, t: it.t || it.b, failed: !!(J.res[it.u] && J.res[it.u].failed) }; });
     patch({ lists: lists, imported: imported, importedAt: now, summary: sum, job: null });
+    if(Cloud.flush && !(await Cloud.flush(STATE_KEY)))say('Saved on this device. Account sync will retry when you reconnect.');
     if (window.track) track('spotify_import_done', { liked: sum.liked, albums: sum.albums, lists: sum.lists, none: sum.none });
     if (window.buzz) buzz('big');
     if (window.renderProfile && window.currentMode === 'profile') renderProfile();
@@ -39119,6 +39274,7 @@ window.track = function (name, props) {
     var st = readState();
     if (J && J.run) UI.stage = 'importing';
     else if (J && !J.applied && counts().check) UI.stage = 'review';
+    else if (st.importedAt && (!stage || stage === 'intro')) UI.stage = 'done';
     else if (stage) UI.stage = stage;
     else if (st.job && st.job.items && st.job.items.length) UI.stage = 'resume';
     else if (UI.stage === 'done' || UI.stage === 'importing') UI.stage = 'intro';
@@ -39213,8 +39369,11 @@ window.track = function (name, props) {
           (sm.albums ? '<span><b>' + n(sm.albums) + '</b> albums to rate</span>' : '') +
           (sm.lists ? '<span><b>' + n(sm.lists) + '</b> ' + (sm.lists === 1 ? 'list' : 'lists') + '</span>' : '') +
           (sm.history ? '<span><b>' + n(sm.history) + '</b> plays</span>' : '') +
+          (sm.historyTracks ? '<span><b>' + n(sm.historyTracks) + '</b> tracks in your listening history</span>' : '') +
         '</div>' +
+        (sm.historyError ? '<p class="reco-note">Your listening history couldn’t be saved. Import this export again to retry.</p>' : '') +
         '<button class="btn-primary sp-wide sp-cta" data-sp="rate">Start rating</button>' +
+        '<button class="btn-mini sp-wide" data-sp="guide">Import another export</button>' +
         (sm.none ? '<details class="sp-miss"><summary>' + plural(sm.none, 'record') + ' not on Deezer</summary><div>' +
           (sm.unmatched || []).map(function (x) { return '<div class="sp-miss-r"><b>' + esc(x.t) + '</b><span>' + esc(x.a) + (x.failed ? ' · couldn\'t check' : '') + '</span></div>'; }).join('') +
           '</div></details>' : '') +
@@ -39351,7 +39510,7 @@ window.track = function (name, props) {
     var h = $('sp-home');
     if (!h) return;
     var st = readState();
-    if (!on() || st.dismissedAt || (st.importedAt && !(J && !J.applied))) { h.innerHTML = ''; return; }
+    if (!hydrated || !on() || st.dismissedAt || (st.importedAt && !(J && !J.applied))) { h.innerHTML = ''; return; }
     var waiting = st.requestedAt && !st.importedAt, likely = waiting && Date.now() - st.requestedAt > READY_AFTER;
     var pool = (window.VinalPool && VinalPool.albums) || [];
     var covers = [3, 0, 12].map(function (i) { return pool[i] && small(pool[i][6]); }).filter(Boolean);
@@ -39431,12 +39590,26 @@ window.track = function (name, props) {
     if (so) so.addEventListener('click', fromSettings(function () { openSend(null); }));
   }
 
-  window.SpotifyBridge = { open: open, send: openSend, paintHome: paintHome, parse: parseExport };
+  function resetBridge(){hydrated=false;if(J)J.run=false;J=null;UI.lib=null;UI.stage='intro';close();paintHome();}
+  document.addEventListener('vinall:account-ready',function(){hydrated=true;paintHome();});
+  async function hydrateBridge(){
+    const owner=me()&&me().id;
+    if(!owner||readState().importedAt)return;
+    // Older devices uploaded the history but kept the completion flag local.
+    // Recover that status from existing account rows without asking for a file.
+    try{
+      const res=await sb().from('listening_plays').select('updated_at',{count:'exact'}).eq('user_id',owner).eq('source','spotify-export').order('updated_at',{ascending:false}).limit(1);
+      if(res.error||!res.data||!res.data.length||!me()||me().id!==owner)return;
+      patch({importedAt:Date.parse(res.data[0].updated_at)||Date.now(),summary:{historyTracks:res.count||res.data.length}});
+      if(Cloud.flush)await Cloud.flush(STATE_KEY);
+    }catch(e){}
+  }
+  window.SpotifyBridge = { hydrate:hydrateBridge, reset:resetBridge, state:readState, open: open, send: openSend, paintHome: paintHome, parse: parseExport };
 
   function init() {
     wire();
     paintHome();
-    if (window.Cloud && Cloud.ready) Cloud.ready.then(function () { paintHome(); });
+    if (window.Cloud && Cloud.ready) Cloud.ready.then(function () { hydrated=true;paintHome(); });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
@@ -39453,5 +39626,5 @@ window.track = function (name, props) {
 </div>
 
 </body>
-<script src="/assets/interactions.js?v=1"></script>
+<script src="/assets/interactions.js?v=2"></script>
 </html>

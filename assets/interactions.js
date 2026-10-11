@@ -1,3 +1,34 @@
+/* Keep navigation synchronous and live geometry untransformed. Document
+   snapshot transitions suppress hit testing during capture, losing rapid taps
+   in WebKit. A shallow horizontal reveal gives direction without that freeze. */
+(function () {
+  var entrance = null;
+  var order = ['home', 'albums', 'songs', 'crate', 'choice', 'foryou', 'games', 'collection', 'rewards', 'profile'];
+  window.VinallTransitions = {
+    enter: function (view, from, mode) {
+      if (entrance) entrance.cancel();
+      if (!view.animate || document.hidden || (window.motionReduced && motionReduced())) return null;
+      var frames = [{ opacity: 0 }, { opacity: 1 }];
+      var list = view.querySelector('#albums-grid, #songs-list, #crate-feed, .col-grid');
+      // Promoting a very tall list can allocate a large backing surface in
+      // WebKit. Its visible cards and shared navigation carry the motion.
+      if (list && list.children.length >= 48) return null;
+      if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        frames[0].clipPath = order.indexOf(mode) >= order.indexOf(from) ? 'inset(0 1.5% 0 0)' : 'inset(0 0 0 1.5%)';
+        frames[1].clipPath = 'inset(0 0 0 0)';
+      }
+      var animation = view.animate(frames, { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      entrance = animation;
+      animation.finished.catch(function () {}).finally(function () { if (entrance === animation) entrance = null; });
+      return animation;
+    }
+  };
+  // Interaction takes priority over decoration, including opening a sheet
+  // whose fixed contents must never remain clipped by a page entrance.
+  document.addEventListener('pointerdown', function () { if (entrance) { entrance.cancel(); entrance = null; } }, true);
+  document.addEventListener('keydown', function () { if (entrance) { entrance.cancel(); entrance = null; } }, true);
+})();
+
 /* Accessibility follows the same open/close paths as pointer input, so game
    timers, audio, forms and confirmation promises keep their own cleanup. */
 (function () {
@@ -92,6 +123,9 @@
     if (root.matches && root.matches(selector)) nodes.unshift(root);
     nodes.forEach(function (n) {
       if (/^(BUTTON|A|INPUT|SELECT)$/.test(n.tagName) || n.closest('button, a')) return;
+      // Large ranking grids emit these in their markup. Rewriting three
+      // attributes on hundreds of already-accessible cards delays first paint.
+      if (n.matches('.card') && n.hasAttribute('tabindex') && n.hasAttribute('role') && n.hasAttribute('aria-label')) return;
       n.tabIndex = 0;
       // Crate cards contain a remove button, so their container is a group.
       n.setAttribute('role', n.querySelector('button') ? 'group' : 'button');

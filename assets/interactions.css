@@ -1,5 +1,22 @@
 /* Shared launch polish. Keep the existing palette, geometry and game motion. */
 :root { --ease-interaction: cubic-bezier(.2,.8,.2,1); }
+/* The Home banner is below the header. Loading only changes its opacity. */
+.artist-hero { height: 320px; margin: 0 0 24px; border-radius: var(--radius); animation: none; transition: opacity 320ms var(--ease-interaction); }
+.artist-hero.artist-hero-hidden { height: 320px !important; margin-bottom: 24px !important; opacity: 0; visibility: hidden; }
+.artist-hero-empty { background: radial-gradient(ellipse at 70% 40%, var(--gold-dim), transparent 65%), var(--surface); border: 1px solid var(--border); }
+.artist-hero-empty .artist-hero-bg, .artist-hero-empty .artist-hero-bed, .artist-hero-empty .artist-hero-canvas { visibility: hidden; }
+@media (min-width: 700px) {
+  .artist-hero-bg { inset: 0 auto auto 50%; width: auto; max-width: 100%; height: 100%; transform: translateX(-50%); object-fit: contain; object-position: center; filter: none; }
+  .artist-hero-canvas { display: none !important; }
+  .artist-hero-bed { filter: blur(30px) saturate(1.25) brightness(.45); transform: scale(1.12); }
+  .artist-hero-bed, .artist-hero-bg { mask-image: none; -webkit-mask-image: none; }
+  .artist-hero-bg { mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent); }
+  .artist-hero-fade { background: linear-gradient(0deg, rgba(0,0,0,.72), transparent 55%); }
+  .artist-hero-content { padding: 24px; }
+}
+@media (max-width: 699px) {
+  .artist-hero, .artist-hero.artist-hero-hidden { height: 232px !important; margin-bottom: 16px !important; }
+}
 button {
   transition-property: color, background-color, border-color, box-shadow, opacity, transform;
   transition-duration: 160ms;
@@ -12,7 +29,41 @@ button {
 .fy-key-hint { display: none; }
 @media (hover: hover) and (pointer: fine) {
   .fy-key-hint { display: block; position: absolute; bottom: 8px; left: 0; right: 0; z-index: 7; pointer-events: none; text-align: center; color: var(--text-dim); font-size: 12px; }
-  .game-card:hover { transform: translateY(-3px); }
+  .card, .game-card, .list-card, .groove-card, .t-pick, .col-rec, .rw-card, .done-tile, .bmc, .cf-card {
+    transition: transform 320ms var(--ease-interaction), border-color 240ms ease, box-shadow 320ms ease;
+  }
+  .card:hover { transform: translateY(-3px) scale(1.018); }
+  .game-card:not(.locked):hover, .list-card:hover, .groove-card:hover, .t-pick:hover, .col-rec:hover, .rw-card:hover, .done-tile:hover, .bmc:hover { transform: translateY(-2px) scale(1.012); }
+  .cf-card:hover { transform: translateY(-2px); }
+  nav.modes button:hover:not(.active) .nav-icon { transform: translateY(-1px) scale(1.08); }
+  .card:active, .game-card:not(.locked):active { transform: scale(.985); transition-duration: 140ms; }
+  .splash-cta { transition: transform 350ms var(--ease-interaction), border-radius 350ms var(--ease-interaction), box-shadow 350ms ease; }
+  .splash-cta:hover:not(:disabled) { transform: translateY(-2px) scale(1.025); border-radius: 32px; }
+}
+/* Remove the transformed paint-containment seam at the album artwork edge.
+   The card itself already clips its artwork; no extra composited clip needed. */
+.card .art-wrap { contain: none; transform: none; }
+.card .art { transition: transform 380ms var(--ease-interaction); }
+.grid .card:nth-child(n+19) { animation: none; }
+.game-card.locked:hover { transform: none; }
+.draw-strip { will-change: auto; }
+.draw-window.spinning .draw-strip { will-change: transform; }
+/* Shimmering seventy tiles repaints the entire travelling reel every frame. */
+.draw-window.spinning .draw-tile, .draw-window.spinning .dt-chip { animation-play-state: paused; }
+.draw-result { min-height: 90px; }
+.loading-dots { display: inline-flex; align-items: center; gap: 10px; }
+.loading-dots::after { content: ''; width: 14px; height: 14px; border: 2px solid var(--surface-3); border-top-color: var(--section, var(--gold)); border-radius: 50%; animation: loaderTurn 800ms linear infinite; }
+@keyframes loaderTurn { to { transform: rotate(360deg); } }
+@media (min-width: 700px) {
+  .splash-disc { width: min(110vh, 90vw); height: min(110vh, 90vw); }
+  /* Scale/translate the record on its own compositor layer. Blur over a
+     desktop-sized rotating disc required a large repaint on every frame. */
+  .splash-disc.is-flying { animation-name: desktopDiscFlight; }
+  .splash-gate.is-handing .splash-cta { border-radius: 999px; }
+}
+@keyframes desktopDiscFlight {
+  from { transform: translate(-50%, -50%) scale(1); }
+  to { transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(var(--fs)); }
 }
 .fy-feed { min-height: 180px; overflow-anchor: none; touch-action: pan-y pinch-zoom; }
 .fy-loading { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; }
@@ -43,6 +94,8 @@ body.layer-open { overflow-y: hidden; }
   @starting-style { .modal.open { opacity: 0; } }
 }
 @media (hover: none) {
+  :is(.card, .cf-card, .list-card, .groove-card, .t-pick, .col-rec, .rw-card, .done-tile, .bmc):hover { transform: none; }
+  .card:active, .cf-card:active { transform: scale(.985); }
   .game-card:hover { transform: none; }
   .game-card:active { transform: scale(.98); }
 }
@@ -58,6 +111,8 @@ body.layer-open { overflow-y: hidden; }
 /* Snapping is a navigation rule, not a decorative animation. Keep it in
    reduced mode; only the glide and ambient/large-area motion are removed. */
 @media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) :is(.card, .game-card, .list-card, .groove-card, .t-pick, .col-rec, .rw-card, .done-tile, .bmc, .cf-card):hover,
+  html:not([data-motion="full"]) .card:hover .art { transform: none; }
   html:not([data-motion="full"]) { scroll-behavior: auto; }
   html:not([data-motion="full"]) *, html:not([data-motion="full"]) *::before, html:not([data-motion="full"]) *::after {
     animation-duration: .01ms !important; animation-iteration-count: 1 !important;
@@ -65,6 +120,8 @@ body.layer-open { overflow-y: hidden; }
   }
 }
 html[data-motion="none"] { scroll-behavior: auto; }
+html[data-motion="none"] :is(.card, .game-card, .list-card, .groove-card, .t-pick, .col-rec, .rw-card, .done-tile, .bmc, .cf-card):hover,
+html[data-motion="none"] .card:hover .art { transform: none; }
 html[data-motion="none"] *, html[data-motion="none"] *::before, html[data-motion="none"] *::after {
   animation-duration: .01ms !important; animation-iteration-count: 1 !important;
   transition-duration: .01ms !important; scroll-behavior: auto !important;

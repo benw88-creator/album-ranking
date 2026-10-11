@@ -1,5 +1,25 @@
 # VINALL
 
+## Animation and account reliability follow-up (2026-10-11)
+
+See `PRELAUNCH-POLISH.md`. This follow-up is local development work; the owner
+asked to approve pushing after implementation/testing. Earlier release approval
+below does not authorise this new push or a production/database operation.
+
+The artist banner now belongs to Home below shared navigation, with reserved
+geometry and a full contained desktop photo. Page entrances use a shallow
+horizontal reveal/fade without transforming live views. Document snapshot
+transitions reproduced lost WebKit taps and are not used. Large lists carry
+motion through their visible cards and nav rather than a whole-list animation.
+Card entrances use backwards fill so hover owns transform after they finish.
+
+`crate_spotify_import_v1` syncs completion status through existing `app_state`;
+raw files and local resume jobs are not synced. Correctly owned legacy flags
+and existing Spotify-export listening rows recover earlier import status.
+Account reset hooks clear listening, feed, Today, collection and import caches.
+Browser icons are transparent; references use `official-transparent-2`, shared
+interaction files use `v=2`, and the worker shell version is `vinall-v5`.
+
 ## Prelaunch polish (2026-10-11)
 
 See `PRELAUNCH-AUDIT.md` for the local regression suite and verification limits.
@@ -9,7 +29,7 @@ this release has no migration or backend data operation.
 
 `assets/interactions.css` and `assets/interactions.js` hold the shared interaction
 polish. They load after the established stylesheet/markup; keep safe-area rules
-intact. Page transitions are opacity-only: even a small whole-view transform
+intact. The first pass used opacity-only transitions: a whole-view transform
 changed fixed containing blocks and reproduced WebKit clicks landing on a
 different element on release. Use the existing game-specific motion for games.
 The launch requirement respects reduced motion, including ambient animation;
