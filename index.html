@@ -19896,6 +19896,12 @@ window.handleGrooveLink=handleGrooveLink;
     navigator.serviceWorker.addEventListener('message', function (ev) {
       if (ev.data !== 'vinall-sw-updated') return;
       if (document.getElementById('sw-update')) return;
+      // Still on the splash: nothing has been touched, so take the new build now
+      // rather than asking. Once somebody is in the app, it asks instead.
+      if (document.getElementById('splash-gate') && !sessionStorage.getItem('vinall_sw_reloaded')) {
+        try { sessionStorage.setItem('vinall_sw_reloaded', '1'); } catch (e) {}
+        location.reload(); return;
+      }
       var b = document.createElement('button');
       b.id = 'sw-update';
       b.className = 'sw-update';
