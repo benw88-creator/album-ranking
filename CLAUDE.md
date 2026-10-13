@@ -6072,3 +6072,31 @@ and key repeat are ignored. `scripts/tests/recall.spec.mjs` covers it.
   half, the window charges for Epic and up in the last ~1.1s, the winning tile
   pops, and a Disc prize counts up to what landed. Reduced motion keeps the old
   single transition.
+
+## Every minigame has its own move
+
+`assets/play.js` (`window.Play`: `roll`, `flipYear`, `count`) and `assets/play.css`.
+All display only — each settles on exactly the value it was given — and all jump
+straight to it under reduced motion.
+
+| game | signature |
+|---|---|
+| Guess the Year | split-flap digits flip **forward** from your guess to the real year, last two digits with an extra lap, slowing as they land |
+| Guess the Cover | on a correct answer the record slides out of the sleeve and spins |
+| Middle square | the reveal opens like a camera aperture from the crop |
+| Tracklist | the list prints line by line; the sleeve drops in on reveal |
+| Earworm | the key you typed pops; the winning row hops |
+| Daily Drop | "N of M still fit" rolls down like an odometer |
+| Higher or Lower | the hidden number counts up into place, then takes the verdict colour |
+| Bid Wars | chips left is an odometer |
+| Cover Fire | sleeves are dealt each round, the right one flashes, the score rolls |
+| Recall | the sleeve pulls into focus on reveal; the live step pulses |
+
+- **The odometer loops forward**: each strip holds two laps of 0-9, so 8 → 1 travels
+  8, 9, 0, 1 and never jumps back. Up rolls wrap, down rolls fall straight.
+- **Earworm used to replay every past row's flip on every keypress**, because the
+  board is rebuilt per key. Only `ewState.fresh` (the row just submitted) animates
+  now; `ewState.typed` marks the one cell that pops.
+- The win hop uses the independent `translate` property, because the flip already
+  owns `transform` and a second animation on it would cancel the flip.
+- Cover Fire's deal uses `backwards`, not `both` — the picks hover (trap 12).

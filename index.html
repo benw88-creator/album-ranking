@@ -9583,6 +9583,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/games.css?v=1">
 <link rel="stylesheet" href="/assets/store.css?v=1">
 <link rel="stylesheet" href="/assets/glow.css?v=1">
+<link rel="stylesheet" href="/assets/play.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -10866,6 +10867,7 @@ window.discAmt = function (n) {
         <span><span class="g-streak" id="g-streak"></span> <span id="g-score-disp">Score 0</span></span>
       </div>
       <div class="g-cover-wrap" id="g-cover-wrap">
+        <span class="g-vinyl" aria-hidden="true"></span>
         <img class="g-cover" id="g-cover" alt="">
         <div class="result-badge" id="g-badge"><div class="circle" id="g-circle"></div></div>
         <div class="confetti" id="g-confetti"></div>
@@ -14933,7 +14935,7 @@ function renderAuthArea(connected){
   function renderRound(){
     answered=false;clearResult();
     const r=rounds[idx];
-    progressEl.textContent='Round '+(idx+1)+' of '+rounds.length;
+    progressEl.textContent='Round '+(idx+1)+' of '+rounds.length;coverWrap.dataset.game=gameType;tracklistBox.classList.remove('tl-in');void tracklistBox.offsetWidth;tracklistBox.classList.add('tl-in');
     scoreDisp.textContent='Score '+score;
     streakEl.textContent=streak>=2?('\u{1F525} '+streak):'';
     feedbackEl.textContent='';feedbackEl.className='g-feedback';
@@ -14983,6 +14985,8 @@ function renderAuthArea(connected){
     feedbackEl.textContent=ok?(streak>=3?'\u{1F525} '+streak+' in a row!':'Correct!'):'Not quite.';
     feedbackEl.className='g-feedback fade-up '+(ok?'correct':'wrong');
     answerEl.textContent=answerText;answerEl.className='g-answer fade-up';
+    // Guess the Year: the calendar flips from your guess to the real year.
+    if(gameType==='year'&&window.Play&&/^\d{4}$/.test(String(r.year))){answerEl.innerHTML='Released <span class="g-flipyear"></span>';Play.flipYear(answerEl.querySelector('.g-flipyear'),parseInt(yearInput.value,10),r.year);}
     guessBtn.style.display='none';
     nextBtn.textContent=(idx+1>=rounds.length)?'See results':'Next';
     nextBtn.style.display='block';
@@ -23351,7 +23355,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     for (var r = 0; r < ROWS; r++) {
       var row = ewState.rows[r];
       var live = (r === ewState.rows.length && !ewState.done);
-      html += '<div class="ew-row" style="grid-template-columns:' + tpl + '">';
+      // Every keystroke redraws the board; only the row just submitted may flip.
+      var won = row && ewState.won && r === ewState.rows.length - 1;
+      html += '<div class="ew-row' + (r === ewState.fresh ? ' fresh' : '') + (won && r === ewState.fresh ? ' ew-win' : '') + '" style="grid-template-columns:' + tpl + '">';
       var c = 0;
       for (var w = 0; w < rec.shape.length; w++) {
         if (w) html += '<i class="ew-gap" aria-hidden="true"></i>';
@@ -23360,7 +23366,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
             html += '<div class="ew-cell ' + row.marks[c] + '" style="animation-delay:' + (c * 0.07) + 's">' + row.letters[c] + '</div>';
           } else if (live) {
             var ch = ewState.current[c] || '';
-            html += '<div class="ew-cell' + (ch ? ' filled' : '') + '">' + ch + '</div>';
+            html += '<div class="ew-cell' + (ch ? ' filled' : '') + (ch && c === ewState.typed ? ' typed' : '') + '">' + ch + '</div>';
           } else {
             html += '<div class="ew-cell"></div>';
           }
@@ -23480,11 +23486,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (ewState.done || !ewState.rec) return;
     if (ewState.current.length >= ewLen()) return;
     ewState.current += ch;
+    ewState.fresh = -1; ewState.typed = ewState.current.length - 1;
     ewRenderBoard();
   }
   function ewBack() {
     if (ewState.done || !ewState.rec) return;
     ewState.current = ewState.current.slice(0, -1);
+    ewState.fresh = -1; ewState.typed = -1;
     ewRenderBoard();
   }
   function ewSubmit() {
@@ -23501,6 +23509,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     }
     var scored = ewScore(ewState.current);
     ewState.rows.push(scored);
+    ewState.fresh = ewState.rows.length - 1; ewState.typed = -1;
     ewState.won = ewState.current === ewState.rec.answer;
     ewState.current = '';
     if (ewState.won || ewState.rows.length >= ROWS) ewState.done = true;
@@ -24420,9 +24429,14 @@ function playDismissAnimation(gateEl, callback) {
     var left = GUESS_LIMIT - st.g.length;
     elLeft.innerHTML = '<b>' + left + '</b> guess' + (left === 1 ? '' : 'es') + ' left';
     var fit = st.g.length ? stillPossible(mode, st.g) : total;
-    elCount.innerHTML = st.g.length
-      ? '<b>' + fit + '</b> of ' + total + ' still fit' + (fit === 1 ? 's' : '')
-      : total + ' ' + (mode === 'album' ? 'albums' : 'songs') + ' in today’s list';
+    if (st.g.length) {
+      var prevFit = elCount._fit != null && elCount._mode === mode ? elCount._fit : total;
+      elCount.innerHTML = '<b class="dd-fit"></b> of ' + total + ' still fit' + (fit === 1 ? 's' : '');
+      var fb = elCount.querySelector('.dd-fit');
+      fb._rollTxt = String(prevFit); fb.textContent = prevFit;
+      if (window.Play) Play.roll(fb, fit); else fb.textContent = fit;
+    } else elCount.innerHTML = total + ' ' + (mode === 'album' ? 'albums' : 'songs') + ' in today’s list';
+    elCount._fit = st.g.length ? fit : total; elCount._mode = mode;
     elHint.textContent = hintFor(st.g.length);
   }
 
@@ -25258,7 +25272,8 @@ function playDismissAnimation(gateEl, callback) {
     // moves while you are deciding rather than only after you commit.
     var left = w.chips - spent() - (Number(pending) || 0);
     var box = document.getElementById('war-chips');
-    document.getElementById('war-chips-left').textContent = left;
+    var cl = document.getElementById('war-chips-left');
+    if (window.Play) Play.roll(cl, left); else cl.textContent = left;
     document.getElementById('war-chips-fill').style.width =
       Math.max(0, Math.min(100, (left / w.chips) * 100)) + '%';
     // The input is clamped to what is available, so going over is no longer
@@ -30109,9 +30124,10 @@ window.renderAdminStats = renderAdminStats;
     el(saidHigher ? 'hl-higher' : 'hl-lower').classList.add('chosen');
 
     var v = el('hl-right-val');
-    v.textContent = fmt(right.v);
     v.classList.remove('hl-hidden');
     v.classList.add('reveal');
+    if (window.Play && typeof right.v === 'number') Play.count(v, 0, right.v, 560, function (x) { return fmt(Math.round(x)); });
+    else v.textContent = fmt(right.v);
 
     // A tie goes to the player. Ratings especially collide constantly, and
     // losing a run to two albums you scored 84 would feel like a cheat.
@@ -30876,7 +30892,7 @@ window.renderAdminStats = renderAdminStats;
   }
 
   function paintHud() {
-    el('blitz-score').textContent = n(score);
+    if (window.Play) Play.roll(el('blitz-score'), score, n); else el('blitz-score').textContent = n(score);
     var m = Blitz.multFor(streak);
     var mel = el('blitz-mult');
     mel.textContent = '×' + (m % 1 ? m.toFixed(1) : m);
@@ -40104,4 +40120,5 @@ window.track = function (name, props) {
 <script src="/assets/replay.js?v=1"></script>
 <script src="/assets/you.js?v=2"></script>
 <script src="/assets/glow.js?v=1"></script>
+<script src="/assets/play.js?v=1"></script>
 </html>

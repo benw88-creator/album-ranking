@@ -1,0 +1,92 @@
+/* ================================================================
+   PLAY — one signature motion per minigame (assets/play.js does the
+   numbers). Transform and opacity only, `backwards` rather than `both`
+   on anything that also hovers (trap 12), and nothing here waits on.
+   ================================================================ */
+:root { --pl-spring: cubic-bezier(.34, 1.4, .64, 1); }
+
+/* ---- Odometer -------------------------------------------------------- */
+.pl-roll { display: inline-flex; align-items: flex-start; line-height: 1; font-variant-numeric: tabular-nums; vertical-align: baseline; }
+.pl-col { display: inline-block; height: 1em; overflow: hidden; }
+.pl-strip { display: block; transition: transform 640ms var(--pl-spring); will-change: transform; }
+.pl-strip b { display: block; height: 1em; line-height: 1em; font: inherit; }
+.pl-sep { display: inline-block; }
+
+/* ---- Split-flap year ------------------------------------------------- */
+.g-flipyear { font-size: 1.5em; vertical-align: middle; margin-left: 4px; }
+.pl-flip { display: inline-flex; gap: 4px; perspective: 420px; }
+.pl-card {
+  position: relative; display: inline-grid; place-items: center; width: 1.05em; height: 1.4em; border-radius: 7px;
+  font: 700 1em/1 var(--font-mono); color: #f4efe6;
+  background: linear-gradient(180deg, #2c2824 0 50%, #221f1b 50% 100%);
+  box-shadow: 0 6px 14px -6px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.07);
+  transform-origin: 50% 50%; backface-visibility: hidden;
+}
+.pl-card::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(0,0,0,.55); }
+.pl-card.pl-land { animation: plLand 360ms var(--pl-spring); color: var(--gold); }
+@keyframes plLand { 40% { transform: translateY(2px) scale(1.06); } }
+
+/* ---- Guess the Cover: the record slides out of the sleeve ----------- */
+#game .g-cover { position: relative; z-index: 1; }
+.g-vinyl {
+  position: absolute; z-index: 0; top: 6%; left: 18%; width: 88%; aspect-ratio: 1; border-radius: 50%; opacity: 0;
+  background:
+    radial-gradient(circle, var(--gold) 0 12%, #0c0b0a 12.5% 14%, transparent 14.5%),
+    repeating-radial-gradient(circle, #141312 0 2px, #1f1d1b 2px 3px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.7);
+  transition: transform 700ms var(--pl-spring), opacity 200ms ease;
+}
+.g-cover-wrap[data-game="cover"].correct .g-cover { transform: translateX(-30%) rotate(-3deg); }
+.g-cover-wrap[data-game="cover"].correct .g-vinyl { opacity: 1; transform: translateX(26%); animation: plSpin 2.4s linear 400ms infinite; }
+@keyframes plSpin { from { rotate: 0deg; } to { rotate: 1turn; } }
+
+/* ---- The middle square: the crop opens like an aperture ------------- */
+.g-cover-wrap[data-game="coverx"] .g-cover { transition: transform 900ms cubic-bezier(.22, 1.18, .36, 1); }
+#game .result-badge, #game .confetti { z-index: 3; }
+.g-cover-wrap[data-game="coverx"]:is(.correct, .wrong)::after {
+  content: ''; position: absolute; z-index: 2; left: 50%; top: 50%; width: 100%; aspect-ratio: 1; margin: -50% 0 0 -50%;
+  border-radius: 50%; pointer-events: none; box-shadow: 0 0 0 60vmax rgba(8,7,6,.85);
+  animation: plIris 900ms cubic-bezier(.22, 1, .36, 1) forwards;
+}
+@keyframes plIris { from { transform: scale(.14); } to { transform: scale(1.9); } }
+.g-cover-wrap[data-game="coverx"].wrong { animation: none; }
+
+/* ---- Tracklist: the list prints line by line, the sleeve drops in ---- */
+.g-tracklist.tl-in li { animation: plPrint 420ms cubic-bezier(.2, .8, .2, 1) backwards; }
+.g-tracklist.tl-in li:nth-child(2) { animation-delay: 70ms; } .g-tracklist.tl-in li:nth-child(3) { animation-delay: 140ms; }
+.g-tracklist.tl-in li:nth-child(4) { animation-delay: 210ms; } .g-tracklist.tl-in li:nth-child(5) { animation-delay: 280ms; }
+@keyframes plPrint { from { opacity: 0; transform: translateX(-10px); clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.g-cover-wrap[data-game="tracklist"]:is(.correct, .wrong) { animation: plDrop 620ms var(--pl-spring); }
+@keyframes plDrop { from { opacity: 0; transform: translateY(-24px) rotate(-4deg) scale(.92); } }
+
+/* ---- Earworm: only the newest row flips; keys pop; a win hops -------- */
+.ew-row:not(.fresh) .ew-cell.exact, .ew-row:not(.fresh) .ew-cell.present, .ew-row:not(.fresh) .ew-cell.absent { animation: none; }
+.ew-cell.typed { animation: plKey 170ms cubic-bezier(.2, .9, .3, 1.4); border-color: var(--text-dim); }
+@keyframes plKey { from { transform: scale(1.14); } }
+.ew-row.ew-win .ew-cell { animation: ewFlip .5s var(--ease) both, plHop 1.15s ease both; }
+@keyframes plHop { 0%, 55% { translate: 0 0; } 70% { translate: 0 -11px; } 84% { translate: 0 2px; } 100% { translate: 0 0; } }
+
+/* ---- Recall: the sleeve pulls into focus ----------------------------- */
+.rc-art.open img { animation: plFocus 1s cubic-bezier(.2, .8, .2, 1); }
+@keyframes plFocus { from { filter: blur(16px) saturate(.3) brightness(.55); transform: scale(1.14); } 60% { filter: blur(0) saturate(1.1); } }
+.rc-steps i.now { animation: plPip 1.6s ease-in-out infinite; }
+@keyframes plPip { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--rc, #ff4f9a) 22%, transparent); } }
+
+/* ---- Higher or Lower: the verdict lands on the number ----------------- */
+.hl-side.right-correct .hl-val { color: var(--green, #4fb477); text-shadow: 0 0 18px rgba(79,180,119,.5); transition: color 200ms ease 560ms, text-shadow 200ms ease 560ms; }
+
+/* ---- Cover Fire: sleeves are dealt, the right one flashes ------------- */
+.bl-grid .bl-pick { animation: plDeal 380ms cubic-bezier(.2, .9, .3, 1.15) backwards; }
+.bl-grid .bl-pick:nth-child(2) { animation-delay: 45ms; } .bl-grid .bl-pick:nth-child(3) { animation-delay: 90ms; } .bl-grid .bl-pick:nth-child(4) { animation-delay: 135ms; }
+@keyframes plDeal { from { opacity: 0; transform: translateY(14px) rotate(-3deg) scale(.94); } }
+.bl-pick.right { animation: plFlash 620ms ease-out; }
+@keyframes plFlash { from { box-shadow: 0 0 0 0 rgba(79,180,119,.7), 0 0 30px rgba(79,180,119,.6); } to { box-shadow: 0 0 0 16px rgba(79,180,119,0), 0 0 0 rgba(79,180,119,0); } }
+
+/* ---- Bid Wars: the chips counter is an odometer; a stake thumps ------ */
+.war-chips-num .pl-roll { font-size: inherit; }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) :is(.pl-strip, .g-vinyl, .g-cover-wrap .g-cover) { transition: none !important; }
+  html:not([data-motion="full"]) :is(.pl-card, .g-vinyl, .g-cover-wrap, .g-tracklist li, .ew-cell, .rc-art img, .rc-steps i, .bl-pick) { animation: none !important; }
+  html:not([data-motion="full"]) .g-cover-wrap::after { animation: none !important; transform: scale(1.9); }
+}

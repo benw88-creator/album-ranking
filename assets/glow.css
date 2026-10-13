@@ -175,3 +175,9 @@
 .hub-tabs button { flex: none !important; white-space: nowrap; }
 .hub-tabs .hub-act { color: var(--text-faint); }
 .hub-tabs[hidden] { display: none !important; }
+/* Narrow phones: wrap into a tidy grid instead of scrolling tabs off-screen —
+   a tab you have to discover by swiping is a tab nobody finds. */
+@media (max-width: 520px) {
+  .hub-tabs { flex-wrap: wrap; overflow: visible; gap: 4px; }
+  .hub-tabs button { flex: 1 1 30% !important; min-width: 0; padding-inline: 6px; font-size: 12.5px; }
+}
