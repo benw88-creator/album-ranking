@@ -6004,3 +6004,28 @@ and key repeat are ignored. `scripts/tests/recall.spec.mjs` covers it.
 - `scripts/serve.mjs` takes `PORT`. Port 4173 is often occupied by another local
   project on this machine, and the Playwright config's `reuseExistingServer`
   would then run the whole suite against the wrong app without complaint.
+
+## The Shop is a page, and Records leads with the shelf
+
+`assets/store.css`, loaded last.
+
+- **The Shop modal is gone.** `#shop-list`, `#shop-balance-val` and the catalogue
+  live on `view-rewards` now: a balance hero (`paintShopHero`, `#rw-hero`, which also
+  carries the 2× countdown, freezes held and album picks), Daily, Boosts
+  (`#store-feat`), Spin, then the Catalogue with category tabs (`#store-cats`,
+  `_shopCat`). `openShop()` just goes to the page. This also resolves the old
+  "two things called Shop" note. Every buy and equip path is unchanged —
+  `doBuy`, `buyCosmetic`, `buyTheme`, `buyBanner`, `buyBoost` — and the handlers
+  query the whole view, because boosts are no longer inside the list.
+- **Cards preview the real thing**: themes as a tiny app in their colours, flair on
+  the real `fl-*` class with your username, frames on the real `pa-wrap fr-*`.
+  The deal-in animation runs only when the category changes (`st-enter`), never on
+  a purchase re-render.
+- **Records (`view-collection`, Yours)** opens on a portrait of the shelf: net worth,
+  rated share, your average, collecting since, a value-share bar of the six biggest
+  records, and three tiles — most valuable, held longest, grown on you — all read
+  from the collection rows and your ratings. Cards are sleeve-first. Standings gets
+  a podium for the top three. The header line is blank on Yours because the hero
+  already says it.
+- `.col-grid > *` has a taller `contain-intrinsic-size` in `store.css` to match the
+  new cards; the old 96px hint made the scrollbar jump as skipped cards rendered.

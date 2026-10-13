@@ -77,7 +77,7 @@
       ((tm.genreSimilarity != null || tm.eraSimilarity != null) ? '<div class="tm2-ctx">' +
         (tm.genreSimilarity != null ? '<span><b>' + tm.genreSimilarity + '%</b> genre overlap</span>' : '') +
         (tm.eraSimilarity != null ? '<span><b>' + tm.eraSimilarity + '%</b> era overlap</span>' : '') +
-        '<em>Context only, not part of the match.</em></div>' : '');
+        '<em>Not part of the score.</em></div>' : '');
     if (tm.overlaps && tm.overlaps.length) html += '<div class="tm2-sub">Where you meet</div>' + pairRows(tm.overlaps, 'you-them');
     if (tm.surprise) html += '<div class="tm2-sub">A surprise</div><p class="tm2-note">You both love a ' + esc(tm.surprise.genre) + ' record, and neither of you usually rates much ' + esc(tm.surprise.genre) + '.</p>' + pairRows([tm.surprise], 'you-them');
     html += '<div data-tm2-gems></div>';
@@ -136,7 +136,7 @@
       '<div class="dp-card"><div class="dp-id"><span class="dp-kicker">How you listen</span><h3>' + esc(d.identity.name) + '</h3><p>' + esc(d.identity.line) + '</p>' +
       (d.identity.because ? '<p class="dp-because">' + esc(d.identity.because) + '.</p>' : '') + '</div>' +
       '<div class="dp-radar">' + radar(d) + '</div><div class="dp-dims">' + rows + '</div>' +
-      '<p class="dp-foot">Each measure is a ratio, so rating more of the same never raises it. Scores are rounded to fives.</p></div>';
+      '</div>';
   }
   function depthTile() {
     var d = depthNow(), top = Object.keys(d.dims).sort(function (a, b) { return d.dims[b].score - d.dims[a].score; })[0];
@@ -154,7 +154,7 @@
     var covers = Object.keys(A).map(function (id) { return A[id]; }).sort(function (a, b) { return (b.score || 0) - (a.score || 0); }).slice(0, 5).map(function (a) { return a.art; }).filter(Boolean);
     return '<div class="prof-section-title">About you</div><button class="ab-teaser" data-go-about>' +
       '<span class="ab-teaser-covers">' + covers.map(function (u, i) { return '<img src="' + esc(th(u, 160)) + '" alt="" style="--i:' + i + '">'; }).join('') + '</span>' +
-      '<span class="ab-teaser-t"><b>' + (k >= 10 ? 'Your taste, read from your ratings' : 'Rate ' + (10 - k) + ' more albums to unlock this') + '</b><small>Patterns, contradictions and changes, each with the numbers behind it.</small></span><span class="ab-teaser-go">→</span></button>';
+      '<span class="ab-teaser-t"><b>' + (k >= 10 ? 'What your ratings say about you' : 'Rate ' + (10 - k) + ' more albums to unlock') + '</b></span><span class="ab-teaser-go">→</span></button>';
   }
   function visual(v) {
     if (!v) return '';
@@ -205,7 +205,7 @@
         return '<div class="dp-dim' + (dim ? '' : ' off') + '"><div class="dp-dim-top"><b>' + x.label + '</b><span>' + (dim ? dim.score : '—') + '</span></div><i><em style="width:' + (dim ? dim.score : 0) + '%"></em></i><small>' + esc(dim ? dim.evidence : x.q) + '</small></div>';
       }).join('') + '</div></section>' +
       '<div class="ab-grid">' + cards + '</div>' +
-      '<p class="ab-foot">Private to you. Every line above comes from your own ratings' + (r.list.some(function (x) { return /played|play them/.test(x.headline); }) ? ' and imported listening' : '') + '; where the data is too thin, the line is left out rather than guessed.</p>';
+      '<p class="ab-foot">Only you can see this.</p>';
   }
 
   /* ================================================================

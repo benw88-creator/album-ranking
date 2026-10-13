@@ -9581,6 +9581,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/replay.css?v=1">
 <link rel="stylesheet" href="/assets/you.css?v=1">
 <link rel="stylesheet" href="/assets/games.css?v=1">
+<link rel="stylesheet" href="/assets/store.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -10302,8 +10303,7 @@ window.discAmt = function (n) {
     <div class="section-head" style="margin-top:30px;"><h2>This week</h2></div>
     <div class="ln-week" id="ln-week"></div>
 
-    <div class="section-head" style="margin-top:30px;"><h2>The year</h2>
-      <span class="muted">Every day, coloured by how it sounded</span></div>
+    <div class="section-head" style="margin-top:30px;"><h2>The year</h2></div>
     <div class="ln-year-wrap" id="ln-year"></div>
     <div class="ln-legend" id="ln-legend"></div>
 
@@ -10513,7 +10513,7 @@ window.discAmt = function (n) {
       </button>
     </header>
     <div class="games-grid arcade" id="games-grid">
-      <h3 class="arc-label"><span>Featured</span><small>The two to start with</small></h3>
+      <h3 class="arc-label"><span>Featured</span></h3>
       <div class="game-card gc-feature" id="recall-card">
         <div class="gc-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="gc-emoji" data-icon="wave"></div>
@@ -10530,7 +10530,7 @@ window.discAmt = function (n) {
         <div class="gc-go">Challenge someone &rarr;</div>
       </div>
 
-      <h3 class="arc-label"><span>Daily</span><small>Same for everybody, once a day</small></h3>
+      <h3 class="arc-label"><span>Daily</span></h3>
       <div class="game-card" id="drop-card">
         <div class="gc-art" aria-hidden="true"></div>
         <div class="gc-emoji" data-icon="disc"></div>
@@ -10548,7 +10548,7 @@ window.discAmt = function (n) {
         <div class="gc-best" id="ew-card-status"></div>
       </div>
 
-      <h3 class="arc-label"><span>Quick play</span><small>An artist, your crate, or a mate</small></h3>
+      <h3 class="arc-label"><span>Quick play</span></h3>
       <div class="game-card" id="blitz-card">
         <div class="gc-art" aria-hidden="true"><i></i><i></i><i></i></div>
         <div class="gc-emoji" data-icon="pistol"></div>
@@ -10645,7 +10645,9 @@ window.discAmt = function (n) {
        nothing and walks into the `views` map trap in setMode. -->
   <section id="view-rewards" class="view" style="display:none;">
     <div class="section-head"><h2><span data-icon="disc"></span> Shop</h2><span class="muted" id="rw-streak"></span></div>
+    <div id="rw-hero"></div>
     <div id="rewards-body"></div>
+    <div id="store-feat" class="store-feat" style="display:none;"></div>
 
     <!-- The Draw. A sibling of #rewards-body rather than content inside it,
          because renderRewards() replaces that element's innerHTML and the reel
@@ -10693,6 +10695,13 @@ window.discAmt = function (n) {
       </details>
     </div>
     </div>
+    <!-- The catalogue. It lived in a 520px modal of collapsed lists; it is the
+         page now. renderShop() owns #store-cats, #shop-list and #store-feat. -->
+    <div id="store" class="store" style="display:none;">
+      <h3 class="st-label">Catalogue</h3>
+      <div class="st-cats" id="store-cats" role="tablist" aria-label="Shop sections"></div>
+      <div class="shop-list st-grid" id="shop-list"></div>
+    </div>
   </section>
 
   <!-- ============================ ACHIEVEMENTS ============================ -->
@@ -10709,7 +10718,6 @@ window.discAmt = function (n) {
   <section id="view-profile" class="view" style="display:none;">
     <div id="profile-body"></div>
     <div class="section-head" style="margin-top:34px;"><h2>Your Music Lore</h2><span class="muted" id="lore-count"></span></div>
-    <p class="reco-note">Everything you&rsquo;ve said about your records.</p>
     <div id="lore-list"></div>
     <div id="listening-import"></div>
     <div id="admin-stats"></div>
@@ -10749,7 +10757,6 @@ window.discAmt = function (n) {
 
   <section id="view-grooves" class="view" style="display:none;">
     <div class="section-head"><h2><span data-icon="groove"></span> Grooves</h2><button class="btn-primary" id="groove-create-btn" style="margin-left:auto;">+ New Groove</button></div>
-    <p class="reco-note">Groups for you and your mates.</p>
     <div id="groove-invites"></div>
     <div id="groove-list"></div>
   </section>
@@ -11228,21 +11235,6 @@ window.discAmt = function (n) {
 
 <div class="today-info-pop" id="today-info-modal"><p id="today-info-text"></p></div>
 
-<div class="modal" id="shop-modal">
-  <div class="modal-panel" style="max-width:520px;">
-    <button class="modal-close" id="shop-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji" data-icon="disc"></span>
-      <div><h2>Disc Shop</h2></div></div>
-    <div class="shop-balance">
-      <span class="shop-balance-label">Balance</span>
-      <span class="shop-balance-val" id="shop-balance-val">0</span>
-    </div>
-    <div class="shop-list" id="shop-list"></div>
-    <!-- Motion moved to Settings. It was here only because the Shop was the
-         one modal that existed, which made a display preference look like
-         something you might have to buy. -->
-  </div>
-</div>
 
 <!-- ============================ SETTINGS ============================
      Everything that is a preference rather than a thing you own. Opened from
@@ -15610,7 +15602,7 @@ function renderCompletionistAchievements(){
     g.rated.push(a);
   });
   const artists=Object.values(byArtist);
-  if(!artists.length){el.innerHTML='<p class="reco-note">No artists yet \u2014 rate an album to start a Completionist track.</p>';return;}
+  if(!artists.length){el.innerHTML='<p class="reco-note">Rate an album to start tracking an artist.</p>';return;}
   const claimed=loadClaimed();
 
   // Known progress first, highest first; then unknown, most-rated first,
@@ -17871,7 +17863,7 @@ async function drawProfile(host,prof,isOwner,profileTok){
           '<div class="reco-note">'+esc(prof.username)+' has set their rankings to private.</div>':
           prof.ratings_visibility==='friends'?
           '<div class="reco-note">'+esc(prof.username)+'\u2019s rankings are friends-only \u2014 you both need to follow each other.</div>':
-          '<div class="reco-note">No rankings visible yet \u2014 '+esc(prof.username)+' may not have synced their ratings. Ask them to log out and back in.</div>')):'');
+          '<div class="reco-note">No rankings yet.</div>')):'');
 
   if(taste&&window.YouUI)YouUI.enhanceTaste(host,taste);
   if(taste&&taste.unheard&&taste.unheard.length){
@@ -19684,7 +19676,7 @@ window.handleGrooveLink=handleGrooveLink;
   async function renderTrending(){
     if(!trendingEl||!window.Cloud)return;
     const trending=await Cloud.fetchTrending();
-    if(!trending.length){trendingEl.innerHTML='<div class="reco-note">Nothing yet — start rating!</div>';return;}
+    if(!trending.length){trendingEl.innerHTML='<div class="reco-note">Nothing yet.</div>';return;}
     trendingEl.innerHTML=trending.map(function(a){
       const col=albumColor(a.avg);
       return'<div class="crate-trending-row" data-open-trending="'+esc(JSON.stringify({id:a.id,name:a.name,art:a.art,artist:a.artist}))+'">'+
@@ -19801,7 +19793,7 @@ window.handleGrooveLink=handleGrooveLink;
 
     // render ratings
     if(!ratings.length){
-      document.getElementById('ap-ratings-list').innerHTML='<div class="reco-note">No VINALL ratings yet — be the first!</div>';
+      document.getElementById('ap-ratings-list').innerHTML='<div class="reco-note">No ratings yet.</div>';
     } else {
       const avg=Math.round(ratings.reduce(function(s,r){return s+(r.score||0);},0)/ratings.length);
       const avgEl=document.getElementById('ap-avg-score');
@@ -21472,6 +21464,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (left <= 0 && _boostTick) {
       clearInterval(_boostTick); _boostTick = null;
       if (document.querySelector('[data-boost-left]') && typeof renderShop === 'function') renderShop();
+      if (window.paintShopHero) paintShopHero();
     }
   }
 
@@ -21961,16 +21954,22 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     // Keys used to be short literals from THEMES/BANNERS, so this stays escaped
     // into the attribute like any other untrusted-shaped value.
     const k = window.esc ? esc(key) : key;
-    if (active) action = '<button class="btn-mini" disabled>Equipped</button>';
+    const short = !owned && !get().is_admin && get().discs < item.cost;
+    if (active) action = '<button class="btn-mini si-on" disabled>Equipped</button>';
     else if (owned) action = '<button class="btn-mini" data-equip-' + kind + '="' + k + '">Equip</button>';
-    else action = '<button class="btn-primary" style="padding:9px 16px;font-size:13px;" data-buy-' + kind + '="' + k + '" ' + ((get().discs < item.cost && !get().is_admin) ? 'disabled' : '') + '>Buy</button>';
-    return '<div class="shop-item" data-row="' + kind + ':' + k + '">' +
+    else action = '<button class="btn-primary" style="padding:9px 16px;font-size:13px;" data-buy-' + kind + '="' + k + '" ' + (short ? 'disabled title="' + (item.cost - get().discs).toLocaleString('en-GB') + ' Discs short"' : '') + '>Buy</button>';
+    // Owned things stop showing a price: what you paid is not what the card is about.
+    const price = owned && kind !== 'boost'
+      ? (key === 'none' ? '' : '<span class="si-own">' + (active ? 'In use' : 'Owned') + '</span>')
+      : (get().is_admin ? 'Free (Admin)' : (item.cost === 0 ? 'Free' : discAmt(item.cost)));
+    return '<div class="shop-item' + (owned ? ' is-owned' : '') + (active ? ' is-active' : '') + (short ? ' is-short' : '') +
+      '" data-kind="' + kind + '" data-row="' + kind + ':' + k + '">' +
       '<div class="shop-swatch' + (swatchClass ? ' ' + swatchClass : '') +
         '" style="background:' + swatchBg + '">' + (swatchHtml || '') + '</div>' +
       '<div class="shop-item-info">' +
-        '<div class="shop-item-name">' + item.name + (active ? ' ✓' : '') + '</div>' +
+        '<div class="shop-item-name">' + item.name + '</div>' +
         (item.desc ? '<div class="shop-item-desc">' + item.desc + '</div>' : '') +
-        '<div class="shop-item-cost">' + (get().is_admin ? 'Free (Admin)' : (item.cost === 0 ? 'Free' : discAmt(item.cost))) +
+        '<div class="shop-item-cost">' + price +
           (item.status ? ' <span class="shop-item-status">' + item.status + '</span>' : '') + '</div>' +
       '</div>' + action + '</div>';
   }
@@ -22021,8 +22020,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (!_pricesOnce) _pricesOnce = loadPrices();
     await _pricesOnce;
     const w = get();
-    document.getElementById('shop-balance-val').textContent = w.is_admin ? ('∞ ' + (w.discs || 0)) : w.discs;
     const list = document.getElementById('shop-list');
+    const feat = document.getElementById('store-feat');
+    if (!list) return;
+    if (window.paintShopHero) paintShopHero();
 
     /* Which sections were open, and how far down the panel you were.
 
@@ -22032,14 +22033,12 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        The open set and the scroll position are read here and put back at the
        end. Restoring them is not the same as never re-rendering: the row still
        has to redraw to show Equipped instead of Buy. */
-    const wasOpen = {};
-    list.querySelectorAll('details.shop-sec[open] > summary .shop-section-title')
-      .forEach(function (t) { wasOpen[t.textContent] = true; });
-    const panel = list.closest('.modal-panel');
-    const wasScroll = panel ? panel.scrollTop : 0;
+    const wasY = window.scrollY;
 
+    // A theme card is a tiny app in that theme's colours, not a gradient chip.
     const themeRows = Object.keys(THEMES).map(function (key) {
-      return shopItemRow('theme', key, THEMES[key], SWATCH[key], w.is_admin || w.owned_themes.indexOf(key) !== -1, w.active_theme === key);
+      return shopItemRow('theme', key, THEMES[key], SWATCH[key], w.is_admin || w.owned_themes.indexOf(key) !== -1, w.active_theme === key,
+        'sw-theme', '<span class="sw-th"><i></i><i></i><i></i><b></b></span>');
     }).join('');
     const bannerRows = Object.keys(BANNERS).map(function (key) {
       const owned = w.is_admin || key === 'none' || w.owned_banners.indexOf(key) !== -1;
@@ -22056,6 +22055,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        differ only in which array holds ownership and what the swatch looks
        like — and a 'none' row first, so equipping nothing stays reachable and
        the first tag you buy is not permanent. */
+    function myName() {
+      try { var p = window.Cloud && Cloud.getProfile && Cloud.getProfile(); if (p && p.username) return p.username; } catch (e) {}
+      return 'Your name';
+    }
     function cosmeticRows(kind, map, swatches, swatchClass) {
       const ownedList = w[OWN_KEY[kind]] || [];
       const activeKey = w[ACT_KEY[kind]] || 'none';
@@ -22073,14 +22076,16 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
                            activeKey === key, swatchClass,
                            // A tag's swatch is the tag: the same chip that
                            // ends up on the profile, at swatch size.
-                           kind === 'tag' && window.tagChipHtml
-                             ? tagChipHtml(key, map[key]) : '');
+                           kind === 'tag' && window.tagChipHtml ? tagChipHtml(key, map[key])
+                           // Flair and frames preview on the real classes the profile uses.
+                           : kind === 'flair' ? '<span class="sw-word fl-' + key + '">' + esc(myName()) + '</span>'
+                           : kind === 'frame' ? '<span class="pa-wrap fr-' + key + '"><i class="sw-av"></i></span>' : '');
       }).join('');
     }
 
     const tagRows   = cosmeticRows('tag',   TAGS,   null,          'sw-tag');
-    const flairRows = cosmeticRows('flair', FLAIRS, FLAIR_SWATCH, 'sw-flair');
-    const frameRows = cosmeticRows('frame', FRAMES, FRAME_SWATCH, 'sw-frame');
+    const flairRows = cosmeticRows('flair', FLAIRS, null, 'sw-flair');
+    const frameRows = cosmeticRows('frame', FRAMES, null, 'sw-frame');
 
     /* Boosts, which are bought and never owned. The button says Buy every
        time, and how many you already hold is on the row — an item you can buy
@@ -22095,7 +22100,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       }
       const live = key === 'double' && boostLeft() > 0;
       if (live) def.status = '<span class="boost-live" data-boost-left>' + fmtLeft(boostLeft()) + ' left</span>';
-      let row = shopItemRow('boost', key, def, BOOST_SWATCH[key], false, false, live ? 'boost-on' : '', key === 'double' ? '<b class="boost-x">2×</b>' : '');
+      let row = shopItemRow('boost', key, def, BOOST_SWATCH[key], false, false, 'sw-boost' + (live ? ' boost-on' : ''),
+        key === 'double' ? '<b class="boost-x">2×</b>' : '<b class="boost-x boost-ice">' + (w.streak_freezes || 0) + '</b>');
       if (live) row = row.replace(/<button class="btn-primary"[^>]*>Buy<\/button>/, '<button class="btn-mini" disabled>Running</button>');
       return row;
     }).join('');
@@ -22112,33 +22118,39 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        Which one is open is not remembered between opens, deliberately: it is a
        shop, and it should reset to its front window rather than to wherever
        you were rummaging last time. */
-    function sec(title, rows, count) {
-      return '<details class="shop-sec"' + (wasOpen[title] ? ' open' : '') + '>' +
-        '<summary><span class="shop-section-title">' + title + '</span>' +
-        '<span class="ss-n">' + count + '</span></summary>' + rows + '</details>';
-    }
-    /* SUGGEST A TAG sits at the TOP of the Tags section, above the thirty
-       rows rather than under them. The point of it is the record that is NOT
-       in the list, and a control for "the one you cannot find" underneath
-       thirty you can find is a control nobody reaches.
-
-       It opens the shared suggestions sheet in tag mode, where typing filters
-       the list so "see what other users are suggesting under TRAVIS" works
-       before anything is pressed. Nothing here pays Discs and nothing about
-       the Shop's own economy is touched. */
     const suggestRow =
       '<button class="shop-suggest" id="shop-suggest-tag" type="button">' +
         '<span class="ss-plus" aria-hidden="true">+</span>' +
         '<span><b>Suggest a tag</b><small>Not here? Put one forward.</small></span>' +
       '</button>';
 
-    list.innerHTML =
-      sec('Tags', suggestRow + tagRows, Object.keys(TAGS).length) +
-      sec('Name flair', flairRows, Object.keys(FLAIRS).length) +
-      sec('Avatar frames', frameRows, Object.keys(FRAMES).length) +
-      sec('Boosts', boostRows, Object.keys(BOOSTS).length) +
-      sec('Themes', themeRows, Object.keys(THEMES).length) +
-      sec('Profile banners', bannerRows, Object.keys(BANNERS).length);
+    function ownedN(map, arr) {
+      return Object.keys(map).filter(function (k) { return k !== 'none' && (w.is_admin || map[k].cost === 0 || (arr || []).indexOf(k) !== -1); }).length;
+    }
+    const CATS = [
+      { k: 'themes',  label: 'Themes',  rows: themeRows,            have: ownedN(THEMES, w.owned_themes),   of: Object.keys(THEMES).length },
+      { k: 'tags',    label: 'Tags',    rows: suggestRow + tagRows, have: ownedN(TAGS, w.owned_tags),       of: Object.keys(TAGS).length },
+      { k: 'flair',   label: 'Flair',   rows: flairRows,            have: ownedN(FLAIRS, w.owned_flairs),   of: Object.keys(FLAIRS).length },
+      { k: 'frames',  label: 'Frames',  rows: frameRows,            have: ownedN(FRAMES, w.owned_frames),   of: Object.keys(FRAMES).length },
+      { k: 'banners', label: 'Banners', rows: bannerRows,           have: ownedN(BANNERS, w.owned_banners), of: Object.keys(BANNERS).length - 1 },
+    ];
+    if (!CATS.some(function (c) { return c.k === _shopCat; })) _shopCat = 'themes';
+    const cats = document.getElementById('store-cats');
+    if (cats) {
+      cats.innerHTML = CATS.map(function (c) {
+        return '<button role="tab" data-store-cat="' + c.k + '" aria-selected="' + (c.k === _shopCat) + '">' + c.label +
+          '<em>' + c.have + '/' + c.of + '</em></button>';
+      }).join('');
+      cats.querySelectorAll('[data-store-cat]').forEach(function (b) {
+        b.addEventListener('click', function () { if (_shopCat === b.dataset.storeCat) return; _shopCat = b.dataset.storeCat; renderShop(); });
+      });
+    }
+    const switched = list.dataset.cat !== _shopCat;
+    list.dataset.cat = _shopCat;
+    list.classList.toggle('st-enter', switched);
+    list.innerHTML = CATS.filter(function (c) { return c.k === _shopCat; })[0].rows;
+    if (feat) feat.innerHTML = '<h3 class="st-label">Boosts</h3><div class="st-feat-grid">' + boostRows + '</div>';
+    const root = document.getElementById('view-rewards') || list;
 
     const sg = document.getElementById('shop-suggest-tag');
     if (sg) sg.addEventListener('click', function () {
@@ -22163,6 +22175,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         if (after) await after();
         await stampBought(row);
         renderShop();
+        if (window.paintShopHero) paintShopHero();
         if (typeof window.renderStats === 'function') window.renderStats();
       });
     }
@@ -22171,56 +22184,47 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     // the attribute name — six near-identical blocks was the alternative.
     ['tag', 'flair', 'frame'].forEach(function (kind) {
       const Kind = kind.charAt(0).toUpperCase() + kind.slice(1);
-      list.querySelectorAll('[data-buy-' + kind + ']').forEach(function (b) {
+      root.querySelectorAll('[data-buy-' + kind + ']').forEach(function (b) {
         const key = b.dataset['buy' + Kind];
         doBuy(b, function () { return buyCosmetic(kind, key); },
                  function () { return equipCosmetic(kind, key); });
       });
-      list.querySelectorAll('[data-equip-' + kind + ']').forEach(function (b) {
+      root.querySelectorAll('[data-equip-' + kind + ']').forEach(function (b) {
         b.addEventListener('click', async function () {
           await equipCosmetic(kind, b.dataset['equip' + Kind]);
           renderShop();
         });
       });
     });
-    list.querySelectorAll('[data-buy-boost]').forEach(function (b) {
+    root.querySelectorAll('[data-buy-boost]').forEach(function (b) {
       const key = b.dataset.buyBoost;
       doBuy(b, function () { return buyBoost(key); });
     });
-    list.querySelectorAll('[data-buy-theme]').forEach(function (b) {
+    root.querySelectorAll('[data-buy-theme]').forEach(function (b) {
       const key = b.dataset.buyTheme;
       doBuy(b, function () { return buyTheme(key); }, function () { return equipTheme(key); });
     });
-    list.querySelectorAll('[data-equip-theme]').forEach(function (b) {
+    root.querySelectorAll('[data-equip-theme]').forEach(function (b) {
       b.addEventListener('click', async function () { await equipTheme(b.dataset.equipTheme); renderShop(); });
     });
-    list.querySelectorAll('[data-buy-banner]').forEach(function (b) {
+    root.querySelectorAll('[data-buy-banner]').forEach(function (b) {
       const key = b.dataset.buyBanner;
       doBuy(b, function () { return buyBanner(key); }, function () { return equipBanner(key); });
     });
-    list.querySelectorAll('[data-equip-banner]').forEach(function (b) {
+    root.querySelectorAll('[data-equip-banner]').forEach(function (b) {
       b.addEventListener('click', async function () { await equipBanner(b.dataset.equipBanner); renderShop(); });
     });
 
     // Put the view back. After the sections have been re-created, so the panel
     // has its full height again and the scroll value is not clamped to a
     // collapsed list.
-    if (panel) panel.scrollTop = wasScroll;
+    if (Math.abs(window.scrollY - wasY) > 2) window.scrollTo(0, wasY);
   }
+  var _shopCat = 'themes';
+  window.renderShop = renderShop;
 
   window.openShop = function () {
-    /* The Shop needs an account now. It used to open for guests purely so they
-       could reach the Motion setting at the bottom — that setting lives in
-       Settings, which opens for anybody, so the Shop can go back to being a
-       shop. */
-    const signedIn = !!(window.Cloud && Cloud.isOn && Cloud.isOn());
-    if (signedIn) renderShop();
-    else {
-      document.getElementById('shop-balance-val').textContent = '0';
-      document.getElementById('shop-list').innerHTML =
-        '<div class="reco-note" style="font-size:13px;">Log in to earn Discs and buy themes.</div>';
-    }
-    document.getElementById('shop-modal').classList.add('open');
+    if (window.goToView) goToView('rewards');
   };
   // This script sits at the very end of <body>, so every element above it
   // (including the shop modal) is already in the DOM — wire directly.
@@ -28119,7 +28123,8 @@ window.renderAdminStats = renderAdminStats;
   function paintHeader() {
     var h = el('col-worth');
     if (!h) return;
-    if (!on()) { h.textContent = ''; return; }
+    // On Yours the shelf hero says all of this, larger.
+    if (!on() || tab === 'mine') { h.textContent = ''; return; }
     var w = worthOf(_mine);
     // Album picks ride along in the header rather than only in the Market,
     // because a Mythic won on the Draw tab is otherwise invisible from every
@@ -28292,6 +28297,7 @@ window.renderAdminStats = renderAdminStats;
     });
     // Search belongs to the Market and nowhere else.
     el('col-search').style.display = (tab === 'market') ? '' : 'none';
+    paintHeader();
 
     body.style.display = '';
 
@@ -28389,9 +28395,8 @@ window.renderAdminStats = renderAdminStats;
         (picks > 0
           ? '<div class="col-picks-box"><b>' + picks + ' album pick' + (picks === 1 ? '' : 's') + '</b></div>'
           : '') +
-        '<p class="reco-note">' +
-        'You hold ' + (admin ? '∞' : discAmt(discs)) + '.' +
-        (_results ? ' <a href="#" id="col-clear">Back to the crate</a>' : '') + '</p>' +
+        '<div class="rc-market-head"><span class="rw-chip">You hold <b>' + (admin ? '∞' : discAmt(discs)) + '</b></span>' +
+        (_results ? '<a href="#" id="col-clear">Back to the market</a>' : '') + '</div>' +
         '<div class="col-grid">' + items.map(function (a) {
           var isOwned = own.has(a);
           return card(a, {
@@ -28439,12 +28444,22 @@ window.renderAdminStats = renderAdminStats;
       return _boardBy === 'owned' ? (b.owned - a.owned) || (b.net_worth - a.net_worth)
                                   : (b.net_worth - a.net_worth) || (b.owned - a.owned);
     });
+    var av = function (x) { return esc(window.avatarSrc ? avatarSrc(x.avatar_url) : (x.avatar_url || '')); };
+    var val = function (x) { return _boardBy === 'owned' ? x.owned + ' records' : n(x.net_worth); };
+    var pod = sorted.length >= 3 ? [1, 0, 2].map(function (i) {
+      var x = sorted[i];
+      return '<div class="rc-pod p' + (i + 1) + (x.user_id === meId ? ' me' : '') + '">' +
+        '<img src="' + av(x) + '" alt=""><b>' + esc(x.username) + '</b><span>' + val(x) + '</span>' +
+        '<i>' + (i + 1) + '</i></div>';
+    }).join('') : '';
     body.innerHTML =
       '<div class="col-sorts board-sorts">' +
         '<button class="col-sort' + (_boardBy === 'worth' ? ' active' : '') + '" data-board="worth">Net worth</button>' +
         '<button class="col-sort' + (_boardBy === 'owned' ? ' active' : '') + '" data-board="owned">Records</button>' +
       '</div>' +
+      (pod ? '<div class="rc-podium">' + pod + '</div>' : '') +
       '<div class="col-board">' + sorted.map(function (x, i) {
+      if (pod && i < 3) return '';
       return '<div class="cb-row' + (x.user_id === meId ? ' me' : '') + '">' +
         '<span class="cb-rank">' + (i + 1) + '</span>' +
         '<img src="' + esc(window.avatarSrc ? avatarSrc(x.avatar_url) : (x.avatar_url || '')) + '" alt="">' +
@@ -28472,13 +28487,7 @@ window.renderAdminStats = renderAdminStats;
        orders a person actually walks their records in: what they have had
        longest, what they think most of, and what has grown on them. */
     var sorted = sortShelf(mine.slice());
-    body.innerHTML =
-      '<div class="col-worth-box"><div class="cw-v">' + n(w) + '</div>' +
-      '<div class="cw-k">Net worth</div>' +
-      '<div class="cw-s">' + mine.length + ' record' + (mine.length === 1 ? '' : 's') +
-      // loadMine() comes back price-descending, so mine[0] is the best record
-      // on the shelf whatever order the cards are currently in.
-      ' · best is ' + esc((mine[0] && mine[0].name) || '') + '</div></div>' +
+    body.innerHTML = shelfHero(mine, w) +
       '<div class="col-sorts">' + SHELF_SORTS.map(function (o) {
         return '<button class="col-sort' + (o.k === _shelfSort ? ' active' : '') + '" data-shelf-sort="' + o.k + '">' + o.label + '</button>';
       }).join('') + '</div>' +
@@ -28486,7 +28495,71 @@ window.renderAdminStats = renderAdminStats;
     wire(body);
   }
 
+  /* Everything here is read off the collection rows and your own ratings —
+     the same two sources the cards already use. Nothing is estimated. */
+  var SEG = ['var(--c-cyan)', 'var(--c-violet)', 'var(--c-pink)', 'var(--c-lime)', 'var(--c-blue)', 'var(--gold)'];
+  function shelfHero(mine, w) {
+    try { return shelfHeroInner(mine, w); } catch (e) { return ''; }
+  }
+  function monthYear(t) { return new Date(t).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }); }
+  function shelfHeroInner(mine, w) {
+    var byValue = mine.slice().sort(function (a, b) { return (b.price || 0) - (a.price || 0); });
+    var rated = 0, sum = 0, oldest = null, grown = null, unrated = 0;
+    mine.forEach(function (a) {
+      var r = myRec(a.album_id);
+      if (r && typeof r.score === 'number') {
+        rated++; sum += r.score;
+        var mv = window.scoreMove ? scoreMove(r) : null;
+        if (mv && mv.delta > 0 && (!grown || mv.delta > grown.mv.delta)) grown = { a: a, mv: mv };
+      } else unrated++;
+      var t = a.bought_at ? Date.parse(a.bought_at) : NaN;
+      if (!isNaN(t) && (!oldest || t < oldest.t)) oldest = { t: t, a: a };
+    });
+    var thumbOf = function (a) { return '<img src="' + esc(window.thumb ? thumb(a.art, 160) : (a.art || '')) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'; };
+    // The fan: your five most valuable sleeves, leaning on each other.
+    var fan = byValue.slice(0, 5).map(function (a, i) { return '<span style="--i:' + i + '">' + thumbOf(a) + '</span>'; }).join('');
+    var facts = '<span><b>' + mine.length + '</b> record' + (mine.length === 1 ? '' : 's') + '</span>' +
+      '<span><b>' + rated + '</b> of them rated</span>' +
+      (rated ? '<span>your average <b>' + Math.round(sum / rated) + '</b></span>' : '') +
+      (oldest ? '<span>collecting since <b>' + monthYear(oldest.t) + '</b></span>' : '');
+    // Where the value sits. Six biggest records, the rest as one grey run.
+    var bar = '', legend = '';
+    if (w > 0 && mine.length > 1) {
+      var top = byValue.slice(0, 6), restV = w - top.reduce(function (t, a) { return t + (a.price || 0); }, 0);
+      bar = top.map(function (a, i) {
+        var pc = (a.price || 0) / w * 100;
+        return pc > 0 ? '<i style="--w:' + pc.toFixed(2) + '%;--c:' + SEG[i] + '" title="' + esc(a.name) + ' · ' + Math.round(pc) + '%"></i>' : '';
+      }).join('') + (restV > 0 ? '<i class="rest" style="--w:' + (restV / w * 100).toFixed(2) + '%" title="Everything else"></i>' : '');
+      legend = top.slice(0, 3).map(function (a, i) {
+        return '<span><em style="background:' + SEG[i] + '"></em>' + esc(a.name) + ' <b>' + Math.round((a.price || 0) / w * 100) + '%</b></span>';
+      }).join('');
+    }
+    var tile = function (k, a, line) {
+      return '<button class="rc-tile" data-open-rec="' + esc(a.album_id) + '">' + thumbOf(a) +
+        '<span><small>' + k + '</small><b>' + esc(a.name) + '</b><em>' + line + '</em></span></button>';
+    };
+    var tiles = (byValue[0] ? tile('Most valuable', byValue[0], discAmt(byValue[0].price || 0)) : '') +
+      (oldest && mine.length > 1 ? tile('Held longest', oldest.a, 'since ' + monthYear(oldest.t)) : '') +
+      (grown ? tile('Grown on you', grown.a, '&uarr;' + grown.mv.delta + ' since you first rated it') : '');
+    return '<div class="rc-hero">' +
+        '<div class="rc-hero-main"><span class="st-k">Net worth</span>' +
+          '<div class="rc-worth"><b>' + n(w) + '</b><span>Discs</span></div>' +
+          '<div class="rc-facts">' + facts + '</div></div>' +
+        '<div class="rc-fan" aria-hidden="true">' + fan + '</div>' +
+      '</div>' +
+      (bar ? '<div class="rc-split"><div class="rc-bar">' + bar + '</div><div class="rc-legend">' + legend + '</div></div>' : '') +
+      (tiles ? '<div class="rc-tiles">' + tiles + '</div>' : '') +
+      (unrated ? '<p class="rc-nudge">' + unrated + ' record' + (unrated === 1 ? '' : 's') + ' on your shelf ' + (unrated === 1 ? 'has' : 'have') + ' no score from you yet.</p>' : '') +
+      '<h3 class="st-label">Your shelf</h3>';
+  }
+
   function wire(body) {
+    body.querySelectorAll('[data-open-rec]').forEach(function (t) {
+      t.addEventListener('click', function () {
+        var row = (_mine || []).filter(function (x) { return x.album_id === t.dataset.openRec; })[0];
+        if (row && window.openAlbum) openAlbum({ id: row.album_id, name: row.name, artist: row.artist, art: row.art });
+      });
+    });
     body.querySelectorAll('[data-shelf-sort]').forEach(function (b2) {
       /* Re-sorting is a local array operation over records already in memory.
          It used to go all the way back through render(), which re-fetched the
@@ -29249,14 +29322,16 @@ window.renderAdminStats = renderAdminStats;
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) {
       if (head) head.textContent = '';
       if (drawBlock) drawBlock.style.display = 'none';
+      ['store', 'store-feat', 'rw-hero'].forEach(function (id) { var x = document.getElementById(id); if (x) { x.style.display = 'none'; } });
       host.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.disc +
-        '</span><h3>Discs</h3><p>Log in and every day you come back pays.</p>' +
+        '</span><h3>Discs</h3><p>Log in to start earning Discs.</p>' +
         '<button class="btn-primary" id="rw-login" style="margin-top:8px;">Log in</button></div>';
       var b = document.getElementById('rw-login');
       if (b) b.addEventListener('click', function () { Cloud.openAuth(); });
       return;
     }
     if (drawBlock) drawBlock.style.display = '';
+    ['store', 'store-feat', 'rw-hero'].forEach(function (id) { var x = document.getElementById(id); if (x) x.style.display = ''; });
 
     var st = (window.Wallet && Wallet.get) ? Wallet.get() : null;
     if (!st) return;
@@ -29320,20 +29395,9 @@ window.renderAdminStats = renderAdminStats;
        The ladder still shows the numbers, because those are the reason to come
        back tomorrow and nobody can discover a schedule. Everything else is a
        balance, a tile and two doors. */
-    host.innerHTML =
-      '<div class="rw-ladder">' + days + '</div>' +
-      (st.album_picks > 0
-        ? '<div class="rw-picks"><b>' + st.album_picks + ' free record' + (st.album_picks === 1 ? '' : 's') +
-          '</b> waiting' +
-          '<button class="btn-mini" id="rw-go-picks">Go and pick</button></div>'
-        : '') +
-      // No Draw card any more: the reel itself is directly below this element.
-      // A card linking to something already on screen is a link to nowhere.
-      '<div class="rw-other">' +
-        '<div class="rw-card" id="rw-shop"><h3>The Shop</h3>' +
-          '<p>You hold ' + (st.is_admin ? '∞' : n(st.discs)) + ' Discs.</p>' +
-          '<div class="gc-go">Browse &rarr;</div></div>' +
-      '</div>';
+    host.innerHTML = '<h3 class="st-label">Daily</h3><div class="rw-ladder">' + days + '</div>';
+    paintShopHero();
+    if (window.renderShop) window.renderShop();
 
     // The reel is a sibling of this element, so it renders itself rather than
     // being part of the innerHTML above.
@@ -29365,16 +29429,27 @@ window.renderAdminStats = renderAdminStats;
       // Day seven's celebrate() lives inside Wallet.dailyLogin().
     });
 
-    var gp = document.getElementById('rw-go-picks');
-    if (gp) gp.addEventListener('click', function () {
-      if (window.openCollectionMarket) openCollectionMarket();
-    });
-    var sh = document.getElementById('rw-shop');
-    if (sh) sh.addEventListener('click', function () {
-      var b = document.getElementById('shop-open-discs');
-      if (b && b.click) b.click();
-    });
   }
+  /* The top of the Shop: what you have to spend, and anything already working
+     for you. Its own element so a purchase can repaint it without rebuilding
+     the ladder or touching the reel below. */
+  function paintShopHero() {
+    var el = document.getElementById('rw-hero');
+    var st = (window.Wallet && Wallet.get) ? Wallet.get() : null;
+    if (!el || !st) return;
+    var left = st.boost_until ? Math.max(0, Date.parse(st.boost_until) - Date.now()) : 0;
+    var chips = '';
+    if (left > 0) chips += '<span class="rw-chip rw-chip-boost"><b>2×</b> <span data-boost-left></span></span>';
+    if (st.streak_freezes > 0) chips += '<span class="rw-chip rw-chip-ice">' + st.streak_freezes + ' streak freeze' + (st.streak_freezes === 1 ? '' : 's') + '</span>';
+    if (st.album_picks > 0) chips += '<button class="rw-chip rw-chip-pick" id="rw-go-picks">' + st.album_picks + ' free record' + (st.album_picks === 1 ? '' : 's') + ' to pick &rarr;</button>';
+    el.innerHTML = '<div class="rw-hero"><div class="rw-hero-bal"><span class="st-k">Balance</span>' +
+      '<b id="shop-balance-val">' + (st.is_admin ? '∞' : n(st.discs || 0)) + '</b><span class="rw-hero-u">Discs</span></div>' +
+      (chips ? '<div class="rw-hero-chips">' + chips + '</div>' : '') + '</div>';
+    var gp = document.getElementById('rw-go-picks');
+    if (gp) gp.addEventListener('click', function () { if (window.openCollectionMarket) openCollectionMarket(); });
+    if (left > 0) { var bl = el.querySelector('[data-boost-left]'); if (bl) { var m = Math.ceil(left / 60000); bl.textContent = (m >= 60 ? Math.floor(m / 60) + 'h ' + (m % 60) + 'm' : m + 'm') + ' left'; } }
+  }
+  window.paintShopHero = paintShopHero;
   /* The dot on the Discs tab is OFF.
 
      It was the last thing advertising the daily claim from elsewhere, after
@@ -34410,7 +34485,7 @@ window.track = function (name, props) {
     if (!on()) {
       host.style.height = '';
       host.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.sparkle +
-        '</span><h3>Today</h3><p>Login to save your progress.</p>' +
+        '</span><h3>Today</h3><p>Log in to save your progress.</p>' +
         '<button class="btn-primary" id="today-login" style="margin-top:8px;">Log in</button></div>';
       var b = document.getElementById('today-login');
       if (b) b.addEventListener('click', function () { Cloud.openAuth(); });
@@ -39863,5 +39938,5 @@ window.track = function (name, props) {
 </body>
 <script src="/assets/interactions.js?v=2"></script>
 <script src="/assets/replay.js?v=1"></script>
-<script src="/assets/you.js?v=1"></script>
+<script src="/assets/you.js?v=2"></script>
 </html>
