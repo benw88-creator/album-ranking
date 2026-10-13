@@ -6029,3 +6029,46 @@ and key repeat are ignored. `scripts/tests/recall.spec.mjs` covers it.
   already says it.
 - `.col-grid > *` has a taller `contain-intrinsic-size` in `store.css` to match the
   new cards; the old 96px hint made the scrollbar jump as skipped cards rendered.
+
+## Navigation, the rating drag, For You's first card, the Spin
+
+`assets/glow.js` and `assets/glow.css`.
+
+- **The account menu is four doors**, not eleven: you (avatar, name → profile),
+  People & Grooves, Messages, then Settings and Log out. Everything about *you* is a
+  **hub tab** on the profile — Profile · Replay · About you · Your music ·
+  Achievements · Activity — and People and Grooves share one bar with Messages.
+  `paintHubTabs(mode)` (called from `setMode` beside `paintCrateTabs`) injects the
+  bars exactly the way the Crate's sub-tabs are injected, so no section moved and
+  no render function changed. The You bar hides on somebody else's profile.
+  Activity and Messages are actions in the bar, opening the same drawer and sheet
+  they always did.
+- **`GlowSlider.enhance(input)`** sits on a real `<input type=range>`, which stays
+  focusable and remains the source of truth: every drag writes `input.value` and
+  fires a genuine `input` event, so existing listeners work unchanged. Pointer
+  capture, rAF-coalesced paints on transform/clip-path, rubber-band stretch past
+  either end, squash by velocity, a haptic tick per tenth, a spring and a ring on
+  release, and `pointercancel` restores the value it started from. Call
+  `input._gs.sync()` after setting `.value` from code. Used on the album rating
+  sheet and Your music. **Not on For You**: that range must keep
+  `touch-action: pan-y` so a vertical swipe still moves the feed; it only gains
+  the glow.
+- The album sheet takes **← / →** (Shift for tens) whenever it is open and focus is
+  not in a text field. On a phone **Rate Album is pinned above the nav**, and rides
+  above the player bar when that is up (`body:has(#player-bar.up)`).
+- **For You's first card waited on the slowest of six album lookups.**
+  `warmHeads()` awaited `Promise.all`; it now fires them and `albumTracks()`
+  shares in-flight requests, so each draw waits only for its own album. Prewarm
+  starts ~0.7s after the session settles and immediately on hover/press of the
+  tab. The first card's art is `fetchpriority="high"`, cards past the third are
+  `loading="lazy"`. The background refresh no longer blanks a feed you can see:
+  it builds off-screen, and if you come back before it is ready the old feed and
+  its state are restored rather than swapped under you.
+- **The Spin** runs on WAAPI keyframes: a 26px wind-back, a long deceleration and
+  an overshoot that settles back. **The overshoot (≤20px) plus jitter (≤36px)
+  stays inside half a tile (65px)**, so the needle never points at anything but
+  the server's prize — keep that sum under 65 if either changes. The needle flicks
+  per tile crossed (one computed-style read per frame), haptics tick on the slow
+  half, the window charges for Epic and up in the last ~1.1s, the winning tile
+  pops, and a Disc prize counts up to what landed. Reduced motion keeps the old
+  single transition.

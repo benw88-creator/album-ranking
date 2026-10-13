@@ -308,6 +308,8 @@
       '<h2>' + esc(x.name) + '</h2><p class="ym-artist">' + esc(x.artist) + '</p>' + (chips.length ? '<p class="ym-chips">' + chips.map(esc).join(' · ') + '</p>' : '') + ctl + '</div></div>' +
       '<div class="ym-actions"><button class="btn-ghost" data-ym-act="undo"' + (ym.undo.length ? '' : ' disabled') + '>Undo</button><button class="btn-ghost" data-ym-act="skip">Skip</button></div>' +
       '<p class="ym-keys">' + (isAlb ? 'Type a score · ← → to adjust · Enter to rate' : '1–9, 0 for 10') + ' · S to skip · U to undo</p>';
+    var sl = $('ym-slider');
+    if (sl && window.GlowSlider) GlowSlider.enhance(sl, { className: 'gs-ym' });
     prefetch();
   }
   // The next few records' details, so rating one never waits on the network.
@@ -366,6 +368,7 @@
     var o = $('ym-val'), s = $('ym-slider'), b = document.querySelector('.ym-save');
     if (o) { o.textContent = ym.val; o.style.color = col(ym.val); }
     if (s && +s.value !== ym.val) s.value = ym.val;
+    if (s && s._gs) s._gs.sync();
     if (b) b.textContent = 'Rate ' + ym.val;
   }
   function wireYm() {

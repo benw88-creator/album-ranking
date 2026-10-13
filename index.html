@@ -9582,6 +9582,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/you.css?v=1">
 <link rel="stylesheet" href="/assets/games.css?v=1">
 <link rel="stylesheet" href="/assets/store.css?v=1">
+<link rel="stylesheet" href="/assets/glow.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -12330,6 +12331,7 @@ function updateRatePreview() {
   const v = parseInt(rateSlider.value, 10);
   rateScoreEl.innerHTML = v + '<span style="font-size:14px; color:var(--text-faint);">/100</span>';
   rateScoreEl.style.color = albumColor(v);
+  if (rateSlider._gs) rateSlider._gs.sync();
 }
 function showDetailNote(note) {
   const el = document.getElementById('detail-note');
@@ -13942,6 +13944,7 @@ function setMode(mode, fromCode) {
   // read from. One attribute, and the whole page changes temperature.
   document.body.dataset.section = mode;
   if (window.paintCrateTabs) window.paintCrateTabs(mode);
+  if (window.paintHubTabs) window.paintHubTabs(mode);
   /* One nav button can stand for several views. The Crate button covers
      albums, songs and the community feed, so it has to stay lit on all three —
      otherwise switching sub-tab visibly unselects the nav item you are inside. */
@@ -16359,30 +16362,23 @@ const Cloud=(function(){
        own gap, so this was spacing counted twice — and the ten pixels it
        took were exactly what the wordmark was short of at 375px. */
     if(user){
-      let avatarUrl='';try{const p=await fetchProfile(user.id);if(p&&p.avatar_url)avatarUrl=p.avatar_url;}catch(e){}
+      let avatarUrl='',uname='';try{const p=await fetchProfile(user.id);if(p&&p.avatar_url)avatarUrl=p.avatar_url;if(p&&p.username)uname=p.username;}catch(e){}
       const initial=esc((user.email||'?').charAt(0).toUpperCase());
-      acct.innerHTML='<button id="acct-avatar-btn" class="acct-avatar" aria-label="Account menu">'+(avatarUrl?'<img src="'+esc(avatarUrl)+'" alt="" onerror="this.style.display=\'none\';this.parentNode.textContent=\''+initial+'\'">':initial)+'</button>'+
-        '<div class="acct-menu" id="acct-menu">'+
-          '<div class="acct-menu-head">'+esc((user.email||'account').split('@')[0])+'</div>'+
-          '<button class="acct-menu-item" data-go="profile">'+ICONS.person+' My profile</button>'+
-          /* Left the nav bar when that became five places and a thumb. An
-             achievement is not a place you go, it is something that happened
-             to you, so it belongs next to your profile rather than beside
-             Home. */
-          '<button class="acct-menu-item" data-go="achievements">'+ICONS.trophy+' Achievements</button>'+
-          '<button class="acct-menu-item" data-go="replay">'+ICONS.sparkle+' Replay</button>'+
-          '<button class="acct-menu-item" data-go="yourmusic">'+ICONS.sparkle+' Your music</button>'+
-          '<button class="acct-menu-item" data-go="about">'+ICONS.person+' About you</button>'+
-          /* Its button in the top bar is hidden on a phone, where there was
-             no room for it — so this is the only way in there, not a second
-             one. */
-          '<button class="acct-menu-item" id="acct-activity">'+ICONS.stopwatch+' Recent activity</button>'+
-          '<button class="acct-menu-item" id="acct-messages">'+ICONS.person+' Messages</button>'+
-          '<button class="acct-menu-item" data-go="people">'+ICONS.people+' People</button>'+
-          '<button class="acct-menu-item" data-go="grooves">'+ICONS.groove+' Grooves</button>'+
-
-          '<button class="acct-menu-item" id="acct-settings">\u2699 Settings</button>'+
-          '<button class="acct-menu-item" id="acct-logout">\u21B3 Log out</button>'+
+      const avHtml=avatarUrl?'<img src="'+esc(avatarUrl)+'" alt="" onerror="this.style.display=\'none\';this.parentNode.textContent=\''+initial+'\'">':initial;
+      /* Four things, not eleven. Everything about YOU — Replay, About you, Your
+         music, Achievements, Activity — is a tab on your profile now, one tap
+         from the top of this menu. Everything about OTHER PEOPLE is one page
+         with People and Grooves side by side. What is left here is identity,
+         the two ways to reach a person, settings and the door. */
+      acct.innerHTML='<button id="acct-avatar-btn" class="acct-avatar" aria-label="Account menu" aria-haspopup="menu">'+avHtml+'</button>'+
+        '<div class="acct-menu" id="acct-menu" role="menu">'+
+          '<button class="acct-menu-item acct-id" data-go="profile" role="menuitem"><span class="acct-id-av">'+avHtml+'</span>'+
+            '<span class="acct-id-t"><b>'+esc(uname||(user.email||'account').split('@')[0])+'</b><small>Profile, Replay, About you</small></span></button>'+
+          '<button class="acct-menu-item" data-go="people" role="menuitem">'+ICONS.people+' People &amp; Grooves</button>'+
+          '<button class="acct-menu-item" id="acct-messages" role="menuitem">'+ICONS.person+' Messages</button>'+
+          '<div class="acct-sep" role="separator"></div>'+
+          '<button class="acct-menu-item" id="acct-settings" role="menuitem">\u2699 Settings</button>'+
+          '<button class="acct-menu-item" id="acct-logout" role="menuitem">\u21B3 Log out</button>'+
         '</div>';
     }else{
       // Settings is reachable logged out too — Motion is in there, and that is
@@ -25995,6 +25991,75 @@ window.renderAdminStats = renderAdminStats;
 </script>
 
 <!-- ================================================================
+     HUB TABS — the same idea as the Crate's sub-tabs, for two more groups.
+     Everything that is about you sits under your profile; everything about
+     other people sits under People. The account menu only has to open the
+     door to each. Bars are injected at the top of each view and call
+     setMode, so no section moved and no render function changed.
+     ================================================================ -->
+<script>
+(function () {
+  var GROUPS = [
+    { key: 'you', tabs: [
+      { mode: 'profile', label: 'Profile' }, { mode: 'replay', label: 'Replay' },
+      { mode: 'about', label: 'About you' }, { mode: 'yourmusic', label: 'Your music' },
+      { mode: 'achievements', label: 'Achievements' }, { act: 'activity', label: 'Activity' } ] },
+    { key: 'social', tabs: [
+      { mode: 'people', label: 'People' }, { mode: 'grooves', label: 'Grooves' },
+      { act: 'messages', label: 'Messages' } ] }
+  ];
+  function act(name) {
+    if (name === 'messages' && window.Messages) Messages.open();
+    if (name === 'activity') { var t = document.getElementById('activity-toggle'); if (t) t.click(); }
+  }
+  // Somebody else's profile is not part of YOUR hub.
+  function othersProfile() {
+    try {
+      var u = new URLSearchParams(location.search).get('u');
+      var me = window.Cloud && Cloud.getUser && Cloud.getUser();
+      return !!u && (!me || u !== me.id);
+    } catch (e) { return false; }
+  }
+  function ensure(g, mode) {
+    var sec = document.getElementById('view-' + mode);
+    if (!sec) return null;
+    var bar = sec.querySelector(':scope > .hub-tabs');
+    if (bar) return bar;
+    bar = document.createElement('nav');
+    bar.className = 'crate-tabs hub-tabs';
+    bar.setAttribute('aria-label', g.key === 'you' ? 'You' : 'People');
+    bar.innerHTML = g.tabs.map(function (t) {
+      return t.mode ? '<button type="button" data-hub-tab="' + t.mode + '">' + t.label + '</button>'
+                    : '<button type="button" class="hub-act" data-hub-act="' + t.act + '">' + t.label + '</button>';
+    }).join('');
+    sec.insertBefore(bar, sec.firstChild);
+    bar.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.hubAct) { act(b.dataset.hubAct); return; }
+      if (b.dataset.hubTab === 'profile' && location.search.indexOf('u=') !== -1) history.replaceState(null, '', location.pathname + location.hash);
+      if (window.goToView) goToView(b.dataset.hubTab);
+    });
+    return bar;
+  }
+  function paintHubTabs(mode) {
+    GROUPS.forEach(function (g) {
+      if (!g.tabs.some(function (t) { return t.mode === mode; })) return;
+      var bar = ensure(g, mode);
+      if (!bar) return;
+      bar.hidden = g.key === 'you' && mode === 'profile' && othersProfile();
+      bar.querySelectorAll('[data-hub-tab]').forEach(function (b) {
+        var on = b.dataset.hubTab === mode;
+        b.classList.toggle('active', on);
+        if (on) { b.setAttribute('aria-current', 'page'); if (b.scrollIntoView && bar.scrollWidth > bar.clientWidth) bar.scrollLeft = b.offsetLeft - 16; }
+        else b.removeAttribute('aria-current');
+      });
+    });
+  }
+  window.paintHubTabs = paintHubTabs;
+})();
+</script>
+
+<!-- ================================================================
      COMMUNITY CHOICE
      ================================================================
      Somebody picks the best stretch of a song — a verse, a feature, a hook,
@@ -28856,7 +28921,8 @@ window.renderAdminStats = renderAdminStats;
   var WIN_INDEX = 62;    // far enough in that it reads as a real run
   var SPIN_MS = 5200;
 
-  var items = null, busy = false;
+  var items = null, busy = false, _tickRaf = 0;
+  var BIG = { epic: 1, legendary: 1, mythic: 1 };
 
   function el(id) { return document.getElementById(id); }
   function W() { return window.Wallet; }
@@ -28955,6 +29021,8 @@ window.renderAdminStats = renderAdminStats;
 
   function resetStrip() {
     var strip = el('draw-strip');
+    if (strip.getAnimations) strip.getAnimations().forEach(function (a) { a.cancel(); });
+    if (_tickRaf) { cancelAnimationFrame(_tickRaf); _tickRaf = 0; }
     strip.style.transition = 'none';
     strip.style.transform = 'translate3d(0,0,0)';
     el('draw-window').className = 'draw-window';
@@ -29150,17 +29218,58 @@ window.renderAdminStats = renderAdminStats;
     var jitter = (Math.random() * 2 - 1) * (TILE * 0.28);
     var target = (WIN_INDEX * TILE) + (TILE / 2) - (windowW / 2) + jitter;
 
-    // Force the browser to take the reset transform before the real one, or
-    // the two collapse into a single style recalculation and nothing moves.
-    void strip.offsetWidth;
-    strip.style.transition = 'transform ' + SPIN_MS + 'ms cubic-bezier(.12,.72,.12,1)';
-    strip.style.transform = 'translate3d(' + (-target) + 'px,0,0)';
+    var reducedSpin = !!(window.motionReduced && motionReduced());
+    if (!reducedSpin && strip.animate) {
+      /* The run as a physical object: a short wind-back, a launch, a long
+         deceleration, and an overshoot that settles back onto the winner.
+         The overshoot is capped so it never crosses into the next tile —
+         jitter (≤36px) plus overshoot (≤20px) stays inside half a tile — so
+         the needle never once points at anything but the server's prize. */
+      var over = Math.min(20, TILE * 0.15);
+      var anim = strip.animate([
+        { transform: 'translate3d(0,0,0)', easing: 'cubic-bezier(.35,0,.65,1)' },
+        { transform: 'translate3d(26px,0,0)', offset: 0.045, easing: 'cubic-bezier(.16,.62,.1,1)' },
+        { transform: 'translate3d(' + (-(target + over)) + 'px,0,0)', offset: 0.92, easing: 'cubic-bezier(.5,0,.25,1)' },
+        { transform: 'translate3d(' + (-target) + 'px,0,0)' }
+      ], { duration: SPIN_MS, fill: 'forwards' });
+      anim.finished.then(function () {
+        strip.style.transition = 'none';
+        strip.style.transform = 'translate3d(' + (-target) + 'px,0,0)';
+        anim.cancel();
+      }).catch(function () {});
+      // Every tile that crosses the needle flicks it, and the slow end ticks
+      // under the thumb. Read off the rendered position, one read per frame.
+      var needle = el('draw-window').querySelector('.draw-needle');
+      var lastIdx = null, lastBuzz = 0, t0 = performance.now();
+      var tick = function (now) {
+        var m = getComputedStyle(strip).transform, x = 0;
+        if (m && m !== 'none') { var p = m.match(/matrix\(([^)]+)\)/); if (p) x = parseFloat(p[1].split(',')[4]) || 0; }
+        var idx = Math.floor((windowW / 2 - x) / TILE);
+        if (lastIdx !== null && idx !== lastIdx) {
+          if (needle && needle.animate) needle.animate([{ transform: 'rotate(' + (idx > lastIdx ? -9 : 9) + 'deg)' }, { transform: 'none' }], { duration: 160, easing: 'cubic-bezier(.2,.9,.3,1.4)' });
+          if (now - lastBuzz > 120 && now - t0 > SPIN_MS * 0.45 && window.buzz) { buzz('tap'); lastBuzz = now; }
+        }
+        lastIdx = idx;
+        _tickRaf = now - t0 < SPIN_MS ? requestAnimationFrame(tick) : 0;
+      };
+      _tickRaf = requestAnimationFrame(tick);
+      // A big one is coming: the window gathers light before it lands.
+      if (BIG[won.tier]) setTimeout(function () { el('draw-window').classList.add('charge', 'charge-' + won.tier); }, SPIN_MS - 1150);
+    } else {
+      // Force the browser to take the reset transform before the real one, or
+      // the two collapse into a single style recalculation and nothing moves.
+      void strip.offsetWidth;
+      strip.style.transition = 'transform ' + SPIN_MS + 'ms cubic-bezier(.12,.72,.12,1)';
+      strip.style.transform = 'translate3d(' + (-target) + 'px,0,0)';
+    }
 
     setTimeout(function () {
       busy = false;
       var wnd = el('draw-window');
-      wnd.classList.remove('spinning');
+      wnd.classList.remove('spinning', 'charge', 'charge-epic', 'charge-legendary', 'charge-mythic');
       wnd.classList.add('landed', 'hit-' + (won.tier || 'common'));
+      var wonTile = el('draw-strip').children[WIN_INDEX];
+      if (wonTile) wonTile.classList.add('dt-won');
       go.textContent = 'Open another';
       var r = el('draw-result');
       r.className = 'draw-result in tier-' + (won.tier || 'common');
@@ -29215,6 +29324,15 @@ window.renderAdminStats = renderAdminStats;
         (freeNote ? '<div class="dr-free">' + esc(freeNote) + '</div>' : '');
 
       applyFeedback(won);
+      // A Disc prize counts up to what actually landed — it never overshoots it.
+      if (paysDiscs && gained > 0 && !(window.motionReduced && motionReduced())) {
+        var lab = r.querySelector('.dr-label'), c0 = performance.now(), cd = Math.min(900, 420 + gained / 60);
+        (function cnt(now) {
+          var k = Math.min(1, (now - c0) / cd), e = 1 - Math.pow(1 - k, 3);
+          if (lab) lab.textContent = '+' + Math.round(gained * e).toLocaleString('en-GB') + ' Discs';
+          if (k < 1) requestAnimationFrame(cnt);
+        })(c0);
+      }
       // The free spin has just been taken, so the button has to stop offering
       // it. The server said which it was in `won.free`; asking again is one
       // cheap call and cannot disagree with the row that was actually written.
@@ -36556,8 +36674,22 @@ window.track = function (name, props) {
      has to look that clip up a second time. Cached whole, then drawn from a
      couple at a time, which is what makes ten records into a hundred songs
      for ten requests. */
-  async function albumTracks(alb) {
-    if (_tracks[alb.id]) return _tracks[alb.id];
+  var _inflight = {};
+  function albumTracks(alb) {
+    if (_tracks[alb.id]) return Promise.resolve(_tracks[alb.id]);
+    if (_inflight[alb.id]) return _inflight[alb.id];
+    var tok = _feedTok;
+    var p = albumTracksFetch(alb).then(function (box) {
+      if (_inflight[alb.id] === p) delete _inflight[alb.id];
+      // A rebuild started meanwhile: hand the box back, but do not plant it in
+      // the new feed's cache, whose exclusions it was never checked against.
+      if (tok === _feedTok) _tracks[alb.id] = box;
+      return box;
+    });
+    _inflight[alb.id] = p;
+    return p;
+  }
+  async function albumTracksFetch(alb) {
     var base = ((window.Native && Native.api) || '') + '/api/preview';
     var u = base + '?artist=' + encodeURIComponent(alb.artist || '') +
                    '&album=' + encodeURIComponent(alb.name || '');
@@ -36577,8 +36709,7 @@ window.track = function (name, props) {
       if (t.ms && t.ms < 60000) return;
       list.push(t);
     });
-    _tracks[alb.id] = { alb: alb, list: list, art: alb.art || (j && j.cover) || '', link: (j && j.link) || '' };
-    return _tracks[alb.id];
+    return { alb: alb, list: list, art: alb.art || (j && j.cover) || '', link: (j && j.link) || '' };
   }
 
   /* Take up to FROM_ALBUM unseen, unrated songs off the front pool, then
@@ -36764,9 +36895,10 @@ window.track = function (name, props) {
       });
     });
     if (!want.length) return;
-    await Promise.all(want.slice(0, 6).map(function (a) {
-      return albumTracks(a).catch(function () { return null; });
-    }));
+    /* Fired, not awaited. Waiting on all six made the first card exactly as
+       slow as the slowest album lookup; now each draw waits only for its own
+       album, and the rest are already on the way when the loop reaches them. */
+    want.slice(0, 8).forEach(function (a) { albumTracks(a).catch(function () { return null; }); });
   }
 
   async function drawSongs(count) {
@@ -36842,13 +36974,13 @@ window.track = function (name, props) {
       // The bed: the same sleeve, blurred past recognition, giving the page the
       // record's colours without competing with the record.
       '<div class="fy-bed-wrap" aria-hidden="true">' +
-        (art ? '<img class="fy-bed" src="' + art + '" alt="" onerror="this.style.display=\'none\'">' : '') +
+        (art ? '<img class="fy-bed" src="' + art + '" alt="" decoding="async"' + (i > 2 ? ' loading="lazy"' : '') + ' onerror="this.style.display=\'none\'">' : '') +
       '</div>' +
       // The record itself, whole and square. `data-play`, never `data-open` —
       // one control, one verb.
       '<div class="fy-art-wrap">' +
         '<button class="fy-art" data-play="' + i + '" aria-label="Play ' + esc(c.title || '') + '">' +
-          (art ? '<img class="fy-main" src="' + art + '" alt="">' : '') +
+          (art ? '<img class="fy-main" src="' + art + '" alt="" decoding="async"' + (i === 0 ? ' fetchpriority="high"' : i > 2 ? ' loading="lazy"' : '') + '>' : '') +
           '<span class="fy-cue"></span>' +
         '</button>' +
         '<button class="fy-like' + (window.likedSongHas && likedSongHas(c.key) ? ' liked' : '') + '" data-like="' + i + '" aria-label="Like"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 20.6s-7.6-4.5-10.2-9C.3 8.6 1 5.4 3.7 4.1c2-.9 4.3-.3 5.7 1.4l2.6 3.1 2.6-3.1c1.4-1.7 3.7-2.3 5.7-1.4 2.7 1.3 3.4 4.5 1.9 7.5-2.6 4.5-10.2 9-10.2 9Z"/></svg></button>' +
@@ -37367,6 +37499,35 @@ window.track = function (name, props) {
     if (!host) return;
     if (_busy || _topping) { if (force) _rebuild = true; return; }
     if (_built && !force) return;
+    var bg = _built && !_onFeed && document.body.dataset.section !== 'foryou' && !!host.querySelector('.fy-card[data-i="0"]');
+    var saved = bg ? { items: _items, tracks: _tracks, used: _used, mixAt: _mixAt, mixTaken: _mixTaken, widen: _widen, ctx: _ctx, pools: _pools, remote: _remote } : null;
+    if (bg) {
+      _busy = true;
+      var mineBg = ++_feedTok;
+      try {
+        _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0;
+        _ctx = buildContext(); _pools = localPools(_ctx);
+        _remote = remotePools(_ctx, _pools).catch(function () { return _pools; });
+        if (!(_pools.yours.length + _pools.partial.length + _pools.shortlist.length) || _feed === 'pushed') await _remote;
+        var nextFirst = mineBg === _feedTok ? await drawSongs(FIRST_PAGE) : [];
+        // Came back while it was building, or nothing new: keep what they had.
+        if (mineBg !== _feedTok || _onFeed || document.body.dataset.section === 'foryou' || !nextFirst.length) {
+          if (mineBg === _feedTok) { _items = saved.items; _tracks = saved.tracks; _used = saved.used; _mixAt = saved.mixAt; _mixTaken = saved.mixTaken; _widen = saved.widen; _ctx = saved.ctx; _pools = saved.pools; _remote = saved.remote; }
+          return;
+        }
+        stopAll(); if (_io) { _io.disconnect(); _io = null; }
+        clearTimeout(_settle); _settle = 0; _navTarget = null; _activeCard = 0;
+        _items = nextFirst;
+        host.innerHTML = nextFirst.map(cardHtml).join('');
+        host.scrollTo({ top: 0, behavior: 'instant' });
+        markSeenSongs(nextFirst);
+        window.ForYou._last = { ctx: _ctx, pools: _pools };
+        topUp();
+      } catch (e) {
+        if (saved) { _items = saved.items; _tracks = saved.tracks; _used = saved.used; _ctx = saved.ctx; _pools = saved.pools; }
+      } finally { _busy = false; if (_rebuild) { _rebuild = false; build(true); } }
+      return;
+    }
     // stopAll() pauses VinalAudio and clears _playing/_tok; wiping the DOM
     // below does neither by itself, since the audio element is not scoped to
     // this feed's markup — it kept playing under the fresh cards, which is
@@ -37491,7 +37652,10 @@ window.track = function (name, props) {
      so it is not competing with Home for the first paint. */
   function prewarm() {
     var go = function () { if (!_built && !_busy && document.body.dataset.section !== 'foryou') build(); };
-    setTimeout(function () { (window.requestIdleCallback || setTimeout)(go, { timeout: 2000 }); }, 2500);
+    setTimeout(function () { (window.requestIdleCallback || setTimeout)(go, { timeout: 1200 }); }, 700);
+    // Hovering or pressing the tab is a strong hint: start now rather than on click.
+    var tab = document.querySelector('#modes button[data-mode="foryou"]');
+    if (tab) ['pointerenter', 'pointerdown', 'focus'].forEach(function (ev) { tab.addEventListener(ev, go, { passive: true }); });
   }
   if (window.Cloud && Cloud.ready) Cloud.ready.then(prewarm); else prewarm();
 
@@ -39939,4 +40103,5 @@ window.track = function (name, props) {
 <script src="/assets/interactions.js?v=2"></script>
 <script src="/assets/replay.js?v=1"></script>
 <script src="/assets/you.js?v=2"></script>
+<script src="/assets/glow.js?v=1"></script>
 </html>

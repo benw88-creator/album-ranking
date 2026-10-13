@@ -1,0 +1,177 @@
+/* ================================================================
+   GLOW SLIDER (assets/glow.js) and the rating controls around it.
+   Transform, opacity and clip-path only; the spring is one curve.
+   ================================================================ */
+:root { --gs-spring: cubic-bezier(.34, 1.56, .64, 1); }
+
+.gs {
+  --gs-c: #f5c842;
+  position: relative; flex: 1 1 auto; min-width: 0; height: 56px;
+  display: flex; align-items: center;
+  touch-action: none; -webkit-user-select: none; user-select: none; cursor: grab;
+  -webkit-tap-highlight-color: transparent;
+}
+.gs.gs-drag { cursor: grabbing; }
+/* The real input: invisible, but focusable and the source of truth. */
+.gs .gs-native { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; pointer-events: none; }
+
+.gs-track {
+  position: relative; width: 100%; height: 46px; border-radius: 999px; overflow: hidden;
+  background: rgba(255,255,255,.045);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), inset 0 6px 14px rgba(0,0,0,.35);
+  transition: transform 560ms var(--gs-spring), box-shadow 300ms ease;
+  will-change: transform;
+}
+.gs-drag .gs-track { transition: box-shadow 300ms ease; }
+.gs-dots { position: absolute; inset: 0 22px; display: flex; align-items: center; justify-content: space-between; }
+.gs-dots i { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,.22); }
+.gs-fill {
+  position: absolute; inset: 0; z-index: 1;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--gs-c) 18%, transparent), color-mix(in srgb, var(--gs-c) 72%, transparent) 70%, color-mix(in srgb, var(--gs-c) 92%, #fff));
+  box-shadow: inset 0 0 18px color-mix(in srgb, var(--gs-c) 40%, transparent);
+  transition: clip-path 420ms var(--gs-spring);
+}
+.gs-drag .gs-fill { transition: none; }
+/* Sparkles drifting inside the fill. A pixel tile, so the loop never snaps. */
+.gs-sparks {
+  position: absolute; inset: 0; opacity: .7;
+  background-image:
+    radial-gradient(1.2px 1.2px at 12px 14px, #fff, transparent 60%),
+    radial-gradient(1px 1px at 44px 30px, #fff, transparent 60%),
+    radial-gradient(1.4px 1.4px at 78px 20px, #fff, transparent 60%),
+    radial-gradient(1px 1px at 101px 36px, #fff, transparent 60%);
+  background-size: 120px 46px;
+  animation: gsDrift 3.2s linear infinite;
+}
+@keyframes gsDrift { to { background-position: 120px 0; } }
+
+.gs-thumb {
+  position: absolute; left: 0; top: 50%; z-index: 2; margin-top: -19px;
+  height: 38px; min-width: 64px; padding: 0 16px; border-radius: 999px;
+  display: grid; place-items: center; pointer-events: none;
+  background: linear-gradient(180deg, #fff, #f1ede6);
+  color: #15120d; font: 700 16px/1 var(--font-mono); font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.7), 0 2px 8px rgba(0,0,0,.35),
+              0 0 22px 2px color-mix(in srgb, var(--gs-c) 65%, transparent);
+  transition: transform 520ms var(--gs-spring), margin-left 520ms var(--gs-spring), box-shadow 260ms ease;
+  will-change: transform;
+}
+.gs-thumb::before {   /* the bloom behind the pill */
+  content: ''; position: absolute; inset: -18px -26px; z-index: -1; border-radius: 999px; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--gs-c) 55%, transparent), transparent);
+  opacity: .55; transition: opacity 260ms ease, transform 260ms ease;
+}
+.gs-drag .gs-thumb { transition: box-shadow 200ms ease; box-shadow: 0 0 0 1px #fff, 0 4px 12px rgba(0,0,0,.4), 0 0 30px 6px color-mix(in srgb, var(--gs-c) 80%, transparent); }
+.gs-drag .gs-thumb::before { opacity: 1; transform: scale(1.25); }
+.gs-max .gs-track { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gs-c) 80%, transparent), 0 0 26px color-mix(in srgb, var(--gs-c) 45%, transparent); }
+
+/* Letting go: one ring leaves the pill. */
+.gs-bloom .gs-thumb::after {
+  content: ''; position: absolute; inset: -2px; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--gs-c); animation: gsRing 560ms ease-out forwards;
+}
+@keyframes gsRing { from { opacity: .9; transform: scale(1); } to { opacity: 0; transform: scale(1.6, 2); } }
+.gs:has(.gs-native:focus-visible) .gs-track { outline: 2px solid var(--gs-c); outline-offset: 3px; }
+
+/* The album sheet: score readout under the drag rather than squeezed beside it. */
+#rate-view .modal-panel > div:has(> .gs) { flex-direction: column; align-items: stretch !important; gap: 10px !important; }
+#rate-view #rate-score { text-align: center !important; min-width: 0 !important; transition: color 200ms ease; }
+.gs-ym { margin: 4px 0 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .gs-sparks { animation: none; }
+  html:not([data-motion="full"]) .gs-track, html:not([data-motion="full"]) .gs-thumb, html:not([data-motion="full"]) .gs-fill { transition-duration: 1ms !important; }
+}
+
+/* ---- For You: the same light on its native slider ----------------------
+   That range must keep `touch-action: pan-y` so a vertical swipe still moves
+   the feed, so it keeps its own input and only gains the glow. */
+.fy-rate input[type="range"]::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(0,0,0,.28), 0 0 18px 4px var(--fy-tint, #efb927), 0 0 44px 10px color-mix(in srgb, var(--fy-tint, #efb927) 35%, transparent); }
+.fy-rate input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.22); }
+
+/* ---- Mobile: Rate sits where a thumb already is ------------------------ */
+@media (max-width: 699px) {
+  #view-album-detail #rate-album-btn {
+    position: fixed; z-index: 150; left: 50%; transform: translateX(-50%);
+    bottom: calc(var(--nav-h) + var(--s3) + env(safe-area-inset-bottom, 0px));
+    width: calc(100% - var(--gutter) * 2); max-width: 460px; min-height: 52px;
+    border-radius: 18px; font-size: 16px;
+    box-shadow: 0 14px 34px -10px rgba(0,0,0,.8), 0 0 28px -6px var(--gold-glow);
+    transition: bottom 260ms var(--ease), transform 160ms var(--ease);
+  }
+  #view-album-detail #rate-album-btn:active { transform: translateX(-50%) scale(.98); }
+  /* The player bar takes that slot when something is playing; Rate rides above it. */
+  body:has(#player-bar.up) #view-album-detail #rate-album-btn { bottom: calc(var(--nav-h) + var(--s3) + 76px + env(safe-area-inset-bottom, 0px)); }
+  #view-album-detail { padding-bottom: 76px; }
+}
+
+/* ---- The Spin ----------------------------------------------------------
+   The reel's motion lives in the Draw module (WAAPI keyframes); this is the
+   light around it. Box-shadow on the window, transform on one tile. */
+.draw-window { transition: box-shadow 600ms ease, border-color 400ms ease; }
+.draw-window.charge-epic      { box-shadow: 0 0 46px rgba(196,107,255,.45), inset 0 0 40px rgba(196,107,255,.18); border-color: #c46bff; }
+.draw-window.charge-legendary { box-shadow: 0 0 60px rgba(255,200,70,.5),  inset 0 0 46px rgba(255,200,70,.2);  border-color: #ffd24a; }
+.draw-window.charge-mythic    { box-shadow: 0 0 80px rgba(255,45,111,.6),  inset 0 0 56px rgba(255,45,111,.24); border-color: #ff2d6f; animation: drawCharge .5s ease-in-out infinite alternate; }
+@keyframes drawCharge { to { box-shadow: 0 0 110px rgba(255,45,111,.75), inset 0 0 70px rgba(255,45,111,.3); } }
+.draw-needle { transform-origin: 50% 0; }
+.draw-tile { position: relative; }
+.draw-tile.dt-won { z-index: 1; animation: dtWon 720ms cubic-bezier(.34,1.56,.64,1) both; border-color: currentColor; }
+.draw-tile.t-rare.dt-won      { color: #2fe0ff; box-shadow: 0 0 26px rgba(47,224,255,.45); }
+.draw-tile.t-epic.dt-won      { color: #c46bff; box-shadow: 0 0 32px rgba(196,107,255,.55); }
+.draw-tile.t-legendary.dt-won { color: #ffd24a; box-shadow: 0 0 40px rgba(255,210,74,.6); }
+.draw-tile.t-mythic.dt-won    { color: #ff2d6f; box-shadow: 0 0 52px rgba(255,45,111,.7); }
+.draw-tile.t-common.dt-won    { color: rgba(255,255,255,.45); }
+@keyframes dtWon { 0% { transform: scale(1); } 45% { transform: scale(1.1); } 100% { transform: scale(1.05); } }
+/* One pass of light across the window as it lands. */
+.draw-window.landed::before {
+  content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(100deg, transparent 35%, rgba(255,255,255,.22) 50%, transparent 65%);
+  animation: drawFlash 700ms ease-out forwards;
+}
+@keyframes drawFlash { from { transform: translateX(-100%); } to { transform: translateX(100%); opacity: 0; } }
+/* Rays behind the biggest prizes. */
+.draw-result { isolation: isolate; }
+.draw-result.tier-legendary::before, .draw-result.tier-mythic::before {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 360px; height: 360px; margin: -180px 0 0 -180px; z-index: -1;
+  border-radius: 50%; pointer-events: none; opacity: 0;
+  background: repeating-conic-gradient(from 0deg, rgba(255,210,74,.22) 0 8deg, transparent 8deg 22deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000 20%, transparent); mask-image: radial-gradient(closest-side, #000 20%, transparent);
+  animation: drawRays 9s linear infinite, drawRaysIn 600ms ease-out forwards;
+}
+.draw-result.tier-mythic::before { background: repeating-conic-gradient(from 0deg, rgba(255,45,111,.26) 0 7deg, rgba(47,224,255,.14) 7deg 14deg, transparent 14deg 24deg); }
+@keyframes drawRays { to { transform: rotate(1turn); } }
+@keyframes drawRaysIn { to { opacity: 1; } }
+.draw-result.in .dr-tier { animation: drTier 600ms cubic-bezier(.2,.8,.2,1) both; }
+@keyframes drTier { from { letter-spacing: .6em; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .draw-window.charge-mythic,
+  html:not([data-motion="full"]) .draw-tile.dt-won,
+  html:not([data-motion="full"]) .draw-window.landed::before,
+  html:not([data-motion="full"]) .draw-result.tier-legendary::before,
+  html:not([data-motion="full"]) .draw-result.tier-mythic::before,
+  html:not([data-motion="full"]) .draw-result.in .dr-tier { animation: none !important; }
+}
+
+/* ---- Account menu: who you are, then four doors --------------------- */
+.acct-menu { min-width: 248px; padding: 8px; border-radius: 18px; transform-origin: top right; }
+.acct-menu.open { animation: acctIn 200ms cubic-bezier(.2,.8,.2,1); }
+@keyframes acctIn { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
+.acct-menu-item { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 12px; border-radius: 11px; transition: background-color 160ms ease; }
+.acct-menu-item svg { width: 16px; height: 16px; flex: none; opacity: .8; }
+.acct-id { gap: 12px; min-height: 60px; padding: 8px 10px; margin-bottom: 4px; background: rgba(255,255,255,.035); }
+.acct-id-av { width: 40px; height: 40px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center;
+  background: var(--surface-3); font: 700 15px/1 var(--font-display); color: var(--text); }
+.acct-id-av img { width: 100%; height: 100%; object-fit: cover; }
+.acct-id-t { display: grid; gap: 2px; min-width: 0; }
+.acct-id-t b { font: 700 14.5px/1.2 var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acct-id-t small { font-size: 12px; color: var(--text-faint); }
+.acct-sep { height: 1px; margin: 6px 8px; background: var(--border); }
+@media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) .acct-menu.open { animation: none; } }
+
+/* ---- Hub tabs: the Crate's bar, for You and People -------------------- */
+.hub-tabs { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+.hub-tabs::-webkit-scrollbar { display: none; }
+.hub-tabs button { flex: none !important; white-space: nowrap; }
+.hub-tabs .hub-act { color: var(--text-faint); }
+.hub-tabs[hidden] { display: none !important; }
