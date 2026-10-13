@@ -147,16 +147,19 @@
     new MutationObserver(function () { enhanceFeed(); }).observe(feed, { childList: true });
     // Desktop: left and right rate the card in view.
     document.addEventListener('keydown', function (e) {
-      if (window.currentMode !== 'foryou' || e.defaultPrevented || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+      var enter = e.key === 'Enter';
+      if (window.currentMode !== 'foryou' || e.defaultPrevented || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && !enter)) return;
       var t = e.target;
       if (t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && t.type !== 'range') || t.isContentEditable)) return;
-      if (t && t.matches && t.matches('input[data-rate]')) return;   // it handles its own arrows
+      if (t && t.matches && t.matches(enter ? 'button, a' : 'input[data-rate]')) return;   // those handle their own keys
       if (document.querySelector('.modal.open')) return;
       var fr = feed.getBoundingClientRect(), cy = fr.top + fr.height / 2, card = null;
       feed.querySelectorAll('.fy-card').forEach(function (c) { var r = c.getBoundingClientRect(); if (r.top <= cy && r.bottom >= cy) card = c; });
       var inp = card && card.querySelector('input[data-rate]');
       if (!inp) return;
       e.preventDefault();
+      // Enter commits the score in view, exactly as pressing Rate does.
+      if (enter) { if (!e.repeat) { var sv = card.querySelector('[data-save]'); if (sv) sv.click(); } return; }
       inp.value = Math.max(+inp.min || 0, Math.min(+inp.max || 10, +inp.value + (e.key === 'ArrowRight' ? 1 : -1)));
       inp.dispatchEvent(new Event('input', { bubbles: true }));
       if (window.buzz) buzz('tap');

@@ -6116,3 +6116,24 @@ flaps) ticking '84, '85… — only changed digits flip and 99 rolls to 00, and 
 ticks while the card is on screen and the tab is visible. Only children and
 pseudo-elements animate, using `translate`/`rotate`/`scale`: `.gc-art` itself owns
 the hover lift.
+
+## For You: the card answers the slider
+
+`assets/foryou.css`, plus small hooks in the `ForYou` module and `glow.js`.
+
+- **One colour.** `tintFor()` now uses `albumColor()`, the same function that
+  paints the glow pill, so the halo behind the sleeve, the stamp and the Rate
+  glow are exactly the slider's colour. `--fy-v` (0–1) carries the score.
+- **Depth between songs** is a scroll-driven `view-timeline` per card
+  (`--fy`): sleeve `scale`/`opacity`, words `translate`, bed `opacity`.
+  Compositor-run, no listener; browsers without it keep the plain snap. It
+  animates `scale`/`translate`, never `transform`, because those hold for ever
+  and the drag lean and the commit press own `transform` on `.fy-art` (trap 2).
+- **Dragging** (`.fy-card:has(.gs-drag)`) lifts the halo and leans the sleeve
+  by score. **Rating** plays one beat — press, stamp, flare, tray — replacing
+  the confetti and the lime outline; the stamp stays as the score on the sleeve.
+- **Momentum:** a FIRST rating moves to the next song after 820ms. A re-rate
+  never does; any touch, wheel, non-Enter key or slider move cancels it.
+- The clip shows as a 30s line under the sleeve (`.is-playing`), the next two
+  sleeves are de-lazied on settle so nothing decodes mid-snap, and desktop
+  Enter rates the card in view. Reduced motion keeps the light, drops movement.

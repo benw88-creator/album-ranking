@@ -1,0 +1,115 @@
+/* ================================================================
+   FOR YOU — the card around the glow slider.
+
+   One language with the slider: the same spring, the same colour
+   (--fy-tint is albumColor, exactly what paints the pill), and light
+   rather than motion doing most of the work. Transform, scale,
+   translate and opacity only; nothing here delays a tap or the audio.
+   ================================================================ */
+
+/* ---- depth between songs ----------------------------------------------
+   A scroll-driven timeline on each card, run by the compositor: the sleeve
+   comes up out of the dark as its card arrives and sinks as it leaves, the
+   words travel a little further than the art, and the bed fades so two
+   records' colours never meet at a hard line mid-swipe. No JS, no scroll
+   listener. Browsers without view timelines get the old hard snap. */
+@supports (animation-timeline: view()) {
+  .fy-card { view-timeline: --fy block; }
+  .fy-art-wrap { animation: fyDepthArt linear both; animation-timeline: --fy; }
+  .fy-meta     { animation: fyDepthMeta linear both; animation-timeline: --fy; }
+  .fy-bed-wrap { animation: fyDepthBed linear both; animation-timeline: --fy; }
+}
+/* `scale`/`translate`, never `transform`: these hold for ever, and the press
+   and the drag below own `transform` on the sleeve itself. */
+@keyframes fyDepthArt  { 0% { scale: .84; opacity: .3; } 50% { scale: 1; opacity: 1; } 100% { scale: .84; opacity: .3; } }
+@keyframes fyDepthMeta { 0% { translate: 0 56px; opacity: 0; } 50% { translate: 0 0; opacity: 1; } 100% { translate: 0 -56px; opacity: 0; } }
+@keyframes fyDepthBed  { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+
+/* No blank square while a sleeve decodes. */
+.fy-art { background: var(--surface-2, #1a1816); }
+
+/* ---- the halo: the slider's light, cast on the record -------------------
+   Behind the sleeve, in the score's colour, brighter the higher the score.
+   Dragging lifts it and leans the sleeve forward a touch, so the record
+   reacts to the verdict being formed under it. */
+.fy-art-wrap::before {
+  content: ''; position: absolute; inset: -16%; z-index: -1; pointer-events: none; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--fy-tint) 60%, transparent), transparent);
+  opacity: calc(.12 + var(--fy-v, .7) * .22);
+  transition: opacity 320ms ease;
+}
+.fy-card:has(.gs-drag) .fy-art-wrap::before { opacity: calc(.25 + var(--fy-v, .7) * .6); }
+.fy-art { transition: transform 520ms var(--gs-spring, var(--ease)), box-shadow 320ms ease; }
+.fy-card:has(.gs-drag) .fy-art {
+  transform: scale(calc(.985 + var(--fy-v, .7) * .045));
+  box-shadow: 0 26px 70px rgba(0,0,0,.6), 0 0 0 1px color-mix(in srgb, var(--fy-tint) 45%, transparent);
+  transition: transform 160ms ease-out, box-shadow 200ms ease;
+}
+
+/* ---- the clip, as a line ------------------------------------------------
+   Thirty seconds drawn along the foot of the sleeve. Started by the same
+   class that starts the equaliser, so it can only run while audio does. */
+.fy-art::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; z-index: 4; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255,245,235,.55), #fff);
+  box-shadow: 0 0 10px rgba(255,255,255,.5);
+  transform: scaleX(0); transform-origin: left center; opacity: 0;
+}
+.fy-card.is-playing .fy-art::before { opacity: 1; animation: fyClip 30s linear forwards; }
+@keyframes fyClip { to { transform: scaleX(1); } }
+
+/* ---- the verdict --------------------------------------------------------
+   The score is pressed onto the sleeve like a label, in its own colour. It
+   replaces the lime outline, which said "done" without saying what. */
+.fy-stamp {
+  position: absolute; top: -12px; left: -12px; z-index: 4; pointer-events: none;
+  width: 50px; height: 50px; border-radius: 50%;
+  display: none; place-items: center;
+  font: 800 19px/1 var(--font-mono); font-variant-numeric: tabular-nums; color: #15120d;
+  background: radial-gradient(circle, #fff 0 34%, var(--fy-tint) 36% 100%);
+  box-shadow: 0 0 0 3px rgba(10,9,8,.55), 0 6px 18px rgba(0,0,0,.5), 0 0 26px color-mix(in srgb, var(--fy-tint) 70%, transparent);
+  transform: rotate(-8deg);
+}
+.fy-card.is-rated .fy-stamp { display: grid; }
+.fy-card.is-rated .fy-art { outline: 0; }
+.fy-card.fy-commit .fy-stamp { animation: fyStamp 520ms var(--gs-spring, ease) backwards; }
+@keyframes fyStamp { from { transform: scale(2.1) rotate(-30deg); opacity: 0; } 55% { opacity: 1; } }
+/* The sleeve takes the press, then springs past rest and settles. */
+.fy-card.fy-commit .fy-art { animation: fyPress 560ms var(--gs-spring, ease); }
+@keyframes fyPress { 0% { transform: scale(1); } 28% { transform: scale(.955); } 70% { transform: scale(1.03); } 100% { transform: scale(1); } }
+/* The halo flares once and returns to the score's resting glow. */
+.fy-card.fy-commit .fy-art-wrap::before { animation: fyFlare 760ms ease-out; }
+@keyframes fyFlare { from { opacity: 1; transform: scale(1.18); } }
+/* And the tray answers the slider it holds. */
+.fy-card.fy-commit .fy-rate { animation: fyTray 700ms ease-out; }
+@keyframes fyTray { from { border-color: var(--fy-tint); box-shadow: 0 0 0 1px var(--fy-tint), 0 0 30px color-mix(in srgb, var(--fy-tint) 55%, transparent); } }
+
+/* Rate lights in the score's colour while pressing it would change something. */
+.fy-save { transition: box-shadow 260ms ease, transform 160ms var(--ease), filter 200ms ease; }
+.fy-save.ready { box-shadow: 0 0 0 1px color-mix(in srgb, var(--fy-tint) 80%, transparent), 0 0 22px color-mix(in srgb, var(--fy-tint) 55%, transparent); }
+.fy-save:active { transform: scale(.95); }
+
+/* ---- desktop: the sleeve answers a pointer ------------------------------ */
+@media (hover: hover) and (pointer: fine) {
+  .fy-art:hover { transform: translateY(-4px) scale(1.012); box-shadow: 0 34px 80px rgba(0,0,0,.65), 0 0 0 1px rgba(255,245,235,.12); }
+  .fy-card:not(.is-playing) .fy-art:hover .fy-cue { opacity: .9; transform: none; }
+  .fy-title:hover, .fy-alb:hover { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--fy-tint) 70%, transparent); text-underline-offset: 4px; }
+}
+
+/* ---- reduced motion: light stays, movement goes ------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .fy-art-wrap,
+  html:not([data-motion="full"]) .fy-meta,
+  html:not([data-motion="full"]) .fy-bed-wrap,
+  html:not([data-motion="full"]) .fy-card.fy-commit .fy-stamp,
+  html:not([data-motion="full"]) .fy-card.fy-commit .fy-art,
+  html:not([data-motion="full"]) .fy-card.fy-commit .fy-art-wrap::before,
+  html:not([data-motion="full"]) .fy-card.fy-commit .fy-rate { animation: none; }
+  html:not([data-motion="full"]) .fy-card .fy-art { transform: none; }
+  html:not([data-motion="full"]) .fy-card.is-playing .fy-art::before { animation: none; opacity: 0; }
+}
+html[data-motion="none"] .fy-art-wrap, html[data-motion="none"] .fy-meta, html[data-motion="none"] .fy-bed-wrap,
+html[data-motion="none"] .fy-card.fy-commit .fy-stamp, html[data-motion="none"] .fy-card.fy-commit .fy-art,
+html[data-motion="none"] .fy-card.fy-commit .fy-art-wrap::before, html[data-motion="none"] .fy-card.fy-commit .fy-rate { animation: none; }
+html[data-motion="none"] .fy-card .fy-art { transform: none; }
+html[data-motion="none"] .fy-card.is-playing .fy-art::before { animation: none; opacity: 0; }

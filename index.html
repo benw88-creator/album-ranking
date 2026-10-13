@@ -9585,6 +9585,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/glow.css?v=3">
 <link rel="stylesheet" href="/assets/play.css?v=1">
 <link rel="stylesheet" href="/assets/cards.css?v=1">
+<link rel="stylesheet" href="/assets/foryou.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -10350,7 +10351,7 @@ window.discAmt = function (n) {
         <span class="fy-push-arrow" aria-hidden="true"></span><span id="fy-push-label">Push</span>
       </button>
     </div>
-    <p id="fy-key-hint" class="fy-key-hint">Use ↑ and ↓ to change posts</p>
+    <p id="fy-key-hint" class="fy-key-hint">↑ ↓ change song · ← → score · Enter rates</p>
     <div class="fy-feed" id="fy-feed" tabindex="0" role="region" aria-label="For You feed" aria-describedby="fy-key-hint"></div>
   </section>
 
@@ -36980,7 +36981,10 @@ window.track = function (name, props) {
      everywhere else in the app. Not albumTier()'s exact bands — that is a
      0-100 scale and these are ten steps — but the same journey. */
   var RATE_TINT = ['#e24b4a','#e24b4a','#e0603c','#e08a3c','#efb927','#efb927','#c8c344','#a8c24a','#6bbf68','#4fb477','#4fb477'];
-  function tintFor(v) { return RATE_TINT[Math.max(0, Math.min(10, v | 0))]; }
+  /* The glow slider paints itself with albumColor(), so the card takes the
+     same function — the halo round the sleeve and the pill under the thumb
+     are one colour, not two ladders that nearly agree. */
+  function tintFor(v) { v = Math.max(0, Math.min(10, v | 0)); return window.albumColor ? albumColor(v * 10) : RATE_TINT[v]; }
 
   /* THE ART IS THE CARD. Two copies of the same sleeve: a blurred, overscaled
      bed so the crop has somewhere to blend out to, and the real one over it
@@ -36993,7 +36997,7 @@ window.track = function (name, props) {
      most taps. The sleeve plays; the title and the album name open. */
   function cardHtml(c, i) {
     var art = esc(c.art || '');
-    return '<article class="fy-card" data-i="' + i + '" data-pool="' + esc(c.pool) + '" style="--fy-tint:' + tintFor(7) + '">' +
+    return '<article class="fy-card" data-i="' + i + '" data-pool="' + esc(c.pool) + '" style="--fy-tint:' + tintFor(7) + ';--fy-v:.7">' +
       // The bed: the same sleeve, blurred past recognition, giving the page the
       // record's colours without competing with the record.
       '<div class="fy-bed-wrap" aria-hidden="true">' +
@@ -37006,6 +37010,8 @@ window.track = function (name, props) {
           (art ? '<img class="fy-main" src="' + art + '" alt="" decoding="async"' + (i === 0 ? ' fetchpriority="high"' : i > 2 ? ' loading="lazy"' : '') + '>' : '') +
           '<span class="fy-cue"></span>' +
         '</button>' +
+        // The score, pressed onto the sleeve once there is one.
+        '<span class="fy-stamp" aria-hidden="true"></span>' +
         '<button class="fy-like' + (window.likedSongHas && likedSongHas(c.key) ? ' liked' : '') + '" data-like="' + i + '" aria-label="Like"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 20.6s-7.6-4.5-10.2-9C.3 8.6 1 5.4 3.7 4.1c2-.9 4.3-.3 5.7 1.4l2.6 3.1 2.6-3.1c1.4-1.7 3.7-2.3 5.7-1.4 2.7 1.3 3.4 4.5 1.9 7.5-2.6 4.5-10.2 9-10.2 9Z"/></svg></button>' +
       '</div>' +
       '<div class="fy-meta">' +
@@ -37174,12 +37180,18 @@ window.track = function (name, props) {
     // the destination owns playback, even when another key interrupts it.
     if (_navTarget != null && (at !== _navTarget || Math.abs(host.scrollTop - at * host.clientHeight) > 2)) return;
     _navTarget = null; _activeCard = at;
+    /* The next two sleeves load now, not when they scroll in — a lazy image
+       arriving mid-snap is the flash between songs. */
+    for (var w = at + 1; w <= at + 2 && w < cards.length; w++)
+      cards[w].querySelectorAll('img[loading="lazy"]').forEach(function (im) { im.loading = 'eager'; });
     var i = parseInt(card.dataset.i, 10);
     if (i < 0) { stopAll(); topUp(); return; }
     if (i >= _items.length - LOOKAHEAD) topUp();
     if (i >= 0 && i !== _playing) playCard(i);
   }
 
+  var _advT = 0;
+  function cancelAdvance() { if (_advT) { clearTimeout(_advT); _advT = 0; } }
   function navigatePost(step) {
     var host = el('fy-feed');
     if (!host || !host.querySelector('.fy-card') || !host.clientHeight) return;
@@ -37210,7 +37222,10 @@ window.track = function (name, props) {
         // must never trigger the native snap engine alongside arrow keys.
         if (desktopFeed() && !e.ctrlKey) e.preventDefault();
       }, { passive: false });
-      host.addEventListener('touchstart', function () { _navTarget = null; }, { passive: true });
+      host.addEventListener('touchstart', function () { _navTarget = null; cancelAdvance(); }, { passive: true });
+      host.addEventListener('wheel', cancelAdvance, { passive: true });
+      host.addEventListener('pointerdown', function (e) { if (!e.target.closest('[data-save]')) cancelAdvance(); }, { passive: true });
+      document.addEventListener('keydown', function (e) { if (e.key !== 'Enter' && e.key !== ' ') cancelAdvance(); });
       document.addEventListener('keydown', function (e) {
         if (e.defaultPrevented || !desktopFeed() || document.body.dataset.section !== 'foryou' ||
             (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
@@ -37483,11 +37498,30 @@ window.track = function (name, props) {
       // of you stays live, which is the point.
       if (_ctx) { if (v > 0) _ctx.ratedSong[rec.skey] = true; else delete _ctx.ratedSong[rec.skey]; }
       t.textContent = v > 0 ? ('Rated ' + v) : 'Skipped';
+      t.classList.remove('ready');
       var card2 = host.querySelector('.fy-card[data-i="' + k + '"]');
-      if (card2) card2.classList.toggle('is-rated', v > 0);
-      // The burst is for a verdict arriving, not for every nudge of a slider.
-      if (first && v > 0 && card2 && window.burst) burst(card2);
+      if (card2) {
+        card2.classList.toggle('is-rated', v > 0);
+        var st = card2.querySelector('.fy-stamp');
+        if (st) st.textContent = v > 0 ? v : '';
+        /* One coordinated beat: the sleeve takes the press, the stamp lands,
+           the halo flares in the score's colour. Restarted, so a re-rate
+           plays it again. Nothing waits on it. */
+        if (v > 0) { card2.classList.remove('fy-commit'); void card2.offsetWidth; card2.classList.add('fy-commit'); }
+      }
       if (window.buzz) buzz('good');
+      /* MOMENTUM. A first verdict carries you on to the next song once the
+         stamp has landed. Only the first — a re-rate is somebody still
+         thinking — and a touch, wheel, key or slider move in the meantime
+         cancels it: the feed is never taken from a hand that is on it. */
+      cancelAdvance();
+      var at2 = card2 ? Array.prototype.indexOf.call(host.children, card2) : -1;
+      if (first && v > 0 && at2 === _activeCard) {
+        _advT = setTimeout(function () {
+          _advT = 0;
+          if (document.body.dataset.section === 'foryou' && !document.hidden && _activeCard === at2) navigatePost(1);
+        }, 820);
+      }
     });
 
     host.addEventListener('input', function (e) {
@@ -37513,7 +37547,10 @@ window.track = function (name, props) {
          the numeral beside it picks it up from the same variable — one
          assignment, two elements, no second lookup to keep in step. */
       var cd = r.closest('.fy-card');
-      if (cd) cd.style.setProperty('--fy-tint', tintFor(parseInt(r.value, 10)));
+      if (cd) { cd.style.setProperty('--fy-tint', tintFor(parseInt(r.value, 10))); cd.style.setProperty('--fy-v', (r.value / 10).toFixed(2)); }
+      // Rate glows while pressing it would change something.
+      if (b) b.classList.toggle('ready', parseInt(r.value, 10) > 0 && (_items[+r.dataset.rate] || {}).myScore !== parseInt(r.value, 10));
+      cancelAdvance();
     });
   }
 
@@ -40126,6 +40163,6 @@ window.track = function (name, props) {
 <script src="/assets/interactions.js?v=2"></script>
 <script src="/assets/replay.js?v=1"></script>
 <script src="/assets/you.js?v=2"></script>
-<script src="/assets/glow.js?v=2"></script>
+<script src="/assets/glow.js?v=3"></script>
 <script src="/assets/play.js?v=2"></script>
 </html>
