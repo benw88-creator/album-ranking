@@ -58,22 +58,7 @@
 .fy-card.is-playing .fy-art::before { opacity: 1; animation: fyClip 30s linear forwards; }
 @keyframes fyClip { to { transform: scaleX(1); } }
 
-/* ---- the verdict --------------------------------------------------------
-   The score is pressed onto the sleeve like a label, in its own colour. It
-   replaces the lime outline, which said "done" without saying what. */
-.fy-stamp {
-  position: absolute; top: -12px; left: -12px; z-index: 4; pointer-events: none;
-  width: 50px; height: 50px; border-radius: 50%;
-  display: none; place-items: center;
-  font: 800 19px/1 var(--font-mono); font-variant-numeric: tabular-nums; color: #15120d;
-  background: radial-gradient(circle, #fff 0 34%, var(--fy-tint) 36% 100%);
-  box-shadow: 0 0 0 3px rgba(10,9,8,.55), 0 6px 18px rgba(0,0,0,.5), 0 0 26px color-mix(in srgb, var(--fy-tint) 70%, transparent);
-  transform: rotate(-8deg);
-}
-.fy-card.is-rated .fy-stamp { display: grid; }
-.fy-card.is-rated .fy-art { outline: 0; }
-.fy-card.fy-commit .fy-stamp { animation: fyStamp 520ms var(--gs-spring, ease) backwards; }
-@keyframes fyStamp { from { transform: scale(2.1) rotate(-30deg); opacity: 0; } 55% { opacity: 1; } }
+/* ---- the verdict ---------------------------------------------------------- */
 /* The sleeve takes the press, then springs past rest and settles. */
 .fy-card.fy-commit .fy-art { animation: fyPress 560ms var(--gs-spring, ease); }
 @keyframes fyPress { 0% { transform: scale(1); } 28% { transform: scale(.955); } 70% { transform: scale(1.03); } 100% { transform: scale(1); } }
@@ -101,15 +86,19 @@
   html:not([data-motion="full"]) .fy-art-wrap,
   html:not([data-motion="full"]) .fy-meta,
   html:not([data-motion="full"]) .fy-bed-wrap,
-  html:not([data-motion="full"]) .fy-card.fy-commit .fy-stamp,
-  html:not([data-motion="full"]) .fy-card.fy-commit .fy-art,
+    html:not([data-motion="full"]) .fy-card.fy-commit .fy-art,
   html:not([data-motion="full"]) .fy-card.fy-commit .fy-art-wrap::before,
   html:not([data-motion="full"]) .fy-card.fy-commit .fy-rate { animation: none; }
   html:not([data-motion="full"]) .fy-card .fy-art { transform: none; }
   html:not([data-motion="full"]) .fy-card.is-playing .fy-art::before { animation: none; opacity: 0; }
 }
 html[data-motion="none"] .fy-art-wrap, html[data-motion="none"] .fy-meta, html[data-motion="none"] .fy-bed-wrap,
-html[data-motion="none"] .fy-card.fy-commit .fy-stamp, html[data-motion="none"] .fy-card.fy-commit .fy-art,
+html[data-motion="none"] .fy-card.fy-commit .fy-art,
 html[data-motion="none"] .fy-card.fy-commit .fy-art-wrap::before, html[data-motion="none"] .fy-card.fy-commit .fy-rate { animation: none; }
 html[data-motion="none"] .fy-card .fy-art { transform: none; }
 html[data-motion="none"] .fy-card.is-playing .fy-art::before { animation: none; opacity: 0; }
+
+/* A rated sleeve keeps a thin ring in its score's colour — the old lime
+   outline said "done" without saying what; the number lives on the Rate
+   button ("Rated 8"), not stamped over the artwork. */
+.fy-card.is-rated .fy-art { outline: 2px solid color-mix(in srgb, var(--fy-tint) 65%, transparent); outline-offset: 3px; }

@@ -9585,7 +9585,8 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/glow.css?v=3">
 <link rel="stylesheet" href="/assets/play.css?v=1">
 <link rel="stylesheet" href="/assets/cards.css?v=1">
-<link rel="stylesheet" href="/assets/foryou.css?v=1">
+<link rel="stylesheet" href="/assets/foryou.css?v=2">
+<link rel="stylesheet" href="/assets/boards.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -10512,7 +10513,7 @@ window.discAmt = function (n) {
       </div>
       <button class="lb-bar arc-lb" id="leaderboard-card">
         <span class="lb-bar-icon" data-icon="stopwatch"></span>
-        <span class="lb-bar-text"><b>Leaderboard</b><small>Fastest runs and top scores</small></span>
+        <span class="lb-bar-text"><b>Leaderboards</b><small>Every game, every artist, your friends</small></span>
         <span class="lb-bar-go">&rarr;</span>
       </button>
     </header>
@@ -10911,6 +10912,7 @@ window.discAmt = function (n) {
       </div>
       <span class="drop-date" id="drop-date"></span>
     </div>
+    <div class="gb-clock-row" id="drop-clock"></div>
     <div class="drop-status">
       <span id="drop-left"></span>
       <span class="drop-count" id="drop-count"></span>
@@ -11068,6 +11070,7 @@ window.discAmt = function (n) {
     </div>
 
     <div id="blitz-play" style="display:none;">
+      <div class="gb-clock-row" id="blitz-clock"></div>
       <div class="bl-hud">
         <div class="bl-score"><span id="blitz-score">0</span><small>points</small></div>
         <div class="bl-mult" id="blitz-mult">&times;1</div>
@@ -11111,6 +11114,7 @@ window.discAmt = function (n) {
     </div>
 
     <div id="hl-play" style="display:none;">
+      <div class="gb-clock-row" id="hl-clock"></div>
       <div class="hl-score-row">
         <div class="hl-score"><span id="hl-score">0</span><small>points</small></div>
         <div class="hl-score mult-tile"><span class="hl-mult" id="hl-mult">×1</span><small id="hl-streak">0 in a row</small></div>
@@ -11166,6 +11170,7 @@ window.discAmt = function (n) {
       <div class="rc-score" id="recall-score" style="display:none;" aria-live="polite"></div>
       <div class="rc-streak" id="recall-streak" aria-live="polite"></div>
     </div>
+    <div class="gb-clock-row" id="recall-clock"></div>
 
     <div id="recall-lobby">
       <div class="rc-lobby-art" aria-hidden="true"><div class="rc-disc"></div><div class="rc-ladder"><i>1s</i><i>3s</i><i>5s</i><i>10s</i></div></div>
@@ -11230,6 +11235,7 @@ window.discAmt = function (n) {
       <button id="ew-hint">Reveal artist</button>
     </div>
 
+    <div class="gb-clock-row" id="ew-clock"></div>
     <div class="ew-clues" id="ew-clues"></div>
     <div id="ew-status"></div>
     <div class="ew-board" id="ew-board"></div>
@@ -11739,19 +11745,19 @@ window.discAmt = function (n) {
   </div>
 </div>
 
-<!-- ============================ SPEED LEADERBOARD ============================ -->
+<!-- ============================ LEADERBOARDS ============================
+     Drawn by assets/boards.js. One sheet for every minigame: game chips, the
+     game's modes, today or best day for dailies, an artist filter for the
+     artist games, Friends, and you pinned at the foot. -->
 <div class="modal" id="leaderboard-modal">
-  <div class="modal-panel" style="max-width:520px;">
+  <div class="modal-panel gb-panel">
     <button class="modal-close" id="leaderboard-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji" data-icon="stopwatch"></span><div><h2>Speed Leaderboard</h2><p>Fastest perfect (5/5) runs, globally.</p></div></div>
-    <div class="seg" id="lb-game-seg" style="width:100%; display:flex; margin-bottom:14px; flex-wrap:wrap;">
-      <button data-game="cover" class="active" style="flex:1;">Cover</button>
-      <button data-game="coverx" style="flex:1;">EXTREME</button>
-      <button data-game="tracklist" style="flex:1;">Tracklist</button>
-      <button data-game="year" style="flex:1;">Year</button>
-      <button data-game="recall" style="flex:1;">Recall</button>
-    </div>
-    <div id="lb-list" style="max-height:56vh; overflow-y:auto;"></div>
+    <div class="gb-head"><h2>Leaderboards</h2><p id="gb-sub"></p></div>
+    <div class="gb-games" id="gb-games" role="tablist" aria-label="Game"></div>
+    <div class="gb-filters"><div class="gb-seg" id="gb-modes" hidden></div><div class="gb-seg" id="gb-period" hidden></div></div>
+    <div class="gb-scope" id="gb-scope"></div>
+    <div class="gb-list" id="gb-list" aria-live="polite"></div>
+    <div class="gb-me" id="gb-me"></div>
   </div>
 </div>
 
@@ -14717,7 +14723,7 @@ function renderAuthArea(connected){
   const emojiEl=document.getElementById('g-emoji');
   let gameType='cover',poolMode='artist',pool=[],rounds=[],idx=0,score=0,streak=0,answered=false;
   let artistName='',selectedArtistId=null,artTimer=null,artSugg=[],artActive=-1;
-  let _gameStartTime=0,_liveTimerInt=null,_lastModeKey='',_lastModeLabel='';
+  let _gameStartTime=0,_liveTimerInt=null,_lastModeKey='',_lastModeLabel='',_near=0,_gbSlot=null;
 
   function showV(v){vStart.style.display=v==='start'?'block':'none';vPlay.style.display=v==='play'?'block':'none';vEnd.style.display=v==='end'?'block':'none';}
   function setPoolMode(m){
@@ -14919,13 +14925,17 @@ function renderAuthArea(connected){
        reason nobody can see. */
     _lastModeKey = 'artist:' + (selectedArtistId||artistName);
     _lastModeLabel = artistName || '';
-    _gameStartTime = performance.now();
+    _gameStartTime = performance.now(); _near = 0;
+    /* The board's clock is the server's: the run is stamped there, and the
+       timer reads that start, corrected once the reply lands. */
+    const _run = window.Boards ? Boards.start(gameType, 'artist', { artistKey: _lastModeKey, artistLabel: _lastModeLabel }) : null;
+    if(_gbSlot) _gbSlot.innerHTML='';
     if(timerEl){
       timerEl.textContent='0.0s';
       clearInterval(_liveTimerInt);
       _liveTimerInt=setInterval(function(){
-        const secs=((performance.now()-_gameStartTime)/1000).toFixed(1);
-        timerEl.textContent=secs+'s';
+        const ms=_run?(Date.now()-_run.t0):(performance.now()-_gameStartTime);
+        timerEl.textContent=(Math.max(0,ms)/1000).toFixed(1)+'s';
       },100);
     }
     renderRound();
@@ -14972,7 +14982,7 @@ function renderAuthArea(connected){
   function submit(){
     if(answered)return;
     const r=rounds[idx];let ok=false,answerText='';
-    if(gameType==='year'){const guessY=parseInt(yearInput.value,10);if(!guessY)return;const actual=parseInt(r.year,10);ok=!isNaN(actual)&&Math.abs(guessY-actual)<=1;answerText='Released '+(r.year||'?');yearInput.disabled=true;}
+    if(gameType==='year'){const guessY=parseInt(yearInput.value,10);if(!guessY)return;const actual=parseInt(r.year,10);ok=!isNaN(actual)&&Math.abs(guessY-actual)<=1;if(ok&&guessY!==actual)_near++;answerText='Released '+(r.year||'?');yearInput.disabled=true;}
     else{if(!guessInput.value.trim())return;ok=nameMatch(guessInput.value,r.name);answerText='It was \u201C'+r.name+'\u201D';guessInput.disabled=true;}
     answered=true;
     if(ok){score++;streak++;}else{streak=0;}
@@ -15015,26 +15025,18 @@ function renderAuthArea(connected){
     // A round finished, not a modal opened — "most played" should mean rounds
     // you saw through, or abandoning a setup screen would count as playing.
     if(window.notePlay)notePlay(gameType,{artist:artistName,score:score});
-    // Only perfect runs (5/5) count for the speed leaderboard — a fast wrong
-    // answer shouldn't beat a slower flawless one.
-    if(pct===1 && window.Cloud && Cloud.isOn && Cloud.isOn()){
-      Cloud.submitLeaderboardTime(gameType,_lastModeKey,_lastModeLabel,elapsedMs).then(function(res){
-        if(res && res.ok) showLeaderboardEntry(elapsedMs);
-      });
+    /* Every run goes to the board now, not only perfect ones: the server
+       scores accuracy first and speed only on right answers, so a fast wrong
+       run cannot beat a slower right one. It also scales for the artist's
+       pool size, which is what keeps the all-artists board fair. */
+    if(window.Boards){
+      _gbSlot=Boards.slot(finalMsg,'g-gb-result');
+      _gbSlot.innerHTML='';
+      Boards.finish(gameType,{correct:score,near:_near,pool:pool.length}).then(function(res){Boards.result(_gbSlot,res);});
     }
     renderBests();
   }
 
-  let _lbEntryEl=null;
-  function showLeaderboardEntry(elapsedMs){
-    if(!_lbEntryEl){
-      _lbEntryEl=document.createElement('div');
-      _lbEntryEl.className='reco-note';
-      _lbEntryEl.style.cssText='margin-top:10px;color:var(--gold);text-align:center;';
-      finalMsg.parentNode.insertBefore(_lbEntryEl, finalMsg.nextSibling);
-    }
-    _lbEntryEl.textContent='Added to the leaderboard \u2014 '+(elapsedMs/1000).toFixed(1)+'s';
-  }
 
   /* `.gc-best[data-best]` and not `.gc-best`. The five-round games keep their
      best in `crate_best_<key>` and are painted from here; the Daily Drop,
@@ -15069,60 +15071,7 @@ function renderAuthArea(connected){
   renderBests();
 })();
 
-/* ================================================================
-   8b. SPEED LEADERBOARD
-   ================================================================ */
-(function(){
-  const modal=document.getElementById('leaderboard-modal');
-  const listHost=document.getElementById('lb-list');
-  const seg=document.getElementById('lb-game-seg');
-  let activeGame='cover';
-
-  const GAME_NAMES={cover:'Guess the Cover',coverx:'Cover EXTREME',tracklist:'Guess from Tracklist',year:'Guess the Year',recall:'Recall'};
-  // Every other game here races a clock \u2014 lower is better. Recall is a score,
-  // reusing the same time_ms column (same table, same dedup-by-user, same
-  // architecture) rather than a schema change for one game.
-  const SCORE_GAMES={recall:true};
-
-  function open(){modal.classList.add('open');loadBoard();}
-  function close(){modal.classList.remove('open');}
-
-  async function loadBoard(){
-    listHost.innerHTML='<p class="reco-note ld-line">Loading\u2026</p>';
-    if(!window.Cloud||!Cloud.isOn||!Cloud.isOn()){
-      listHost.innerHTML='<div class="reco-note">Log in to see global times.</div>';
-      return;
-    }
-    const isScore=!!SCORE_GAMES[activeGame];
-    const rows=await Cloud.fetchLeaderboard(activeGame, null, !isScore);
-    if(!rows.length){
-      listHost.innerHTML='<div class="empty" style="padding:32px 20px;"><span class="emoji">\u23F1\ufe0f</span><h3>Nothing yet</h3><p>'+
-        (isScore?'Be the first to post a high score on Recall.':'Be the first to post a perfect 5/5 run on '+esc(GAME_NAMES[activeGame]||activeGame)+'.')+'</p></div>';
-      return;
-    }
-    const me=Cloud.getUser&&Cloud.getUser();
-    listHost.innerHTML=rows.map(function(r,i){
-      const mine=me&&r.user_id===me.id;
-      const medal=i<3?ICONS.medal:('#'+(i+1));
-      return '<div class="ptop-row" style="cursor:default;'+(mine?'background:rgba(245,200,66,0.07);border-radius:8px;':'')+'">'+
-        '<span style="width:34px; text-align:center; font-family:var(--font-display); font-weight:700; font-size:'+(i<3?'18px':'14px')+';">'+medal+'</span>'+
-        '<div style="flex:1;"><div class="nm">'+esc(r.username||'user')+(mine?' <span style="color:var(--gold);font-size:11px;">(you)</span>':'')+'</div>'+
-        (r.mode_label?'<div class="ar">'+esc(r.mode_label)+'</div>':'')+'</div>'+
-        '<div style="font-family:var(--font-display); font-weight:700; color:var(--gold);">'+(isScore?Number(r.time_ms).toLocaleString('en-GB'):(r.time_ms/1000).toFixed(1)+'s')+'</div>'+
-      '</div>';
-    }).join('');
-  }
-
-  document.getElementById('leaderboard-card').addEventListener('click',open);
-  document.getElementById('leaderboard-close').addEventListener('click',close);
-  modal.addEventListener('click',function(e){if(e.target===modal)close();});
-  seg.addEventListener('click',function(e){
-    const b=e.target.closest('button');if(!b)return;
-    activeGame=b.dataset.game;
-    seg.querySelectorAll('button').forEach(function(x){x.classList.toggle('active',x===b);});
-    loadBoard();
-  });
-})();
+/* 8b. The leaderboard sheet lives in assets/boards.js (window.Boards). */
 
 /* ================================================================
    9. ACHIEVEMENTS + ARTIST COMPLETION
@@ -23263,6 +23212,18 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
     if (ewState.mode === 'daily') ewRestoreDaily();
     ewRenderAll();
+    /* Daily runs are timed by the server from first sight; Unlimited is
+       built from your own library, so it keeps a local clock and no board. */
+    var ewck = document.getElementById('ew-clock');
+    if (window.Boards && ewck) {
+      if (ewState.done || !pick) ewck.innerHTML = '';
+      else {
+        Boards.start('earworm', ewState.mode, { day: Boards.day(), local: ewState.mode !== 'daily' });
+        Boards.clock(ewck, 'earworm', { score: function (ms) {
+          return ewState.done || ewState.mode !== 'daily' ? '' : Boards.preview.earworm(ewState.rows.length, ms, ewLen(), ewState.hinted);
+        } });
+      }
+    }
 
     /* The only record without a baked genre is one out of your own library.
        Fill that clue in if the lookup answers, but never wait for it, and
@@ -23439,7 +23400,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         (rec.art ? '<img class="ew-result-art" src="' + esc(rec.art) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
         '<h3>' + (ewState.won ? 'Got it — ' : 'It was ') + esc(rec.title) + '</h3>' +
         '<p>' + esc(rec.artist) + (rec.genre ? ' · ' + esc(rec.genre) : '') + '</p>' +
-        (ewState.mode === 'daily' ? '<div class="drop-share">' + esc(grid) + '</div>' : '') +
+        (ewState.mode === 'daily' ? '<div class="drop-share">' + esc(grid) + '</div><div class="gb-slot" id="ew-gb"></div>' : '') +
         '<div class="ew-result-actions">' +
           (ewState.mode === 'daily'
             ? '<button class="btn-primary" type="button" id="ew-copy">' + Native.hand + ' result</button>'
@@ -23535,6 +23496,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     }
 
     if (ewState.done && window.notePlay) notePlay('earworm');
+    if (ewState.done && window.Boards) {
+      var ewm = ewState.mode;
+      Boards.finish('earworm', { guesses: ewState.rows.length, solved: ewState.won, letters: ewLen(), hinted: ewState.hinted }).then(function (res) {
+        var gs = document.getElementById('ew-gb');
+        if (gs && res && ewState.mode === ewm) Boards.result(gs, res);
+      });
+    }
     if (ewState.done && ewState.won) {
       // Fewest rows is the best result, so this is a minimum rather than a
       // maximum — and it carries what it was for, because "solved in 2" means
@@ -24421,6 +24389,17 @@ function playDismissAnimation(gateEl, callback) {
     refreshStatus();
     if (st.done) showResult(st.won);
     updateCardStatus();
+    /* The board's clock starts the first time today's puzzle is on screen —
+       the server resumes it after that — and stops on the last guess. */
+    var ck = document.getElementById('drop-clock');
+    if (window.Boards && ck) {
+      if (st.done) ck.innerHTML = '';
+      else {
+        var gr = Boards.live('drop');
+        if (!(gr && gr.mode === mode && gr.day === Boards.day())) Boards.start('drop', mode, { day: Boards.day() });
+        Boards.clock(ck, 'drop', { score: function (ms) { var s2 = loadState(mode); return s2.done ? '' : Boards.preview.drop(s2.g.length, ms); } });
+      }
+    }
   }
 
   function refreshStatus() {
@@ -24518,6 +24497,12 @@ function playDismissAnimation(gateEl, callback) {
     if (st.done) {
       elInput.disabled = true;
       showResult(won);
+      var ckd = document.getElementById('drop-clock');
+      if (window.Boards) Boards.finish('drop', { guesses: st.g.length, solved: !!won }).then(function (res) {
+        if (ckd) ckd.innerHTML = '';
+        var gs = document.getElementById('drop-gb');
+        if (gs && res && res.mode === mode) Boards.result(gs, res);
+      });
       if (won) {
         if (typeof celebrate === 'function') {
           celebrate(guess.name, guess.artist || '', {
@@ -24566,6 +24551,7 @@ function playDismissAnimation(gateEl, callback) {
         '<h3>' + (won ? 'Got it — ' : 'It was ') + esc(answer.name) + '</h3>' +
         '<p>' + esc(sub) + '</p>' +
         '<div class="drop-share">' + esc(shareGrid()) + '</div>' +
+        '<div class="gb-slot" id="drop-gb"></div>' +
         '<div><button class="btn-primary" id="drop-share-btn" type="button" style="margin-top:14px;">' + Native.hand + ' result</button></div>' +
         '<div class="drop-note">' + (otherLeft() || 'A new album and a new song every day at midnight.') + '</div>' +
       '</div>';
@@ -24573,6 +24559,7 @@ function playDismissAnimation(gateEl, callback) {
     if (btn) btn.addEventListener('click', function () {
       handOff(btn, { text: shareText() });
     });
+    if (window.Boards) Boards.paint(document.getElementById('drop-gb'), 'drop', mode, Boards.day());
   }
   /* Finishing one half of the day should point at the other half rather
      than at a closed door. */
@@ -30095,6 +30082,12 @@ window.renderAdminStats = renderAdminStats;
     paintCard();
 
     score = 0; points = 0;
+    // Streams runs are ranked; Your ratings is about your own scores, so it
+    // keeps a clock and no board.
+    if (window.Boards) {
+      Boards.start('higherlower', mode, { local: mode !== 'streams' });
+      Boards.clock(el('hl-clock'), 'higherlower');
+    }
     left = pool[Math.floor(Math.random() * pool.length)];
     used.add(left);
     right = nextRight();
@@ -30207,6 +30200,11 @@ window.renderAdminStats = renderAdminStats;
     // run played, and "favourite minigame" should count what you reach for,
     // not what you were good at.
     if (window.notePlay) notePlay('higherlower');
+    if (window.Boards) {
+      var gbh = Boards.slot(el('hl-over-sub'), 'hl-gb');
+      gbh.innerHTML = '';
+      Boards.finish('higherlower', { streak: score }).then(function (res) { Boards.result(gbh, res); });
+    }
     if (window.track) track('higherlower_run', { mode: mode, score: score, points: points, exhausted: !!exhausted });
   }
 
@@ -30857,6 +30855,11 @@ window.renderAdminStats = renderAdminStats;
     if (!qs.length) { note('Could not build a round.'); return; }
     i = 0; score = 0; streak = 0; bestStreak = 0; correct = 0; busy = false; marks = [];
     riskArmed = false; riskRound = -1;
+    // Head-to-heads keep their own record; the board takes Today's Ten and Solo.
+    if (window.Boards) {
+      Boards.start('blitz', mode === 'daily' ? 'daily' : 'solo', { day: Boards.day(), local: mode === 'match' });
+      Boards.clock(el('blitz-clock'), 'blitz');
+    }
     show('blitz-play');
     round();
   }
@@ -31032,6 +31035,11 @@ window.renderAdminStats = renderAdminStats;
     }
     if (window.notePlay) notePlay('blitz');
     if (window.Wallet && Wallet.awardGame) Wallet.awardGame('blitz', { reason: 'Cover Fire' });
+    if (window.Boards) {
+      var gbs = Boards.slot(el('blitz-vs'), 'blitz-gb');
+      gbs.innerHTML = '';
+      Boards.finish('blitz', { score: score, correct: correct }).then(function (res) { Boards.result(gbs, res); });
+    }
     if (window.track) track('blitz_run', { mode: mode, score: score, correct: correct });
 
     if (mode !== 'match' || !match) return;
@@ -32274,7 +32282,7 @@ window.renderAdminStats = renderAdminStats;
     if (window.Reminders) Reminders.sync();
     paintCard();
     dailyExtras(rec);
-    if (!on()) return;
+    if (!on()) { gbRecall(); return; }
     try {
       /* The score is the SERVER's, computed from the step, and correctness is
          decided there against recall_daily. What goes up is the title being
@@ -32303,6 +32311,15 @@ window.renderAdminStats = renderAdminStats;
         loadState();
       }
     } catch (e) {}
+    // After recall_submit, because the board takes the daily's score from it.
+    gbRecall();
+  }
+  function gbRecall() {
+    if (!window.Boards) return;
+    var gs = Boards.slot(el('recall-rev-actions'), 'recall-gb');
+    if (!gs) return;
+    gs.innerHTML = '';
+    Boards.finish('recall', {}).then(function (res) { Boards.result(gs, res); });
   }
   /* The share row and the clock to the next one. A daily is only collectible
      if it ends somewhere — a result that just sits there is a score, and a
@@ -32378,19 +32395,13 @@ window.renderAdminStats = renderAdminStats;
       sh.onclick = function () { handOff(sh, { text: Recall.shareText(shareRec), copied: 'Copied' }); };
     }
     paintCard();
+    if (window.Boards) {
+      var gbe = Boards.slot(el('recall-summary'), 'recall-gb-end');
+      gbe.innerHTML = '';
+      Boards.finish('recall', { score: st.score, played: st.played, songs: st.songs }).then(function (res) { Boards.result(gbe, res); });
+    }
     if (!on()) return;
     try { await Cloud.recallSession(st.score, st.songs, st.bestStreak, Math.round(st.avgReveal)); } catch (e) {}
-    /* The leaderboard, not per round — a run's total is the thing worth
-       comparing. Only a genuine new personal best is submitted: fetchLeaderboard
-       already keeps one row per user (fastest/highest), so a worse run is
-       thrown away there regardless, but posting every mediocre run is still
-       noise and, on a slow connection, a stale insert racing a later one for
-       no reason. Real songs answered required, or an empty run at Discs bought
-       nothing and posted a genuine "0" that reads as a joke entry. */
-    if (isBest && st.songs > 0) {
-      try { await Cloud.submitLeaderboardTime('recall', sess.mode, sess.mode === 'daily' ? 'Daily' : 'Endless', st.score); }
-      catch (e) {}
-    }
   }
   function row(k, v) { return '<div class="rc-sum-row"><span>' + esc(k) + '</span><b>' + esc(v) + '</b></div>'; }
 
@@ -32532,6 +32543,10 @@ window.renderAdminStats = renderAdminStats;
   function startMode(key) {
     if (key === 'daily' && Recall.dailyDone()) { paintLobby(); return; }
     sess = Recall.session(key);
+    if (window.Boards) {
+      Boards.start('recall', key, { day: Recall.dayNo(), local: key !== 'daily' && key !== 'endless' });
+      Boards.clock(el('recall-clock'), 'recall');
+    }
     track2('recall_start', { mode: key });
     nextRound();
   }
@@ -37010,8 +37025,6 @@ window.track = function (name, props) {
           (art ? '<img class="fy-main" src="' + art + '" alt="" decoding="async"' + (i === 0 ? ' fetchpriority="high"' : i > 2 ? ' loading="lazy"' : '') + '>' : '') +
           '<span class="fy-cue"></span>' +
         '</button>' +
-        // The score, pressed onto the sleeve once there is one.
-        '<span class="fy-stamp" aria-hidden="true"></span>' +
         '<button class="fy-like' + (window.likedSongHas && likedSongHas(c.key) ? ' liked' : '') + '" data-like="' + i + '" aria-label="Like"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 20.6s-7.6-4.5-10.2-9C.3 8.6 1 5.4 3.7 4.1c2-.9 4.3-.3 5.7 1.4l2.6 3.1 2.6-3.1c1.4-1.7 3.7-2.3 5.7-1.4 2.7 1.3 3.4 4.5 1.9 7.5-2.6 4.5-10.2 9-10.2 9Z"/></svg></button>' +
       '</div>' +
       '<div class="fy-meta">' +
@@ -37502,10 +37515,8 @@ window.track = function (name, props) {
       var card2 = host.querySelector('.fy-card[data-i="' + k + '"]');
       if (card2) {
         card2.classList.toggle('is-rated', v > 0);
-        var st = card2.querySelector('.fy-stamp');
-        if (st) st.textContent = v > 0 ? v : '';
-        /* One coordinated beat: the sleeve takes the press, the stamp lands,
-           the halo flares in the score's colour. Restarted, so a re-rate
+        /* One coordinated beat: the sleeve takes the press, the halo flares
+           in the score's colour and the tray answers. Restarted, so a re-rate
            plays it again. Nothing waits on it. */
         if (v > 0) { card2.classList.remove('fy-commit'); void card2.offsetWidth; card2.classList.add('fy-commit'); }
       }
@@ -40164,5 +40175,6 @@ window.track = function (name, props) {
 <script src="/assets/replay.js?v=1"></script>
 <script src="/assets/you.js?v=2"></script>
 <script src="/assets/glow.js?v=3"></script>
+<script src="/assets/boards.js?v=1"></script>
 <script src="/assets/play.js?v=2"></script>
 </html>

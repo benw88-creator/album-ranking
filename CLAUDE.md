@@ -6130,10 +6130,52 @@ the hover lift.
   animates `scale`/`translate`, never `transform`, because those hold for ever
   and the drag lean and the commit press own `transform` on `.fy-art` (trap 2).
 - **Dragging** (`.fy-card:has(.gs-drag)`) lifts the halo and leans the sleeve
-  by score. **Rating** plays one beat — press, stamp, flare, tray — replacing
-  the confetti and the lime outline; the stamp stays as the score on the sleeve.
+  by score. **Rating** plays one beat — press, flare, tray — replacing the
+  confetti. A rated sleeve keeps a thin ring in its score colour. There is NO
+  score badge on the art: one shipped and the owner rejected it.
 - **Momentum:** a FIRST rating moves to the next song after 820ms. A re-rate
   never does; any touch, wheel, non-Enter key or slider move cancels it.
 - The clip shows as a 30s line under the sleeve (`.is-playing`), the next two
   sleeves are de-lazied on settle so nothing decodes mid-snap, and desktop
   Enter rates the card in view. Reduced motion keeps the light, drops movement.
+
+## Leaderboards — every minigame, scored and timed by the server
+
+`..._20261014100000_game_leaderboards.sql` (**applied 2026-10-13** via
+`supabase db query --linked -f`), `assets/boards.js` (`window.Boards`) and
+`assets/boards.css`. Replaces the old speed board: `leaderboard_times` and
+`Cloud.submitLeaderboardTime` are left in place and no longer written.
+
+- **The server owns the clock and the score.** `game_start` stamps the run;
+  `game_finish` measures elapsed against it and calls `game_score`. The browser
+  sends only what happened (`correct`, `guesses`, `streak`…), never a number to
+  rank — except Cover Fire, whose in-round score is held to ≤ 4,200 and ≤ 600 a
+  right answer, as `blitz_submit` already did. Recall's daily score comes from
+  `recall_results`; Higher or Lower's points are recomputed from the streak.
+- **Integrity:** a run finishes once (`already_finished`), a new non-daily run
+  voids any open one (no starting ten and filing the best), dailies are unique
+  per `(user, game, mode, day)` and their clock resumes from first sight, 60
+  starts an hour per game, per-game "too fast" floors, a max duration. A
+  rejected run is kept as `void` with the reason in `detail`.
+- **Correctness is still client-reported** for games whose questions are built
+  in the browser (the five-round artist games, Drop, Earworm, Cover Fire). Same
+  posture as every other minigame; nothing here pays Discs.
+- **Scoring, per kind of game** (all in `game_score`, guards assert it):
+  five-round artist games — 1,000 a right round (Year: 700 within one),
+  speed ≤ 300 per RIGHT round vs a par, × game difficulty, × a pool factor
+  (`0.55 + 0.45·ln(pool)/ln 20`, capped at 1) so the all-artists board does not
+  favour small discographies. Drop/Earworm — guesses decide (1,000 each), time
+  adds ≤ 500/400, so it only breaks ties. HL — the game's own multiplier sum.
+- **Boards** are `game_bests` rows, one per (game, mode, artist_key, day,
+  user): artist games write their artist board and `'*'`; dailies write the
+  day and `day = -1` ("best day"). Reads are `game_board` (index range, top
+  50, your rank by count) and `game_board_artists` for the search box. Friends
+  = people you follow, plus you. Not boarded, deliberately: Earworm Unlimited
+  and HL "Your ratings" (your own crate), Cover Fire head-to-heads, Bid Wars.
+- `game_spec()` is the list of boards; `Boards.GAMES` mirrors it for display.
+  Change one, change the other.
+- Each game mounts `Boards.clock` in a `.gb-clock-row` and puts the results card
+  (`Boards.result`) in a slot on its end screen. Drop and Earworm rebuild their
+  end screens, so they re-paint the cached result with `Boards.paint`.
+- Known limits: HL streams ranks across different crates (a bigger crate allows
+  a longer run); the pool factor trusts the client's pool size.
