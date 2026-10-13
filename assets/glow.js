@@ -63,17 +63,32 @@
     }
     function rubber(d) { return d * 0.42 / (1 + Math.abs(d) / 140); }
 
-    wrap.addEventListener('pointerdown', function (e) {
-      if (e.button > 0) return;
+    var pend = null;   // a touch that has not yet said which way it is going
+    function begin(e) {
       measure();
       var r = track.getBoundingClientRect();
-      drag = { id: e.pointerId, r: r, from: +input.value, lx: e.clientX, lt: e.timeStamp, v: 0 };
-      wrap.setPointerCapture(e.pointerId);
+      drag = { id: e.pointerId, r: r, from: pend ? pend.from : +input.value, lx: e.clientX, lt: e.timeStamp, v: 0 };
+      pend = null;
+      try { wrap.setPointerCapture(e.pointerId); } catch (x) {}
       wrap.classList.add('gs-drag');
       lastTick = Math.floor(frac(+input.value) * 10);
       move(e);
+    }
+    wrap.addEventListener('pointerdown', function (e) {
+      if (e.button > 0) return;
+      if (opts.axis && e.pointerType !== 'mouse') {
+        pend = { id: e.pointerId, x: e.clientX, y: e.clientY, from: +input.value };
+        return;
+      }
+      begin(e);
       input.focus({ preventScroll: true });
       e.preventDefault();
+    });
+    wrap.addEventListener('pointermove', function (e) {
+      if (!pend || pend.id !== e.pointerId) return;
+      var dx = Math.abs(e.clientX - pend.x), dy = Math.abs(e.clientY - pend.y);
+      if (dx > 6 && dx > dy) begin(e);
+      else if (dy > 10) pend = null;          // a scroll: let the feed have it
     });
     function move(e) {
       if (!drag || e.pointerId !== drag.id) return;
@@ -102,8 +117,12 @@
       if (!cancelled && window.buzz) buzz('good');
       if (opts.onRelease && !cancelled) opts.onRelease(+input.value);
     }
-    wrap.addEventListener('pointerup', function (e) { end(e, false); });
-    wrap.addEventListener('pointercancel', function (e) { end(e, true); });
+    wrap.addEventListener('pointerup', function (e) {
+      // A tap that never moved: the score goes where the finger landed.
+      if (pend && pend.id === e.pointerId) { begin(e); }
+      end(e, false);
+    });
+    wrap.addEventListener('pointercancel', function (e) { pend = null; end(e, true); });
     input.addEventListener('input', function () { if (!drag) paint(+input.value); });
     input.addEventListener('keydown', function () { wrap.classList.add('gs-release'); setTimeout(function () { wrap.classList.remove('gs-release'); }, 300); });
     if (window.ResizeObserver) new ResizeObserver(sync).observe(track);
@@ -113,11 +132,40 @@
   }
   window.GlowSlider = { enhance: enhance };
 
-  /* ---- the album rating sheet ------------------------------------------ */
+  /* ---- For You: every card's score -----------------------------------
+     Cards arrive in batches as the feed tops up, so new ones are enhanced as
+     they land. Axis-locked: on a phone a vertical swipe that starts on the
+     slider still moves the feed, which is the rule this control lives by. */
+  function enhanceFeed(root) {
+    (root || document).querySelectorAll('#fy-feed input[data-rate]:not(.gs-native)').forEach(function (inp) {
+      enhance(inp, { className: 'gs-fy', axis: true });
+    });
+  }
+  var feed = document.getElementById('fy-feed');
+  if (feed) {
+    enhanceFeed();
+    new MutationObserver(function () { enhanceFeed(); }).observe(feed, { childList: true });
+    // Desktop: left and right rate the card in view.
+    document.addEventListener('keydown', function (e) {
+      if (window.currentMode !== 'foryou' || e.defaultPrevented || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+      var t = e.target;
+      if (t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && t.type !== 'range') || t.isContentEditable)) return;
+      if (t && t.matches && t.matches('input[data-rate]')) return;   // it handles its own arrows
+      if (document.querySelector('.modal.open')) return;
+      var fr = feed.getBoundingClientRect(), cy = fr.top + fr.height / 2, card = null;
+      feed.querySelectorAll('.fy-card').forEach(function (c) { var r = c.getBoundingClientRect(); if (r.top <= cy && r.bottom >= cy) card = c; });
+      var inp = card && card.querySelector('input[data-rate]');
+      if (!inp) return;
+      e.preventDefault();
+      inp.value = Math.max(+inp.min || 0, Math.min(+inp.max || 10, +inp.value + (e.key === 'ArrowRight' ? 1 : -1)));
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      if (window.buzz) buzz('tap');
+    });
+  }
+
+  /* ---- the album rating sheet: arrows only ------------------------------ */
   var rs = document.getElementById('rate-slider');
   if (rs) {
-    rs.removeAttribute('style');
-    enhance(rs, { className: 'gs-album' });
     var rv = document.getElementById('rate-view');
     // Desktop: arrows rate without having to find the slider first.
     document.addEventListener('keydown', function (e) {

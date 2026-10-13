@@ -6049,10 +6049,13 @@ and key repeat are ignored. `scripts/tests/recall.spec.mjs` covers it.
   capture, rAF-coalesced paints on transform/clip-path, rubber-band stretch past
   either end, squash by velocity, a haptic tick per tenth, a spring and a ring on
   release, and `pointercancel` restores the value it started from. Call
-  `input._gs.sync()` after setting `.value` from code. Used on the album rating
-  sheet and Your music. **Not on For You**: that range must keep
-  `touch-action: pan-y` so a vertical swipe still moves the feed; it only gains
-  the glow.
+  `input._gs.sync()` after setting `.value` from code. **It is For You's
+  rating control** (and Your music's); the album sheet keeps the plain range.
+  On For You it runs with `axis: true` and `touch-action: pan-y`: a touch waits
+  until it has moved — sideways (>6px, more x than y) starts a drag, vertical
+  (>10px) is left to the feed, and a tap that never moved sets the score where it
+  landed. New cards are enhanced by a MutationObserver on `#fy-feed`. On desktop
+  ← / → rate the card in the middle of the feed.
 - The album sheet takes **← / →** (Shift for tens) whenever it is open and focus is
   not in a text field. On a phone **Rate Album is pinned above the nav**, and rides
   above the player bar when that is up (`body:has(#player-bar.up)`).
@@ -6100,3 +6103,16 @@ straight to it under reduced motion.
 - The win hop uses the independent `translate` property, because the flip already
   owns `transform` and a second animation on it would cancel the flip.
 - Cover Fire's deal uses `backwards`, not `both` — the picks hover (trap 12).
+
+## The game cards move
+
+`assets/cards.css`, plus `yearCard()` in `play.js`. Recall, Daily Drop and Bid Wars
+already animated; now Earworm's tiles flip through green/amber/grey, Cover Fire's
+fan shuffles, the record slides out of Guess the Cover's sleeve, Cover EXTREME's
+crop has marching ants (a 12px dash tile moved exactly 12px) and a breathing
+square, a now-playing light steps down Tracklist, Higher or Lower's arrows trade,
+and **Guess the Year is a real split-flap** (static top/bottom halves plus two
+flaps) ticking '84, '85… — only changed digits flip and 99 rolls to 00, and it only
+ticks while the card is on screen and the tab is visible. Only children and
+pseudo-elements animate, using `translate`/`rotate`/`scale`: `.gc-art` itself owns
+the hover lift.

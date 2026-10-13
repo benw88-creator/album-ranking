@@ -91,5 +91,48 @@
     })(t0);
   }
 
+  /* The Guess the Year card: a split-flap calendar ticking through the years.
+     Each digit is four half-cards: a static top showing the next number, a
+     static bottom showing the current one, and two flaps — the current top
+     falls, the next bottom swings down after it. Only digits that change flip,
+     and 99 rolls on to 00, so the loop never jumps back. It only runs while the
+     card is on screen and the tab is visible. */
+  function yearCard() {
+    var art = document.querySelector('#year-card .gc-art');
+    if (!art || art._yf) return;
+    art._yf = true;
+    var y = 84;
+    function digit(ch) {
+      return '<span class="yf-d"><span class="yf-t"><b>' + ch + '</b></span><span class="yf-b"><b>' + ch + '</b></span>' +
+        '<span class="yf-ft"><b>' + ch + '</b></span><span class="yf-fb"><b>' + ch + '</b></span></span>';
+    }
+    art.innerHTML = '<i>’</i>' + digit('8') + digit('4');
+    var ds = art.querySelectorAll('.yf-d');
+    function flip(d, cur, nxt) {
+      var q = function (c) { return d.querySelector(c + ' b'); };
+      q('.yf-t').textContent = nxt; q('.yf-fb').textContent = nxt; q('.yf-ft').textContent = cur; q('.yf-b').textContent = cur;
+      var ft = d.querySelector('.yf-ft'), fb = d.querySelector('.yf-fb');
+      if (!ft.animate) { q('.yf-b').textContent = nxt; q('.yf-ft').textContent = nxt; return; }
+      ft.animate([{ transform: 'rotateX(0deg)' }, { transform: 'rotateX(-90deg)' }], { duration: 240, easing: 'cubic-bezier(.55,0,1,.45)', fill: 'forwards' })
+        .finished.then(function () {
+          return fb.animate([{ transform: 'rotateX(90deg)' }, { transform: 'rotateX(0deg)' }], { duration: 300, easing: 'cubic-bezier(.2,.9,.3,1.25)' }).finished;
+        }).then(function () {
+          q('.yf-b').textContent = nxt; q('.yf-ft').textContent = nxt;
+          ft.getAnimations().forEach(function (a) { a.cancel(); });
+        }).catch(function () {});
+    }
+    var visible = false, timer = 0;
+    function tick() {
+      if (!visible || document.hidden || reduced()) return;
+      var a = ('0' + y).slice(-2), b = ('0' + ((y + 1) % 100)).slice(-2);
+      y = (y + 1) % 100;
+      for (var i = 0; i < 2; i++) if (a.charAt(i) !== b.charAt(i)) setTimeout(flip.bind(null, ds[i], a.charAt(i), b.charAt(i)), i ? 0 : 60);
+    }
+    timer = setInterval(tick, 1600);
+    if (window.IntersectionObserver) new IntersectionObserver(function (es) { visible = es[0].isIntersecting; }).observe(art);
+    else visible = true;
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', yearCard); else yearCard();
+
   window.Play = { roll: roll, flipYear: flipYear, count: count };
 })();

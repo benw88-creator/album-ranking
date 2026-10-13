@@ -181,3 +181,14 @@
   .hub-tabs { flex-wrap: wrap; overflow: visible; gap: 4px; }
   .hub-tabs button { flex: 1 1 30% !important; min-width: 0; padding-inline: 6px; font-size: 12.5px; }
 }
+
+/* ---- For You: the glow drag in the rating tray ------------------------
+   pan-y keeps a vertical swipe on the slider moving the feed; the axis
+   lock in glow.js takes sideways drags. The value rides in the pill, so
+   the separate numeral beside it goes. */
+.gs-fy { touch-action: pan-y; height: 46px; }
+.gs-fy .gs-track { height: 38px; }
+.gs-fy .gs-thumb { height: 30px; min-width: 48px; margin-top: -15px; padding: 0 12px; font-size: 15px; }
+.gs-fy .gs-dots { inset: 0 18px; }
+.fy-rate:has(.gs-fy) output { display: none; }
+.fy-rate:has(.gs-fy) { padding-block: 6px; }
