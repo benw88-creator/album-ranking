@@ -74,6 +74,8 @@
   .doc-top .disc::after {
     content:''; position:absolute; inset:42%; border-radius:50%; background:var(--gold);
   }
+  .doc-top a.home .back-arrow { font-size:15px; margin-right:2px; color:var(--text-2); transition:transform .2s; }
+  .doc-top a.home:hover .back-arrow { transform:translateX(-3px); }
   .doc-top nav { margin-left:auto; display:flex; gap:4px; }
   .doc-top nav { display:flex; gap:4px; }
   .doc-top nav a {
@@ -189,7 +191,7 @@
 </style></head>
 <body>
 <header class="doc-top">
-  <a class="home" href="/"><span class="disc"></span>VINALL</a>
+  <a class="home" href="/" data-back aria-label="Back to VINALL"><span class="back-arrow" aria-hidden="true">&larr;</span><span class="disc"></span>Back to VINALL</a>
   <nav>
     <a href="/privacy.html">Privacy</a>
     <a href="/terms.html" aria-current="page">Terms</a>
@@ -199,13 +201,12 @@
 <div class="doc-kicker">VINALL &middot; Legal</div>
 <h1>Terms of Use</h1>
 <div class="doc-meta">
-  <span><b>Effective</b> 17 September 2026</span>
-  <span><b>Version</b> 1.2</span>
+  <span><b>Effective</b> 13 October 2026</span>
+  <span><b>Version</b> 1.3</span>
   <span><b>Applies to</b> vinall.xyz and the VINALL app</span>
 </div>
 
-<p class="lede">VINALL is run by one person as an independent project. Using it means agreeing to
-the following, which is deliberately short and plainly written.</p>
+<p class="lede">VINALL is run by one person as an independent project. By using it you agree to these terms.</p>
 
 <nav class="toc" aria-label="Contents">
   <h2>Contents</h2>
@@ -236,7 +237,7 @@ them in the app, including to other users where you have made them public.</p>
 <p>Do not post anything that is:</p>
 <ul>
   <li>abusive, harassing, hateful or threatening;</li>
-  <li>sexual content, or anything involving minors inappropriately;</li>
+  <li>sexually explicit, or anything that sexualises minors;</li>
   <li>someone else&rsquo;s private information;</li>
   <li>spam, scams or advertising;</li>
   <li>illegal.</li>
@@ -256,7 +257,7 @@ them in the app, including to other users where you have made them public.</p>
 <p>Discs are points inside VINALL. <b>They have no cash value, cannot be bought, and cannot be
 exchanged for money or for anything outside the app.</b> They may be adjusted or reset if they were
 obtained by exploiting a bug. Cosmetic items bought with Discs stay on your account for as long as
-the account exists.</p>
+the account exists. Boosts, such as Streak Freeze and 2&times; Discs, are used up when they take effect and are not refunded.</p>
 <p>Streaming figures and market prices shown in the games come from public third-party data and are
 approximate. They are there to play with, not to rely on.</p>
 </section>
@@ -269,8 +270,7 @@ limited to a short clip; full tracks open in Deezer.</p>
 
 <section id="s6"><h2>Availability</h2>
 <p>VINALL is provided as-is, with no guarantee that it will be available, or that nothing will ever
-be lost. Keep your own copy of anything you would be upset to lose. It is an independent project,
-not a bank.</p>
+be lost. Keep your own copy of anything you would be upset to lose.</p>
 <p>Nothing in these terms limits liability for death or personal injury caused by negligence, for
 fraud, or for anything else that cannot be limited under the law of England and Wales.</p>
 </section>
@@ -293,10 +293,27 @@ benefit of any mandatory protections of the country you live in.</p>
     <span>VINALL</span><span class="sep">&middot;</span>
     <a href="/privacy.html">Privacy Policy</a><span class="sep">&middot;</span>
     <a href="/terms.html">Terms of Use</a><span class="sep">&middot;</span>
-    <a href="/">Back to the app</a>
+    <a href="/" data-back>Back to VINALL</a>
   </div>
   <p>VINALL is an independent project. Catalogue information, artwork and preview clips are
   supplied by Deezer. Questions about this document go to
   <a href="mailto:vinall.support@gmail.com">vinall.support@gmail.com</a>.</p>
 </footer>
-</div></body></html>
+</div>
+<script>
+(function () {
+  function sameSiteReferrer() {
+    try {
+      if (!document.referrer) return false;
+      var r = new URL(document.referrer);
+      return r.origin === location.origin && !/\/(privacy|terms)\.html$/.test(r.pathname);
+    } catch (e) { return false; }
+  }
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('[data-back]');
+    if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0) return;
+    if (sameSiteReferrer() && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+})();
+</script>
+</body></html>

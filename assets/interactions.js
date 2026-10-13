@@ -81,7 +81,7 @@
       return;
     }
     var t = e.target;
-    if (!layer && (e.key === 'Enter' || e.key === ' ') && t && t.matches('.game-card, .card[tabindex], [data-open][tabindex], [data-uid][tabindex]') && !t.matches('button, a, input')) {
+    if (!layer && (e.key === 'Enter' || e.key === ' ') && t && t.matches && t.matches('.game-card, .card[tabindex], [data-open][tabindex], [data-uid][tabindex]') && !t.matches('button, a, input')) {
       e.preventDefault(); t.click();
     }
   });

@@ -1,0 +1,508 @@
+/* ================================================================
+   VINALL GAMES — the arcade, Recall, and the game sheets.
+
+   Loaded last and scoped by id (#games-grid, #recall-modal, the game
+   modals), so nothing here can lose a source-order fight with the 300KB
+   stylesheet above it — the trap this project has hit five times.
+
+   THE HOVER GLITCH, and why it is fixed here rather than tuned:
+   every card carried an animated light layer (::after) at z-index -1 inside
+   a card with NO stacking context of its own. At rest that layer painted
+   BEHIND the card's opaque background and was invisible. Hover applied a
+   transform, a transform creates a stacking context, and the layer jumped
+   IN FRONT of the background mid-animation — then jumped back the instant
+   the transition finished on the way out. Moving fast between cards fired
+   that flash on every one. `isolation: isolate` gives each card its own
+   context permanently, so nothing changes layer on hover; and the light
+   layers that repainted every frame (animated box-shadow and drop-shadow on
+   the icon wells) are gone. Hover is transform + opacity, reversible from
+   wherever it is.
+   ================================================================ */
+
+:root {
+  --arc-ease: cubic-bezier(.2, .8, .2, 1);
+  --arc-spring: cubic-bezier(.34, 1.4, .64, 1);
+  --hue-recall: #ff4f9a; --hue-recall-2: #35e0ff;
+}
+
+/* ---- the arcade header ------------------------------------------------- */
+#view-games .arc-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 4px 0 18px; }
+#view-games .arc-kicker { font: 600 11px/1 var(--font-mono); letter-spacing: .22em; text-transform: uppercase; color: var(--c-violet); }
+#view-games .arc-title { font: 800 clamp(40px, 7vw, 68px)/.9 var(--font-display); letter-spacing: -.055em; margin: 8px 0 0; }
+#view-games .arc-lb { width: auto; flex: 0 1 320px; background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.09); border-radius: 999px; padding: 10px 16px 10px 14px; transition: border-color 240ms var(--arc-ease), background-color 240ms var(--arc-ease); }
+#view-games .arc-lb:hover { border-color: rgba(255,255,255,.2); background: rgba(255,255,255,.06); }
+
+/* ---- the grid ----------------------------------------------------------- */
+#games-grid.arcade { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; margin-bottom: var(--s6, 32px); }
+#games-grid.arcade .arc-label { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 12px; margin: 22px 0 0; font: 600 11px/1 var(--font-mono); letter-spacing: .2em; text-transform: uppercase; color: var(--text); }
+#games-grid.arcade .arc-label:first-child { margin-top: 0; }
+#games-grid.arcade .arc-label small { font: 400 12px/1 var(--font-body); letter-spacing: 0; text-transform: none; color: var(--text-faint); }
+
+/* Hues per GAME, not per position. */
+#recall-card    { --g: var(--hue-recall); }
+#drop-card      { --g: var(--c-violet); }
+#ew-card        { --g: var(--c-lime); }
+#war-card       { --g: var(--c-cyan); }
+#blitz-card     { --g: #ff8a3d; }
+#cover-card     { --g: var(--c-blue); }
+#coverx-card    { --g: #ff5a4f; }
+#tracklist-card { --g: #f5c842; }
+#year-card      { --g: #4fd18b; }
+#hl-card        { --g: #8b8cff; }
+
+#games-grid.arcade .game-card {
+  grid-column: span 4;
+  isolation: isolate; position: relative; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  min-height: 176px; padding: 22px; border-radius: 22px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--g) 16%, transparent), transparent 60%),
+    linear-gradient(180deg, #14111b, #0d0b12);
+  border: 1px solid color-mix(in srgb, var(--g) 18%, rgba(255,255,255,.06));
+  box-shadow: none; transform: none;
+  transition: transform 420ms var(--arc-ease), border-color 300ms var(--arc-ease), box-shadow 420ms var(--arc-ease);
+}
+/* The two flagships share the top row at the same size; neither is the
+   other's sidekick. */
+#games-grid.arcade .gc-feature { grid-column: span 6; min-height: 420px; padding: 30px; }
+#games-grid.arcade #drop-card, #games-grid.arcade #ew-card { grid-column: span 6; }
+
+/* The old layers, retired: the positional ::after motion and the corner
+   blob. ::before becomes the hover light; ::after stays free for the unlock
+   sweep. */
+#games-grid.arcade .game-card:not(.just-unlocked)::after { content: none; }
+#games-grid.arcade .game-card::before {
+  content: ''; position: absolute; inset: 0; top: 0; right: 0; width: auto; height: auto; border-radius: inherit; z-index: 0; pointer-events: none;
+  background: radial-gradient(70% 60% at 30% 100%, color-mix(in srgb, var(--g) 20%, transparent), transparent 70%);
+  opacity: 0; transition: opacity 420ms var(--arc-ease);
+}
+#games-grid.arcade .game-card > :not(.gc-art) { position: relative; z-index: 2; }
+
+/* Type. */
+#games-grid.arcade .game-card h3 { font: 750 22px/1.05 var(--font-display); letter-spacing: -.03em; margin: 12px 0 0; color: var(--text); }
+#games-grid.arcade .gc-feature h3 { font-size: clamp(40px, 5vw, 60px); letter-spacing: -.055em; margin-top: 16px; }
+#games-grid.arcade .game-card p { font-size: 14px; line-height: 1.45; color: var(--text-dim); margin: 6px 0 0; max-width: 32ch; -webkit-line-clamp: 2; }
+#games-grid.arcade .gc-feature p { font-size: 16px; max-width: 32ch; }
+#games-grid.arcade .gc-go { display: inline-flex; margin-top: 14px; font: 600 11px/1 var(--font-mono); letter-spacing: .14em; color: var(--g); transition: transform 320ms var(--arc-ease); }
+#games-grid.arcade .gc-feature .gc-go { margin-top: 22px; padding: 13px 18px; border-radius: 999px; background: var(--g); color: #08121a; letter-spacing: .12em; align-self: flex-start; }
+
+/* The glyph, without a box. */
+#games-grid.arcade .gc-emoji { align-self: flex-start; display: inline-flex; width: auto; height: auto; background: none; box-shadow: none; border-radius: 0; overflow: visible; color: var(--g); animation: none; }
+#games-grid.arcade .gc-emoji::before, #games-grid.arcade .gc-emoji::after { content: none; }
+#games-grid.arcade .gc-emoji svg, #games-grid.arcade .gc-emoji svg * { animation: none !important; filter: none !important; }
+#games-grid.arcade .gc-emoji svg { width: 22px; height: 22px; }
+
+/* Hover: a lift, a light, a CTA that leans. All reversible mid-flight. */
+@media (hover: hover) and (pointer: fine) {
+  #games-grid.arcade .game-card:not(.locked):hover {
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--g) 46%, transparent);
+    box-shadow: 0 26px 50px -28px color-mix(in srgb, var(--g) 70%, transparent);
+  }
+  #games-grid.arcade .game-card:not(.locked):hover::before { opacity: 1; }
+  #games-grid.arcade .game-card:not(.locked):hover .gc-go { transform: translateX(4px); }
+  #games-grid.arcade .gc-feature:not(.locked):hover .gc-go { transform: translateX(0) scale(1.03); }
+  #war-card:not(.locked):hover .bw-sleeves i:nth-child(3) { transform: translateY(-8px); }
+  #games-grid.arcade .game-card:not(.locked):hover .gc-art { transform: translate3d(0, -3px, 0) scale(1.03); }
+}
+#games-grid.arcade .game-card:active:not(.locked) { transform: translateY(-1px) scale(.985); transition-duration: 140ms; }
+#games-grid.arcade .game-card:focus-visible { outline: 2px solid var(--g); outline-offset: 3px; }
+#games-grid.arcade .game-card.locked { opacity: .5; filter: saturate(.45); }
+#games-grid.arcade .game-card.locked .gc-go { display: none; }
+#games-grid.arcade .game-card.locked .gc-lock { position: static; display: block; width: fit-content; margin-top: 12px; }
+
+/* ---- each game's artwork --------------------------------------------------
+   One drawn motif per game, top right, behind the words. Same family —
+   flat shapes in the card's hue at low contrast — different subject. Motion
+   only where the subject moves (a disc turns, an equaliser plays, bids
+   rise), transform-only and slow. */
+#games-grid.arcade .gc-art { position: absolute; z-index: 1; pointer-events: none; top: 18px; right: 18px; transition: transform 520ms var(--arc-ease); }
+
+/* Recall: an equaliser that is the whole top of the card. */
+#recall-card .gc-art { justify-content: space-between; left: 30px; right: 30px; top: 30px; height: 44%; display: flex; align-items: flex-end; gap: 7px;
+  -webkit-mask-image: linear-gradient(to top, transparent, #000 45%); mask-image: linear-gradient(to top, transparent, #000 45%); }
+#recall-card .gc-art i { flex: 1; height: 100%; border-radius: 4px; transform-origin: bottom;
+  max-width: 9px; background: linear-gradient(180deg, var(--hue-recall-2), var(--hue-recall) 75%); opacity: .55;
+  animation: arcEq 2.4s ease-in-out infinite; }
+#recall-card .gc-art i:nth-child(4n+1) { animation-duration: 1.9s; animation-delay: -.3s; }
+#recall-card .gc-art i:nth-child(4n+2) { animation-duration: 2.7s; animation-delay: -1.1s; }
+#recall-card .gc-art i:nth-child(4n+3) { animation-duration: 2.2s; animation-delay: -.7s; }
+#recall-card .gc-art i:nth-child(5n)   { animation-duration: 3.1s; animation-delay: -1.9s; }
+@keyframes arcEq { 0%, 100% { transform: scaleY(.22); } 35% { transform: scaleY(.85); } 60% { transform: scaleY(.45); } 80% { transform: scaleY(.7); } }
+
+/* Daily Drop: a record turning, half off the card. */
+#drop-card .gc-art { top: -46px; right: -46px; width: 170px; height: 170px; border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--g) 0 9%, #0d0b12 9.5% 11%, color-mix(in srgb, var(--g) 50%, #0d0b12) 11.5% 22%, transparent 22.5%),
+    repeating-radial-gradient(circle, rgba(255,255,255,.07) 0 1px, transparent 1px 5px),
+    radial-gradient(circle, #1d1924, #0b0a0f 72%);
+  opacity: .8; animation: arcSpin 24s linear infinite; }
+@keyframes arcSpin { to { transform: rotate(360deg); } }
+
+/* Earworm: three tiles, scored. */
+#ew-card .gc-art { display: flex; gap: 6px; }
+#ew-card .gc-art i { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; font: 800 16px/1 var(--font-display); font-style: normal; color: #0d0b12; }
+#ew-card .gc-art i:nth-child(1) { background: var(--g); }
+#ew-card .gc-art i:nth-child(2) { background: #efb927; transform: translateY(6px); }
+#ew-card .gc-art i:nth-child(3) { background: rgba(255,255,255,.18); color: rgba(255,255,255,.8); transform: translateY(-3px); }
+
+/* Bid Wars: five records dealt face down, and under each the two blind bids
+   rising out of step — yours in the hue, theirs in white. */
+#war-card .gc-art { left: 30px; right: 30px; top: 30px; display: grid; gap: 10px; }
+#war-card .bw-sleeves { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+#war-card .bw-sleeves i { aspect-ratio: 1; border-radius: 10px; transition: transform 420ms var(--arc-ease);
+  background: repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0 2px, transparent 2px 9px), linear-gradient(160deg, #1d2a33, #0e141a);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--g) 40%, transparent), 0 14px 24px -12px rgba(0,0,0,.8); }
+#war-card .bw-sleeves i:nth-child(3) { box-shadow: inset 0 0 0 1.5px var(--g), 0 0 26px -6px color-mix(in srgb, var(--g) 70%, transparent); }
+#war-card .bw-bids { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; height: 34px; align-items: end; }
+#war-card .bw-bids i { height: 100%; border-radius: 4px 4px 2px 2px; transform-origin: bottom; background: var(--g); opacity: .8; animation: arcBid 4.6s var(--arc-ease) infinite; }
+#war-card .bw-bids.them { margin-top: -6px; }
+#war-card .bw-bids.them i { background: rgba(255,255,255,.28); animation-name: arcBidThem; }
+#war-card .bw-bids i:nth-child(2) { animation-delay: -.9s; } #war-card .bw-bids i:nth-child(3) { animation-delay: -2.1s; }
+#war-card .bw-bids i:nth-child(4) { animation-delay: -1.4s; } #war-card .bw-bids i:nth-child(5) { animation-delay: -3.3s; }
+@keyframes arcBid { 0%, 100% { transform: scaleY(.25); } 45% { transform: scaleY(.95); } 70% { transform: scaleY(.6); } }
+@keyframes arcBidThem { 0%, 100% { transform: scaleY(.7); } 40% { transform: scaleY(.3); } 75% { transform: scaleY(.85); } }
+
+/* Cover Fire: three sleeves, fanned. */
+#blitz-card .gc-art { width: 120px; height: 90px; }
+#blitz-card .gc-art i { position: absolute; right: 0; top: 0; width: 70px; height: 70px; border-radius: 9px; box-shadow: 0 10px 22px rgba(0,0,0,.45); }
+#blitz-card .gc-art i:nth-child(1) { background: linear-gradient(135deg, color-mix(in srgb, var(--g) 70%, #fff), var(--g)); transform: translateX(-46px) rotate(-12deg); opacity: .55; }
+#blitz-card .gc-art i:nth-child(2) { background: linear-gradient(135deg, #2b2533, #1a1720); transform: translateX(-22px) rotate(-4deg); opacity: .9; }
+#blitz-card .gc-art i:nth-child(3) { background: linear-gradient(135deg, var(--g), color-mix(in srgb, var(--g) 40%, #0d0b12)); transform: rotate(7deg); }
+
+/* Guess the Cover: a sleeve with its picture in. */
+#cover-card .gc-art { width: 64px; height: 64px; border-radius: 10px; transform: rotate(6deg);
+  background: radial-gradient(circle at 60% 40%, color-mix(in srgb, var(--g) 80%, #fff) 0 14%, transparent 15%), linear-gradient(160deg, var(--g), color-mix(in srgb, var(--g) 30%, #0d0b12)); opacity: .85; }
+/* Cover EXTREME: a sleeve you only see the middle of. */
+#coverx-card .gc-art { width: 66px; height: 66px; border-radius: 10px; border: 1px dashed color-mix(in srgb, var(--g) 50%, transparent);
+  background: linear-gradient(var(--g), var(--g)) center / 22px 22px no-repeat; }
+/* Tracklist: a numbered list. */
+#tracklist-card .gc-art { display: grid; gap: 7px; width: 84px; }
+#tracklist-card .gc-art i { height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--g) 55%, transparent); }
+#tracklist-card .gc-art i:nth-child(2) { width: 78%; } #tracklist-card .gc-art i:nth-child(3) { width: 90%; } #tracklist-card .gc-art i:nth-child(4) { width: 60%; background: var(--g); }
+/* Guess the Year: the numeral is the art. */
+#year-card .gc-art { top: 6px; font: 800 64px/1 var(--font-display); letter-spacing: -.06em; color: transparent; -webkit-text-stroke: 1.5px color-mix(in srgb, var(--g) 70%, transparent); }
+#year-card .gc-art i { font-style: normal; }
+/* Higher or Lower: up, down. */
+#hl-card .gc-art { display: flex; gap: 8px; }
+#hl-card .gc-art i { width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent; }
+#hl-card .gc-art i:nth-child(1) { border-bottom: 24px solid var(--g); }
+#hl-card .gc-art i:nth-child(2) { border-top: 24px solid rgba(255,255,255,.22); margin-top: 10px; }
+
+/* ---- responsive arcade ------------------------------------------------- */
+@media (max-width: 1000px) {
+  #games-grid.arcade .game-card { grid-column: span 6; }
+  #games-grid.arcade .gc-feature { min-height: 360px; }
+}
+@media (max-width: 699px) {
+  #view-games .arc-head { flex-direction: column; align-items: stretch; }
+  #view-games .arc-lb { flex: none; width: 100%; }
+  #games-grid.arcade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  /* Every id-level span from above must be named here too, or a span-6 card in a
+     two-column grid invents implicit columns and crushes the rest. */
+  #games-grid.arcade .game-card,
+  #games-grid.arcade #drop-card, #games-grid.arcade #ew-card { grid-column: span 1; min-height: 150px; padding: 16px; border-radius: 18px; }
+  #games-grid.arcade .gc-feature { grid-column: 1 / -1; min-height: 280px; padding: 20px; }
+  #games-grid.arcade .game-card h3 { font-size: 16px; }
+  #games-grid.arcade .gc-feature h3 { font-size: 42px; }
+  #games-grid.arcade .game-card p { display: none; }
+  #games-grid.arcade .gc-feature p { display: block; font-size: 14px; }
+  #games-grid.arcade .gc-art { top: 14px; right: 14px; transform: scale(.78); transform-origin: top right; }
+  #recall-card .gc-art { left: 20px; right: 20px; top: 22px; transform: none; height: 40%; }
+  #war-card .gc-art { left: 20px; right: 20px; top: 22px; transform: none; gap: 8px; }
+  #war-card .bw-sleeves, #war-card .bw-bids { gap: 7px; }
+  #war-card .bw-bids { height: 24px; }
+  #drop-card .gc-art { top: -34px; right: -34px; width: 104px; height: 104px; transform: none; }
+  #games-grid.arcade .arc-label small { display: none; }
+}
+@media (hover: none) {
+  #games-grid.arcade .game-card:active:not(.locked) { transform: scale(.98); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) #games-grid.arcade .gc-art, html:not([data-motion="full"]) #games-grid.arcade .gc-art i { animation: none !important; }
+}
+html[data-motion="none"] #games-grid.arcade .gc-art, html[data-motion="none"] #games-grid.arcade .gc-art i { animation: none !important; }
+
+/* ================================================================
+   RECALL — the stage
+   The record is the room. Rings of sound come off the sleeve, a record
+   slides out from behind it while the clip plays, the waveform and the
+   ladder of lengths are one instrument, and every answer lands with a
+   change of light rather than a line of text alone. Its own pink and
+   cyan, fixed: the sleeve's colours would give the answer away.
+   ================================================================ */
+#recall-modal .modal-panel {
+  --rc: var(--hue-recall); --rc2: var(--hue-recall-2); --rc-dim: color-mix(in srgb, var(--hue-recall) 16%, transparent);
+  max-width: 500px; padding: 26px 28px 26px; overflow: hidden; isolation: isolate;
+  background: radial-gradient(90% 55% at 50% 0%, #1b1022, transparent 70%), #0b0910;
+  border: 1px solid rgba(255,255,255,.07);
+}
+#recall-modal .rc-atmos { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+#recall-modal .rc-atmos i {
+  position: absolute; left: 50%; top: 210px; width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--rc) 30%, transparent); opacity: 0;
+  animation: rcRingOut 7.5s linear infinite; will-change: transform, opacity;
+}
+#recall-modal .rc-atmos i:nth-child(2) { animation-delay: -2.5s; border-color: color-mix(in srgb, var(--rc2) 26%, transparent); }
+#recall-modal .rc-atmos i:nth-child(3) { animation-delay: -5s; }
+#recall-modal .rc-atmos b { position: absolute; left: -10%; right: -10%; bottom: -30%; height: 60%; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--rc) 18%, transparent), transparent); transition: opacity 600ms var(--arc-ease); }
+@keyframes rcRingOut { 0% { transform: scale(.55); opacity: 0; } 15% { opacity: .9; } 100% { transform: scale(2.3); opacity: 0; } }
+#recall-modal.rc-playing .rc-atmos i { animation-duration: 2.6s; }
+#recall-modal.rc-miss .rc-atmos b { background: radial-gradient(closest-side, rgba(255,80,80,.28), transparent); }
+#recall-modal.rc-win .rc-atmos b { background: radial-gradient(closest-side, color-mix(in srgb, var(--rc2) 30%, transparent), transparent); }
+#recall-modal.rc-win .rc-atmos i { animation: rcRingWin 1.4s var(--arc-ease) both; border-width: 2px; }
+#recall-modal.rc-win .rc-atmos i:nth-child(2) { animation-delay: .12s; } #recall-modal.rc-win .rc-atmos i:nth-child(3) { animation-delay: .24s; }
+@keyframes rcRingWin { 0% { transform: scale(.7); opacity: 1; } 100% { transform: scale(2.6); opacity: 0; } }
+
+/* Head. */
+#recall-modal .rc-top { margin-bottom: 18px; }
+#recall-modal .rc-wordmark { font: 800 15px/1 var(--font-display); letter-spacing: .3em; }
+#recall-modal .rc-score { font: 700 20px/1 var(--font-mono); letter-spacing: -.02em;
+  background: linear-gradient(90deg, var(--rc), var(--rc2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+#recall-modal .rc-streak { font: 600 11px/1 var(--font-mono); letter-spacing: .06em; padding: 7px 11px; }
+#recall-modal .rc-streak.lit { color: #fff; border-color: color-mix(in srgb, var(--rc) 45%, transparent); background: color-mix(in srgb, var(--rc) 16%, transparent); }
+#recall-modal .rc-streak.lit .rc-flame { color: var(--rc); }
+#recall-modal .modal-close { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1); border-radius: 50%; width: 36px; height: 36px; }
+
+/* The record and its sleeve. */
+#recall-modal .rc-deck { position: relative; width: min(268px, 66vw); margin: 4px auto 0; }
+#recall-modal .rc-disc {
+  position: absolute; inset: 4%; border-radius: 50%; z-index: 0;
+  background:
+    radial-gradient(circle, #0b0910 0 4%, var(--rc) 4.5% 14%, #160c18 14.5% 17%, transparent 17.5%),
+    conic-gradient(from 30deg, rgba(255,255,255,.08), transparent 18%, rgba(255,255,255,.05) 50%, transparent 68%, rgba(255,255,255,.08)),
+    repeating-radial-gradient(circle, rgba(255,255,255,.05) 0 1px, transparent 1px 4px),
+    radial-gradient(circle, #1a1620, #070609 75%);
+  box-shadow: 0 20px 40px rgba(0,0,0,.6);
+  translate: 0 0; transition: translate 700ms var(--arc-ease);
+  animation: rcSpin 3.2s linear infinite; animation-play-state: paused;
+}
+@keyframes rcSpin { to { transform: rotate(360deg); } }
+#recall-modal.rc-playing .rc-disc { translate: 26% 0; animation-play-state: running; }
+#recall-modal #recall-play.revealed .rc-disc { translate: 30% 0; }
+#recall-modal .rc-art {
+  max-width: none; width: 100%; position: relative; z-index: 1; border-radius: 18px;
+  background: radial-gradient(circle at 30% 25%, #2a2233, #120f17 70%);
+  box-shadow: 0 30px 60px -20px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.07);
+  transition: box-shadow 700ms var(--arc-ease);
+}
+#recall-modal .rc-art.loading { animation: none; }
+#recall-modal .rc-art.loading::before {
+  content: ''; position: absolute; inset: 0; z-index: 2;
+  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.07) 50%, transparent 70%);
+  animation: rcShimmer 1.3s linear infinite;
+}
+@keyframes rcShimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+#recall-modal .rc-art.open { box-shadow: 0 30px 70px -18px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.12), 0 0 60px -10px color-mix(in srgb, var(--rc) 45%, transparent); }
+#recall-modal.rc-win .rc-art.open { box-shadow: 0 30px 70px -18px rgba(0,0,0,.9), 0 0 0 2px color-mix(in srgb, var(--rc2) 70%, transparent), 0 0 80px -6px color-mix(in srgb, var(--rc2) 50%, transparent); }
+
+/* The tape: waveform and the ladder of lengths, one instrument. */
+#recall-modal .rc-tape { width: min(268px, 66vw); margin: 22px auto 0; }
+#recall-modal .rc-wave { max-width: none; height: 44px; margin: 0; align-items: center; gap: 3px; }
+#recall-modal .rc-wave i { border-radius: 2px; background: rgba(255,255,255,.12); transform-origin: center; transition: background-color 400ms var(--arc-ease); }
+#recall-modal .rc-wave i.lit { background: linear-gradient(180deg, var(--rc2), var(--rc)); }
+#recall-modal.rc-playing .rc-wave i.lit { animation: rcBarLive 900ms ease-in-out infinite alternate; }
+#recall-modal.rc-playing .rc-wave i.lit:nth-child(3n) { animation-duration: 700ms; }
+#recall-modal.rc-playing .rc-wave i.lit:nth-child(4n+1) { animation-duration: 1100ms; }
+@keyframes rcBarLive { from { transform: scaleY(.75); } to { transform: scaleY(1.08); } }
+#recall-modal .rc-wave .rc-head { background: #fff; box-shadow: 0 0 12px rgba(255,255,255,.7); }
+#recall-modal .rc-steps { position: relative; height: 26px; margin-top: 8px; display: block; }
+#recall-modal .rc-steps i {
+  position: absolute; top: 0; transform: translateX(-50%); padding: 5px 8px; border-radius: 999px; font: 600 10.5px/1 var(--font-mono);
+  color: var(--text-faint); background: none; border: 1px solid transparent; white-space: nowrap;
+}
+#recall-modal .rc-steps i:last-child { transform: translateX(-90%); }
+#recall-modal .rc-steps i::before { content: ''; position: absolute; left: 50%; top: -7px; width: 1px; height: 6px; background: rgba(255,255,255,.2); }
+#recall-modal .rc-steps i.done { color: color-mix(in srgb, var(--rc) 70%, #fff); }
+#recall-modal .rc-steps i.now { color: #fff; background: color-mix(in srgb, var(--rc) 24%, transparent); border-color: color-mix(in srgb, var(--rc) 60%, transparent); animation: rcStepIn 520ms var(--arc-spring) both; }
+@keyframes rcStepIn { from { scale: .6; opacity: 0; } to { scale: 1; opacity: 1; } }
+
+/* The play control: a tactile pill whose own body fills with the clip. */
+#recall-modal .rc-hear {
+  position: relative; overflow: hidden; isolation: isolate; margin: 14px auto 0;
+  min-width: 176px; height: 58px; padding: 0 26px 0 10px; gap: 14px; justify-content: flex-start;
+  border-radius: 999px; color: #fff; font: 600 18px/1 var(--font-mono); letter-spacing: -.02em;
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 14px 30px -14px rgba(0,0,0,.8);
+  transition: transform 160ms var(--arc-ease), border-color 300ms var(--arc-ease), box-shadow 300ms var(--arc-ease);
+}
+#recall-modal .rc-hear::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; transform-origin: left; transform: scaleX(var(--p, 0));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 40%, transparent), color-mix(in srgb, var(--rc2) 32%, transparent));
+}
+#recall-modal .rc-hear .rc-play-ico {
+  width: 38px; height: 38px; border: 0; border-radius: 50%; flex: 0 0 auto; position: relative;
+  background: linear-gradient(135deg, var(--rc), color-mix(in srgb, var(--rc) 60%, var(--rc2)));
+  box-shadow: 0 6px 16px -4px color-mix(in srgb, var(--rc) 70%, transparent);
+}
+#recall-modal .rc-hear .rc-play-ico::after { content: ''; position: absolute; left: 15px; top: 12px; border-left: 11px solid #fff; border-top: 7px solid transparent; border-bottom: 7px solid transparent; }
+#recall-modal .rc-hear.on { border-color: color-mix(in srgb, var(--rc) 55%, transparent); box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 0 0 5px color-mix(in srgb, var(--rc) 14%, transparent); }
+#recall-modal .rc-hear.on .rc-play-ico::after { left: 13px; top: 12px; width: 4px; height: 14px; border: 0; background: #fff; box-shadow: 8px 0 0 #fff; }
+#recall-modal .rc-hear:active:not(:disabled) { transform: scale(.965); }
+#recall-modal .rc-hear:disabled { opacity: .45; }
+
+/* The answer. */
+#recall-modal .rc-answer { margin-top: 22px; }
+#recall-modal .rc-answer input {
+  height: 56px; padding: 0 52px 0 18px; border-radius: 16px; font-size: 16px;
+  background: rgba(255,255,255,.04); border: 1.5px solid rgba(255,255,255,.12);
+  transition: border-color 220ms var(--arc-ease), box-shadow 220ms var(--arc-ease), background-color 220ms var(--arc-ease);
+}
+#recall-modal .rc-answer input:focus { border-color: var(--rc); background: rgba(255,255,255,.06); box-shadow: 0 0 0 4px color-mix(in srgb, var(--rc) 16%, transparent); }
+#recall-modal .rc-key { position: absolute; right: 12px; top: 28px; transform: translateY(-50%); pointer-events: none;
+  min-width: 28px; height: 26px; display: grid; place-items: center; border-radius: 7px; font: 600 13px/1 var(--font-mono);
+  color: var(--text-faint); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-bottom-width: 2px; }
+#recall-modal .rc-answer.picked input { border-color: var(--rc2); box-shadow: 0 0 0 4px color-mix(in srgb, var(--rc2) 14%, transparent); }
+#recall-modal .rc-answer.picked .rc-key { color: #06222a; background: var(--rc2); border-color: var(--rc2); }
+#recall-modal .rc-answer.shake input { border-color: #ff6b6b; }
+#recall-modal .rc-sugg { top: calc(100% + 8px); background: #16121d; border-color: rgba(255,255,255,.1); border-radius: 16px; padding: 6px; box-shadow: 0 24px 50px -16px rgba(0,0,0,.9); }
+#recall-modal .rc-sug { min-height: 46px; padding: 10px 12px; border-radius: 10px; align-items: center; }
+#recall-modal .rc-sug + .rc-sug { border-top: 0; }
+#recall-modal .rc-sug span { font-weight: 600; }
+#recall-modal .rc-sug:hover { background: rgba(255,255,255,.05); }
+#recall-modal .rc-sug.on { background: color-mix(in srgb, var(--rc) 16%, transparent); box-shadow: inset 3px 0 0 var(--rc); }
+#recall-modal .rc-verdict { min-height: 20px; margin-top: 12px; font-size: 13.5px; color: var(--text-dim); }
+#recall-modal .rc-verdict.bad { color: #ff8a8a; }
+#recall-modal .rc-controls { margin-top: 10px; gap: 10px; }
+#recall-modal .rc-controls .btn-primary { height: 52px; border-radius: 16px; background: linear-gradient(100deg, var(--rc), color-mix(in srgb, var(--rc) 45%, var(--rc2)) 60%, var(--rc2)); color: #12060d; font-size: 16px; }
+#recall-modal .rc-skip { height: 52px; border-radius: 16px; padding: 0 18px; background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.12); color: var(--text-dim); }
+#recall-modal .rc-skip:hover { border-color: rgba(255,255,255,.3); color: #fff; }
+
+/* The reveal. */
+#recall-modal .rc-reveal.on { margin-top: 22px; animation: rcRevealIn 600ms var(--arc-ease) both; }
+@keyframes rcRevealIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+#recall-modal .rc-rev-head { font-size: 11px; letter-spacing: .24em; }
+#recall-modal .rc-rev-head.good { color: var(--rc2); }
+#recall-modal .rc-rev-head.bad { color: #ff8a8a; }
+#recall-modal .rc-rev-head b { font: 700 24px/1 var(--font-mono); background: linear-gradient(90deg, var(--rc), var(--rc2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+#recall-modal .rc-rev-title { font: 800 clamp(26px, 6vw, 34px)/1.05 var(--font-display); letter-spacing: -.04em; margin-top: 10px; }
+#recall-modal .rc-rev-actions .btn-primary { height: 50px; border-radius: 16px; background: #fff; color: #0b0910; }
+
+/* Lobby and summary. */
+#recall-modal .rc-lobby-art { position: relative; height: 190px; margin: 0 0 18px; display: grid; place-items: center; }
+#recall-modal .rc-lobby-art .rc-disc { inset: auto; position: relative; width: 170px; height: 170px; translate: none; animation-duration: 6s; animation-play-state: running; }
+#recall-modal .rc-ladder { position: absolute; left: 0; right: 0; bottom: 4px; display: flex; justify-content: center; gap: 8px; }
+#recall-modal .rc-ladder i { font: 600 11px/1 var(--font-mono); font-style: normal; padding: 7px 10px; border-radius: 999px; background: rgba(11,9,16,.8); border: 1px solid rgba(255,255,255,.12); color: var(--text-dim); backdrop-filter: blur(6px); }
+#recall-modal .rc-ladder i:first-child { color: #fff; border-color: color-mix(in srgb, var(--rc) 60%, transparent); background: color-mix(in srgb, var(--rc) 22%, rgba(11,9,16,.85)); }
+#recall-modal .rc-pitch { font: 650 clamp(22px, 5vw, 28px)/1.15 var(--font-display); letter-spacing: -.03em; color: var(--text); margin-bottom: 22px; }
+#recall-modal #recall-lobby .rc-big { height: 58px; border-radius: 18px; font-size: 17px; background: linear-gradient(100deg, var(--rc), var(--rc2)); color: #12060d; }
+#recall-modal .rc-second { height: 52px; border-radius: 16px; background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.12); }
+#recall-modal .rc-final { font: 800 clamp(64px, 18vw, 96px)/1 var(--font-display); letter-spacing: -.05em; background: linear-gradient(90deg, var(--rc), var(--rc2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+@media (max-width: 699px) {
+  #recall-modal .modal-panel { padding: 22px 20px 20px; }
+  #recall-modal .rc-deck, #recall-modal .rc-tape { width: min(232px, 62vw); }
+  #recall-modal .rc-atmos i { top: 180px; width: 240px; height: 240px; margin: -120px 0 0 -120px; }
+}
+@media (max-height: 760px) and (min-width: 700px) {
+  #recall-modal .rc-deck, #recall-modal .rc-tape { width: 220px; }
+  #recall-modal .rc-atmos i { top: 180px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) #recall-modal .rc-atmos i, html:not([data-motion="full"]) #recall-modal .rc-disc,
+  html:not([data-motion="full"]) #recall-modal .rc-wave i, html:not([data-motion="full"]) #recall-modal .rc-art.loading::before { animation: none !important; }
+  html:not([data-motion="full"]) #recall-modal .rc-atmos i { opacity: .25; transform: scale(1.2); }
+}
+html[data-motion="none"] #recall-modal .rc-atmos i, html[data-motion="none"] #recall-modal .rc-disc,
+html[data-motion="none"] #recall-modal .rc-wave i, html[data-motion="none"] #recall-modal .rc-art.loading::before { animation: none !important; }
+
+/* ================================================================
+   THE OTHER GAME SHEETS — one family, each in its own colour
+   A deep ground lit from one corner in the game's hue, the glyph without
+   a box, a heading set like a title rather than a label, and inputs and
+   progress that wear the hue. Mechanics untouched.
+   ================================================================ */
+#game { --gh: var(--c-blue); }
+#drop-modal { --gh: var(--c-violet); }
+#ew-modal { --gh: var(--c-lime); }
+#blitz-modal { --gh: #ff8a3d; }
+#hl-modal { --gh: #8b8cff; }
+#war-modal, #war-new-modal { --gh: var(--c-cyan); }
+#leaderboard-modal { --gh: #f5c842; }
+:is(#game, #drop-modal, #ew-modal, #blitz-modal, #hl-modal, #war-modal, #war-new-modal, #leaderboard-modal) .modal-panel {
+  isolation: isolate;
+  background:
+    radial-gradient(110% 55% at 0% 0%, color-mix(in srgb, var(--gh) 15%, transparent), transparent 62%),
+    radial-gradient(80% 45% at 100% 100%, color-mix(in srgb, var(--gh) 8%, transparent), transparent 70%),
+    #0d0b12;
+  border: 1px solid color-mix(in srgb, var(--gh) 20%, rgba(255,255,255,.07));
+}
+:is(#game, #drop-modal, #ew-modal, #blitz-modal, #hl-modal, #war-modal, #war-new-modal, #leaderboard-modal) .modal-head { gap: 12px; margin-bottom: 20px; }
+:is(#game, #drop-modal, #ew-modal, #blitz-modal, #hl-modal, #war-modal, #war-new-modal, #leaderboard-modal) .mh-emoji {
+  color: var(--gh); background: none; box-shadow: none; width: auto; height: auto; font-size: 26px; display: inline-flex;
+}
+:is(#game, #drop-modal, #ew-modal, #blitz-modal, #hl-modal, #war-modal, #war-new-modal, #leaderboard-modal) .mh-emoji svg { width: 26px; height: 26px; }
+:is(#game, #drop-modal, #ew-modal, #blitz-modal, #hl-modal, #war-modal, #war-new-modal, #leaderboard-modal) .modal-head h2 {
+  font: 800 clamp(24px, 5vw, 30px)/1 var(--font-display); letter-spacing: -.04em; margin: 0;
+}
+:is(#game, #drop-modal, #ew-modal, #blitz-modal, #hl-modal, #war-modal, #war-new-modal, #leaderboard-modal) .modal-head p { margin-top: 6px; color: var(--text-dim); font-size: 13.5px; }
+:is(#game, #drop-modal, #ew-modal, #blitz-modal, #hl-modal, #war-modal, #war-new-modal, #leaderboard-modal) .modal-close { border-radius: 50%; width: 36px; height: 36px; background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1); }
+:is(#game, #drop-modal, #ew-modal, #war-new-modal) .g-input {
+  height: 52px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1.5px solid rgba(255,255,255,.12);
+  transition: border-color 220ms var(--arc-ease), box-shadow 220ms var(--arc-ease);
+}
+:is(#game, #drop-modal, #ew-modal, #war-new-modal) .g-input:focus { outline: none; border-color: var(--gh); box-shadow: 0 0 0 4px color-mix(in srgb, var(--gh) 16%, transparent); }
+:is(#game, #drop-modal, #ew-modal, #blitz-modal, #hl-modal, #war-modal) :is(.seg, .drop-mode, .ew-mode, .hl-mode) { background: rgba(255,255,255,.05); border-radius: 999px; }
+:is(#game, #drop-modal, #ew-modal, #blitz-modal, #hl-modal, #war-modal) :is(.seg, .drop-mode, .ew-mode, .hl-mode) button.active { background: var(--gh); color: #0b0910; }
+:is(#game, #drop-modal, #ew-modal, #blitz-modal, #hl-modal, #war-modal) .btn-primary { min-height: 50px; border-radius: 14px; }
+
+/* Guess the Cover / Tracklist / Year: a HUD, and a sleeve worth looking at. */
+#game .g-bar { padding: 10px 16px; border-radius: 999px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); font: 600 12px/1 var(--font-mono); }
+#game .g-cover-wrap { border-radius: 18px; box-shadow: 0 30px 60px -24px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.08); }
+#game .g-final-num { font: 800 clamp(64px, 16vw, 96px)/1 var(--font-display); letter-spacing: -.05em; color: var(--gh); }
+/* Cover Fire and Higher or Lower: the score is the screen's anchor. */
+#blitz-modal .bl-score span, #hl-modal .hl-score span { font-family: var(--font-display); letter-spacing: -.04em; }
+#blitz-modal .bl-final, #hl-modal .hl-over-score { font: 800 clamp(56px, 15vw, 88px)/1 var(--font-display); letter-spacing: -.05em; color: var(--gh); }
+#hl-modal .hl-btn { min-height: 48px; border-radius: 14px; }
+/* Bid Wars: the chip count is the tension. */
+#war-modal .war-chips-num span { font-family: var(--font-display); letter-spacing: -.04em; color: var(--gh); }
+#war-modal .war-chips-fill { background: linear-gradient(90deg, var(--gh), color-mix(in srgb, var(--gh) 40%, #fff)); }
+
+/* ================================================================
+   SHOP BOOSTS — what each does, and whether it is running
+   ================================================================ */
+.shop-item-desc { font-size: 12.5px; line-height: 1.4; color: var(--text-dim); margin: 3px 0 4px; max-width: 34ch; }
+.shop-item-status { font: 600 11px/1 var(--font-mono); color: var(--text-dim); margin-left: 6px; }
+.boost-live { color: #f5c842; }
+.shop-swatch .boost-x { display: grid; place-items: center; width: 100%; height: 100%; font: 800 17px/1 var(--font-display); color: #2a1a00; letter-spacing: -.04em; }
+.shop-swatch.boost-on { box-shadow: 0 0 0 2px #f5c842, 0 0 18px -2px rgba(245,200,66,.6); }
+/* The header Disc chip while 2× is running: a small gold tag on its corner. */
+#shop-open-btn.boosted { position: relative; border-color: rgba(245,200,66,.7); }
+#shop-open-btn.boosted::after {
+  content: attr(data-boost); position: absolute; top: -7px; right: -7px; padding: 3px 5px; border-radius: 999px;
+  font: 800 9.5px/1 var(--font-display); color: #2a1a00; background: linear-gradient(135deg, #f5c842, #fff3c4);
+  box-shadow: 0 2px 8px rgba(0,0,0,.45);
+}
+
+/* ================================================================
+   BID WARS — inside the war
+   One record in your hand at a time is the whole game, so the dealt card is
+   the screen: big sleeve, the bid under your thumb, the pot above. Cyan is
+   Bid Wars' colour from the arcade to the reveal; gold here used to read as
+   "Discs", which this is not.
+   ================================================================ */
+#war-modal .modal-panel { max-width: 520px; }
+#war-modal .war-chips { padding: 16px 18px; border-radius: 18px; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.08); }
+#war-modal .war-chips-num span { font: 800 48px/1 var(--font-display); letter-spacing: -.05em; color: var(--gh); }
+#war-modal .war-chips.over .war-chips-num span { color: #ff6b6b; }
+#war-modal .war-chips-bar { height: 6px; background: rgba(255,255,255,.08); }
+#war-modal .war-dots .wd.done { background: color-mix(in srgb, var(--gh) 35%, transparent); border-color: transparent; }
+#war-modal .war-dots .wd.now { background: var(--gh); border-color: var(--gh); box-shadow: 0 0 12px color-mix(in srgb, var(--gh) 60%, transparent); }
+#war-modal .war-one { border-radius: 22px; padding: 20px; background: linear-gradient(170deg, rgba(255,255,255,.06), rgba(255,255,255,.015)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 30px 60px -30px rgba(0,0,0,.9); }
+#war-modal .war-one.staked { border-color: var(--gh); box-shadow: 0 0 0 1px var(--gh), 0 30px 60px -30px rgba(0,0,0,.9), 0 0 40px -12px color-mix(in srgb, var(--gh) 60%, transparent); }
+#war-modal .war-one img { border-radius: 14px; box-shadow: 0 20px 40px -14px rgba(0,0,0,.8); }
+#war-modal .war-one-nm { font: 800 22px/1.15 var(--font-display); letter-spacing: -.03em; }
+#war-modal .war-stepper button { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); font-size: 18px; }
+#war-modal .war-stepper input { width: 64px; height: 44px; border-radius: 12px; font: 700 18px/1 var(--font-mono); background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.12); }
+#war-modal .war-stepper input:focus { outline: none; border-color: var(--gh); }
+#war-modal .war-rec.staked { border-color: color-mix(in srgb, var(--gh) 50%, transparent); }
+#war-modal .war-rec-val, #war-modal .war-rec-chips { color: var(--gh); }
+#war-modal .war-wait-ic { color: var(--gh); }
+#war-modal .war-score-side { border-radius: 18px; padding: 16px 10px; background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.08); }
+#war-modal .war-score-side.lead { border-color: var(--gh); background: color-mix(in srgb, var(--gh) 12%, transparent); }
+#war-modal .ws-num { font: 800 40px/1 var(--font-display); letter-spacing: -.05em; }
+#war-modal .war-rev { border-radius: 16px; background: rgba(255,255,255,.03); }
+#war-modal .war-rev.won { border-color: color-mix(in srgb, var(--gh) 60%, transparent); background: linear-gradient(100deg, color-mix(in srgb, var(--gh) 14%, transparent), rgba(255,255,255,.02) 70%); }
+#war-modal .war-verdict { font: 800 clamp(28px, 7vw, 40px)/1.05 var(--font-display); letter-spacing: -.04em; text-align: center; margin-top: 18px; }

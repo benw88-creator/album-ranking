@@ -67,7 +67,7 @@ cross-origin from `capacitor://localhost`, and the login sheet reaches Supabase.
 - **Notifications are in the privacy policy now** — web push stores a browser
   push endpoint (deleted on toggle-off and on logout); the app's reminders are
   local and store nothing. Neither was mentioned before.
-- **Buy Me a Coffee is web-only** (`html.is-native` hides all three links), so
+- **Buy Me a Coffee was removed (2026-10-13)**, so
   the binary contains no payment or tipping path for guideline 3.1.1 to ask
   about. Keep it that way.
 - The cold-launch black screen (~4-5s) is still there. Not a rejection.

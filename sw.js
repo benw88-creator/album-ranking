@@ -29,8 +29,8 @@ const PRECACHE = [
   '/assets/icons/browser-512.png?v=official',
   '/assets/icons/apple-touch-icon.png?v=official',
   '/assets/icons/favicon.ico?v=official',
-  '/assets/interactions.css?v=2',
-  '/assets/interactions.js?v=1'
+  '/assets/interactions.css?v=3',
+  '/assets/interactions.js?v=2'
 ];
 
 self.addEventListener('install', (event) => {

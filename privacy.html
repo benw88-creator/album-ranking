@@ -74,6 +74,8 @@
   .doc-top .disc::after {
     content:''; position:absolute; inset:42%; border-radius:50%; background:var(--gold);
   }
+  .doc-top a.home .back-arrow { font-size:15px; margin-right:2px; color:var(--text-2); transition:transform .2s; }
+  .doc-top a.home:hover .back-arrow { transform:translateX(-3px); }
   .doc-top nav { margin-left:auto; display:flex; gap:4px; }
   .doc-top nav { display:flex; gap:4px; }
   .doc-top nav a {
@@ -189,7 +191,7 @@
 </style></head>
 <body>
 <header class="doc-top">
-  <a class="home" href="/"><span class="disc"></span>VINALL</a>
+  <a class="home" href="/" data-back aria-label="Back to VINALL"><span class="back-arrow" aria-hidden="true">&larr;</span><span class="disc"></span>Back to VINALL</a>
   <nav>
     <a href="/privacy.html" aria-current="page">Privacy</a>
     <a href="/terms.html">Terms</a>
@@ -199,15 +201,14 @@
 <div class="doc-kicker">VINALL &middot; Legal</div>
 <h1>Privacy Policy</h1>
 <div class="doc-meta">
-  <span><b>Effective</b> 17 September 2026</span>
-  <span><b>Version</b> 1.2</span>
+  <span><b>Effective</b> 13 October 2026</span>
+  <span><b>Version</b> 1.3</span>
   <span><b>Applies to</b> vinall.xyz and the VINALL app</span>
 </div>
 
-<p class="lede">VINALL is a small independent app for rating music and keeping track of what your
-records mean to you. This policy says plainly what it stores, who can see it, and how to get rid
-of it. There is no advertising on VINALL, no profiling, and your data is never sold or shared for
-marketing.</p>
+<p class="lede">VINALL is an independent app for rating and remembering music. This policy covers
+what it stores, who can see it, and how to delete it. VINALL has no advertising, and your data is
+never sold or shared for marketing.</p>
 
 <nav class="toc" aria-label="Contents">
   <h2>Contents</h2>
@@ -233,7 +234,8 @@ marketing.</p>
   <div><span class="t">Your music</span><span class="d">The albums and songs you rate, your scores, notes, lists and diary entries.</span></div>
   <div><span class="t">Your lore</span><span class="d">The answers you tap on Today, plus any optional note you add.</span></div>
   <div><span class="t">Your profile</span><span class="d">Username, avatar, bio, and anything else you choose to fill in.</span></div>
-  <div><span class="t">Imported listening history</span><span class="d">Optional, and only if you choose it. If you upload your own Spotify streaming history, VINALL adds up how many times you played each track and when you first and last played it, and keeps that. <b>The individual plays are added up in your browser and are never uploaded</b>; only the per-track totals are stored. Nobody else can see any of it, and you can remove it on your profile without touching anything else.</span></div>
+  <div><span class="t">Imported listening history</span><span class="d">Optional. If you upload your own Spotify data, VINALL stores how many times you played each track and for how long, both in total and per day, so Replay can show what you played in a given week, month or year. <b>Individual plays are added up in your browser and never uploaded</b>; only those totals are stored. Nobody else can see them, and you can remove them from your profile without affecting anything else.</span></div>
+  <div><span class="t">Imported library</span><span class="d">If you import your Spotify library, the songs, albums and playlists you choose become ratings, lists or a shortlist in VINALL. To match them to the catalogue, each track's title, artist and Spotify link are sent to VINALL's server; matches are cached without anything that identifies you.</span></div>
   <div><span class="t">Usage events</span><span class="d">Which questions were shown, answered or skipped, so we can tell whether the app is any good. These are tied to your account but contain no message content.</span></div>
   <div><span class="t">Crash reports</span><span class="d">If something breaks, the error message and page address are recorded so it can be fixed.</span></div>
   <div><span class="t">Notifications</span><span class="d">Only if you switch them on. On the website, turning on notifications stores the address your browser gives us for delivering them; the message is encrypted and passed through your browser&rsquo;s own push service (Apple, Google or Mozilla, depending on the browser), which cannot read it. Turning them off, or logging out, deletes that address. In the app, reminders are scheduled on your phone itself and nothing is stored with us.</span></div>
@@ -242,9 +244,9 @@ marketing.</p>
 </section>
 
 <section id="s2"><h2>Stored on your device</h2>
-<p>VINALL keeps a working copy of your ratings, your diary entries and your game progress in your
-browser&rsquo;s own storage, so the app is quick and still shows your crate if the connection drops.
-It also stores a login session and the theme you have equipped. None of this is a tracking cookie
+<p>VINALL keeps a working copy of your ratings, diary entries, game progress and Replay summaries
+in your browser&rsquo;s storage, so the app is fast and works when the connection drops. It also
+stores your login session and the theme you have equipped. None of this is a tracking cookie
 and none of it is shared with anyone. Clearing your browser data for this site removes all of it;
 anything already synced to your account comes back when you sign in.</p>
 </section>
@@ -297,8 +299,11 @@ contact us and it will be removed.</p>
 <section id="s8"><h2>Why we are allowed to store it</h2>
 <p>If you are in the UK or EU, the legal bases are <b>contract</b> for your account and the music you
 rate, since the app cannot work without them, and <b>legitimate interests</b> for usage events, crash
-reports and moderation records, which exist to keep the app working and safe. There is no
-advertising, no profiling and no automated decision-making.</p>
+reports and moderation records, which keep the app working and safe.</p>
+<p>Features such as Replay, Music DNA, About You and Taste Match analyse your own ratings and
+listening to describe your taste. That analysis is shown to you (and, for Taste Match, to the person
+you compare with, only where your ratings are public). It is not used for advertising and no decision
+with legal or similarly significant effect is made from it.</p>
 </section>
 
 <section id="s9"><h2>Where it is held</h2>
@@ -330,10 +335,27 @@ access requests and deletion requests all go to the same address.</p>
     <span>VINALL</span><span class="sep">&middot;</span>
     <a href="/privacy.html">Privacy Policy</a><span class="sep">&middot;</span>
     <a href="/terms.html">Terms of Use</a><span class="sep">&middot;</span>
-    <a href="/">Back to the app</a>
+    <a href="/" data-back>Back to VINALL</a>
   </div>
   <p>VINALL is an independent project. Catalogue information, artwork and preview clips are
   supplied by Deezer. Questions about this document go to
   <a href="mailto:vinall.support@gmail.com">vinall.support@gmail.com</a>.</p>
 </footer>
-</div></body></html>
+</div>
+<script>
+(function () {
+  function sameSiteReferrer() {
+    try {
+      if (!document.referrer) return false;
+      var r = new URL(document.referrer);
+      return r.origin === location.origin && !/\/(privacy|terms)\.html$/.test(r.pathname);
+    } catch (e) { return false; }
+  }
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('[data-back]');
+    if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0) return;
+    if (sameSiteReferrer() && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+})();
+</script>
+</body></html>

@@ -2,7 +2,7 @@ import { test as base, expect } from '@playwright/test';
 export { expect };
 export const album = id => ({ id: String(id), name: `Record ${id}`, album_type: 'album', release_date: '2025-01-01', artists: [{ id: '42', name: 'Test Artist' }], images: [{ url: '/assets/icons/icon-512.png', width: 512, height: 512 }], tracks: { items: Array.from({ length: 16 }, (_, i) => ({ id: `${id}${i}`, name: `Song ${id}-${i}`, artists: [{ id: '42', name: 'Test Artist' }], preview_url: '/test-preview.wav', duration_ms: 180000, track_number: i + 1 })) } });
 export const test = base.extend({
-  page: async ({ page, browserName }, use) => {
+  page: async ({ page, browserName, baseURL }, use) => {
     await page.context().routeWebSocket('**/*', socket => socket.close());
     if (browserName === 'webkit') {
       // Windows WebKit cannot decode the PCM fixture or run its Web Audio
@@ -44,7 +44,7 @@ export const test = base.extend({
         return route.fulfill({ json: { cover: '/assets/icons/icon-512.png', tracks: Array.from({ length: 16 }, (_, i) => ({ id: `${id}${i}`, title: `Song ${id}-${i}`, artist: 'Test Artist', duration: 180, preview: '/test-preview.wav' })) } });
       }
       if (url.pathname.startsWith('/api/')) return route.fulfill({ json: [] });
-      if (url.origin !== 'http://127.0.0.1:4173') return route.fulfill({ status: 200, body: '', contentType: 'text/plain' });
+      if (url.origin !== new URL(baseURL).origin) return route.fulfill({ status: 200, body: '', contentType: 'text/plain' });
       if (url.pathname === '/test-preview.wav') {
         const size = 8000 * 30 * 2, wav = Buffer.alloc(44 + size);
         wav.write('RIFF'); wav.writeUInt32LE(36 + size, 4); wav.write('WAVEfmt ', 8); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22); wav.writeUInt32LE(8000, 24); wav.writeUInt32LE(16000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(size, 40);

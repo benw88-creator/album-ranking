@@ -17,4 +17,4 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
     fs.createReadStream(file).pipe(res);
   });
-}).listen(4173, '127.0.0.1', () => console.log('VINALL local preview: http://127.0.0.1:4173'));
+}).listen(+process.env.PORT || 4173, '127.0.0.1', () => console.log('VINALL local preview: http://127.0.0.1:' + (+process.env.PORT || 4173)));

@@ -27,6 +27,12 @@ button {
      visibly gives under the cursor. */
   .btn-primary:active:not(:disabled), .btn-ghost:active:not(:disabled), .btn-mini:active:not(:disabled) { transform: scale(.97); }
 }
+/* For You is one screen: the feed is the scroller and already runs under the
+   nav. The body's nav padding made the DOCUMENT 102px taller than the window,
+   so a swipe outside the feed scrolled the page and slid the whole feed up —
+   sleeve cut off under the status bar, bare page below it. No padding, no
+   page to scroll. */
+body[data-section="foryou"] { padding-bottom: 0; overscroll-behavior-y: none; }
 .fy-feed { min-height: 180px; overflow-anchor: none; touch-action: pan-y pinch-zoom; }
 .fy-loading { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; }
 .fy-loading::before { content: ''; width: min(65%, 240px); aspect-ratio: 1; border-radius: 14px; background: var(--surface-2); animation: fyPlaceholder 1.4s ease-in-out infinite alternate; }
