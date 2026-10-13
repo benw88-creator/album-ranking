@@ -844,6 +844,19 @@ logic in an `_`-prefixed module and dispatch to it from an existing route by `pa
 way Spotify matching rides `/api/catalogue?path=spotify-match`. After any push that adds a
 file under `api/`, check the commit status (`gh api repos/benw88-creator/album-ranking/commits/<sha>/status`).
 
+### 12. An entrance animation with `fill-mode: both` on something that hovers
+
+An animation outranks every normal declaration, and `both` holds the last
+keyframe for ever — so `.card { animation: cardIn … both }` pinned `transform`
+and `.card:hover`'s lift never once applied (the Crate feed's `cfCardIn` too).
+If the end keyframe equals the resting style, use `backwards`.
+
+### 13. A preview tab can be one build behind
+
+`sw.js` is stale-while-revalidate, so after an edit the local preview serves the
+previous `index.html` — a fix "not working" may not be loaded. Unregister the
+worker and clear Cache Storage before judging a change in the browser.
+
 ## The traps, continued: a fifth source-order loss and a fifth silent no-op
 
 `.song-slider { width: 80px }` in a `max-width: 560px` block sat **after** the new slider

@@ -15,8 +15,9 @@
 <link rel="icon" type="image/x-icon" href="/assets/icons/favicon.ico?v=official">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=official">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png?v=official">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png?v=official">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png?v=official">
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/browser-192.png?v=official">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="VINALL">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1813,11 +1814,18 @@ html[data-motion="none"] .view.enter { animation: none; }
   transition: transform 0.22s var(--ease), box-shadow 0.22s;
   /* Score-coloured top border  */
   border-top: 3px solid var(--score, var(--border-strong));
-  /* Promote to its own layer so the spotlight repaint never triggers a reflow of siblings */
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  animation: cardIn 0.5s var(--ease) both;
+  /* BACKWARDS, not both. A fill that holds the last keyframe holds its
+     transform for ever, and an animation outranks every normal declaration —
+     so .card:hover's lift had never once applied. The end state equals the
+     resting style, so letting go of it at the end changes nothing else.
+
+     And no permanent layers. This card, its art-wrap, its art and its
+     spotlight were each forced onto their own compositor layer, square-
+     cornered, inside a rounded card with a 3px score border on top. Scaling
+     the art on hover moved one square layer against another and a sliver of
+     it crossed the rounded top edge and the score border — the bar that
+     flickered on hover. One clip, drawn in one place, has nothing to tear. */
+  animation: cardIn 0.5s var(--ease) backwards;
 }
 @keyframes cardIn {
   from { opacity: 0; transform: translateY(16px) translateZ(0) scale(0.97); }
@@ -1843,7 +1851,7 @@ html[data-motion="none"] .view.enter { animation: none; }
 }
 html[data-motion="none"] .card { animation: none; }
 .card:hover {
-  transform: translateY(-6px) translateZ(0);
+  transform: translateY(-4px) scale(1.015);
   box-shadow:
     0 20px 48px rgba(0,0,0,0.6),
     0 0 0 1px rgba(255,245,235,0.1),
@@ -1863,8 +1871,6 @@ html[data-motion="none"] .card { animation: none; }
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.4s var(--ease);
-  will-change: opacity;
-  transform: translateZ(0);
   background: radial-gradient(
     220px circle at var(--mx, 50%) var(--my, 50%),
     rgba(255,255,255,0.10),
@@ -1879,7 +1885,8 @@ html[data-motion="none"] .card { animation: none; }
   aspect-ratio: 1;
   overflow: hidden;
   contain: paint;
-  transform: translateZ(0);
+  /* The card's inner top corners, so the art is clipped where the card is. */
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
 }
 .card .art {
   width: 100%; height: 100%;
@@ -1887,10 +1894,8 @@ html[data-motion="none"] .card { animation: none; }
   display: block;
   background: var(--surface-3);
   transition: transform 0.4s var(--ease);
-  will-change: transform;
-  backface-visibility: hidden;
 }
-.card:hover .art { transform: scale(1.04) translateZ(0); }
+.card:hover .art { transform: scale(1.04); }
 
 /* Every affordance on this card was a hover: a cursor-tracking spotlight, a
    6px lift and an art zoom. On a phone all three are dead — and worse, iOS
@@ -1902,7 +1907,7 @@ html[data-motion="none"] .card { animation: none; }
   .card:hover::before { opacity: 0; }
   .card:hover .art { transform: none; }
   .card:active {
-    transform: scale(0.975) translateZ(0);
+    transform: scale(0.975);
     transition: transform var(--dur-quick) var(--ease);
   }
 }
@@ -3942,7 +3947,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
   aspect-ratio: 1;
   cursor: pointer;
   background: var(--surface-3);
-  animation: cfCardIn 0.4s var(--ease) both;
+  animation: cfCardIn 0.4s var(--ease) backwards; /* not both: a held transform blocks the hover lift */
   /* glow pulse on hover using score colour */
   transition: transform 0.25s var(--ease),
               box-shadow 0.25s;
@@ -4379,13 +4384,11 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 .splash-disc.is-flying {
   animation: discFlight 880ms cubic-bezier(.62,.02,.24,1) forwards;
 }
+/* Fallback only — playDismissAnimation drives the flight through
+   element.animate() wherever that exists. */
 @keyframes discFlight {
-  0%   { transform: translate(-50%, -50%) scale(1); filter: blur(0px); }
-  22%  { filter: blur(2.5px); }
-  100% {
-    transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(var(--fs));
-    filter: blur(0px);
-  }
+  0%   { transform: translate(-50%, -50%) scale(1); }
+  100% { transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(var(--fs)); }
 }
 /* The spin-up. Two animations on one element would fight over `transform`, so
    the rotation lives on .sd-vinyl and the flight on .splash-disc — which is
@@ -4967,6 +4970,28 @@ body.entering-done #artist-hero {
 .artist-hero-bed, .artist-hero-bg, .artist-hero-canvas {
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
           mask-image: linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
+}
+/* THE WHOLE PHOTO, NEVER A CROP. `cover` on a wide band cut the top and
+   bottom off every square press shot — heads included. The sharp image is
+   now its own square, centred and contained, and the blurred bed above fills
+   the sides in the photo's own colours. Its left and right edges feather
+   into the bed so there is no vertical seam; the bottom keeps the long
+   dissolve into the page. The band is wider than tall at every width (232px
+   on a phone, 460 above), so the square always has bed either side of it. */
+.artist-hero-bg {
+  inset: 0 auto auto 50%;
+  width: auto; height: 100%; max-width: 100%;
+  aspect-ratio: 1 / 1;
+  transform: translateX(-50%);
+  object-fit: contain; object-position: center top;
+  -webkit-mask-image:
+    linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%),
+    linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
+          mask-image:
+    linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%),
+    linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
+  -webkit-mask-composite: source-in;
+          mask-composite: intersect;
 }
 .artist-hero-fade {
   position: absolute;
@@ -7054,6 +7079,12 @@ html[data-motion="none"] .games-grid > .game-card .gc-emoji { animation: none; }
 /* While it runs. The sweep is a single moving highlight rather than
    per-tile motion blur, which would cost a repaint on seventy elements. */
 .draw-window.spinning { border-color: var(--gold); }
+/* The strip is one composited layer sliding sideways. A tile animating its
+   own background or filter inside it repaints that whole 9,000px layer every
+   frame of the spin, which is the stutter. They hold still while it moves —
+   a prism tile is still a prism going past. */
+.draw-window.spinning .draw-tile,
+.draw-window.spinning .dt-chip { animation-play-state: paused; }
 .draw-window.spinning::after {
   content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: linear-gradient(90deg, transparent, var(--gold-glow), transparent);
@@ -9568,7 +9599,7 @@ input, textarea, select, [contenteditable="true"],
   .modal-panel { margin-bottom: env(safe-area-inset-bottom); }
 }
 </style>
-<link rel="stylesheet" href="/assets/interactions.css?v=1">
+<link rel="stylesheet" href="/assets/interactions.css?v=2">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -10818,7 +10849,7 @@ window.discAmt = function (n) {
         <div class="g-pop" id="g-popular"></div>
       </div>
       <button class="btn-primary g-btn-full" id="g-start-btn">Start</button>
-      <div class="g-loading" id="g-loading">Loading albums&hellip;</div>
+      <div class="g-loading ld-line" id="g-loading">Loading albums&hellip;</div>
       <div class="g-error" id="g-error"></div>
     </div>
 
@@ -12173,7 +12204,7 @@ async function openAlbum(meta, fromHistory) {
   coverEl.src = meta.art || '';
   document.getElementById('detail-name').textContent = meta.name;
   document.getElementById('detail-artist').textContent = meta.artist + (meta.year ? ' · ' + meta.year : '');
-  document.getElementById('detail-tracks').innerHTML = '<div class="sugg-empty">Loading tracks…</div>';
+  document.getElementById('detail-tracks').innerHTML = '<div class="sugg-empty ld-line">Loading tracks…</div>';
   applyAlbumTint(null); // reset while new art loads
   if (meta.art) {
     const probe = new Image();
@@ -13075,7 +13106,7 @@ window.removeSong = removeSong;
       host.innerHTML = '';
       return;
     }
-    host.innerHTML = '<div class="cert-card"><div class="cert-next">Reading this record’s certification…</div></div>';
+    host.innerHTML = '<div class="cert-card"><div class="cert-next ld-line">Reading this record’s certification…</div></div>';
     _cert = await Cert.one(album.id);
     paint();
   }
@@ -13713,6 +13744,10 @@ function watchHeroPending() {
 }
 
 function showArtistHero(hero) {
+  // Already open: re-running the reveal collapsed it to zero and grew it
+  // again on every visit to Home, pushing the header down under the status
+  // bar each time.
+  if (hero.style.display === 'block' && !hero.classList.contains('artist-hero-hidden')) return;
   heroResize(hero, function () {
     hero.style.display = 'block';
     hero.classList.add('artist-hero-hidden');
@@ -13897,7 +13932,9 @@ function setMode(mode, fromCode) {
       _v._entrance = _v.animate([
         { opacity: 0 },
         { opacity: 1 }
-      ], { duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      // iOS's own deceleration: quick to arrive, long soft tail. Opacity
+      // only, for the WebKit hit-testing reason above.
+      ], { duration: 280, easing: 'cubic-bezier(.32,.72,0,1)' });
     }
   }
   // Repaints --section, which the background washes and every section heading
@@ -13923,6 +13960,20 @@ function setMode(mode, fromCode) {
        blocks that are no longer on this page — cheap, but it is also how a
        render ends up running twice and a scroll position ends up thrown
        away. */
+    /* Back to Home with the banner already built: put it back in the SAME
+       frame the view swaps, at full height. It used to wait for a profile
+       round trip and then grow from zero over 550ms, so every return to Home
+       slid the header, search and nav down the screen after you had arrived —
+       the shift right under the status bar. The fetch below still runs and
+       still swaps the artist if it changed elsewhere. */
+    var _h = document.getElementById('artist-hero');
+    if (_h && _heroBuilt) {
+      _h.style.transition = 'none';
+      _h.style.display = 'block';
+      _h.classList.remove('artist-hero-hidden');
+      void _h.offsetHeight;
+      _h.style.transition = '';
+    }
     renderArtistHero();
     // Both halves of the loop live here now. renderToday() no-ops if the
     // stack is already built for today, so re-entering Home is cheap.
@@ -14717,7 +14768,7 @@ function renderAuthArea(connected){
     const host=document.getElementById('g-popular');
     if(!host)return;
     if(_popular&&Date.now()-_popularAt<1800000){paintPopular(_popular);return;}
-    host.innerHTML='<div class="g-pop-note">Loading\u2026</div>';
+    host.innerHTML='<div class="g-pop-note ld-line">Loading\u2026</div>';
     try{
       const r=await fetch(Native.api+'/api/catalogue?path=chart-artists&limit=24');
       if(!r.ok)throw new Error('http '+r.status);
@@ -14985,7 +15036,7 @@ function renderAuthArea(connected){
   function close(){modal.classList.remove('open');}
 
   async function loadBoard(){
-    listHost.innerHTML='<p class="reco-note">Loading\u2026</p>';
+    listHost.innerHTML='<p class="reco-note ld-line">Loading\u2026</p>';
     if(!window.Cloud||!Cloud.isOn||!Cloud.isOn()){
       listHost.innerHTML='<div class="reco-note">Log in to see global times.</div>';
       return;
@@ -16033,7 +16084,7 @@ const Cloud=(function(){
      touched at all: they are public facts about records, expensive to refetch,
      and identical for everybody. */
   const OWNER_KEY = 'vinall_local_owner';
-  const OWNED_PREFIX = /^(crate_|vinal_drop2_|vinal_earworm2_)/;
+  const OWNED_PREFIX = /^(crate_|vinal_drop2_|vinal_earworm2_|vinall_spotify_v1$)/;
   const OWNED_KEEP = { 'crate_today_auto': 1, 'crate_home_folds': 1 };
 
   function wipeLocalAccountState(){
@@ -16057,7 +16108,7 @@ const Cloud=(function(){
     return foreign;
   }
 
-  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best','crate_foryou_songs','crate_foryou_seen','crate_onboard_v1','crate_liked_songs_v1'];
+  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best','crate_foryou_songs','crate_foryou_seen','crate_onboard_v1','crate_liked_songs_v1','crate_spotify_v1'];
   const pending={};
   function isOn(){return!!(sb&&user);}
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
@@ -16178,6 +16229,16 @@ const Cloud=(function(){
       else if(!!a.done!==!!b.done)win=a.done?a:b;
       else win=((a.step||0)>=(b.step||0))?a:b;
       lsSetRaw('crate_onboard_v1',win);
+    })();
+    /* Spotify import: the newer record wins as a whole, except the imported
+       map and the playlist lists, which union — a track brought in on either
+       device is in, and a playlist list made on either keeps its id. */
+    (function(){
+      const a=lsGet('crate_spotify_v1'),b=cloud['crate_spotify_v1'];
+      if(!a&&!b)return;
+      if(!a||!b){lsSetRaw('crate_spotify_v1',a||b);return;}
+      const nw=(a.at||0)>=(b.at||0)?a:b,old=nw===a?b:a;
+      lsSetRaw('crate_spotify_v1',Object.assign({},nw,{imported:Object.assign({},old.imported,nw.imported),lists:Object.assign({},old.lists,nw.lists)}));
     })();
     if(cloud['crate_album_size']&&!localStorage.getItem('crate_album_size'))lsSetRaw('crate_album_size',cloud['crate_album_size']);
     /* Push back only what the merge actually CHANGED, and do not wait for it.
@@ -17212,7 +17273,7 @@ async function renderProfile(){
   const publicId=params.get('u');
   const me=window.Cloud&&Cloud.getUser&&Cloud.getUser();
   if(publicId&&(!me||me.id!==publicId)){
-    host.innerHTML='<p class="reco-note">Loading profile\u2026</p>';
+    host.innerHTML='<p class="reco-note ld-line">Loading profile\u2026</p>';
     const prof=await Cloud.fetchProfile(publicId);
     if(profileTok!==_profileRenderTok)return;
     if(!prof){host.innerHTML='<div class="empty"><span class="emoji">'+ICONS.person+'</span><h3>Profile not found</h3><p>This user doesn\u2019t exist or hasn\u2019t set up a profile.</p></div>';return;}
@@ -17222,7 +17283,7 @@ async function renderProfile(){
     host.innerHTML='<div class="empty"><span class="emoji">'+ICONS.person+'</span><h3>Your profile</h3><p>Log in to create a public profile.</p><button class="btn-primary" id="prof-login" style="margin-top:8px;">Log in / Sign up</button></div>';
     const b=document.getElementById('prof-login');if(b)b.addEventListener('click',function(){Cloud.openAuth();});return;
   }
-  host.innerHTML='<p class="reco-note">Loading your profile\u2026</p>';
+  host.innerHTML='<p class="reco-note ld-line">Loading your profile\u2026</p>';
   let prof=await Cloud.fetchProfile(me.id);
   if(profileTok!==_profileRenderTok)return;
   if(!prof)prof={id:me.id,username:'user_'+me.id.slice(0,8),bio:'',avatar_url:'',top3:[]};
@@ -17875,7 +17936,7 @@ async function openFollowModal(uid,which,username){
   const modal=document.getElementById('follow-modal');
   document.getElementById('follow-modal-title').textContent=(which==='followers'?'Followers':'Following');
   const listEl=document.getElementById('follow-modal-list');
-  listEl.innerHTML='<p class="reco-note">Loading\u2026</p>';
+  listEl.innerHTML='<p class="reco-note ld-line">Loading\u2026</p>';
   modal.classList.add('open');
   await (window.loadBlocks?loadBlocks():Promise.resolve());
   const people=(which==='followers'?await Cloud.followersList(uid):await Cloud.followingList(uid))
@@ -17895,7 +17956,7 @@ async function renderPeople(){
   if(window.Reach)try{Reach.render();}catch(e){}
   if(window.PeopleKin)try{PeopleKin.render();}catch(e){}
   if(!me){document.getElementById('people-result').innerHTML='<div class="reco-note">Log in to follow people.</div>';fhost.innerHTML='';return;}
-  fhost.innerHTML='<p class="reco-note">Loading\u2026</p>';
+  fhost.innerHTML='<p class="reco-note ld-line">Loading\u2026</p>';
   await loadBlocks();
   // Blocked people disappear from your lists rather than being hidden
   // behind a notice, which is what a block is supposed to feel like.
@@ -18826,7 +18887,7 @@ function notifEmoji(t){return t==='follow'?ICONS.people:(t==='suggestion'||t==='
 async function renderNotifications(){
   const host=document.getElementById('notif-list');if(!host)return;
   if(!Cloud.isOn()){host.innerHTML='<div class="act-empty">Log in to get notifications.</div>';return;}
-  host.innerHTML='<div class="act-empty">Loading\u2026</div>';
+  host.innerHTML='<div class="act-empty ld-line">Loading\u2026</div>';
   await (window.loadBlocks ? loadBlocks() : Promise.resolve());
   // A block that still lets someone reach your notifications is not a block.
   const list=(await Cloud.fetchNotifications()).filter(function(n){
@@ -18853,7 +18914,7 @@ function openSuggest(item,kind){
   document.getElementById('suggest-item-sub').textContent=kind==='list'?'List':(item.artist||'');
   document.getElementById('suggest-item-img').src=(kind==='list'?((item.items&&item.items[0]&&item.items[0].art)||''):(item.art||''));
   document.getElementById('suggest-error').textContent='';
-  document.getElementById('suggest-list').innerHTML='<p class="reco-note">Loading people you follow\u2026</p>';
+  document.getElementById('suggest-list').innerHTML='<p class="reco-note ld-line">Loading people you follow\u2026</p>';
   document.getElementById('suggest-modal').classList.add('open');
   loadSuggestTargets();
 }
@@ -18884,7 +18945,7 @@ let _currentGroove=null,_grooveInviteTimer=null;
 async function renderGrooves(){
   const listHost=document.getElementById('groove-list');const invHost=document.getElementById('groove-invites');if(!listHost)return;
   if(!Cloud.isOn()){invHost.innerHTML='';listHost.innerHTML='<div class="empty"><span class="emoji">'+ICONS.groove+'</span><h3>Grooves</h3><p>Log in to create groups with your mates.</p><button class="btn-primary" id="groove-login" style="margin-top:8px;">Log in</button></div>';const b=document.getElementById('groove-login');if(b)b.addEventListener('click',function(){Cloud.openAuth();});return;}
-  listHost.innerHTML='<p class="reco-note">Loading\u2026</p>';invHost.innerHTML='';
+  listHost.innerHTML='<p class="reco-note ld-line">Loading\u2026</p>';invHost.innerHTML='';
   const{member,invites}=await Cloud.myGrooves();
   if(invites.length){invHost.innerHTML='<h3 class="prof-section-title" style="margin-top:8px;">Invites</h3>'+invites.map(function(g){return'<div class="groove-card invite" data-ginvite="'+esc(g.id)+'"><div class="groove-ic">'+ICONS.groove+'</div><div style="flex:1;"><div class="groove-nm">'+esc(g.name)+'</div><div class="groove-meta">You\u2019ve been invited</div></div><button class="btn-mini groove-accept" data-acc="'+esc(g.id)+'">Accept</button><button class="btn-mini groove-decline" data-dec="'+esc(g.id)+'">Decline</button></div>';}).join('');invHost.querySelectorAll('.groove-accept').forEach(function(b){b.addEventListener('click',async function(){b.textContent='\u2026';await Cloud.acceptGrooveInvite(b.dataset.acc);renderGrooves();});});invHost.querySelectorAll('.groove-decline').forEach(function(b){b.addEventListener('click',async function(){b.textContent='\u2026';await Cloud.leaveGroove(b.dataset.dec);renderGrooves();});});}
   if(!member.length){listHost.innerHTML='<div class="empty"><span class="emoji">'+ICONS.groove+'</span><h3>No Grooves yet</h3><p>Create one and invite your mates.</p></div>';return;}
@@ -18897,7 +18958,7 @@ async function openGroove(grooveId){
   _currentGroove=g;
   document.getElementById('groove-name').textContent=g.name;
   document.getElementById('groove-invite-panel').style.display='none';
-  document.getElementById('groove-members').innerHTML='<p class="reco-note">Loading members\u2026</p>';
+  document.getElementById('groove-members').innerHTML='<p class="reco-note ld-line">Loading members\u2026</p>';
   document.getElementById('groove-modal').classList.add('open');
   const me=Cloud.getUser();
   // The block list has to be in memory before the filter below means anything.
@@ -19642,7 +19703,7 @@ window.handleGrooveLink=handleGrooveLink;
     document.getElementById('ap-hero-artist').textContent=_currentMeta.artist||'';
     document.getElementById('ap-avg-score').textContent='—';
     document.getElementById('ap-avg-count').textContent='';
-    document.getElementById('ap-ratings-list').innerHTML='<div class="reco-note">Loading…</div>';
+    document.getElementById('ap-ratings-list').innerHTML='<div class="reco-note ld-line">Loading…</div>';
     document.getElementById('ap-comment-list').innerHTML='';
     modal.classList.add('open');
 
@@ -23549,7 +23610,26 @@ function playDismissAnimation(gateEl, callback) {
 
   // 2. Let go once it is properly turning. The delay is what makes the flight
   //    read as being thrown rather than as a slide starting.
-  setTimeout(function () { disc.classList.add('is-flying'); }, 300);
+  /* 2. The flight. Scale is interpolated GEOMETRICALLY (fs^p), not linearly.
+        A linear 1 → 0.05 spends half the flight above 50% size, so on a
+        desktop — where the record starts at 1,200-1,900px — it hung full-screen
+        and then collapsed into the corner in the last 200ms. Equal ratios per
+        step read as one steady zoom at every viewport. The easing sits on the
+        whole effect so the steps share one curve. No animated filter: a blur
+        that changes every frame re-rasterises a layer that size every frame. */
+  var flightAnim = null;
+  if (disc.animate) {
+    var frames = [];
+    for (var i = 0; i <= 8; i++) {
+      var p = i / 8;
+      frames.push({ transform: 'translate(calc(-50% + ' + (fx * p).toFixed(1) + 'px), calc(-50% + ' +
+        (fy * p).toFixed(1) + 'px)) scale(' + Math.pow(fs, p).toFixed(5) + ')' });
+    }
+    flightAnim = disc.animate(frames, { duration: 880, delay: 300, easing: 'cubic-bezier(.62,.02,.24,1)', fill: 'forwards' });
+    flightAnim.finished.then(finish, function () {});
+  } else {
+    setTimeout(function () { disc.classList.add('is-flying'); }, 300);
+  }
 
   /* 3. Wind DOWN before it arrives. The record is turning at 0.34s a
         revolution during the throw and the header mark turns at 8s — landing
@@ -24769,7 +24849,7 @@ function playDismissAnimation(gateEl, callback) {
     }
 
     subscribeWars();
-    act.innerHTML = '<p class="reco-note">Loading&hellip;</p>';
+    act.innerHTML = '<p class="reco-note ld-line">Loading&hellip;</p>';
     chal.innerHTML = ''; hist.innerHTML = '';
 
     var wars = await myWars();
@@ -25522,7 +25602,7 @@ async function renderAdminStats() {
   try { prof = await Cloud.fetchProfile(Cloud.getUser().id); } catch (e) {}
   if (!prof || !prof.is_admin) return;      // silent for everyone else
 
-  host.innerHTML = '<h3 class="prof-section-title">Stats</h3><p class="reco-note">Loading…</p>';
+  host.innerHTML = '<h3 class="prof-section-title">Stats</h3><p class="reco-note ld-line">Loading…</p>';
 
   var s = null, qs = [], errs = [];
   try {
@@ -28209,7 +28289,7 @@ window.renderAdminStats = renderAdminStats;
     }
 
     // Standings
-    if (!_board) body.innerHTML = '<p class="reco-note">Counting everybody…</p>';
+    if (!_board) body.innerHTML = '<p class="reco-note ld-line">Counting everybody…</p>';
     var rows = _board;
     if (!rows) {
       try {
@@ -28486,7 +28566,7 @@ window.renderAdminStats = renderAdminStats;
   async function search(q) {
     if (!q || q.length < 2) { _results = null; render(); return; }
     var body = el('col-body');
-    body.innerHTML = '<p class="reco-note">Searching…</p>';
+    body.innerHTML = '<p class="reco-note ld-line">Searching…</p>';
     try {
       var d = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: 'album', limit: '18' }).toString(),
                                  { priority: true });
@@ -28843,6 +28923,14 @@ window.renderAdminStats = renderAdminStats;
     go.disabled = true;
     go.textContent = 'Spinning…';
     resetStrip();
+    /* The whole run is built NOW, while the round trip is in flight, with a
+       stand-in at the landing index. Building it after the answer meant the
+       strip snapped back showing the previous run's tiles, then swapped every
+       tile, then had a 9,000px layer to rasterise on the first frame of the
+       spin — three hitches before it moved. Only the off-screen tile at
+       WIN_INDEX changes when the result lands. */
+    var strip = el('draw-strip');
+    strip.innerHTML = buildStrip(pool, weightedPick(pool)).map(tileHTML).join('');
     el('draw-window').classList.add('spinning');
 
     var res = await W().spin();
@@ -28859,8 +28947,8 @@ window.renderAdminStats = renderAdminStats;
     var winner = pool.filter(function (i) { return i.key === won.key; })[0] ||
                  { label: won.label, tier: won.tier, kind: won.kind, ref: won.ref, weight: 1 };
 
-    var strip = el('draw-strip');
-    strip.innerHTML = buildStrip(pool, winner).map(tileHTML).join('');
+    var slot = strip.children[WIN_INDEX];
+    if (slot) slot.outerHTML = tileHTML(winner);
 
     // Land the winning tile under the needle, minus a few pixels of jitter so
     // it never stops perfectly centred twice running.
@@ -30339,7 +30427,7 @@ window.renderAdminStats = renderAdminStats;
   async function paintLobby() {
     var host = el('blitz-matches');
     if (!on()) { host.innerHTML = '<div class="reco-note">Log in to challenge somebody. Solo still works.</div>'; return; }
-    host.innerHTML = '<div class="reco-note">Loading…</div>';
+    host.innerHTML = '<div class="reco-note ld-line">Loading…</div>';
     var rows = [];
     try { rows = await Cloud.blitzList(); } catch (e) {}
     var me = meId();
@@ -30664,7 +30752,7 @@ window.renderAdminStats = renderAdminStats;
     if (!on()) { Cloud.openAuth(); return; }
     var host = el('blitz-opps');
     host.style.display = '';
-    host.innerHTML = '<div class="reco-note">Loading…</div>';
+    host.innerHTML = '<div class="reco-note ld-line">Loading…</div>';
     var people = [];
     try { people = await Cloud.followingList(meId()); } catch (e) {}
     await (window.loadBlocks ? loadBlocks() : Promise.resolve());
@@ -32754,7 +32842,7 @@ window.track = function (name, props) {
     // price sweep's _sweep and the player's loadTok.
     var mine = ++tok;
     var host = el('sugg-list');
-    if (!rows.length) host.innerHTML = '<div class="sugg-empty">Loading\u2026</div>';
+    if (!rows.length) host.innerHTML = '<div class="sugg-empty ld-line">Loading\u2026</div>';
     var got = await Cloud.suggestionList(mode, q, 40);
     if (mine !== tok) return;
     rows = got;
@@ -34125,7 +34213,7 @@ window.track = function (name, props) {
     var host = document.getElementById('lore-list');
     if (!host) return;
     if (!on()) { host.innerHTML = '<div class="reco-note">Log in to start building your lore.</div>'; return; }
-    host.innerHTML = '<p class="reco-note">Loading…</p>';
+    host.innerHTML = '<p class="reco-note ld-line">Loading…</p>';
     await loadLore(true);
     var real = _loreList.filter(function (r) { return !r.skipped && (r.choice || r.note); });
     var head = document.getElementById('lore-count');
@@ -34258,7 +34346,7 @@ window.track = function (name, props) {
     void panel.offsetWidth;
     panel.classList.add('in');
     toggle.setAttribute('aria-expanded', 'true');
-    panel.innerHTML = '<div class="dm-title">Daily Missions</div><div class="reco-note">Loading…</div>';
+    panel.innerHTML = '<div class="dm-title">Daily Missions</div><div class="reco-note ld-line">Loading…</div>';
     await render();
   }
 
@@ -35492,7 +35580,7 @@ window.track = function (name, props) {
       host.innerHTML = '<div class="reco-note">Log in to get your Reach code.</div>';
       return;
     }
-    host.innerHTML = '<p class="reco-note">Loading…</p>';
+    host.innerHTML = '<p class="reco-note ld-line">Loading…</p>';
 
     var st = null, code = null;
     try {
@@ -36409,7 +36497,12 @@ window.track = function (name, props) {
          waits for it. Widening past a pool that is about to arrive would reach
          for the chart while your own artists were one promise away. */
       if (_remote) { var r = _remote; _remote = null; await r; _mixAt = 0; _mixTaken = 0; return drawSongs(count); }
+      /* Steps 1 and 2 can each honestly add nothing — logged out there are no
+         artists of yours and no trending rows — and stopping on that meant the
+         chart floor was never reached: every logged-out For You said "Nothing
+         to play yet". Only the chart (step 3 on) coming back empty ends it. */
       var grew = await expand();
+      while (!grew && _widen < 3) grew = await expand();
       if (grew) { _mixAt = 0; _mixTaken = 0; return drawSongs(count); }
     }
     return out;
@@ -36970,7 +37063,7 @@ window.track = function (name, props) {
     host.scrollTo({ top: 0, behavior: 'instant' });
     _busy = true;
     var mine = ++_feedTok;
-    host.innerHTML = '<div class="fy-loading">Finding songs for you&hellip;</div>';
+    host.innerHTML = '<div class="fy-loading ld-line">Finding songs for you&hellip;</div>';
     host.setAttribute('aria-busy', 'true');
     try {
       _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0;
@@ -37037,7 +37130,7 @@ window.track = function (name, props) {
        instead. The threshold is measured from when leave() actually ran, not
        from anything guessed at render time. */
     if (!force && _leftAt && (Date.now() - _leftAt > 10000)) force = true;
-    _leftAt = 0;
+    _leftAt = 0; _onFeed = true; clearTimeout(_fresh);
     if (!_built) { build(force); return; }
     // Re-measured on every entry: the header is a different height logged in
     // and logged out, and the banner appears and disappears above it.
@@ -37060,7 +37153,33 @@ window.track = function (name, props) {
 
   // Leaving the tab must silence it: setMode only changes `display`, and an
   // <audio> element does not care that the card holding it is hidden.
-  function leave() { stopAll(); clearTimeout(_settle); _settle = 0; _navTarget = null; if (_io) { _io.disconnect(); _io = null; } _leftAt = Date.now(); }
+  /* leave() runs on EVERY view change, not only on leaving this one, so it
+     used to restamp _leftAt on each tap elsewhere and the 10s rule measured
+     from the last navigation rather than from leaving the feed. _onFeed makes
+     it the real moment, once.
+
+     And the fresher feed is built THEN, in the background, ten seconds after
+     leaving — not on the way back in, which put a loading screen between
+     somebody and a tab they had already seen full. Coming back finds it ready. */
+  var _onFeed = false, _fresh = 0;
+  function freshen() {
+    if (_onFeed || _busy || document.body.dataset.section === 'foryou') return;
+    _leftAt = 0;
+    build(true);
+  }
+  function leave() {
+    stopAll(); clearTimeout(_settle); _settle = 0; _navTarget = null; if (_io) { _io.disconnect(); _io = null; }
+    if (!_onFeed) return;
+    _onFeed = false; _leftAt = Date.now();
+    clearTimeout(_fresh); _fresh = setTimeout(freshen, 10000);
+  }
+  /* Built before anybody opens it. A few seconds after the session settles,
+     so it is not competing with Home for the first paint. */
+  function prewarm() {
+    var go = function () { if (!_built && !_busy && document.body.dataset.section !== 'foryou') build(); };
+    setTimeout(function () { (window.requestIdleCallback || setTimeout)(go, { timeout: 2000 }); }, 2500);
+  }
+  if (window.Cloud && Cloud.ready) Cloud.ready.then(prewarm); else prewarm();
 
   /* ---- the tabs, and pushing a record -----------------------------------
      `setFeed` rebuilds rather than filtering: the two feeds have different
@@ -38409,7 +38528,7 @@ window.track = function (name, props) {
     var mine = loadAlbums();
     var rated = Object.keys(mine).map(function (k) { return mine[k]; }).filter(function (a) { return a && a.score > 0; });
     if (rated.length < 5) { h.innerHTML = '<div class="reco-note">Rate ' + (5 - rated.length) + ' more album' + (rated.length === 4 ? '' : 's') + ' to find people with your taste.</div>'; return; }
-    h.innerHTML = '<div class="reco-note">Finding your people…</div>';
+    h.innerHTML = '<div class="reco-note ld-line">Finding your people…</div>';
     try {
       var ids = rated.sort(function (a, b) { return (b.ratedAt || b.savedAt || 0) - (a.ratedAt || a.savedAt || 0); }).slice(0, 150).map(function (a) { return a.id; });
       var overlap = {}, PAGE = 1000;
@@ -38877,8 +38996,34 @@ window.track = function (name, props) {
   function report(m, x) { try { if (window.reportIssue) reportIssue(m, x); } catch (e) {} }
   function small(art) { return String(art || '').replace(/\/(\d+)x\1-000000/, '/250x250-000000'); }
 
-  function readState() { try { return JSON.parse(localStorage.getItem(STATE_KEY)) || {}; } catch (e) { return {}; } }
-  function writeState(s) { try { localStorage.setItem(STATE_KEY, JSON.stringify(s)); } catch (e) { /* a full store just means no resume */ } }
+  /* Two halves. What the ACCOUNT knows — when the file was asked for, what has
+     been imported, which list each playlist became, how far a running import
+     has got — is SYNC_KEY, in SYNC_KEYS, so a phone sees what the laptop did
+     and re-importing there skips what is already in. The job itself (every
+     track and its candidates, megabytes for a big library) stays on the device
+     doing the matching, in STATE_KEY. Both are wiped on an account switch. */
+  var SYNC_KEY = 'crate_spotify_v1';
+  var SLIM = ['requestedAt', 'dismissedAt', 'importedAt', 'imported', 'lists', 'summary', 'progress'];
+  function lsRead(k) { try { return JSON.parse(localStorage.getItem(k)) || {}; } catch (e) { return {}; } }
+  function readState() {
+    var local = lsRead(STATE_KEY), synced = lsRead(SYNC_KEY), out = { job: local.job || null };
+    // Before the split everything lived in STATE_KEY; read it from there until the first write moves it.
+    var from = synced.at ? synced : local;
+    SLIM.forEach(function (k) { if (from[k] !== undefined) out[k] = from[k]; });
+    return out;
+  }
+  var _lastSlim = null;
+  function writeState(s) {
+    var slim = {};
+    SLIM.forEach(function (k) { if (s[k] !== undefined && s[k] !== null) slim[k] = s[k]; });
+    var body = JSON.stringify(slim);
+    try { localStorage.setItem(STATE_KEY, JSON.stringify({ job: s.job || null })); } catch (e) { /* a full store just means no resume */ }
+    if (body === _lastSlim) return;            // a job checkpoint that changed nothing the account needs to hear about
+    _lastSlim = body;
+    slim.at = Date.now();
+    try { localStorage.setItem(SYNC_KEY, JSON.stringify(slim)); } catch (e) {}
+    if (window.Cloud && Cloud.push) Cloud.push(SYNC_KEY);
+  }
   function patch(p) { var s = readState(); Object.keys(p).forEach(function (k) { s[k] = p[k]; }); writeState(s); return s; }
 
   /* ---- the zip ----------------------------------------------------------
@@ -38988,8 +39133,13 @@ window.track = function (name, props) {
     await runJob();
   }
   function persistJob() {
-    if (!J) { patch({ job: null }); return; }
-    patch({ job: { opts: J.opts, items: J.items, res: J.res, startedAt: J.startedAt, history: J.history && J.history !== 'running' ? J.history : null } });
+    if (!J) { patch({ job: null, progress: null }); return; }
+    // The other devices hear about it in tenths, not per batch: the synced
+    // record carries the imported map too, and that is not worth re-uploading
+    // every few seconds for a number moving by 1%.
+    var c = counts(), tenth = c.total ? Math.floor(c.done / c.total * 10) * 10 : 0;
+    patch({ job: { opts: J.opts, items: J.items, res: J.res, startedAt: J.startedAt, history: J.history && J.history !== 'running' ? J.history : null },
+      progress: { startedAt: J.startedAt, total: c.total, pct: tenth, check: c.check } });
   }
   function counts() {
     var c = { total: J ? J.items.length : 0, done: 0, ok: 0, check: 0, none: 0 };
@@ -39106,7 +39256,7 @@ window.track = function (name, props) {
     sum.history = J.history && J.history.kept ? J.history.kept : 0;
     sum.covers = J.items.map(got).filter(function (m) { return m && m.art; }).slice(0, 9).map(function (m) { return m.art; });
     sum.unmatched = J.items.filter(function (it) { return !got(it); }).slice(0, 200).map(function (it) { return { a: it.a, t: it.t || it.b, failed: !!(J.res[it.u] && J.res[it.u].failed) }; });
-    patch({ lists: lists, imported: imported, importedAt: now, summary: sum, job: null });
+    patch({ lists: lists, imported: imported, importedAt: now, summary: sum, job: null, progress: null });
     if (window.track) track('spotify_import_done', { liked: sum.liked, albums: sum.albums, lists: sum.lists, none: sum.none });
     if (window.buzz) buzz('big');
     if (window.renderProfile && window.currentMode === 'profile') renderProfile();
@@ -39367,10 +39517,25 @@ window.track = function (name, props) {
     if (!p) return;
     var modalOpen = $('sp-modal') && $('sp-modal').classList.contains('open');
     var running = J && J.run && !J.applied, rev = J && !J.applied && !J.run && reviewQueue().length;
-    if (modalOpen || (!running && !rev)) { p.hidden = true; return; }
-    var c = counts();
+    var label = '';
+    if (running || rev) {
+      var c = counts();
+      label = rev ? 'Spotify · ' + plural(rev, 'match', 'matches') + ' to check' : 'Bringing in Spotify · ' + (c.total ? Math.floor(c.done / c.total * 100) : 0) + '%';
+    } else if (!J && on()) {
+      /* After a reload the job is only on disk, and before this nothing said
+         so until somebody happened to open the sheet. A job here is resumable;
+         progress with no job here is another device's, shown for two days. */
+      var st = readState(), sj = st.job, pr = st.progress;
+      if (sj && sj.items && sj.items.length) {
+        var d = sj.items.filter(function (it) { return sj.res && sj.res[it.u] && sj.res[it.u].status !== 'retry'; }).length;
+        label = 'Spotify import paused · ' + Math.floor(d / sj.items.length * 100) + '% · carry on';
+      } else if (pr && pr.startedAt && Date.now() - pr.startedAt < 2 * 864e5 && !(st.importedAt > pr.startedAt)) {
+        label = 'Spotify importing on another device · ' + (pr.pct || 0) + '%';
+      }
+    }
+    if (modalOpen || !label) { p.hidden = true; return; }
     p.hidden = false;
-    p.innerHTML = rev ? 'Spotify · ' + plural(rev, 'match', 'matches') + ' to check' : 'Bringing in Spotify · ' + (c.total ? Math.floor(c.done / c.total * 100) : 0) + '%';
+    p.textContent = label;
   }
 
   /* ---- wiring --------------------------------------------------------------- */
@@ -39408,7 +39573,7 @@ window.track = function (name, props) {
       else if (a === 'skipall') { reviewQueue().forEach(function (it) { J.res[it.u] = { status: 'none', m: null, alts: [] }; }); persistJob(); applyJob().then(function () { UI.stage = 'done'; paint(); }); }
       else if (a === 'rate') { close(); if (window.setMode) setMode('foryou'); }
       else if (a === 'resume') { var sj = readState().job; J = { opts: sj.opts, items: sj.items, res: sj.res || {}, run: true, startedAt: sj.startedAt, history: sj.history }; UI.stage = 'importing'; paint(); runJob(); }
-      else if (a === 'discard') { J = null; patch({ job: null }); UI.stage = 'intro'; paint(); }
+      else if (a === 'discard') { J = null; patch({ job: null, progress: null }); UI.stage = 'intro'; paint(); paintPill(); }
       else if (a === 'send') openSend(null);
       else if (a === 'copy') {
         var rows = sendSources()[SEND.src] || [];
@@ -39436,7 +39601,7 @@ window.track = function (name, props) {
   function init() {
     wire();
     paintHome();
-    if (window.Cloud && Cloud.ready) Cloud.ready.then(function () { paintHome(); });
+    if (window.Cloud && Cloud.ready) Cloud.ready.then(function () { paintHome(); paintPill(); });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

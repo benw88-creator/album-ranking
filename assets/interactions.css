@@ -12,12 +12,42 @@ button {
 .fy-key-hint { display: none; }
 @media (hover: hover) and (pointer: fine) {
   .fy-key-hint { display: block; position: absolute; bottom: 8px; left: 0; right: 0; z-index: 7; pointer-events: none; text-align: center; color: var(--text-dim); font-size: 12px; }
-  .game-card:hover { transform: translateY(-3px); }
+  /* One hover language for every surface you can open with a mouse: a short
+     lift and a scale small enough to be felt rather than seen, on the app's
+     own curve and one duration. These used to be four durations (140-220ms)
+     on three easings, which is what made the desktop read as assembled. */
+  .card, .game-card, .list-card, .groove-card, .rw-card, .cf-card {
+    transition: transform 280ms var(--ease), box-shadow 280ms var(--ease), border-color 200ms var(--ease);
+  }
+  .game-card:hover, .list-card:hover, .rw-card:hover { transform: translateY(-3px) scale(1.015); }
+  .groove-card:hover { transform: translateY(-2px) scale(1.01); }
+  .btn-primary, .btn-ghost, .btn-mini, .splash-cta { transition-timing-function: var(--ease); }
+  .btn-primary:hover:not(:disabled), .btn-ghost:hover:not(:disabled), .btn-mini:hover:not(:disabled) { transform: scale(1.02); }
+  /* Equal specificity to the hover above and after it, so a press still
+     visibly gives under the cursor. */
+  .btn-primary:active:not(:disabled), .btn-ghost:active:not(:disabled), .btn-mini:active:not(:disabled) { transform: scale(.97); }
 }
 .fy-feed { min-height: 180px; overflow-anchor: none; touch-action: pan-y pinch-zoom; }
 .fy-loading { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; }
 .fy-loading::before { content: ''; width: min(65%, 240px); aspect-ratio: 1; border-radius: 14px; background: var(--surface-2); animation: fyPlaceholder 1.4s ease-in-out infinite alternate; }
 @keyframes fyPlaceholder { to { opacity: .45; } }
+/* Every "Loading…" line in the app. Static text reads as stalled; this says
+   work is happening without pretending to know how much is left: the words
+   breathe, and a hairline track under them carries one travelling highlight
+   in the page's own colour. The highlight runs in PIXELS from fully off one
+   end to fully off the other, so start and end frames are the same empty
+   track and the loop cannot snap (the percentage-gradient trap). */
+.ld-line { animation: ldBreathe 1.6s ease-in-out infinite; }
+.ld-line::after {
+  content: ''; display: block; width: 140px; max-width: 70%; height: 2px; margin-top: 10px; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--section, var(--gold)), transparent) no-repeat,
+              color-mix(in srgb, var(--text) 8%, transparent);
+  background-size: 56px 100%, 100% 100%;
+  animation: ldTrack 1.15s cubic-bezier(.45,0,.25,1) infinite;
+}
+.fy-loading.ld-line::after, .g-loading.ld-line::after { margin-inline: auto; }
+@keyframes ldBreathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes ldTrack { from { background-position: -56px 0, 0 0; } to { background-position: 140px 0, 0 0; } }
 .fy-card { scroll-snap-align: start; }
 .fy-like, .fy-refresh-btn, .modal-close { min-width: 44px; min-height: 44px; }
 .fy-push-btn, #fy-seg button, .fy-save { min-height: 44px; }
