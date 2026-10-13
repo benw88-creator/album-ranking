@@ -2626,6 +2626,56 @@ written** — a wrong match is a wrong opinion filed under somebody's name.
 Imported ratings pay **no Discs** and go into `crate_feed` dated `2000-01-01`, so they count
 in spreads, reviews and taste match without burying everybody's Crate feed for a week.
 
+## Replay — weekly, monthly and yearly recaps
+
+`assets/replay-core.js` (the arithmetic, pure, loaded in `<head>`), `assets/replay.js`
+(home, story, card), `assets/replay.css`, `view-replay`, `#rp-story`, `#rp-home-card`
+on Home, an account-menu entry, `crate_replay_v1` in `SYNC_KEYS`, and
+`..._20261013120000_replay_listening_days.sql`. **Apply that migration by hand**; until
+then Replay is ratings-only and says so. `node scripts/replay.selfcheck.mjs` (part of
+`npm run check`) and `scripts/tests/replay.spec.mjs` cover it.
+
+- **Two sources, never interchangeable.** Crate = what you RATED (score history gives
+  most rated, highest rated, discoveries, changes of mind, genres, streaks). Listening =
+  what you PLAYED, from the Spotify export. "Most played" and minutes appear only over
+  listening data; ratings-based scenes say "Counted by ratings, not plays".
+- **`listening_days`** exists because `listening_plays` folds an export to one LIFETIME
+  row per track, so no period could be answered. The import now also folds per (local
+  day, track) and calls `listening_days_put`, which keeps the GREATER count on conflict —
+  re-importing the same or an overlapping export never adds. No write policy (guarded).
+  `replay_listening(from, to)` and `replay_listening_index()` aggregate server-side as
+  security INVOKER. Accounts that imported before this have lifetime rows and no days;
+  Replay tells them to import the same file again.
+- **The import had two real accuracy bugs, fixed in passing.** A zip holding both the
+  basic and Extended history counted every overlapping play twice — `ReplayCore.dedupe`
+  makes one play one (track, end-minute). And the basic file's `endTime` has no zone, so
+  `Date.parse` read UTC as local time; `parseUtc` fixes it.
+- **Periods are local and half-open.** Weeks Monday 00:00 → Monday 00:00 via
+  `new Date(y, m, d)`, so the DST week is genuinely an hour longer (tested in
+  Europe/London). Scores are taken **as they stood at period end** (`scoreAt`), so a
+  December re-rate does not rewrite March.
+- **Completed periods are snapshotted** on first build and synced; the first snapshot
+  wins in a merge unless the other has listening behind it. Listening is re-asked only
+  when an import landed after the snapshot (`crate_listening_days_at`).
+- **Scenes have floors scaled to the period** (`scenesFor`): no "your sound" on three
+  albums, no Music DNA under 12 ratings a month / 20 a year. Listening discoveries only
+  when the export starts 90+ days before the period — otherwise the first month of any
+  export calls everything new.
+- **Music DNA** (`ReplayCore.dna`) is rule + threshold + evidence per archetype; the
+  strongest eligible leads, the fallback (The Curator) describes what is there rather
+  than inventing a trait. Loyal Listener can only come from listening data.
+- **The card is drawn on a canvas** (1080×1920 / 1080×1080) with fixed zones, real
+  fonts and CORS-loaded sleeves; a sleeve that taints the canvas is dropped, not the
+  export. Never notes, diary or Lore answers.
+- **The demo** (`?replay=demo`, or the empty state) is the static game pool through the
+  same arithmetic with invented ratings and listening, tagged on every scene and
+  watermarked across the card.
+- `#rp-story` is a `.modal`, so Back, Escape, the focus trap and the scroll lock come
+  free. Its rooms use **`overflow: clip`, not hidden** — a hidden box can still be
+  scrolled by focus/scrollIntoView, and one nudge slid the whole story 256px sideways.
+  Its close button carries `.modal-close` for Escape, which means overriding that
+  class's absolute positioning.
+
 ## Spotify, from your own data
 
 `window.SpotifyBridge`, `#sp-modal`, `#sp-home`, `#sp-pill`, `api/_spotify-match.js` (served as `/api/catalogue?path=spotify-match`),

@@ -9600,6 +9600,7 @@ input, textarea, select, [contenteditable="true"],
 }
 </style>
 <link rel="stylesheet" href="/assets/interactions.css?v=2">
+<link rel="stylesheet" href="/assets/replay.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -9614,6 +9615,9 @@ input, textarea, select, [contenteditable="true"],
          https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js
      sha256 d6a5c4414a5d4ce646d9c1de223aa7067d3ff664c15394ffeb7fcffc763354a3 -->
 <script src="/assets/supabase-js-2.117.3.min.js"></script>
+<!-- Replay's arithmetic. Pure functions, a few KB, and read by the listening
+     import below as well as by Replay — so it loads before either. -->
+<script src="/assets/replay-core.js?v=1"></script>
 <script>
 /* Motion preference, applied before the first paint so the splash and the
    dashboard entrance both see it. Three states: follow the system (the
@@ -10246,6 +10250,9 @@ window.discAmt = function (n) {
       <div class="dm-panel" id="dm-panel"></div>
     </div>
 
+    <!-- Replay: this year so far, once there is something in it. -->
+    <div id="rp-home-card"></div>
+
     <!-- Spotify: one card, only until it has been used or waved away. -->
     <div id="sp-home"></div>
 
@@ -10748,6 +10755,12 @@ window.discAmt = function (n) {
   </section>
 
   <!-- ============================ GROOVES ============================ -->
+  <!-- REPLAY — weekly, monthly and yearly recaps. Rendered by assets/replay.js;
+       the story itself is #rp-story, a layer over everything. -->
+  <section id="view-replay" class="view" style="display:none;">
+    <div id="rp-home" class="rp-home"></div>
+  </section>
+
   <section id="view-grooves" class="view" style="display:none;">
     <div class="section-head"><h2><span data-icon="groove"></span> Grooves</h2><button class="btn-primary" id="groove-create-btn" style="margin-left:auto;">+ New Groove</button></div>
     <p class="reco-note">Groups for you and your mates.</p>
@@ -13871,6 +13884,7 @@ const views = {
   profile: document.getElementById('view-profile'),
   people: document.getElementById('view-people'),
   grooves: document.getElementById('view-grooves'),
+  replay: document.getElementById('view-replay'),
   'album-detail': document.getElementById('view-album-detail')
 };
 let lastListMode = 'home';
@@ -13917,7 +13931,7 @@ function setMode(mode, fromCode) {
   var _changed = mode !== currentMode || mode === 'album-detail';
   currentMode = mode;
   window.currentMode = mode;
-  var pageNames = { albums: 'Albums', songs: 'Songs', crate: 'The Crate', choice: 'Community Choice', foryou: 'For You', games: 'Games', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves', 'album-detail': 'Album' };
+  var pageNames = { albums: 'Albums', songs: 'Songs', crate: 'The Crate', choice: 'Community Choice', foryou: 'For You', games: 'Games', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves', replay: 'Replay', 'album-detail': 'Album' };
   document.title = mode === 'home' ? 'VINALL' : 'VINALL — ' + (pageNames[mode] || 'Discover');
   Object.keys(views).forEach(function (k) { views[k].style.display = (k === mode) ? 'block' : 'none'; });
   /* A fade keeps geometry and fixed descendants stable. A transformed view
@@ -14008,6 +14022,8 @@ function setMode(mode, fromCode) {
   if (mode === 'profile' && window.renderAdminStats) window.renderAdminStats();
   if (mode === 'people' && window.renderPeople) window.renderPeople();
   if (mode === 'grooves' && window.renderGrooves) window.renderGrooves();
+  if (mode === 'replay' && window.Replay) window.Replay.renderHome();
+  if (mode === 'home' && window.Replay) window.Replay.renderHomeCard();
   if (_changed) restoreViewScroll(mode, _restoreY);
 }
 window.goToView = setMode;
@@ -16108,7 +16124,7 @@ const Cloud=(function(){
     return foreign;
   }
 
-  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best','crate_foryou_songs','crate_foryou_seen','crate_onboard_v1','crate_liked_songs_v1','crate_spotify_v1'];
+  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best','crate_foryou_songs','crate_foryou_seen','crate_onboard_v1','crate_liked_songs_v1','crate_spotify_v1','crate_replay_v1'];
   const pending={};
   function isOn(){return!!(sb&&user);}
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
@@ -16240,6 +16256,20 @@ const Cloud=(function(){
       const nw=(a.at||0)>=(b.at||0)?a:b,old=nw===a?b:a;
       lsSetRaw('crate_spotify_v1',Object.assign({},nw,{imported:Object.assign({},old.imported,nw.imported),lists:Object.assign({},old.lists,nw.lists)}));
     })();
+    /* Replay snapshots: union by period. Where both devices froze the same
+       period, the one with more listening behind it wins, then the EARLIER
+       one — the first snapshot of a finished period is the canonical one. */
+    (function(){
+      const a=lsGet('crate_replay_v1')||{},b=cloud['crate_replay_v1']||{},out={};
+      Object.keys(a).concat(Object.keys(b)).forEach(function(k){
+        const x=a[k],y=b[k];
+        if(!x||!y){out[k]=x||y;return;}
+        if((x.v||0)!==(y.v||0)){out[k]=(x.v||0)>(y.v||0)?x:y;return;}
+        if(!!x.L!==!!y.L){out[k]=x.L?x:y;return;}
+        out[k]=(x.at||0)<=(y.at||0)?x:y;
+      });
+      if(Object.keys(out).length)lsSetRaw('crate_replay_v1',out);
+    })();
     if(cloud['crate_album_size']&&!localStorage.getItem('crate_album_size'))lsSetRaw('crate_album_size',cloud['crate_album_size']);
     /* Push back only what the merge actually CHANGED, and do not wait for it.
 
@@ -16311,6 +16341,7 @@ const Cloud=(function(){
              to you, so it belongs next to your profile rather than beside
              Home. */
           '<button class="acct-menu-item" data-go="achievements">'+ICONS.trophy+' Achievements</button>'+
+          '<button class="acct-menu-item" data-go="replay">'+ICONS.sparkle+' Replay</button>'+
           /* Its button in the top bar is hidden on a phone, where there was
              no room for it — so this is the only way in there, not a second
              one. */
@@ -32341,7 +32372,9 @@ window.renderAdminStats = renderAdminStats;
     } else return null;
     if (!track || !artist) return null;              // podcast or a blank row
     if (!(ms >= MIN_MS)) return null;
-    var t = when ? Date.parse(when) : NaN;
+    // UTC, both shapes. The basic file writes "2024-03-31 01:05" with no zone,
+    // which Date.parse reads as LOCAL time — an hour out half the year.
+    var t = when ? (window.ReplayCore ? ReplayCore.parseUtc(when) : Date.parse(when)) : NaN;
     return { track: String(track), artist: String(artist),
              album: album ? String(album) : null, uri: uri, ms: ms,
              at: isNaN(t) ? null : t };
@@ -32350,11 +32383,19 @@ window.renderAdminStats = renderAdminStats;
   // Folds a list of files into one row per track. Returns the rows plus what
   // was actually seen, so the UI can say something true about the import
   // rather than just "done".
+  /* Parsed and DE-DUPLICATED. A zip can hold the basic one-year history AND
+     the Extended one, which are the same plays twice — both were counted
+     until Replay needed the numbers to be right. One play is one track
+     ending in one minute (ReplayCore.dedupe). */
+  function parseAll(events) {
+    var out = [];
+    (events || []).forEach(function (raw) { var e = readEvent(raw); if (e) out.push(e); });
+    return window.ReplayCore ? ReplayCore.dedupe(out, keyOf) : out;
+  }
   function fold(events) {
     var byKey = {}, kept = 0;
-    events.forEach(function (raw) {
-      var e = readEvent(raw);
-      if (!e) return;
+    var list = parseAll(events);
+    list.forEach(function (e) {
       kept++;
       var k = keyOf(e.artist, e.track);
       var row = byKey[k];
@@ -32374,7 +32415,32 @@ window.renderAdminStats = renderAdminStats;
     });
     var rows = Object.keys(byKey).map(function (k) { return byKey[k]; });
     rows.sort(function (a, b) { return b.plays - a.plays; });
-    return { rows: rows, kept: kept, unique: rows.length };
+    // The same events per LOCAL day, for Replay (listening_days).
+    var days = window.ReplayCore ? ReplayCore.foldDays(list, keyOf) : [];
+    return { rows: rows, kept: kept, unique: rows.length, days: days };
+  }
+
+  /* Per-day rows go through listening_days_put, which keeps the greater of
+     two counts on conflict — so re-importing the same or an overlapping
+     export never adds. A database without the Replay migration answers with
+     an error, and Replay simply has no listening until it is applied. */
+  var DAY_CHUNK = 1000;
+  async function uploadDays(rows, onProgress) {
+    if (!rows || !rows.length || !on()) return { done: 0 };
+    var done = 0;
+    for (var i = 0; i < rows.length; i += DAY_CHUNK) {
+      var slice = rows.slice(i, i + DAY_CHUNK);
+      var r = await sb().rpc('listening_days_put', { p_rows: slice });
+      if (r.error) {
+        if (window.reportIssue) reportIssue('listening_days_put failed: ' + (r.error.message || r.error));
+        return { done: done, error: r.error.message || String(r.error) };
+      }
+      done += slice.length;
+      if (onProgress) onProgress(done, rows.length);
+    }
+    try { localStorage.setItem('crate_listening_days_at', String(Date.now())); } catch (e) {}
+    if (window.Replay && Replay.invalidate) Replay.invalidate();
+    return { done: done };
   }
 
   /* ---- store ----------------------------------------------------------- */
@@ -32499,9 +32565,10 @@ window.renderAdminStats = renderAdminStats;
     var f = fold(events || []);
     if (!f.rows.length) return { kept: 0 };
     var up = await upload(f.rows);
+    var dy = await uploadDays(f.days);
     _plays = null;
     if (window.renderToday) try { window.renderToday(true); } catch (e) {}
-    return { kept: f.kept, unique: f.unique, done: up.done, error: up.error || null };
+    return { kept: f.kept, unique: f.unique, done: up.done, error: up.error || null, days: dy.done, daysError: dy.error || null };
   }
 
   async function upload(rows, onProgress) {
@@ -32619,6 +32686,10 @@ window.renderAdminStats = renderAdminStats;
         return;
       }
 
+      await uploadDays(f.days, function (done, total) {
+        out.innerHTML = '<p class="reco-note ld-line">Dating ' + done.toLocaleString() +
+          ' of ' + total.toLocaleString() + ' days for Replay…</p>';
+      });
       if (window.track) window.track('listening_imported', { tracks: up.done, events: f.kept });
       out.innerHTML = '<div class="reco-note">Kept ' + f.kept.toLocaleString() +
         ' plays across ' + f.unique.toLocaleString() + ' tracks' +
@@ -32636,6 +32707,8 @@ window.renderAdminStats = renderAdminStats;
                        confirm: 'Remove it', danger: true })) return;
       clr.disabled = true;
       try { await sb().from('listening_plays').delete().eq('user_id', uid()); } catch (e) {}
+      try { await sb().from('listening_days').delete().eq('user_id', uid()); } catch (e) {}
+      if (window.Replay && Replay.invalidate) Replay.invalidate();
       _plays = null;
       renderListeningImport();
     });
@@ -39611,6 +39684,10 @@ window.track = function (name, props) {
 <!-- ============================ ONBOARDING ============================
      One ask at a time, and every reward in it is the real one. See the
      Onboard module for why it is not a .modal. -->
+<!-- The Replay story. A .modal so the back button, Escape, focus trap and
+     scroll lock all apply to it exactly as they do to every other sheet. -->
+<div class="modal" id="rp-story" aria-label="VINALL Replay"></div>
+
 <div class="onb" id="onb">
   <div class="onb-rail" id="onb-rail"></div>
   <div class="onb-body" id="onb-body"></div>
@@ -39619,4 +39696,5 @@ window.track = function (name, props) {
 
 </body>
 <script src="/assets/interactions.js?v=1"></script>
+<script src="/assets/replay.js?v=1"></script>
 </html>

@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node check-scripts.mjs && node traps.mjs && node test-service-worker.mjs",
+    "check": "node check-scripts.mjs && node traps.mjs && node test-service-worker.mjs && node replay.selfcheck.mjs",
     "test": "playwright test",
     "serve": "node serve.mjs"
   },

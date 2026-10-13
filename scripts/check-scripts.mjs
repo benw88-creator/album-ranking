@@ -13,5 +13,5 @@ for (const file of fs.readdirSync(root).filter(f => f.endsWith('.html'))) {
   }
 }
 new vm.Script(fs.readFileSync(path.join(root, 'sw.js'), 'utf8'), { filename: 'sw.js' });
-new vm.Script(fs.readFileSync(path.join(root, 'assets/interactions.js'), 'utf8'), { filename: 'assets/interactions.js' });
+for (const f of ['assets/interactions.js', 'assets/replay-core.js', 'assets/replay.js']) new vm.Script(fs.readFileSync(path.join(root, f), 'utf8'), { filename: f });
 console.log(`Parsed ${blocks} inline scripts and service worker without errors.`);
