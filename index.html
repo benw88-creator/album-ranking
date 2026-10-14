@@ -29331,6 +29331,9 @@ window.renderAdminStats = renderAdminStats;
   }
 
   function tileHTML(it) {
+    // An empty pool (spin_items failed to load) picks nothing; draw a blank
+    // Common tile rather than throwing and leaving the reel unpainted.
+    it = it || { tier: 'common', label: '' };
     return '<div class="draw-tile t-' + esc(it.tier || 'common') + '">' +
       '<span class="dt-chip" style="background:' + swatchFor(it) + '"></span>' +
       '<span class="dt-nm">' + esc(it.label) + '</span></div>';
