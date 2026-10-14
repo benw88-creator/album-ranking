@@ -1,5 +1,14 @@
 # VINALL launch technical fixes
 
+**Current review: NO-GO — one confirmed production ratings-privacy policy
+defect.** See `LAUNCH-REVIEW.md` for independent verification and the safe,
+approval-dependent correction/release sequence. Production already contains
+the launch migration's objects and serves the merged HEAD frontend; this was
+observed read-only, not deployed by the review. Git has no unmerged entries.
+
+The implementation record below describes the earlier local fix work; its
+unapplied-migration/unmerged-index notes are superseded by the current review.
+
 Local implementation only. No live database changes, production configuration
 changes, push, commit, or deployment were performed for this work.
 
