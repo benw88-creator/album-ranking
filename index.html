@@ -5461,6 +5461,10 @@ body.entering-done #artist-hero {
    finishes on. The four categories take four of the fixed hues — identity,
    which is what those hues are for — so a feed of mixed picks reads as mixed
    at a glance and a filtered one is visibly one colour. */
+/* Beat drops take a sixth fixed hue, a hot orange that sits clear of the
+   pink, lime and the themed gold. Fixed, like --c-*, so the category keeps its
+   identity under every skin; scoped here because nothing else uses it. */
+:root { --cc-drop: #ff7a33; }
 .cc-intro { color: var(--text-dim); font-size: var(--t-sm); margin: -8px 0 18px; max-width: 60ch; }
 .cc-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 18px; }
 .cc-cats { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1 1 320px; min-width: 0; padding: 2px 0; }
@@ -5622,6 +5626,37 @@ body.entering-done #artist-hero {
   .cc-lead .cc-art { width: 96px; height: 96px; }
   .cc-lead .cc-title { font-size: 20px; }
   .cc-lead .cc-wave-wrap { height: 60px; }
+}
+/* ---- Beat drops: the motif is a groove that holds low, then spikes. The
+   tall bars land once when the card arrives and bounce on the beat while it
+   plays. transform only, on the svg's own bars (never the card, whose
+   transform belongs to ccIn), and nothing moves under reduced motion. */
+.cc-ic-drop { width: 13px; height: 13px; flex: none; fill: currentColor; overflow: visible; }
+.cc-ic-drop rect { opacity: .55; }
+.cc-ic-drop .sp { opacity: 1; transform-box: fill-box; transform-origin: center; }
+.cc-chip[data-cat="drop"]::before, .cc-chip[data-ed-cat="drop"]::before { display: none; }
+.cc-chip .cc-ic-drop { color: var(--cc); }
+.cc-chip.is-soon { opacity: .7; }
+.cc-chip.is-soon small { font: 700 9.5px var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); }
+.cc-card[data-cat="drop"] .cc-cat .cc-ic-drop .sp { animation: ccDropLand .7s var(--ease) .15s backwards; }
+.cc-card[data-cat="drop"].is-playing .cc-cat .cc-ic-drop .sp { animation: ccDropBeat .48s ease-in-out infinite alternate; }
+.cc-card[data-cat="drop"].is-playing .cc-cat .cc-ic-drop .sp + .sp { animation-delay: -.24s; }
+/* The window edge is the hit: a hairline in the drop hue on the box's left
+   side, so a drop card reads as "it lands here" rather than "it lasts this". */
+.cc-card[data-cat="drop"] .cc-win::before {
+  content: ''; position: absolute; left: -1.5px; top: -4px; bottom: -4px; width: 3px; border-radius: 2px;
+  background: var(--cc); opacity: .9;
+}
+.cc-card[data-cat="drop"].is-playing .cc-win::before { animation: ccDropFlash .48s ease-out infinite alternate; }
+.cc-drop-note { display: flex; gap: 8px; align-items: flex-start; }
+.cc-drop-note .cc-ic-drop { width: 15px; height: 15px; margin-top: 2px; color: var(--cc); }
+@keyframes ccDropLand { 0% { transform: scaleY(.15); } 55% { transform: scaleY(1.18); } 100% { transform: scaleY(1); } }
+@keyframes ccDropBeat { from { transform: scaleY(.45); } to { transform: scaleY(1.1); } }
+@keyframes ccDropFlash { from { opacity: .35; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .cc-card[data-cat="drop"] .cc-ic-drop .sp,
+  .cc-card[data-cat="drop"].is-playing .cc-ic-drop .sp,
+  .cc-card[data-cat="drop"].is-playing .cc-win::before { animation: none; }
 }
 .cc-skel { height: 168px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); animation: ccLoad 1.4s ease-in-out infinite; }
 .cc-state { text-align: center; padding: 48px 20px; color: var(--text-dim); grid-column: 1 / -1; }
@@ -26232,7 +26267,7 @@ window.renderAdminStats = renderAdminStats;
      COMMUNITY CHOICE
      ================================================================
      Somebody picks the best stretch of a song — a verse, a feature, a hook,
-     a beat switch — and everybody else hears exactly that stretch and agrees
+     a beat switch, a beat drop — and everybody else hears exactly that stretch and agrees
      or does not. The picks with the most agreement rise.
 
      WHAT "EXACTLY THAT STRETCH" CAN MEAN HERE. VINALL plays Deezer's
@@ -26267,7 +26302,10 @@ window.renderAdminStats = renderAdminStats;
     { k: 'verse',   label: 'Verses',        one: 'Best verse',       hue: '--c-cyan' },
     { k: 'feature', label: 'Features',      one: 'Best feature',     hue: '--c-violet' },
     { k: 'hook',    label: 'Hooks',         one: 'Best hook',        hue: '--c-pink' },
-    { k: 'beat',    label: 'Beat switches', one: 'Best beat switch', hue: '--c-lime' }
+    { k: 'beat',    label: 'Beat switches', one: 'Best beat switch', hue: '--c-lime' },
+    // The fifth needs 20261014200000_beat_drops.sql before a post is accepted;
+    // reading it works before then (the filter simply comes back empty).
+    { k: 'drop',    label: 'Beat drops',    one: 'Best beat drop',   hue: '--cc-drop' }
   ];
   var CAT = {}; CATS.forEach(function (c) { CAT[c.k] = c; });
   var COLS = 'id,user_id,category,track_id,track_name,artist,album,art,featuring,start_ms,len_ms,peaks,likes,created_at,source,video_id,duration_ms';
@@ -26277,6 +26315,13 @@ window.renderAdminStats = renderAdminStats;
 
   var IC_PLAY = '<svg class="cc-ic-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6L13 8Z" fill="currentColor"/></svg>';
   var IC_PAUSE = '<svg class="cc-ic-pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="2.8" height="10" rx=".8" fill="currentColor"/><rect x="9.2" y="3" width="2.8" height="10" rx=".8" fill="currentColor"/></svg>';
+  // The drop motif: a held-down groove that spikes. The tall bars carry .sp
+  // so the CSS can land them — transform only, and none of it under reduced motion.
+  var IC_DROP = '<svg class="cc-ic-drop" viewBox="0 0 16 16" aria-hidden="true">' +
+    [[1, 3], [3.5, 2.4], [6, 3.2], [8.5, 2.6]].map(function (b) { return '<rect x="' + b[0] + '" y="' + (8 - b[1] / 2) + '" width="1.6" height="' + b[1] + '" rx=".8"/>'; }).join('') +
+    [[11, 13], [13.5, 9]].map(function (b) { return '<rect class="sp" x="' + b[0] + '" y="' + (8 - b[1] / 2) + '" width="1.6" height="' + b[1] + '" rx=".8"/>'; }).join('') +
+    '</svg>';
+  function catIcon(k) { return k === 'drop' ? IC_DROP : ''; }
   var IC_CHECK = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 8.4 6.4 11.4 12.8 4.6"/></svg>';
 
   var st = { cat: 'all', sort: 'top', items: [], byId: {}, offset: 0, done: false, loading: false,
@@ -26718,13 +26763,13 @@ window.renderAdminStats = renderAdminStats;
     var c = CAT[m.category] || CATS[0], who = st.people[m.user_id] || {};
     var tl = total(m), a = m.start_ms / tl * 100, w = m.len_ms / tl * 100;
     var lead = st.sort === 'top' && rank === 1;
-    return '<article class="cc-card' + (lead ? ' cc-lead' : '') + '" data-mid="' + esc(m.id) + '" style="--cc:' + hue(m.category) + '">' +
+    return '<article class="cc-card' + (lead ? ' cc-lead' : '') + '" data-mid="' + esc(m.id) + '" data-cat="' + esc(c.k) + '" style="--cc:' + hue(m.category) + '">' +
       (st.sort === 'top' ? '<div class="cc-rank' + (rank <= 3 ? ' top' : '') + '">#' + rank + '</div>' : '') +
       '<button class="cc-art" type="button" data-cc-play aria-label="Play ' + esc(m.track_name) + '">' +
         '<img src="' + thumb(esc(m.art || ''),320) + '" alt="" decoding="async" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.opacity=0">' +
         '<span class="cc-art-btn">' + IC_PLAY + IC_PAUSE + '</span></button>' +
       '<div class="cc-head">' +
-        '<span class="cc-cat">' + esc(c.one) + (m.featuring ? ' <b>&middot; ' + esc(m.featuring) + '</b>' : '') + '</span>' +
+        '<span class="cc-cat">' + catIcon(c.k) + esc(c.one) + (m.featuring ? ' <b>&middot; ' + esc(m.featuring) + '</b>' : '') + '</span>' +
         '<div class="cc-title" title="' + esc(m.track_name) + '">' + esc(m.track_name) + '</div>' +
         '<div class="cc-artist">' + esc(m.artist) + '</div>' +
       '</div>' +
@@ -26748,7 +26793,7 @@ window.renderAdminStats = renderAdminStats;
     var cats = $('cc-cats');
     if (cats && !cats.childElementCount) {
       cats.innerHTML = '<button type="button" class="cc-chip" data-cat="all">All</button>' +
-        CATS.map(function (c) { return '<button type="button" class="cc-chip" data-cat="' + c.k + '" style="--cc:var(' + c.hue + ')">' + c.label + '</button>'; }).join('');
+        CATS.map(function (c) { return '<button type="button" class="cc-chip" data-cat="' + c.k + '" style="--cc:var(' + c.hue + ')">' + catIcon(c.k) + c.label + '</button>'; }).join('');
     }
     if (cats) cats.querySelectorAll('[data-cat]').forEach(function (b) {
       var on = b.dataset.cat === st.cat;
@@ -27266,7 +27311,8 @@ window.renderAdminStats = renderAdminStats;
     var yt = ed.source === 'youtube', vid = edVideo();
     var waiting = !yt && (ed.state === 'loading' || ed.state === 'decoding');
     var catBtns = CATS.map(function (c) {
-      return '<button type="button" class="cc-chip' + (ed.cat === c.k ? ' is-on' : '') + '" data-ed-cat="' + c.k + '" style="--cc:var(' + c.hue + ')">' + esc(c.one) + '</button>';
+      var soon = c.k === 'drop' && st.dropOff;
+      return '<button type="button" class="cc-chip' + (ed.cat === c.k ? ' is-on' : '') + (soon ? ' is-soon' : '') + '" data-ed-cat="' + c.k + '" style="--cc:var(' + c.hue + ')">' + catIcon(c.k) + esc(c.one) + (soon ? ' <small>soon</small>' : '') + '</button>';
     }).join('');
     var feat = '';
     if (ed.cat === 'feature') {
@@ -27296,7 +27342,7 @@ window.renderAdminStats = renderAdminStats;
       '<div class="cc-lens">' + LENS.map(function (s) {
         return '<button type="button" data-ed-len="' + s + '"' + (ed.lenMs === Math.min(s * 1000, ed.clipMs) ? ' class="is-on"' : '') + '>' + s + 's</button>';
       }).join('') + '</div>' +
-      '<div class="cc-label">What is it?</div><div class="cc-catpick">' + catBtns + '</div>' + feat +
+      '<div class="cc-label">What is it?</div><div class="cc-catpick">' + catBtns + '</div>' + feat + dropNote() +
       (!yt && ed.why ? '<p class="cc-note">' + esc(ed.why) + '</p>' : '') +
       '<button class="btn-primary cc-post" type="button" data-ed="post" id="cc-post">Post to Community Choice</button>';
     paintSel(true);
@@ -27343,13 +27389,22 @@ window.renderAdminStats = renderAdminStats;
     if (win) win.style.width = Math.round(ed.lenMs / 1000 * FINE_PX) + 'px';
     if (Math.round(sc.scrollLeft / FINE_PX) * 1000 !== ed.startMs) sc.scrollLeft = ed.startMs / 1000 * FINE_PX;
   }
+  // A beat switch is a change; a drop is a landing. The window has to hold the
+  // build AND the hit, so the picker says where to start it.
+  function dropNote() {
+    if (!ed || ed.cat !== 'drop') return '';
+    return '<p class="cc-note cc-drop-note">' + IC_DROP + '<span>' + (st.dropOff
+      ? 'Beat drops aren\u2019t switched on yet. Your window is kept \u2014 post it as a beat switch, or come back soon.'
+      : 'Start a second or two before the drop, so the build and the hit both land in the window.') + '</span></p>';
+  }
   function featValue() { return ed.cat === 'feature' ? String(ed.feat || '').trim() : ''; }
   function paintPost() {
     var b = $('cc-post');
     if (!b || !ed) return;
-    var ok = edPlayable() && !!ed.cat && (ed.cat !== 'feature' || featValue().length > 0) && !ed.busy;
+    var soon = ed.cat === 'drop' && st.dropOff;
+    var ok = edPlayable() && !!ed.cat && !soon && (ed.cat !== 'feature' || featValue().length > 0) && !ed.busy;
     b.disabled = !ok;
-    b.textContent = ed.busy ? 'Posting…' : (!ed.cat ? 'Choose what it is' : (ed.cat === 'feature' && !featValue() ? 'Say whose part it is' : 'Post to Community Choice'));
+    b.textContent = ed.busy ? 'Posting…' : (!ed.cat ? 'Choose what it is' : (soon ? 'Beat drops are coming soon' : (ed.cat === 'feature' && !featValue() ? 'Say whose part it is' : 'Post to Community Choice')));
   }
   function hearSelection() {
     if (!ed || !edPlayable()) return;
@@ -27476,6 +27531,13 @@ window.renderAdminStats = renderAdminStats;
       var msg = String(r.error.message || '');
       if (r.error.code === '23505') say('You have already picked a ' + (CAT[ed.cat].one.toLowerCase()) + ' from this song');
       else if (/moment_daily_limit/.test(msg)) say('That’s 20 picks today. More tomorrow.');
+      // The old category list refuses 'drop' until 20261014200000 lands. That is
+      // not a failure to apologise for: say so, keep the window, offer the switch.
+      else if (ed.cat === 'drop' && r.error.code === '23514' && /category/.test(msg)) {
+        st.dropOff = true; say('Beat drops aren’t switched on yet');
+        reportOnce('Community Choice: apply 20261014200000_beat_drops.sql', { code: r.error.code });
+        paintEditor(true); return;
+      }
       else if (ed.source === 'youtube' && /source|video_id|duration_ms/.test(msg)) { say('Whole-song picks aren’t available yet'); reportOnce('Community Choice: apply 20261002180000_moments_youtube.sql', { code: r.error.code }); }
       else if (missing(r.error)) { st.off = true; say('Community Choice isn’t available yet'); reportOnce('Community Choice: moments table missing on post', { code: r.error.code }); }
       else { say('Could not post that — try again'); reportOnce('Community Choice: post failed', { message: msg, code: r.error.code }); }
