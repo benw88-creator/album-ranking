@@ -976,14 +976,14 @@
      control that names one action and performs none is the worst shape a
      control can have. It sits under every Replay entry. */
   function teaserHtml() {
-    return '<div class="rp-teaser" role="note" aria-label="New minigames coming soon">' +
+    return '<div class="rp-teaser" role="note" aria-label="New arcade games coming soon">' +
       '<span class="rp-teaser-sheen" aria-hidden="true"></span>' +
       '<span class="rp-teaser-tiles" aria-hidden="true">' +
         '<i style="--t:var(--c-cyan)"><svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm0 6.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8z"/></svg></i>' +
         '<i style="--t:var(--c-violet)"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6" opacity=".45"/></svg></i>' +
         '<i style="--t:var(--c-pink)"><svg viewBox="0 0 24 24"><text x="12" y="18.5" text-anchor="middle" font-size="17" font-weight="800" font-family="sans-serif">?</text></svg></i>' +
       '</span>' +
-      '<span class="rp-teaser-t"><b>New minigames</b><small>Coming soon to the arcade</small></span>' +
+      '<span class="rp-teaser-t"><b>New arcade games</b><small>Coming soon to the arcade</small></span>' +
       '<em class="rp-soon">Soon</em></div>';
   }
 

@@ -1,5 +1,5 @@
 import { test, expect, start } from './fixtures.mjs';
-const views = { home: 'VINALL', albums: 'Albums', songs: 'Songs', crate: 'The Crate', choice: 'Community Choice', foryou: 'For You', games: 'Games', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves' };
+const views = { home: 'VINALL', albums: 'Albums', songs: 'Songs', crate: 'The Crate', choice: 'Community Choice', foryou: 'For You', games: 'Arcade', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves' };
 for (const [width, height] of [[320, 568], [375, 812], [768, 1024], [1024, 768], [1440, 900], [2560, 1440]]) {
   test(`all views at ${width}×${height}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height });

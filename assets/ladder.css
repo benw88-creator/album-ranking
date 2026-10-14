@@ -76,7 +76,7 @@
 
 /* Day five, later weeks: a tag. The chip is the art; keep it inside the tile. */
 .rw-day.rw-tag .rw-art { max-width: 100%; }
-.rw-day.rw-tag .rw-art > * { max-width: 100%; transform: scale(.72); }
+
 .rw-day.rw-tag .rw-amt { font-size: 13px; }
 .rw-day.rw-tag .rw-unit { color: var(--c-lime); }
 
@@ -86,7 +86,7 @@
 .rw-grand-art svg { width: 34px; height: 34px; animation: rwSpin 6s linear infinite; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--gold) 55%, transparent)); }
 @keyframes rwSpin { to { rotate: 360deg; } }
 .rw-day.rw-grand .rw-amt { font-size: 12px; font-family: var(--font-body); }
-.rw-day.rw-grand .rw-unit > * { transform: scale(.7); transform-origin: center top; }
+
 
 /* Day seven, every week after: the box. A real cube, turning. */
 .rw-day.rw-mystery { border-color: color-mix(in srgb, var(--c-pink) 50%, var(--border));
@@ -141,7 +141,6 @@
   .rw-day.grand .rw-art { grid-row: 2 / 4; grid-column: 1; margin: 4px 0 0; justify-self: center; }
   .rw-day.grand .rw-amt { grid-column: 2; align-self: end; font-size: 17px; }
   .rw-day.grand .rw-unit { grid-column: 2; align-self: start; justify-self: start; }
-  .rw-day.grand .rw-unit > * { transform-origin: left top; }
   .rw-day.grand .rw-take, .rw-day.grand .rw-tick { grid-column: 3; grid-row: 2 / 4; }
   .rw-day.rw-mystery .rw-amt { font-size: 24px; }
   .rw-day.grand.rw-mystery .rw-box { --s: 42px; }
@@ -157,3 +156,24 @@
 html[data-motion="none"] .rw-cube, html[data-motion="none"] .rw-box-glow, html[data-motion="none"] .rw-wrap::after,
 html[data-motion="none"] .rw-grand-art svg, html[data-motion="none"] .rw-day, html[data-motion="none"] .rw-track i { animation: none; }
 html[data-motion="none"] .rw-cube { transform: rotateX(-18deg) rotateY(-30deg); }
+
+/* Tags on the ladder are shown WHOLE. The shop chip ellipsises on one line
+   (it has to, in a profile header), which on a 1/7-width tile cut
+   IT'S VIRJI ISN'T IT down to "IT'S VIRJI I…". Here it wraps instead, at a
+   size that stays readable, and shrinks its tracking before its type. */
+.rw-day .tag-chip {
+  white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere;
+  max-width: 100%; box-sizing: border-box; text-align: center;
+  font-size: 10px; line-height: 1.35; letter-spacing: .06em; padding: 5px 8px; text-wrap: balance;
+}
+.rw-day .tag-chip > span { -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.rw-day .rw-unit:has(.tag-chip) { width: 100%; display: flex; justify-content: center; margin-top: 6px; }
+.rw-day.rw-tag .rw-art { height: auto; min-height: 44px; width: 100%; }
+@media (min-width: 701px) {
+  /* A seventh of the ladder is narrow; let the chip use the whole tile. */
+  .rw-day { padding-left: 5px; padding-right: 5px; }
+}
+@media (max-width: 700px) {
+  .rw-day.grand .rw-unit:has(.tag-chip) { justify-content: flex-start; }
+  .rw-day.grand .tag-chip { font-size: 11px; text-align: left; }
+}

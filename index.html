@@ -832,7 +832,7 @@ nav.modes button .nl {
 nav.modes button:nth-child(2) { --nav-c: var(--gold);     --nav-c-dim: var(--gold-dim); }      /* Home       */
 nav.modes button:nth-child(3) { --nav-c: var(--c-cyan);   --nav-c-dim: var(--c-cyan-dim); }    /* Crate      */
 nav.modes button:nth-child(4) { --nav-c: var(--c-lime);   --nav-c-dim: var(--c-lime-dim); }    /* For You    */
-nav.modes button:nth-child(5) { --nav-c: var(--c-violet); --nav-c-dim: var(--c-violet-dim); }  /* Games      */
+nav.modes button:nth-child(5) { --nav-c: var(--c-violet); --nav-c-dim: var(--c-violet-dim); }  /* Arcade     */
 nav.modes button:nth-child(6) { --nav-c: var(--c-pink);   --nav-c-dim: var(--c-pink-dim); }    /* Records    */
 nav.modes button:nth-child(7) { --nav-c: var(--c-blue);   --nav-c-dim: var(--c-blue-dim); }    /* Shop       */
 /* nth-child(1) is .nav-indicator, which is why the buttons start at 2.
@@ -9566,7 +9566,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/foryou.css?v=3">
 <link rel="stylesheet" href="/assets/comments.css?v=1">
 <link rel="stylesheet" href="/assets/boards.css?v=1">
-<link rel="stylesheet" href="/assets/ladder.css?v=1">
+<link rel="stylesheet" href="/assets/ladder.css?v=2">
 <link rel="stylesheet" href="/assets/profile2.css?v=1">
 <link rel="stylesheet" href="/assets/today.css?v=1">
 <link rel="stylesheet" href="/assets/home2.css?v=1">
@@ -10187,7 +10187,7 @@ window.discAmt = function (n) {
          place you go, not every feature that exists. -->
     <button data-mode="albums"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.2 5.6h11.6v7.2a1 1 0 0 1-1 1H3.2a1 1 0 0 1-1-1Z"/><path d="m2.2 5.6 1.4-3h8.8l1.4 3"/><path d="M5.7 8.4v2.8M8 8.4v2.8M10.3 8.4v2.8"/></svg><span class="nl">Crate</span></button>
     <button data-mode="foryou"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.4S2.6 10.2 2.6 6.5a2.9 2.9 0 0 1 5.4-1.5 2.9 2.9 0 0 1 5.4 1.5c0 3.7-5.4 6.9-5.4 6.9Z"/></svg><span class="nl">For You</span></button>
-    <button data-mode="games"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.4" y="2.4" width="11.2" height="11.2" rx="2.8"/><circle cx="5.9" cy="5.9" r=".95" fill="currentColor" stroke="none"/><circle cx="10.1" cy="10.1" r=".95" fill="currentColor" stroke="none"/></svg><span class="nl">Games</span></button>
+    <button data-mode="games"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.4" y="2.4" width="11.2" height="11.2" rx="2.8"/><circle cx="5.9" cy="5.9" r=".95" fill="currentColor" stroke="none"/><circle cx="10.1" cy="10.1" r=".95" fill="currentColor" stroke="none"/></svg><span class="nl">Arcade</span></button>
     <button data-mode="collection"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.7" y="2.6" width="8.9" height="8.9" rx="1.5"/><path d="M11.3 13.4H4a1.4 1.4 0 0 1-1.4-1.4V4.7"/></svg><span class="nl">Records</span></button>
     <!-- The data-mode stays `rewards`, and must. It is what setMode's explicit
          `views` map is keyed on, what positionNavIndicator measures and what
@@ -10509,7 +10509,7 @@ window.discAmt = function (n) {
     <header class="arc-head">
       <div>
         <span class="arc-kicker">The arcade</span>
-        <h2 class="arc-title">Games</h2>
+        <h2 class="arc-title">Arcade</h2>
       </div>
       <button class="lb-bar arc-lb" id="leaderboard-card">
         <span class="lb-bar-icon" data-icon="stopwatch"></span>
@@ -13904,7 +13904,7 @@ function setMode(mode, fromCode) {
   var _changed = mode !== currentMode || mode === 'album-detail';
   currentMode = mode;
   window.currentMode = mode;
-  var pageNames = { albums: 'Albums', songs: 'Songs', crate: 'The Crate', choice: 'Community Choice', foryou: 'For You', games: 'Games', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves', replay: 'Replay', about: 'About you', yourmusic: 'Your music', 'album-detail': 'Album' };
+  var pageNames = { albums: 'Albums', songs: 'Songs', crate: 'The Crate', choice: 'Community Choice', foryou: 'For You', games: 'Arcade', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves', replay: 'Replay', about: 'About you', yourmusic: 'Your music', 'album-detail': 'Album' };
   document.title = mode === 'home' ? 'VINALL' : 'VINALL — ' + (pageNames[mode] || 'Discover');
   Object.keys(views).forEach(function (k) { views[k].style.display = (k === mode) ? 'block' : 'none'; });
   /* A fade keeps geometry and fixed descendants stable. A transformed view
@@ -17696,7 +17696,7 @@ async function drawProfile(host,prof,isOwner,profileTok){
       try{nLore=(window.VinallLore&&VinallLore.count)?VinallLore.count():0;}catch(e){}
       try{log=window.gameLog?gameLog():{};}catch(e){}
       if(log.favourite){
-        tiles.push({v:log.favourite.label,k:'Favourite minigame',
+        tiles.push({v:log.favourite.label,k:'Favourite arcade game',
                     sub:log.favourite.n+' round'+(log.favourite.n===1?'':'s')+' played',small:true});
       }
       if(log.earworm){
@@ -28013,7 +28013,7 @@ window.renderAdminStats = renderAdminStats;
       : list.slice(0, 10).map(artistRow).join('') +
         (list.length > 10 ? '<details class="gs-more"><summary>All ' + list.length + ' artists</summary>' + list.slice(10).map(artistRow).join('') + '</details>' : '');
 
-    return '<div class="prof-section-title" style="margin-top:26px;">Games</div>' +
+    return '<div class="prof-section-title" style="margin-top:26px;">Arcade</div>' +
       '<div class="gs-card">' +
         '<div class="gs-sum"><div><b>' + total.toLocaleString('en-GB') + '</b><span>games played</span></div>' +
           '<div><b>' + tried + '/' + keys.length + '</b><span>games tried</span></div>' +
@@ -29695,7 +29695,7 @@ window.renderAdminStats = renderAdminStats;
     owned = owned || [];
     if (d === 5) {
       if (cycle === 0) return { kind: 'wrapped', art: '<span class="rw-wrap" aria-hidden="true"><b>V</b></span>', title: 'VINALL Wrapped', sub: 'Unlocks Replay', text: 'VINALL Wrapped — unlocks Replay' };
-      if (owned.indexOf('profit') === -1) return { kind: 'tag', art: chip('profit'), title: 'Tag', sub: 'I GOT TOO MUCH PROFIT', text: 'the I GOT TOO MUCH PROFIT tag' };
+      if (owned.indexOf('profit') === -1) return { kind: 'tag', art: chip('profit'), title: 'New tag', sub: '', text: 'the I GOT TOO MUCH PROFIT tag' };
       return { kind: 'discs', art: ICONS.coin, title: k(10000), sub: 'Discs', text: '10,000 Discs' };
     }
     if (d === 7) {
@@ -38809,7 +38809,7 @@ window.track = function (name, props) {
     show('<h2 class="onb-h">Recall is open.</h2>', cta('Play a round'));
     try {
       celebrate('Recall', 'One second of a record.',
-        { eyebrow: 'Minigame Unlocked', accent: 'var(--c-blue)' });
+        { eyebrow: 'Arcade game unlocked', accent: 'var(--c-blue)' });
     } catch (e) {}
     onCta(function () {
       if (!window.openRecall) { afterGame(before); return; }
