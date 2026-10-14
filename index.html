@@ -9555,7 +9555,7 @@ input, textarea, select, [contenteditable="true"],
 }
 </style>
 <link rel="stylesheet" href="/assets/interactions.css?v=3">
-<link rel="stylesheet" href="/assets/replay.css?v=1">
+<link rel="stylesheet" href="/assets/replay.css?v=2">
 <link rel="stylesheet" href="/assets/you.css?v=1">
 <link rel="stylesheet" href="/assets/games.css?v=1">
 <link rel="stylesheet" href="/assets/store.css?v=2">
@@ -9569,6 +9569,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/ladder.css?v=1">
 <link rel="stylesheet" href="/assets/profile2.css?v=1">
 <link rel="stylesheet" href="/assets/today.css?v=1">
+<link rel="stylesheet" href="/assets/home2.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -13999,6 +14000,7 @@ function setMode(mode, fromCode) {
   if (mode === 'about' && window.YouUI) YouUI.renderAbout();
   if (mode === 'yourmusic' && window.YouUI) YouUI.renderYourMusic();
   if (mode === 'home' && window.Replay) window.Replay.renderHomeCard();
+  if (mode === 'home' && _changed && window.HomeStats) window.HomeStats.enter();
   if (_changed) restoreViewScroll(mode, _restoreY);
 }
 window.goToView = setMode;
@@ -14538,8 +14540,8 @@ function renderStats(){
        strip that never changed — and a stat that never changes is furniture.
        Net worth replaces both: it moves every time you buy or sell. */
     coreTiles=
-      '<div class="stat"><div class="s-label">'+ICONS.disc+' Albums ranked</div><div class="s-val">'+albums.length+'</div></div>'+
-      '<div class="stat"><div class="s-label">'+ICONS.note+' Songs ranked</div><div class="s-val">'+songs.length+'</div></div>';
+      '<div class="stat stat-albums"><div class="s-label">'+ICONS.disc+' Albums ranked</div><div class="s-val">'+albums.length+'</div></div>'+
+      '<div class="stat stat-songs"><div class="s-label">'+ICONS.note+' Songs ranked</div><div class="s-val">'+songs.length+'</div></div>';
   }
   let walletTiles='';
   if(window.Wallet&&loggedIn){
@@ -14576,11 +14578,68 @@ function renderStats(){
       '<div class="stat stat-wallet" id="stat-discs" title="Open the Disc Shop"><div class="s-label">'+ICONS.coin+' Discs</div><div class="s-val">'+(w.is_admin?('∞ <span style="font-size:.55em;opacity:.65;">'+(w.discs||0)+'</span>'):(w.discs||0))+'</div></div>';
   }
   wrap.innerHTML='<div class="stats">'+coreTiles+walletTiles+'</div>';
+  if(window.HomeStats)HomeStats.after(wrap);
   const discTile=document.getElementById('stat-discs');
   if(discTile)discTile.addEventListener('click',function(){if(window.openShop)openShop();});
   const worthTile=document.getElementById('stat-worth');
   if(worthTile)worthTile.addEventListener('click',function(){if(window.openCollectionMarket)openCollectionMarket();});
 }
+/* The stats count up ONCE per visit to Home, when the strip comes into view —
+   never on renderStats() itself, which runs on every rating, award and merge:
+   a number that rolls from zero every time you rate something is a number
+   that reads as reset. enter() re-arms on arriving at Home; after() prepares
+   whatever renderStats just drew while still armed. Only plain integers roll
+   (the Depth word, an admin's ∞ and a not-yet-fetched net worth are left
+   alone), and each lands on exactly the text renderStats wrote. Reduced
+   motion: nothing is hidden or zeroed, so the values simply are there. */
+(function(){
+  var seen=false, io=null;
+  function strip(){var w=document.getElementById('stats-wrap');return w&&w.querySelector('.stats');}
+  function prep(s){
+    if(!s||s.classList.contains('hs-wait'))return;
+    s.classList.add('hs-wait');
+    s.querySelectorAll('.stat .s-val').forEach(function(v){
+      var t=v.textContent.trim();
+      if(v.children.length||!/^\d[\d,]*$/.test(t))return;
+      v.dataset.to=t;v.textContent='0';
+    });
+  }
+  function play(){
+    if(seen)return;
+    var s=strip();seen=true;if(io)io.disconnect();
+    if(!s)return;
+    var list=[].slice.call(s.querySelectorAll('.s-val[data-to]'));
+    s.classList.remove('hs-wait','hs-go');void s.offsetWidth;s.classList.add('hs-go');
+    var t0=performance.now()+140,D=1150;
+    function tick(t){
+      var k=Math.min(1,Math.max(0,(t-t0)/D)),e=1-Math.pow(1-k,4);
+      list.forEach(function(v){
+        var to=v.dataset.to,n=+to.replace(/,/g,''),x=Math.round(n*e);
+        v.textContent=k>=1?to:(to.indexOf(',')>-1?x.toLocaleString('en-GB'):String(x));
+      });
+      if(k<1&&s.isConnected)requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  function seenNow(entries){
+    if(!entries.some(function(e){return e.isIntersecting;}))return;
+    if(document.getElementById('splash-gate')){
+      var mo=new MutationObserver(function(){if(!document.getElementById('splash-gate')){mo.disconnect();play();}});
+      mo.observe(document.body,{childList:true});io.disconnect();return;
+    }
+    play();
+  }
+  function watch(){
+    var w=document.getElementById('stats-wrap');if(!w)return;
+    io=io||new IntersectionObserver(seenNow,{threshold:.35});
+    io.unobserve(w);io.observe(w);   // re-observing hands back a fresh first callback
+  }
+  function able(){return !(window.motionReduced&&motionReduced())&&'IntersectionObserver' in window;}
+  window.HomeStats={
+    enter:function(){if(!able())return;seen=false;prep(strip());watch();},
+    after:function(){if(seen||!able())return;prep(strip());watch();}
+  };
+})();
 
 function esc(str){return String(str||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
 /* A cover at the size it is drawn. Album art is stored at 1000x1000 and a
@@ -40523,7 +40582,7 @@ window.track = function (name, props) {
 
 </body>
 <script src="/assets/interactions.js?v=2"></script>
-<script src="/assets/replay.js?v=1"></script>
+<script src="/assets/replay.js?v=2"></script>
 <script src="/assets/you.js?v=2"></script>
 <script src="/assets/glow.js?v=3"></script>
 <script src="/assets/comments.js?v=1" defer></script>
