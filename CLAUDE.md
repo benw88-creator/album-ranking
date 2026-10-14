@@ -6213,3 +6213,66 @@ Theme, flair and frame previews use the signed-in name and photo from
 it already fetches and `Cloud.saveProfile` refreshes via `Wallet.noteProfile`.
 No card fetches anything. Signed out or no photo: the initial in a gradient
 circle, which also sits under the photo so a broken image leaves the letter.
+
+## For You comments (song_comments)
+
+`assets/comments.js` (`window.SongComments`), `assets/comments.css`,
+`..._20261014140000_song_comments.sql`. **Apply by hand**; until then the sheet
+says "Not switched on yet" and the card shows no count.
+
+- **One thread per song, keyed by the feed's `skey`** (artist|title), not by an
+  id — trap 4. A comment may be pinned to a millisecond of the 30-second clip
+  (`at_ms`): pinned ones show as faces along the foot of the sleeve and rise as
+  a bubble when the playhead passes them. The composer pins to wherever the
+  clip was when the sheet opened; the chip toggles to "Whole song".
+- **The server is the safeguard.** No insert/update policy (guarded); only
+  `song_comment_add()` writes: 2–280 chars, whitespace collapsed, control chars
+  stripped, slurs/targeted abuse refused (folded and squashed, so `f@gg0t`
+  is caught), links refused, 10+ repeated chars refused, 4/minute and 60/day,
+  same text twice in 24h refused. The client mirrors the obvious rules only to
+  answer instantly. Strong swearing is SOFTENED on display (`f••••`), not
+  refused — lyrics get quoted. Verified in a rolled-back transaction.
+- Likes: `song_comment_likes`, own rows only, not on your own comment, the
+  count moved only by a definer trigger. Reports go through the existing
+  `openReport('comment', 'sc:<id>')`; three distinct reporters hide a comment
+  (`song_comment_autohide` on `reports`, wrapped so it can never block a report).
+  Blocks are filtered client-side after `loadBlocks()`. Deleted accounts
+  cascade; a missing profile renders as "deleted account".
+- Everything user-written reaches the DOM through `esc()` or `textContent`.
+  `ask()` takes HTML, so the delete confirm escapes the quoted body.
+- The sheet is a `.modal` at z 198 so `ask()` and the report sheet (200) sit
+  above it, and it is light enough that the record stays visible and playing.
+
+The glow: `.fy-glow` is a second copy of the sleeve behind the art, blurred and
+saturated, turning (`rotate`) and breathing (`scale`) while the clip plays —
+independent properties so neither replaces the other or the drag's
+`transform` (trap 2). Reduced motion keeps the light and drops the movement.
+
+## The seven-day ladder, third shape
+
+`..._20261014170000_login_ladder_v3.sql` (**apply by hand**), `assets/ladder.css`,
+the Rewards module (`rewardFor`, `LADDER`), `Wallet.dailyLogin`.
+
+| day | week one of a run | every week after |
+|---|---|---|
+| 1–4 | 1,500 / 2,000 / 2,500 / 3,000 | same |
+| 5 | **VINALL Wrapped** — sets `profiles.replay_unlocked` | I GOT TOO MUCH PROFIT tag (10,000 if owned) |
+| 6 | 25,000 | 25,000 |
+| 7 | album pick + **IT'S VIRJI ISN'T IT** | **???** mystery box, rolled server-side |
+
+- The week is `v_cycle = (login_streak - 1) / 7`; a broken run starts at week one
+  again, Wrapped included (harmless: already unlocked).
+- `granted {kind,label,tag,picks,discs}` comes back and the client celebrates
+  exactly that. The box: 40% 15k · 25% 30k · 15% a record · 12% an unowned
+  shop tag · 6% 60k · 2% three records.
+- **`virji` is not a `shop_items` row on purpose** (guarded): not buyable, not in
+  the Draw's tag pool. `TAGS.virji.exclusive` makes the Shop row read "Not for
+  sale" for anybody who has not earned it.
+- `replay_unlocked` is pinned by its own trigger (`pin_replay_unlocked`, keyed
+  on `current_user`), not by re-declaring `pin_profile_economy`. Accounts with
+  `login_best >= 5` were back-unlocked.
+- **`window.ReplayGate`** (`unlocked()`, `progress()`) is the one place Replay's
+  lock is decided. Absent column → open, so nothing locks before the migration;
+  wallet not loaded yet → locked, and `vinall:replay-gate` fires on load/change.
+- The economy moved: a first week is now 34,500 Discs + a record + Replay (was
+  18,000 + a record), and day six alone is 25,000. Asked for explicitly.
