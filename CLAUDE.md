@@ -6187,3 +6187,19 @@ the hover lift.
   end screens, so they re-paint the cached result with `Boards.paint`.
 - Known limits: HL streams ranks across different crates (a bigger crate allows
   a longer run); the pool factor trusts the client's pool size.
+
+## More themes, and Shop previews drawn on you (2026-10-14)
+
+`assets/themes2.css` (loaded after store.css) adds eight themes — Reel to Reel,
+Deep Canopy, Chrome Frost, Soul Train, Hard Bop, Midnight Velvet, Vapor Sunset,
+Strobe — priced 12,000–35,000 by `..._20261014150000_more_themes.sql`
+(**apply by hand**; until then the cards render and `wallet_buy` refuses the
+key). Same contract as the originals: tokens and a body texture only, no
+`--font-display`, no `--c-*`, no score colours, no motion. `--text-dim` is
+>= 6.9:1 against `--surface-2/3` in all eight.
+
+Theme, flair and frame previews use the signed-in name and photo from
+`Wallet.get().username / avatar_url`, which `load()` takes off the profile row
+it already fetches and `Cloud.saveProfile` refreshes via `Wallet.noteProfile`.
+No card fetches anything. Signed out or no photo: the initial in a gradient
+circle, which also sits under the photo so a broken image leaves the letter.
