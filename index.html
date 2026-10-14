@@ -3027,29 +3027,6 @@ html[data-motion="none"] .gc-emoji svg * { animation: none !important; }
 .btn-social:active { transform: scale(.98); }
 .btn-social:disabled { opacity: .6; cursor: default; }
 
-/* ---- MESSAGES ------------------------------------------------------------ */
-.dm-conv-row {
-  display: flex; align-items: center; gap: 10px; padding: 10px 4px;
-  border-top: 1px solid var(--border); cursor: pointer;
-}
-.dm-conv-row:first-child { border-top: none; }
-.dm-conv-row img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
-.dm-conv-name { font-weight: 700; font-size: 14px; }
-.dm-conv-prev { font-size: 13px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dm-conv-row.unread .dm-conv-name::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); margin-left: 6px; vertical-align: middle; }
-.dm-back { background: none; border: none; color: var(--text); font-size: 18px; padding: 0 10px 0 0; cursor: pointer; }
-.dm-thread-list {
-  max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
-  padding: 4px 2px 10px;
-}
-.dm-bubble {
-  max-width: 78%; padding: 9px 13px; border-radius: 16px; font-size: 14px; line-height: 1.4;
-  word-wrap: break-word;
-}
-.dm-bubble.me { align-self: flex-end; background: var(--gold-dim); color: var(--text); border-bottom-right-radius: 4px; }
-.dm-bubble.them { align-self: flex-start; background: var(--surface-3); border-bottom-left-radius: 4px; }
-.dm-compose { display: flex; gap: 8px; margin-top: 8px; }
-.dm-compose .g-input { flex: 1; }
 /* ---- SHEETS -------------------------------------------------------------
    A centred dialog floating in the middle of a phone is a website's idea of a
    modal. Every one of these becomes a sheet instead: anchored to the bottom
@@ -9581,20 +9558,16 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/replay.css?v=1">
 <link rel="stylesheet" href="/assets/you.css?v=1">
 <link rel="stylesheet" href="/assets/games.css?v=1">
-<<<<<<< HEAD
-<link rel="stylesheet" href="/assets/store.css?v=1">
-<link rel="stylesheet" href="/assets/glow.css?v=4">
-=======
 <link rel="stylesheet" href="/assets/store.css?v=2">
+<link rel="stylesheet" href="/assets/glow.css?v=4">
 <link rel="stylesheet" href="/assets/themes2.css?v=1">
-<link rel="stylesheet" href="/assets/glow.css?v=3">
->>>>>>> worktree-agent-abbf535e530c9ba89
 <link rel="stylesheet" href="/assets/play.css?v=1">
 <link rel="stylesheet" href="/assets/cards.css?v=1">
 <link rel="stylesheet" href="/assets/foryou.css?v=3">
 <link rel="stylesheet" href="/assets/comments.css?v=1">
 <link rel="stylesheet" href="/assets/boards.css?v=1">
 <link rel="stylesheet" href="/assets/ladder.css?v=1">
+<link rel="stylesheet" href="/assets/profile2.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -11436,34 +11409,6 @@ window.discAmt = function (n) {
       <input id="auth-newpass2" class="g-input" type="password" placeholder="Type it again" autocomplete="new-password">
       <button class="btn-primary g-btn-full" id="auth-newpass-submit" style="margin-top:16px;">Set new password</button>
       <div class="g-error" id="auth-newpass-error"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ============================ MESSAGES ============================ -->
-<div class="modal" id="dm-modal">
-  <div class="modal-panel" style="max-width:420px;">
-    <button class="modal-close" id="dm-close" aria-label="Close">&times;</button>
-
-    <!-- Inbox view -->
-    <div id="dm-view-inbox">
-      <div class="modal-head"><span class="mh-emoji" data-icon="person"></span>
-        <div><h2>Messages</h2></div></div>
-      <div id="dm-inbox-list"></div>
-    </div>
-
-    <!-- Thread view -->
-    <div id="dm-view-thread" style="display:none;">
-      <div class="modal-head">
-        <button class="dm-back" id="dm-back" aria-label="Back to inbox">&larr;</button>
-        <div><h2 id="dm-thread-name"></h2></div>
-      </div>
-      <div id="dm-thread-list" class="dm-thread-list"></div>
-      <div class="dm-compose">
-        <input id="dm-input" class="g-input" type="text" maxlength="1000" placeholder="Message&hellip;" autocomplete="off">
-        <button class="btn-primary" id="dm-send">Send</button>
-      </div>
-      <div class="g-error" id="dm-error"></div>
     </div>
   </div>
 </div>
@@ -16334,13 +16279,12 @@ const Cloud=(function(){
          music, Achievements, Activity — is a tab on your profile now, one tap
          from the top of this menu. Everything about OTHER PEOPLE is one page
          with People and Grooves side by side. What is left here is identity,
-         the two ways to reach a person, settings and the door. */
+         People, settings and the door. */
       acct.innerHTML='<button id="acct-avatar-btn" class="acct-avatar" aria-label="Account menu" aria-haspopup="menu">'+avHtml+'</button>'+
         '<div class="acct-menu" id="acct-menu" role="menu">'+
           '<button class="acct-menu-item acct-id" data-go="profile" role="menuitem"><span class="acct-id-av">'+avHtml+'</span>'+
             '<span class="acct-id-t"><b>'+esc(uname||(user.email||'account').split('@')[0])+'</b><small>Profile, Replay, About you</small></span></button>'+
           '<button class="acct-menu-item" data-go="people" role="menuitem">'+ICONS.people+' People &amp; Grooves</button>'+
-          '<button class="acct-menu-item" id="acct-messages" role="menuitem">'+ICONS.person+' Messages</button>'+
           '<div class="acct-sep" role="separator"></div>'+
           '<button class="acct-menu-item" id="acct-settings" role="menuitem">\u2699 Settings</button>'+
           '<button class="acct-menu-item" id="acct-logout" role="menuitem">\u21B3 Log out</button>'+
@@ -16362,12 +16306,6 @@ const Cloud=(function(){
       e.stopPropagation();
       const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');
       if(window.openSettings)openSettings();
-    });
-    const msgs=document.getElementById('acct-messages');
-    if(msgs)msgs.addEventListener('click',function(e){
-      e.stopPropagation();
-      const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');
-      if(window.Messages)Messages.open();
     });
     /* Opens the same drawer the top-bar button does, by pressing that button
        rather than reaching into the drawer itself — one way in, so whatever
@@ -17735,13 +17673,49 @@ async function drawProfile(host,prof,isOwner,profileTok){
   const shareUrl=(prof.username&&window.ShareLinks)?ShareLinks.user(prof.username):Native.site+'?u='+prof.id;
   let actionBtn='';
   if(isOwner){actionBtn='<div style="display:flex;flex-direction:column;gap:8px;"><button class="btn-primary" id="prof-edit">Edit profile</button><button class="btn-mini" id="prof-share">'+(Native.on?'Share profile':'Copy share link')+'</button></div>';}
-  else if(me){actionBtn='<div style="display:flex;gap:8px;"><button class="'+(following?'btn-mini':'btn-primary')+'" id="prof-follow">'+(following?'Following \u2713':'+ Follow')+'</button><button class="btn-mini" id="prof-message" data-uid="'+esc(prof.id)+'" data-uname="'+esc(prof.username||'')+'">Message</button></div>';}
+  else if(me){actionBtn='<div style="display:flex;gap:8px;"><button class="'+(following?'btn-mini':'btn-primary')+'" id="prof-follow">'+(following?'Following \u2713':'+ Follow')+'</button></div>';}
   else{actionBtn='<button class="btn-primary" id="prof-follow-login">Log in to follow</button>';}
+  /* LISTS — the three song shelves and the user's own lists, under one heading.
+
+     Each shelf is a disclosure row: a strip of sleeves and a count when shut,
+     the full rows when open. Open/shut is this device's business (localStorage);
+     what is HIDDEN is the account's, on profiles.hidden_lists, so somebody else
+     opening this profile never sees it. '*' hides the lot. Before that column
+     exists hidden_lists is undefined, nothing is hidden, and the eye says the
+     feature is not switched on rather than pretending to have saved.
+     Hiding is presentation, not privacy: the lists table stays readable. */
+  const hid=new Set(Array.isArray(prof.hidden_lists)?prof.hidden_lists:[]);
+  const SHELF_KEY='vinall_prof_shelves_v1';
+  let shelfOpen={};try{shelfOpen=JSON.parse(localStorage.getItem(SHELF_KEY)||'{}')||{};}catch(e){shelfOpen={};}
+  const eyeSvg='<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M1.8 10S5 4.2 10 4.2 18.2 10 18.2 10 15 15.8 10 15.8 1.8 10 1.8 10z"/><circle cx="10" cy="10" r="2.6"/><path class="pl-eye-slash" d="M3 17L17 3"/></svg>';
+  function eyeBtn(key,label,cls){return isOwner?'<button type="button" class="pl-eye'+(cls||'')+'" data-hide="'+esc(key)+'" aria-pressed="'+(hid.has(key)?'true':'false')+'" aria-label="Hide '+esc(label)+' from your profile" title="Show or hide on your profile">'+eyeSvg+'</button>':'';}
+  const shelves=[
+    {k:'now',title:'Top 5 right now',arr:topNow,id:'prof-songs-now',own:isOwner,show:topNow.length||isOwner,empty:isOwner?'Pick your current rotation in Edit profile.':''},
+    {k:'alltime',title:'Top 10 of all time',arr:topAll,id:'prof-songs-all',own:isOwner,show:topAll.length||isOwner,empty:isOwner?'Set your all-timers in Edit profile.':''},
+    {k:'liked',title:'Liked songs',arr:likedSongs,id:'prof-liked-songs',own:false,show:likedSongs.length,empty:'',note:isOwner?(prof.likes_public?'public':'private'):''}
+  ].filter(function(sh){return sh.show&&(isOwner||!(hid.has('*')||hid.has(sh.k)));});
+  function shelfHtml(sh){
+    const n=sh.arr.length,open=!!shelfOpen[sh.k];
+    const strip=sh.arr.slice(0,5).map(function(it){return'<img src="'+thumb(esc(it.art||''),160)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">';}).join('');
+    return'<div class="pl-shelf'+(open?' is-open':'')+(hid.has(sh.k)?' is-hidden':'')+'" data-shelf="'+sh.k+'" data-hide-key="'+sh.k+'">'+
+      '<div class="pl-head"><button type="button" class="pl-toggle" aria-expanded="'+open+'" aria-controls="pl-body-'+sh.k+'">'+
+        '<span class="pl-strip">'+(strip||'<span class="pl-strip-empty"></span>')+'</span>'+
+        '<span class="pl-tt"><b>'+sh.title+'</b><small>'+(n?n+(n===1?' song':' songs'):'Empty')+(sh.note?' \u00b7 '+sh.note:'')+'<i class="pl-hid-tag"> \u00b7 hidden</i></small></span>'+
+        '<span class="pl-chev" aria-hidden="true"></span></button>'+eyeBtn(sh.k,sh.title)+'</div>'+
+      '<div class="pl-body" id="pl-body-'+sh.k+'"><div class="pl-inner">'+songRows(sh.arr,sh.empty,sh.id,sh.own)+'</div></div></div>';
+  }
+  const shownLists=lists.filter(function(l){return isOwner||!(hid.has('*')||hid.has(l.id));});
   let listsHtml='';
-  if(lists.length||isOwner){
-    listsHtml='<div class="prof-section-row"><div class="prof-section-title" style="margin:0;">Lists</div>'+(isOwner?'<button class="btn-mini" id="prof-add-list">+ New list</button>':'')+'</div>';
-    if(!lists.length)listsHtml+='<div class="reco-note">'+(isOwner?'Create a list like \u201CBest Drake albums\u201D.':'No lists yet.')+'</div>';
-    else listsHtml+='<div class="lists-wrap" id="prof-lists">'+lists.map(function(l){const covers=(l.items||[]).slice(0,4).map(function(it){return'<img src="'+thumb(esc(it.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">';}).join('');return'<div class="list-card" data-list="'+esc(l.id)+'"><div class="list-covers">'+(covers||'<span class="list-empty">empty</span>')+'</div><div class="list-title">'+esc(l.title)+'</div><div class="list-meta">'+(l.items||[]).length+' '+(l.kind==='song'?'songs':'albums')+'</div></div>';}).join('')+'</div>';
+  if(shelves.length||shownLists.length||isOwner){
+    listsHtml='<div class="pl-block'+(hid.has('*')?' all-hidden':'')+'" id="prof-lists-block">'+
+      '<div class="prof-section-row"><div class="prof-section-title" style="margin:0;">Lists</div>'+
+      (isOwner?'<div class="pl-acts"><button type="button" class="btn-mini pl-all" data-hide="*" aria-pressed="'+hid.has('*')+'">'+(hid.has('*')?'Show all':'Hide all')+'</button><button class="btn-mini" id="prof-add-list">+ New list</button></div>':'')+'</div>'+
+      (isOwner?'<div class="reco-note pl-all-note">Hidden from your profile. Only you can see these.</div>':'')+
+      (shelves.length?'<div class="pl-shelves">'+shelves.map(shelfHtml).join('')+'</div>':'')+
+      (!shownLists.length
+        ?(isOwner?'<div class="reco-note">Create a list like \u201CBest Drake albums\u201D.</div>':'')
+        :'<div class="lists-wrap" id="prof-lists">'+shownLists.map(function(l){const covers=(l.items||[]).slice(0,4).map(function(it){return'<img src="'+thumb(esc(it.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">';}).join('');return'<div class="list-card'+(hid.has(l.id)?' is-hidden':'')+'" data-list="'+esc(l.id)+'" data-hide-key="'+esc(l.id)+'">'+eyeBtn(l.id,l.title,' pl-eye-card')+'<div class="list-covers">'+(covers||'<span class="list-empty">empty</span>')+'</div><div class="list-title">'+esc(l.title)+'</div><div class="list-meta">'+(l.items||[]).length+' '+(l.kind==='song'?'songs':'albums')+'<i class="pl-hid-tag"> \u00b7 hidden</i></div></div>';}).join('')+'</div>')+
+      '</div>';
   }
 
   const favArtist = prof.fav_artist || null;
@@ -17814,9 +17788,6 @@ async function drawProfile(host,prof,isOwner,profileTok){
     tasteMatchHtml(taste,prof.username||'they')+
     '<div class="prof-section-title">Top 3 albums</div>'+
     '<div class="top3" id="prof-top3">'+slots+'</div>'+
-    ((topNow.length||isOwner)?'<div class="prof-section-title">Top 5 songs right now</div>'+songRows(topNow,isOwner?'Pick your current rotation in Edit profile.':'Nothing here yet.','prof-songs-now',isOwner):'')+
-    ((topAll.length||isOwner)?'<div class="prof-section-title">Top 10 songs of all time</div>'+songRows(topAll,isOwner?'Set your all-timers in Edit profile.':'Nothing here yet.','prof-songs-all',isOwner):'')+
-    (likedSongs.length?'<div class="prof-section-title">Liked songs'+(isOwner?' <span class="reco-note" style="display:inline">('+(prof.likes_public?'public':'private')+')</span>':'')+'</div>'+songRows(likedSongs,'','prof-liked-songs',false):'')+
     listsHtml+
     (!isOwner?'<div class="prof-section-title">'+esc(prof.username)+'\u2019s ranked albums</div>'+
       (nAlbums?'<div class="grid" id="prof-rankings"></div>':
@@ -17845,7 +17816,42 @@ async function drawProfile(host,prof,isOwner,profileTok){
   });});
   const sf=document.getElementById('stat-followers');if(sf)sf.addEventListener('click',function(){openFollowModal(prof.id,'followers',prof.username);});
   const sg=document.getElementById('stat-following');if(sg)sg.addEventListener('click',function(){openFollowModal(prof.id,'following',prof.username);});
-  host.querySelectorAll('.list-card').forEach(function(el){el.addEventListener('click',function(){const l=lists.find(function(x){return x.id===el.dataset.list;});if(l)openListView(l,isOwner);});});
+  host.querySelectorAll('.list-card').forEach(function(el){el.addEventListener('click',function(ev){if(ev.target.closest('.pl-eye'))return;const l=lists.find(function(x){return x.id===el.dataset.list;});if(l)openListView(l,isOwner);});});
+  host.querySelectorAll('.pl-toggle').forEach(function(b){b.addEventListener('click',function(){
+    const sh=b.closest('.pl-shelf'),open=!sh.classList.contains('is-open');
+    sh.classList.toggle('is-open',open);b.setAttribute('aria-expanded',String(open));
+    if(open)shelfOpen[sh.dataset.shelf]=1;else delete shelfOpen[sh.dataset.shelf];
+    try{localStorage.setItem(SHELF_KEY,JSON.stringify(shelfOpen));}catch(e){}
+  });});
+  if(isOwner){
+    const block=document.getElementById('prof-lists-block');
+    function paintHidden(){
+      if(!block)return;
+      block.classList.toggle('all-hidden',hid.has('*'));
+      block.querySelectorAll('[data-hide-key]').forEach(function(el){el.classList.toggle('is-hidden',hid.has(el.dataset.hideKey));});
+      block.querySelectorAll('[data-hide]').forEach(function(b){b.setAttribute('aria-pressed',String(hid.has(b.dataset.hide)));});
+      const all=block.querySelector('.pl-all');if(all)all.textContent=hid.has('*')?'Show all':'Hide all';
+    }
+    if(block)block.addEventListener('click',async function(ev){
+      const b=ev.target.closest('[data-hide]');if(!b||b.disabled)return;
+      ev.stopPropagation();
+      const key=b.dataset.hide,was=hid.has(key);
+      if(was)hid.delete(key);else hid.add(key);
+      paintHidden();b.disabled=true;
+      const res=await Cloud.saveProfile({hidden_lists:Array.from(hid)});
+      b.disabled=false;
+      if(res&&res.error){
+        if(was)hid.add(key);else hid.delete(key);
+        paintHidden();
+        const missing=/hidden_lists/.test(String(res.error));
+        if(window.toast)toast(missing?'Hiding lists is not switched on yet':'Could not save that');
+        if(window.reportIssue)reportIssue('hidden_lists save failed',{e:String(res.error)});
+        return;
+      }
+      prof.hidden_lists=Array.from(hid);
+      if(window.buzz)buzz('tap');
+    });
+  }
 
   if(isOwner){
     /* The saved order is the real one. Nothing here is "visually reordered":
@@ -17885,8 +17891,6 @@ async function drawProfile(host,prof,isOwner,profileTok){
     const fb=document.getElementById('prof-follow');
     if(fb)fb.addEventListener('click',async function(){fb.disabled=true;if(following){await Cloud.unfollow(prof.id);}else{await Cloud.follow(prof.id);}renderProfile();});
     const fl=document.getElementById('prof-follow-login');if(fl)fl.addEventListener('click',function(){Cloud.openAuth();});
-    const pm=document.getElementById('prof-message');
-    if(pm)pm.addEventListener('click',function(){if(window.Messages)Messages.openThread(pm.dataset.uid,pm.dataset.uname);});
     host.querySelectorAll('.top3-slot').forEach(function(el){el.addEventListener('click',function(){const t=top3[+el.dataset.slot];if(t&&t.id)openAlbum(t);});});
     const grid=document.getElementById('prof-rankings');
     if(grid){
@@ -19031,7 +19035,7 @@ async function openGroove(grooveId){
         '<button class="btn-mini groove-kick" data-gkick="'+esc(p.id)+'">Remove</button></div>';
     }
     return'<div class="ptop-row groove-member"><img src="'+esc(avatarSrc(p.avatar_url))+'" alt="" data-guid="'+esc(p.id)+'">'+
-      '<div style="flex:1;min-width:0;" data-guid="'+esc(p.id)+'"><div class="nm">'+esc(p.username||'user')+' '+roleBadge(p.role)+'</div>'+
+      '<div class="gm-meta" data-guid="'+esc(p.id)+'"><div class="nm gm-line"><span class="gm-name">'+esc(p.username||'user')+'</span>'+roleBadge(p.role)+'</div>'+
       (p.bio?'<div class="ar">'+esc(p.bio.slice(0,50))+'</div>':'')+'</div>'+
       (window.tasteChip?tasteChip(gchips[p.id]):'')+ctrl+'</div>';
   }).join('');
@@ -26095,11 +26099,9 @@ window.renderAdminStats = renderAdminStats;
       { mode: 'about', label: 'About you' }, { mode: 'yourmusic', label: 'Your music' },
       { mode: 'achievements', label: 'Achievements' }, { act: 'activity', label: 'Activity' } ] },
     { key: 'social', tabs: [
-      { mode: 'people', label: 'People' }, { mode: 'grooves', label: 'Grooves' },
-      { act: 'messages', label: 'Messages' } ] }
+      { mode: 'people', label: 'People' }, { mode: 'grooves', label: 'Grooves' } ] }
   ];
   function act(name) {
-    if (name === 'messages' && window.Messages) Messages.open();
     if (name === 'activity') { var t = document.getElementById('activity-toggle'); if (t) t.click(); }
   }
   // Somebody else's profile is not part of YOUR hub.
@@ -35124,165 +35126,6 @@ window.track = function (name, props) {
 })();
 
 /* ================================================================
-   MESSAGES — a thread between two people, and an inbox of them.
-
-   The social layer had follows, comments, reactions and Groove membership,
-   with nothing for "message this specific person" — the obvious next thing
-   somebody reaches for after comparing taste with a stranger and not
-   finding. Deliberately small: a thread and an inbox, one read marker, no
-   typing indicators, no push, no editing.
-
-   RLS does the real work (see the migration) — blocked pairs simply cannot
-   insert a row in either direction, so nothing here re-checks that; it
-   already can't happen.
-   ================================================================ */
-(function () {
-  'use strict';
-  var el = function (id) { return document.getElementById(id); };
-  var modal, inboxView, threadView, threadList, inboxList;
-  var _otherId = null, _otherName = null, _thread = null, _threadTok = 0;
-
-  function esc2(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-  }); }
-
-  function sb() { return (window.Cloud && Cloud.client) ? Cloud.client() : null; }
-  function me() { return (window.Cloud && Cloud.getUser) ? Cloud.getUser() : null; }
-
-  function showInbox() { inboxView.style.display = ''; threadView.style.display = 'none'; }
-  function showThread() { inboxView.style.display = 'none'; threadView.style.display = ''; }
-
-  function open() {
-    if (!modal) return;
-    modal.classList.add('open');
-    showInbox();
-    renderInbox();
-  }
-  function close() { if (modal) modal.classList.remove('open'); }
-
-  async function renderInbox() {
-    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) {
-      inboxList.innerHTML = '<div class="reco-note">Log in to send messages.</div>';
-      return;
-    }
-    inboxList.innerHTML = '<p class="reco-note loading-dots">loading</p>';
-    var client = sb();
-    var r = client ? await client.rpc('my_conversations') : { error: true };
-    if (r.error || !Array.isArray(r.data)) {
-      inboxList.innerHTML = '<div class="reco-note">Could not load your messages right now.</div>';
-      return;
-    }
-    if (!r.data.length) {
-      inboxList.innerHTML = '<div class="reco-note">No conversations yet — message someone from their profile.</div>';
-      return;
-    }
-    // Names/avatars are a second lookup — my_conversations only knows ids,
-    // the same split fetchProfile/fetchScoresByUsers already keep elsewhere
-    // in this file rather than duplicating a profile join into every RPC.
-    var ids = r.data.map(function (c) { return c.other_id; });
-    var profiles = {};
-    try {
-      var pr = await client.from('profiles').select('id,username,avatar_url').in('id', ids);
-      (pr.data || []).forEach(function (p) { profiles[p.id] = p; });
-    } catch (e) {}
-    inboxList.innerHTML = r.data.map(function (c) {
-      var p = profiles[c.other_id] || {};
-      var name = p.username || 'Someone';
-      var prefix = c.last_from_me ? 'You: ' : '';
-      return '<div class="dm-conv-row' + (c.unread_count > 0 ? ' unread' : '') + '" data-other="' + esc2(c.other_id) + '" data-name="' + esc2(name) + '">' +
-        '<img src="' + esc2(p.avatar_url || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
-        '<div style="flex:1;min-width:0;"><div class="dm-conv-name">' + esc2(name) + '</div>' +
-        '<div class="dm-conv-prev">' + esc2(prefix + c.last_body) + '</div></div></div>';
-    }).join('');
-    inboxList.querySelectorAll('[data-other]').forEach(function (row) {
-      row.addEventListener('click', function () { openThread(row.dataset.other, row.dataset.name); });
-    });
-  }
-
-  async function openThread(otherId, otherName) {
-    _otherId = otherId; _otherName = otherName || 'Conversation';
-    document.getElementById('dm-thread-name').textContent = _otherName;
-    if (!otherName) {
-      try {
-        var client = sb();
-        var pr = await client.from('profiles').select('username').eq('id', otherId).single();
-        if (pr.data && pr.data.username) { _otherName = pr.data.username; document.getElementById('dm-thread-name').textContent = _otherName; }
-      } catch (e) {}
-    }
-    if (!modal.classList.contains('open')) modal.classList.add('open');
-    showThread();
-    await loadThread();
-  }
-
-  async function loadThread() {
-    var mine = ++_threadTok;
-    var m = me();
-    threadList.innerHTML = '<p class="reco-note loading-dots">loading</p>';
-    var client = sb();
-    if (!client || !m) { threadList.innerHTML = ''; return; }
-    var r = await client.from('messages').select('id,sender_id,recipient_id,body,created_at,read_at')
-      .or('and(sender_id.eq.' + m.id + ',recipient_id.eq.' + _otherId + '),and(sender_id.eq.' + _otherId + ',recipient_id.eq.' + m.id + ')')
-      .order('created_at', { ascending: true });
-    if (mine !== _threadTok) return;   // moved on to a different thread
-    _thread = r.data || [];
-    paintThread();
-    // Mark anything the other person sent as read, one at a time — there is
-    // no bulk RPC because a thread is short by construction (no pagination
-    // here yet) and this only ever runs once per open, not per message.
-    _thread.filter(function (x) { return x.sender_id === _otherId && !x.read_at; })
-      .forEach(function (x) { client.rpc('mark_message_read', { p_message_id: x.id }).catch(function () {}); });
-  }
-
-  function paintThread() {
-    var m = me();
-    threadList.innerHTML = (_thread || []).map(function (x) {
-      return '<div class="dm-bubble ' + (x.sender_id === (m && m.id) ? 'me' : 'them') + '">' + esc2(x.body) + '</div>';
-    }).join('');
-    threadList.scrollTop = threadList.scrollHeight;
-  }
-
-  async function send() {
-    var input = el('dm-input'), btn = el('dm-send'), err = el('dm-error');
-    var body = input.value.trim();
-    if (!body) return;
-    var m = me();
-    if (!m) { err.textContent = 'Log in to send messages.'; return; }
-    err.textContent = '';
-    btn.disabled = true;
-    var client = sb();
-    var r = await client.from('messages').insert({ sender_id: m.id, recipient_id: _otherId, body: body }).select().single();
-    btn.disabled = false;
-    if (r.error) {
-      // A blocked pair fails the insert policy rather than the app checking
-      // first — see the migration. Either party being blocked reads the
-      // same generically, which is the honest answer: neither side is told
-      // which of them did the blocking.
-      err.textContent = 'Could not send that message.';
-      return;
-    }
-    input.value = '';
-    _thread = (_thread || []).concat([r.data]);
-    paintThread();
-  }
-
-  function init() {
-    modal = el('dm-modal');
-    if (!modal) return;
-    inboxView = el('dm-view-inbox'); threadView = el('dm-view-thread');
-    threadList = el('dm-thread-list'); inboxList = el('dm-inbox-list');
-    el('dm-close').addEventListener('click', close);
-    modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
-    el('dm-back').addEventListener('click', function () { showInbox(); renderInbox(); });
-    el('dm-send').addEventListener('click', send);
-    el('dm-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') send(); });
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
-
-  window.Messages = { open: open, openThread: openThread };
-})();
-
-/* ================================================================
    PLAY — hand a track to the Spotify the listener already has open.
 
    VINALL plays nothing. No audio element, no embed, no SDK — because
@@ -38952,12 +38795,12 @@ window.track = function (name, props) {
   };
   window.ShareLinks = ShareLinks;
 
-  /* ---- deep links: /?album=<id>&n=<name>&ar=<artist>&review=<id>#reviews,
-          and /?dm=<user id> from a message push. ------------------------ */
+  /* ---- deep links: /?album=<id>&n=<name>&ar=<artist>&review=<id>#reviews.
+          A stale /?dm= link from an old message push is just dropped. ---- */
   function deepLink() {
     var q = new URLSearchParams(location.search);
-    var albumId = q.get('album'), dm = q.get('dm');
-    if (!albumId && !dm) return;
+    var albumId = q.get('album');
+    if (!albumId) { if (q.get('dm')) history.replaceState(null, '', location.pathname); return; }
     var focus = q.get('review') || (location.hash === '#reviews' ? '*' : '');
     var meta = { id: albumId, name: q.get('n') || '', artist: q.get('ar') || '', art: '' };
     history.replaceState(null, '', location.pathname);
@@ -38965,7 +38808,6 @@ window.track = function (name, props) {
     if (window.dismissSplash) try { dismissSplash(); } catch (e) {}
     var ready = (window.Cloud && Cloud.ready) || Promise.resolve();
     Promise.race([ready, new Promise(function (r) { setTimeout(r, 2500); })]).then(function () {
-      if (dm) { if (on() && window.Messages) Messages.openThread(dm); return; }
       var base = (window.Native && Native.api) || '';
       // Resolved through the route directly, NOT spotifyGet: a failed optional
       // lookup there raises the "can't reach the catalogue" gate, and this one

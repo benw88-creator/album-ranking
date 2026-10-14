@@ -6034,15 +6034,25 @@ and key repeat are ignored. `scripts/tests/recall.spec.mjs` covers it.
 
 `assets/glow.js` and `assets/glow.css`.
 
-- **The account menu is four doors**, not eleven: you (avatar, name → profile),
-  People & Grooves, Messages, then Settings and Log out. Everything about *you* is a
+- **The account menu is three doors**, not eleven: you (avatar, name → profile),
+  People & Grooves, then Settings and Log out. Everything about *you* is a
   **hub tab** on the profile — Profile · Replay · About you · Your music ·
-  Achievements · Activity — and People and Grooves share one bar with Messages.
+  Achievements · Activity — and People and Grooves share one bar.
   `paintHubTabs(mode)` (called from `setMode` beside `paintCrateTabs`) injects the
   bars exactly the way the Crate's sub-tabs are injected, so no section moved and
   no render function changed. The You bar hides on somebody else's profile.
-  Activity and Messages are actions in the bar, opening the same drawer and sheet
-  they always did.
+  Activity is an action in the bar, opening the same drawer it always did.
+- **Messages (DMs) were removed from the client (2026-10-14).** The `messages`
+  table, `mark_message_read`, and the `messages` branch of `/api/push` (with its
+  `pg_net` trigger) are untouched server-side; a stale `/?dm=` push link is
+  stripped from the URL and ignored.
+- **Profile lists** (`assets/profile2.css`): Top 5, Top 10 and Liked songs are
+  disclosure shelves (sleeve strip + count) inside one Lists block with the user's
+  own lists. Open/shut is local (`vinall_prof_shelves_v1`); hidden is
+  `profiles.hidden_lists` (`'now' | 'alltime' | 'liked' | <list id> | '*'`),
+  `..._20261014160000_list_visibility.sql`, **apply by hand**. Before it lands the
+  eye reverts and says "not switched on yet". Presentation only — `lists` stays
+  publicly readable.
 - **`GlowSlider.enhance(input)`** sits on a real `<input type=range>`, which stays
   focusable and remains the source of truth: every drag writes `input.value` and
   fires a genuine `input` event, so existing listeners work unchanged. Pointer
