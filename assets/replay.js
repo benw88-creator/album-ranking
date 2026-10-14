@@ -495,6 +495,8 @@
 
   async function open(kind, key, opts) {
     opts = opts || {};
+    // Locked: the demo is still a taste; your own Replay waits for the gate.
+    if (!opts.demo && !gate().open) { if (window.goToView) goToView('replay'); return; }
     var p = key ? R.fromKey(key) : R.period(kind || 'year');
     if (!p) return;
     var m = opts.demo ? await demoModel(p) : await model(p);
@@ -512,7 +514,12 @@
         '<button class="rp-ctl" id="rp-pause" data-rp-ctl aria-label="Pause"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="3.5" y="3" width="3" height="10" rx="1"/><rect x="9.5" y="3" width="3" height="10" rx="1"/></svg></button>' +
         '<button class="rp-ctl modal-close" id="rp-close" data-rp-ctl aria-label="Close Replay"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button></div></div>' +
       '<button class="rp-ctl rp-nav prev" data-rp-ctl data-rp-go="-1" aria-label="Previous">‹</button><button class="rp-ctl rp-nav next" data-rp-ctl data-rp-go="1" aria-label="Next">›</button>' +
-      (m.demo ? '<div class="rp-demo-ribbon"><span class="rp-demo-tag">Demo · not your data</span></div>' : '<div class="rp-hint">' + (matchMedia('(hover: none)').matches ? 'Tap to continue · hold to pause' : '← → to move · space to pause') + '</div>');
+      (m.demo ? '<div class="rp-demo-ribbon"><span class="rp-demo-tag">Demo · not your data</span></div>' : '<div class="rp-hint">' + (matchMedia('(hover: none)').matches ? 'Tap to continue · hold to pause' : '← → to move · space to pause') + '</div>') +
+      // The opening moment: a record in the period's colours spins up out of
+      // the centre and breaks into the room. Thrown away once it has played.
+      (reduced() ? '' : '<div class="rp-unwrap" aria-hidden="true"><i class="rp-unwrap-disc"></i><i class="rp-unwrap-ring"></i></div>');
+    if (!m.demo) markOpened(p.key);
+    setTimeout(function () { var u = h.querySelector('.rp-unwrap'); if (u) u.remove(); }, 1600);
     // Artwork first: the opening's covers and the next two scenes' art.
     await Promise.race([Promise.all(m.covers.slice(0, 8).map(function (u) { return loadImg(thumbOf(u, 320)); })), new Promise(function (r) { setTimeout(r, 900); })]);
     m.covers.slice(0, 48).forEach(function (u) { loadImg(thumbOf(u, 160)); });
@@ -550,6 +557,8 @@
     var h = host(), stage = $('rp-stage');
     h.classList.toggle('rp-story-back', dir < 0);
     h.classList.toggle('rp-at-end', i === S.list.length - 1);
+    // A breath of the palette's light between scenes (opacity only).
+    h.classList.remove('rp-pulse'); void h.offsetWidth; h.classList.add('rp-pulse');
     if (S.cur) { var old = S.cur; old.classList.add('is-out'); setTimeout(function () { if (old.parentNode) old.parentNode.removeChild(old); }, reduced() ? 0 : 400); }
     var id = S.list[i], el = document.createElement('section');
     el.className = 'rp-scene sc-' + id + (id === 'albums' ? ' rp-center' : '');
@@ -931,8 +940,88 @@
     while (out.length < limit && p.end > from) { out.push(p); p = R.prev(p); }
     return out;
   }
+  /* ---- the gate ------------------------------------------------------------
+     Replay opens on a five-day login streak. The rule is the server's and
+     arrives as window.ReplayGate; until that module exists Replay is simply
+     OPEN, so nothing breaks before the backend lands. A gate that throws also
+     reads as open: a broken lock must not lock somebody out of their own year.
+     The meter shows only when the gate can say how far along you are. */
+  function gate() {
+    var G = window.ReplayGate, ok = true, pr = null;
+    if (!G || typeof G.unlocked !== 'function') return { open: true, progress: null };
+    try { ok = !!G.unlocked(); } catch (e) { ok = true; }
+    if (!ok && typeof G.progress === 'function') { try { pr = G.progress() || null; } catch (e) { pr = null; } }
+    return { open: ok, progress: pr };
+  }
+  // Which periods this device has opened, so a finished one nobody has
+  // looked at yet can say "New". A convenience, not a record: losing it only
+  // costs a chip.
+  var OPENED = 'vinal_replay_opened';
+  function opened() { return lsJSON(OPENED) || {}; }
+  function markOpened(k) { try { var o = opened(); if (o[k]) return; o[k] = Date.now(); localStorage.setItem(OPENED, JSON.stringify(o)); } catch (e) {} }
+  function topCovers(k) {
+    var A = crateInput().albums;
+    return Object.keys(A).map(function (id) { return A[id]; }).filter(function (a) { return a && a.art; })
+      .sort(function (a, b) { return (b.score || 0) - (a.score || 0); }).slice(0, k).map(function (a) { return a.art; });
+  }
+  function collage(covers, px) {
+    if (!covers.length) return '';
+    return '<div class="rp-collage n' + Math.min(covers.length, 6) + '" aria-hidden="true">' + covers.slice(0, 6).map(function (u, i) {
+      return '<img src="' + esc(thumbOf(u, px || 320)) + '" alt="" decoding="async" style="--i:' + i + '" onerror="this.style.visibility=\'hidden\'">';
+    }).join('') + '</div>';
+  }
+  function heroStat(v, label) { return '<div class="rp-hstat"><b>' + count(v) + '</b><span>' + esc(label) + '</span></div>'; }
+
+  /* The teaser. Not a button: there is nowhere for it to go yet, and a
+     control that names one action and performs none is the worst shape a
+     control can have. It sits under every Replay entry. */
+  function teaserHtml() {
+    return '<div class="rp-teaser" role="note" aria-label="New minigames coming soon">' +
+      '<span class="rp-teaser-sheen" aria-hidden="true"></span>' +
+      '<span class="rp-teaser-tiles" aria-hidden="true">' +
+        '<i style="--t:var(--c-cyan)"><svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm0 6.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8z"/></svg></i>' +
+        '<i style="--t:var(--c-violet)"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6" opacity=".45"/></svg></i>' +
+        '<i style="--t:var(--c-pink)"><svg viewBox="0 0 24 24"><text x="12" y="18.5" text-anchor="middle" font-size="17" font-weight="800" font-family="sans-serif">?</text></svg></i>' +
+      '</span>' +
+      '<span class="rp-teaser-t"><b>New minigames</b><small>Coming soon to the arcade</small></span>' +
+      '<em class="rp-soon">Soon</em></div>';
+  }
+
+  /* Locked. Says the rule exactly, shows how far along you are, and points at
+     the one thing worth doing while you wait: bringing your listening in,
+     because Replay is built from it. The demo stays open as a taste. */
+  function lockedHtml(g, compact) {
+    var pr = g.progress, need = pr ? Math.max(1, Math.round(+pr.need || 5)) : 5;
+    var st = pr ? Math.max(0, Math.min(need, Math.floor(+pr.streak || 0))) : 0, covers = topCovers(6), pips = '';
+    for (var i = 0; i < need; i++) pips += '<i class="' + (i < st ? 'on' : '') + '" style="--i:' + i + '"><em></em></i>';
+    var left = need - st;
+    var meter = pr ? '<div class="rp-lock-meter"><div class="rp-lock-pips" role="progressbar" aria-label="Login streak" aria-valuemin="0" aria-valuemax="' + need + '" aria-valuenow="' + st + '">' + pips + '</div>' +
+      '<span class="rp-lock-count"><b>' + st + '</b> of ' + need + ' days' + (left > 0 ? ' · ' + (left === 1 ? 'one more day' : left + ' to go') : '') + '</span></div>' : '';
+    return '<div class="rp-hero rp-locked' + (compact ? ' compact' : '') + '"' + (covers[0] ? ' data-rp-pal="' + esc(covers[0]) + '"' : '') + '>' +
+      '<div class="rp-hero-record" aria-hidden="true"></div>' + collage(covers, 160) +
+      '<span class="rp-lock-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="5" y="10.5" width="14" height="10" rx="2.6" fill="currentColor"/></svg></span>' +
+      '<span class="rp-kicker">VINALL Replay · locked</span>' +
+      '<h2 class="rp-lock-title">Unlock on 5 day login streak</h2>' + meter +
+      (compact ? '' : '<p class="rp-hero-sub">Your weeks, months and year in music, told as a story. Open VINALL five days running and it is yours.</p>') +
+      '<ul class="rp-lock-needs">' +
+        '<li><span class="rp-need-ico sp" aria-hidden="true">♫</span><span class="rp-need-t"><b>Built from your Spotify data</b><small>Import your Spotify listening so it is ready when Replay opens.</small></span><button class="rp-need-btn" data-rp-act="import">Import</button></li>' +
+        '<li><span class="rp-need-ico" aria-hidden="true">+</span><span class="rp-need-t"><b>Other music services</b><small>Coming soon.</small></span><em class="rp-soon">Soon</em></li>' +
+      '</ul>' +
+      '<div class="rp-hero-row"><button class="rp-ghost rp-demo-btn" data-rp-act="demo"><i aria-hidden="true">▶</i>Preview a demo Replay</button></div></div>';
+  }
+  function paintPals(h) {
+    h.querySelectorAll('[data-rp-pal]').forEach(function (el) { palette(el.dataset.rpPal).then(function (pal) { el.style.setProperty('--c1', pal[0]); el.style.setProperty('--c2', pal[1]); applyPal(el, pal); }); });
+  }
+  function act(a) {
+    if (a === 'import' && window.SpotifyBridge) SpotifyBridge.open('intro');
+    if (a === 'demo') open('year', null, { demo: true });
+    if (a === 'rate') { if (window.goToView) goToView('albums'); var s = document.querySelector('#search, input[type="search"]'); if (s) s.focus(); }
+  }
+
   async function renderHome() {
     var h = $('rp-home'); if (!h) return;
+    var g = gate();
+    if (!g.open) { h.innerHTML = lockedHtml(g, false) + teaserHtml(); wireHome(h); paintPals(h); return; }
     var input = crateInput(), first = activitySpan(input);
     var idx = await listeningIndex();
     var lFrom = idx && idx.data_from ? R.dayStart(idx.data_from) : null;
@@ -950,40 +1039,45 @@
     }).filter(function (x) { return x.any; });
     // The featured Replay: this year so far once there is something in it.
     var yr = R.period('year'), yc = R.crateStats(input, yr), ylp = playsFor(yr);
-    var feat = (yc.albums + yc.songs > 0 || ylp.plays > 0) ? { p: yr, c: yc } : null;
-    if (!feat) { var py = R.prev(yr), pc = R.crateStats(input, py); if (pc.albums + pc.songs > 0) feat = { p: py, c: pc }; }
+    var feat = (yc.albums + yc.songs > 0 || ylp.plays > 0) ? { p: yr, c: yc, ms: ylp.ms } : null;
+    if (!feat) { var py = R.prev(yr), pc = R.crateStats(input, py); if (pc.albums + pc.songs > 0) feat = { p: py, c: pc, ms: playsFor(py).ms }; }
     var lifetime = await hasLifetimeListening();
     var noDays = !idx || !idx.data_from;
+    var seen = opened();
     h.innerHTML =
-      (feat ? heroHtml(feat) : '') +
+      (feat ? heroHtml(feat) : '') + teaserHtml() +
       '<div class="rp-seg" role="group" aria-label="Replay length">' + ['week', 'month', 'year'].map(function (k) { return '<button data-rp-kind="' + k + '" aria-pressed="' + (k === _kind) + '">' + { week: 'Weekly', month: 'Monthly', year: 'Yearly' }[k] + '</button>'; }).join('') + '</div>' +
-      (list.length ? '<div class="rp-timeline">' + list.map(cardHtml).join('') + '</div>'
+      (list.length ? '<div class="rp-timeline">' + list.map(function (x, i) { return cardHtml(x, i, seen); }).join('') + '</div>'
         : '<div class="rp-empty"><h3>No ' + { week: 'weeks', month: 'months', year: 'years' }[_kind] + ' to replay yet</h3><p>A Replay needs ratings or listening inside the period. Rate a few records this ' + _kind + ' and it appears here.</p></div>') +
       (noDays ? '<p class="rp-note">' + (lifetime ? 'Your Spotify history was imported before Replay could date it. <a href="#" data-rp-act="import">Import the same file again</a> to see what you played, week by week.' : on() ? 'Replay shows what you rated. <a href="#" data-rp-act="import">Add your Spotify data</a> to see what you played too.' : 'Log in and add your Spotify data to see what you played too.') + '</p>' : '');
     wireHome(h);
-    h.querySelectorAll('[data-rp-pal]').forEach(function (el) { palette(el.dataset.rpPal).then(function (pal) { el.style.setProperty('--c1', pal[0]); el.style.setProperty('--c2', pal[1]); applyPal(el, pal); }); });
+    paintPals(h);
+    countUps(h);
   }
   function heroHtml(f) {
-    var covers = f.c.covers.slice(0, 4);
-    return '<div class="rp-hero" data-rp-open="' + f.p.key + '"' + (covers[0] ? ' data-rp-pal="' + esc(covers[0]) + '"' : '') + '>' +
-      '<div class="rp-hero-record" aria-hidden="true"></div>' +
-      (covers.length ? '<div class="rp-hero-fan" aria-hidden="true">' + covers.map(function (u, i) { return '<img src="' + esc(thumbOf(u, 320)) + '" alt="" style="--i:' + i + '">'; }).join('') + '</div>' : '') +
-      '<span class="rp-kicker">VINALL Replay' + (R.complete(f.p) ? '' : ' · so far') + '</span>' +
+    var covers = f.c.covers.slice(0, 6), done = R.complete(f.p);
+    return '<div class="rp-hero rp-feature" data-rp-open="' + f.p.key + '"' + (covers[0] ? ' data-rp-pal="' + esc(covers[0]) + '"' : '') + '>' +
+      '<div class="rp-hero-record" aria-hidden="true"></div>' + collage(covers, 320) +
+      '<span class="rp-kicker">VINALL Replay' + (done ? '' : ' · so far') + '</span>' +
       '<h2 class="rp-hero-word">' + esc(f.p.label) + '</h2>' +
-      '<p class="rp-hero-sub">' + pl(f.c.albums, 'album') + ', ' + pl(f.c.songs, 'song') + ' and ' + pl(f.c.discoveryCount, 'new artist') + (R.complete(f.p) ? '.' : ' so far.') + '</p>' +
+      '<div class="rp-hero-stats">' + heroStat(f.c.albums, f.c.albums === 1 ? 'album' : 'albums') + heroStat(f.c.songs, f.c.songs === 1 ? 'song' : 'songs') +
+        (f.c.discoveryCount ? heroStat(f.c.discoveryCount, f.c.discoveryCount === 1 ? 'new artist' : 'new artists') : '') +
+        (f.ms ? heroStat(Math.round(f.ms / 60000), 'minutes played') : '') + '</div>' +
       '<div class="rp-hero-row"><button class="rp-play" data-rp-open="' + f.p.key + '"><i>▶</i>Play your ' + (f.p.kind === 'year' ? 'year' : f.p.kind) + '</button></div></div>';
   }
-  function cardHtml(x) {
-    var live = !R.complete(x.p), covers = x.c.covers.slice(0, 4);
+  function cardHtml(x, i, seen) {
+    var live = !R.complete(x.p), covers = x.c.covers.slice(0, 4), fresh = !live && !seen[x.p.key];
     var bits = []; if (x.c.albums) bits.push(pl(x.c.albums, 'album')); if (x.c.songs) bits.push(pl(x.c.songs, 'song')); if (x.ms) bits.push(hm(x.ms) + ' played');
-    return '<button class="rp-card" data-rp-open="' + x.p.key + '"' + (covers[0] ? ' data-rp-pal="' + esc(covers[0]) + '"' : '') + '>' +
-      '<span class="rp-chip' + (live ? ' live' : '') + '">' + (live ? 'So far' : 'Ready') + '</span>' +
-      (covers.length ? '<span class="rp-card-covers" aria-hidden="true">' + covers.map(function (u) { return '<img src="' + esc(thumbOf(u, 160)) + '" alt="" loading="lazy">'; }).join('') + '</span>' : '') +
-      '<b>' + esc(x.p.kind === 'week' ? x.p.label : x.p.label) + '</b><small>' + esc(bits.join(' · ') || 'Re-ratings only') + '</small></button>';
+    return '<button class="rp-card' + (i === 0 ? ' lead' : '') + (fresh ? ' fresh' : '') + '" data-rp-open="' + x.p.key + '"' + (covers[0] ? ' data-rp-pal="' + esc(covers[0]) + '"' : '') + '>' +
+      '<span class="rp-chip' + (live ? ' live' : fresh ? ' new' : '') + '">' + (live ? 'So far' : fresh ? 'New' : 'Replayed') + '</span>' +
+      (covers.length ? '<span class="rp-card-covers n' + covers.length + '" aria-hidden="true">' + covers.map(function (u, k) { return '<img src="' + esc(thumbOf(u, i === 0 ? 320 : 160)) + '" alt="" loading="lazy" style="--i:' + k + '" onerror="this.style.visibility=\'hidden\'">'; }).join('') + '</span>' : '') +
+      '<span class="rp-card-kind">' + periodWord(x.p) + '</span>' +
+      '<b>' + esc(x.p.label) + '</b><small>' + esc(bits.join(' · ') || 'Re-ratings only') + '</small>' +
+      '<span class="rp-card-go" aria-hidden="true">▶</span></button>';
   }
   function emptyHome() {
     return '<div class="rp-hero" style="min-height:300px"><div class="rp-hero-record" aria-hidden="true"></div><span class="rp-kicker">VINALL Replay</span><h2 class="rp-hero-word">Replay</h2>' +
-      '<p class="rp-hero-sub">Your weeks, months and year in music — built from what you rate here and, if you add it, what you played on Spotify.</p></div>' +
+      '<p class="rp-hero-sub">Your weeks, months and year in music — built from what you rate here and, if you add it, what you played on Spotify.</p></div>' + teaserHtml() +
       '<div class="rp-empty"><h3>Nothing to replay yet</h3><p>Replay needs at least a few ratings, or your Spotify listening history. Nothing here is ever made up — so it waits until there is something real to show.</p>' +
       '<div class="rp-hero-row"><button class="btn-primary" data-rp-act="rate">Rate a record</button>' + (on() ? '<button class="btn-ghost" data-rp-act="import">Add Spotify data</button>' : '') +
       '<button class="btn-ghost" data-rp-act="demo">See a demo</button></div></div>';
@@ -994,40 +1088,60 @@
       var k = e.target.closest('[data-rp-kind]');
       if (k) { _kind = k.dataset.rpKind; try { localStorage.setItem('vinal_replay_kind', _kind); } catch (x) {} renderHome(); return; }
       var a = e.target.closest('[data-rp-act]');
-      if (a) {
-        e.preventDefault();
-        if (a.dataset.rpAct === 'import' && window.SpotifyBridge) SpotifyBridge.open('intro');
-        if (a.dataset.rpAct === 'demo') open('year', null, { demo: true });
-        if (a.dataset.rpAct === 'rate') { if (window.goToView) goToView('albums'); var s = document.querySelector('#search, input[type="search"]'); if (s) s.focus(); }
-        return;
-      }
+      if (a) { e.preventDefault(); act(a.dataset.rpAct); return; }
       var o = e.target.closest('[data-rp-open]');
       if (o) open(null, o.dataset.rpOpen);
     });
   }
 
-  // The invitation on Home. Only when this year has something in it — for a
-  // brand new account it would be a door to an empty room.
+  // The invitation on Home. Unlocked, only when this year has something in
+  // it — for a brand new account it would be a door to an empty room. Locked,
+  // always: that card is the reason to come back tomorrow.
+  var _gateWas = null, _fresh = false;
   function renderHomeCard() {
     var h = $('rp-home-card'); if (!h) return;
-    var input = crateInput(), yr = R.period('year'), c = R.crateStats(input, yr);
-    if (c.albums + c.songs < 3) { h.innerHTML = ''; return; }
-    var covers = c.covers.slice(0, 4);
-    var sig = yr.key + c.albums + '/' + c.songs + (covers[0] || '');
-    if (h._sig === sig) return; h._sig = sig;
-    h.innerHTML = '<div class="rp-home-card rp-home"><div class="rp-hero" role="button" tabindex="0" data-rp-open="' + yr.key + '"' + (covers[0] ? ' data-rp-pal="' + esc(covers[0]) + '"' : '') + '>' +
-      '<div class="rp-hero-record" aria-hidden="true"></div>' +
-      (covers.length ? '<div class="rp-hero-fan" aria-hidden="true">' + covers.map(function (u, i) { return '<img src="' + esc(thumbOf(u, 160)) + '" alt="" style="--i:' + i + '">'; }).join('') + '</div>' : '') +
-      '<span class="rp-kicker">VINALL Replay · so far</span><h2 class="rp-hero-word">' + yr.label + '</h2>' +
-      '<p class="rp-hero-sub">' + pl(c.albums, 'album') + ' and ' + pl(c.songs, 'song') + ' in. Press play.</p></div></div>';
-    var el = h.querySelector('[data-rp-pal]');
-    if (el) palette(el.dataset.rpPal).then(function (pal) { applyPal(el, pal); });
+    var g = gate();
     if (!h._wired) {
       h._wired = true;
-      h.addEventListener('click', function (e) { var o = e.target.closest('[data-rp-open]'); if (o) open(null, o.dataset.rpOpen); });
-      h.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-rp-open]')) { e.preventDefault(); open(null, e.target.closest('[data-rp-open]').dataset.rpOpen); } });
+      h.addEventListener('click', function (e) {
+        var a = e.target.closest('[data-rp-act]'); if (a) { e.preventDefault(); act(a.dataset.rpAct); return; }
+        var o = e.target.closest('[data-rp-open]'); if (o) open(null, o.dataset.rpOpen);
+      });
+      h.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-rp-open]')) { e.preventDefault(); open(null, e.target.dataset.rpOpen); } });
     }
+    if (!g.open) {
+      var lsig = 'L' + JSON.stringify(g.progress) + topCovers(1)[0];
+      if (h._sig === lsig) return; h._sig = lsig;
+      h.innerHTML = '<div class="rp-home-card rp-home">' + lockedHtml(g, true) + teaserHtml() + '</div>';
+      paintPals(h); return;
+    }
+    var input = crateInput(), yr = R.period('year'), c = R.crateStats(input, yr);
+    if (c.albums + c.songs < 3) { h.innerHTML = ''; h._sig = ''; return; }
+    var covers = c.covers.slice(0, 6), fresh = _fresh;
+    var sig = yr.key + c.albums + '/' + c.songs + (covers[0] || '') + (fresh ? '!' : '');
+    if (h._sig === sig) return; h._sig = sig;
+    _fresh = false;
+    h.innerHTML = '<div class="rp-home-card rp-home"><div class="rp-hero rp-hc' + (fresh ? ' rp-unlocked' : '') + '" role="button" tabindex="0" aria-label="Play your ' + yr.label + ' Replay" data-rp-open="' + yr.key + '"' + (covers[0] ? ' data-rp-pal="' + esc(covers[0]) + '"' : '') + '>' +
+      '<div class="rp-hero-record" aria-hidden="true"></div>' + collage(covers, 160) +
+      '<span class="rp-kicker">' + (fresh ? 'Unlocked · ' : '') + 'VINALL Replay · so far</span><h2 class="rp-hero-word">' + yr.label + '</h2>' +
+      '<div class="rp-hero-stats">' + heroStat(c.albums, c.albums === 1 ? 'album' : 'albums') + heroStat(c.songs, c.songs === 1 ? 'song' : 'songs') +
+        (c.discoveryCount ? heroStat(c.discoveryCount, c.discoveryCount === 1 ? 'new artist' : 'new artists') : '') + '</div>' +
+      '<span class="rp-play rp-play-sm" aria-hidden="true"><i>▶</i>Play your year</span></div>' + teaserHtml() + '</div>';
+    paintPals(h);
+    countUps(h);
+    if (fresh && window.burst) { var hero = h.querySelector('.rp-hero'); setTimeout(function () { if (hero.isConnected) burst(hero, { count: 34, spread: 200 }); }, 300); }
   }
+  // The gate changed (a login extended the streak, or the backend arrived):
+  // repaint both entries. Crossing from locked to open is the unlock moment.
+  window.addEventListener('vinall:replay-gate', function () {
+    var now = gate().open;
+    if (_gateWas === false && now) _fresh = true;
+    _gateWas = now;
+    var hc = $('rp-home-card'); if (hc) hc._sig = null;
+    renderHomeCard();
+    if (window.currentMode === 'replay') renderHome();
+  });
+  _gateWas = gate().open;
 
   function invalidate() { _L = {}; _idx = null; _lifetime = null; }
 

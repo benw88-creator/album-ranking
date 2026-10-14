@@ -1,0 +1,79 @@
+/* ================================================================
+   HOME STATS — bigger tiles, two that lead, and a count-up on arrival.
+
+   Loaded after the main stylesheet so these win at equal specificity
+   (trap 1). The strip stays a hairline grid: the 1px gap is the divider,
+   drawn by the container's own background showing through, so it moves
+   from grid to FLEX here only so a short last row grows to fill the width
+   instead of leaving a grey hole where a tile is missing. Rows are exact:
+   every tile grows, so there is never an empty cell for the border colour
+   to show through.
+
+   The first two tiles lead (albums and songs ranked when there is a crate;
+   net worth and Depth for a logged-in account with none). Hues are by
+   class, not position, for the tiles that have one; the wallet and level
+   tiles keep gold because gold means currency here.
+   ================================================================ */
+#stats-wrap .stats {
+  display: flex; flex-wrap: wrap; gap: 1px;
+  border-radius: calc(var(--radius) + 4px);
+}
+#stats-wrap .stats > .stat {
+  flex: 1 1 calc(25% - 1px); min-width: 0;
+  padding: 20px 20px 18px; isolation: isolate; overflow: hidden;
+}
+#stats-wrap .stats > .stat:nth-child(-n+2) { flex-basis: calc(50% - 1px); padding: 26px 26px 22px; }
+#stats-wrap .stats > .stat:nth-child(-n+2) .s-val {
+  font-family: var(--font-display); font-size: clamp(46px, 6vw, 72px); font-weight: 800;
+  letter-spacing: -.05em; line-height: .9; margin-top: 12px;
+}
+#stats-wrap .stats > .stat:nth-child(-n+2) .s-label { font-size: 12px; letter-spacing: .12em; }
+#stats-wrap .stats .s-val { font-variant-numeric: tabular-nums; }
+
+/* Hues. */
+#stats-wrap .stats > .stat-wallet { --tile: var(--gold); }
+#stats-wrap .stats > .stat-albums { --tile: var(--c-cyan); }
+#stats-wrap .stats > .stat-songs { --tile: var(--c-violet); }
+#stats-wrap .stats > #stat-streak { --tile: var(--c-pink); }
+#stats-wrap .stats > #stat-streak .s-val { color: var(--c-pink); }
+
+/* The tint: a pool of the tile's hue rising from the bottom edge, and a
+   lit rule along the top — always on, not hover-only (a phone has no hover). */
+#stats-wrap .stats > .stat::before {
+  background:
+    radial-gradient(90% 70% at 0% 110%, color-mix(in srgb, var(--tile) 20%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--tile) 5%, transparent), transparent 60%);
+  z-index: -1;
+}
+#stats-wrap .stats > .stat::after { opacity: .28; left: 0; right: 0; }
+#stats-wrap .stats > .stat:nth-child(-n+2)::after { opacity: .6; height: 2px; }
+#stats-wrap .stats > .stat:nth-child(-n+2) .s-val { text-shadow: 0 0 34px color-mix(in srgb, var(--tile) 32%, transparent); }
+
+/* Arrival. hs-wait holds the tiles back until the strip is on screen (set
+   from script only when motion is allowed), hs-go lets them rise in order.
+   `backwards`, not `both`: the end state is the resting style, and holding
+   it would pin transform for ever (trap 12). */
+#stats-wrap .stats.hs-wait > .stat { opacity: 0; }
+#stats-wrap .stats.hs-go > .stat { animation: hsRise 640ms var(--rp-ease-out, cubic-bezier(.16,1,.3,1)) backwards; }
+#stats-wrap .stats.hs-go > .stat:nth-child(2) { animation-delay: 60ms; }
+#stats-wrap .stats.hs-go > .stat:nth-child(3) { animation-delay: 120ms; }
+#stats-wrap .stats.hs-go > .stat:nth-child(4) { animation-delay: 170ms; }
+#stats-wrap .stats.hs-go > .stat:nth-child(5) { animation-delay: 220ms; }
+#stats-wrap .stats.hs-go > .stat:nth-child(6) { animation-delay: 270ms; }
+#stats-wrap .stats.hs-go > .stat:nth-child(-n+2)::after { animation: hsRule 900ms var(--rp-ease-out, ease-out) 200ms backwards; transform-origin: left; }
+@keyframes hsRise { from { opacity: 0; transform: translate3d(0, 12px, 0) scale(.985); } }
+@keyframes hsRule { from { transform: scaleX(0); } }
+
+@media (max-width: 699px) {
+  #stats-wrap .stats > .stat { flex-basis: calc(50% - 1px); padding: var(--s4) var(--s3); }
+  #stats-wrap .stats > .stat:nth-child(-n+2) { padding: 20px 16px 16px; }
+  #stats-wrap .stats > .stat:nth-child(-n+2) .s-val { font-size: 44px; margin-top: 10px; }
+  #stats-wrap .stats > .stat:nth-child(-n+2) .s-label { font-size: 11px; letter-spacing: .08em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) #stats-wrap .stats.hs-go > .stat,
+  html:not([data-motion="full"]) #stats-wrap .stats.hs-go > .stat::after { animation: none; }
+}
+html[data-motion="none"] #stats-wrap .stats.hs-go > .stat,
+html[data-motion="none"] #stats-wrap .stats.hs-go > .stat::after { animation: none; }
