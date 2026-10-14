@@ -9581,7 +9581,8 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/replay.css?v=1">
 <link rel="stylesheet" href="/assets/you.css?v=1">
 <link rel="stylesheet" href="/assets/games.css?v=1">
-<link rel="stylesheet" href="/assets/store.css?v=1">
+<link rel="stylesheet" href="/assets/store.css?v=2">
+<link rel="stylesheet" href="/assets/themes2.css?v=1">
 <link rel="stylesheet" href="/assets/glow.css?v=3">
 <link rel="stylesheet" href="/assets/play.css?v=1">
 <link rel="stylesheet" href="/assets/cards.css?v=1">
@@ -16829,7 +16830,7 @@ const Cloud=(function(){
   function getUser(){return user;}
   function client(){return sb;}
   async function fetchProfile(uid){if(!sb)return null;try{const res=await sb.from('profiles').select('*').eq('id',uid).single();return res.data||null;}catch(e){return null;}}
-  async function saveProfile(fields){if(!isOn())return{error:'not logged in'};try{const row=Object.assign({id:user.id,updated_at:new Date().toISOString()},fields);const res=await sb.from('profiles').upsert(row).select().single();return res.error?{error:res.error.message}:{data:res.data};}catch(e){return{error:String(e&&e.message||e)};}}
+  async function saveProfile(fields){if(!isOn())return{error:'not logged in'};try{const row=Object.assign({id:user.id,updated_at:new Date().toISOString()},fields);const res=await sb.from('profiles').upsert(row).select().single();if(!res.error&&res.data&&window.Wallet&&Wallet.noteProfile)Wallet.noteProfile(res.data);return res.error?{error:res.error.message}:{data:res.data};}catch(e){return{error:String(e&&e.message||e)};}}
   async function uploadAvatar(file){if(!isOn())return{error:'not logged in'};try{const ext=(file.name.split('.').pop()||'jpg').toLowerCase();const path=user.id+'/avatar.'+ext;const up=await sb.storage.from('avatars').upload(path,file,{upsert:true,cacheControl:'3600'});if(up.error)return{error:up.error.message};const pub=sb.storage.from('avatars').getPublicUrl(path);const url=(pub.data&&pub.data.publicUrl)?pub.data.publicUrl+'?t='+Date.now():'';return{url:url};}catch(e){return{error:String(e&&e.message||e)};}}
   async function likeSong(rec){if(!isOn())return;try{await sb.from('liked_songs').upsert({user_id:user.id,track_key:rec.id,name:rec.name,artist:rec.artist,art:rec.art},{onConflict:'user_id,track_key'});}catch(e){}}
   async function unlikeSong(id){if(!isOn())return;try{await sb.from('liked_songs').delete().eq('user_id',user.id).eq('track_key',id);}catch(e){}}
@@ -20833,6 +20834,15 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        starter_theme migration. The cost here is the fallback; loadPrices()
        overwrites it from shop_items, which is what wallet_buy charges. */
     press:    { name: 'Test Pressing', cost: 2000, desc: 'White label. Silver on black, no colour anywhere.' },
+    /* ..._20261014150000_more_themes.sql; tokens in assets/themes2.css. */
+    reel:     { name: 'Reel to Reel',   cost: 12000, desc: 'Warm tape brown, amber and oxide red.' },
+    canopy:   { name: 'Deep Canopy',    cost: 18000, desc: 'Forest-floor green with brass light.' },
+    frost:    { name: 'Chrome Frost',   cost: 20000, desc: 'Blue steel, ice and polished chrome.' },
+    soul:     { name: 'Soul Train',     cost: 22000, desc: 'Chocolate, mustard and rust. Everything rounded.' },
+    bop:      { name: 'Hard Bop',       cost: 25000, desc: 'Midnight navy, electric blue, square corners.' },
+    velvet:   { name: 'Midnight Velvet', cost: 28000, desc: 'Deep plum, amethyst and champagne.' },
+    vapor:    { name: 'Vapor Sunset',   cost: 32000, desc: 'Sun yellow and hot pink over a violet grid.' },
+    strobe:   { name: 'Strobe',         cost: 35000, desc: 'True black, acid yellow, UV magenta. Hard edges.' },
   };
   const SWATCH = {
     classic:  'linear-gradient(135deg,#0a0908 20%,#F5C842 60%,#ff7a4d)',
@@ -20843,6 +20853,14 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     bone:     'linear-gradient(135deg,#141310 20%,#e6dcc4 60%,#b8705a)',
     neon:     'linear-gradient(135deg,#0a0616 20%,#ff3d9a 60%,#22e3ff)',
     press:    'linear-gradient(135deg,#0c0c0d 20%,#d8dbe0 60%,#8d919a)',
+    reel:     'linear-gradient(135deg,#120d08 20%,#e9a84b 60%,#d2593c)',
+    canopy:   'linear-gradient(135deg,#07110b 20%,#2f6b45 55%,#d8b45e)',
+    frost:    'linear-gradient(135deg,#070b10 20%,#a9e5ff 60%,#c4cbe2)',
+    soul:     'linear-gradient(135deg,#150b05 20%,#f0b52f 58%,#d0582a)',
+    bop:      'linear-gradient(135deg,#060a16 30%,#4b97ff 30% 70%,#efe9d8 70%)',
+    velvet:   'linear-gradient(135deg,#0d0714 20%,#b98cff 60%,#f0d6a6)',
+    vapor:    'linear-gradient(180deg,#120a24 15%,#ff6ec7 60%,#ffcf6e)',
+    strobe:   'linear-gradient(135deg,#000 35%,#e8ff2e 35% 62%,#ff3df2 62%)',
   };
   const BANNERS = {
     none:   { name: 'None',      cost: 0,   desc: 'No banner — the plain profile header.', gradient: 'transparent' },
@@ -21497,6 +21515,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
              leaves the bar behaving exactly as it did before. */
           xp_bonus: prof.xp_bonus || 0,
           level: prof.level || 1,
+          // Who the Shop previews are drawn on. Riding the profile row this
+          // already fetched, so no card ever asks the network.
+          username: prof.username || '',
+          avatar_url: prof.avatar_url || '',
           is_admin: !!prof.is_admin,
         };
       }
@@ -21852,6 +21874,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   function get() { return state; }
 
   window.Wallet = {
+    // Cloud.saveProfile calls this, so a new name or photo reaches the Shop
+    // previews without another fetch.
+    noteProfile: function (p) {
+      if (!p) return;
+      if (p.username !== undefined) state.username = p.username || '';
+      if (p.avatar_url !== undefined) state.avatar_url = p.avatar_url || '';
+    },
     // Bid War payouts are credited by Postgres, not here, so the wallet has
     // to be re-read rather than adjusted locally after one settles.
     refresh: async function () {
@@ -21992,10 +22021,19 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        has to redraw to show Equipped instead of Buy. */
     const wasY = window.scrollY;
 
+    /* Previews are drawn on YOU — your name and your photo, off the profile row
+       load() already fetched (state.username / avatar_url), built once per
+       render rather than once per card. Signed out or no photo: your initial
+       in a circle. The img sits over the initial, so a photo that fails to
+       load leaves the letter, never an empty grey blob. */
+    const myName = w.username || 'Your name';
+    const meHtml = '<span class="sw-me"><i class="sw-init">' + esc((w.username || 'Y').charAt(0).toUpperCase()) + '</i>' +
+      (w.avatar_url ? '<img src="' + esc(w.avatar_url) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</span>';
+
     // A theme card is a tiny app in that theme's colours, not a gradient chip.
     const themeRows = Object.keys(THEMES).map(function (key) {
       return shopItemRow('theme', key, THEMES[key], SWATCH[key], w.is_admin || w.owned_themes.indexOf(key) !== -1, w.active_theme === key,
-        'sw-theme', '<span class="sw-th"><i></i><i></i><i></i><b></b></span>');
+        'sw-theme', '<span class="sw-th"><span class="sw-th-me">' + meHtml + '<u>' + esc(myName) + '</u></span><i></i><i></i><b></b></span>');
     }).join('');
     const bannerRows = Object.keys(BANNERS).map(function (key) {
       const owned = w.is_admin || key === 'none' || w.owned_banners.indexOf(key) !== -1;
@@ -22012,10 +22050,6 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        differ only in which array holds ownership and what the swatch looks
        like — and a 'none' row first, so equipping nothing stays reachable and
        the first tag you buy is not permanent. */
-    function myName() {
-      try { var p = window.Cloud && Cloud.getProfile && Cloud.getProfile(); if (p && p.username) return p.username; } catch (e) {}
-      return 'Your name';
-    }
     function cosmeticRows(kind, map, swatches, swatchClass) {
       const ownedList = w[OWN_KEY[kind]] || [];
       const activeKey = w[ACT_KEY[kind]] || 'none';
@@ -22035,8 +22069,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
                            // ends up on the profile, at swatch size.
                            kind === 'tag' && window.tagChipHtml ? tagChipHtml(key, map[key])
                            // Flair and frames preview on the real classes the profile uses.
-                           : kind === 'flair' ? '<span class="sw-word fl-' + key + '">' + esc(myName()) + '</span>'
-                           : kind === 'frame' ? '<span class="pa-wrap fr-' + key + '"><i class="sw-av"></i></span>' : '');
+                           : kind === 'flair' ? '<span class="sw-word fl-' + key + '">' + esc(myName) + '</span>'
+                           : kind === 'frame' ? '<span class="pa-wrap fr-' + key + '">' + meHtml + '</span>' : '');
       }).join('');
     }
 

@@ -140,8 +140,6 @@ button.rw-chip:hover { border-color: rgba(255,255,255,.22); background: rgba(255
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 .st-grid .shop-swatch.sw-frame { background: radial-gradient(120% 120% at 50% 0%, rgba(255,255,255,.06), transparent 60%), var(--surface-2) !important; }
 .sw-frame .pa-wrap { display: inline-block; }
-.sw-av { display: block; width: 58px; height: 58px; border-radius: 50%;
-  background: radial-gradient(circle at 50% 38%, #4a4540 0 18%, transparent 19%), radial-gradient(circle at 50% 100%, #4a4540 0 38%, transparent 39%), #2a2724; }
 .st-grid .shop-item:hover .sw-frame, .st-grid .shop-item:hover .sw-tag, .st-grid .shop-item:hover .sw-flair { transform: none; }
 .shop-suggest { grid-column: 1 / -1; }
 

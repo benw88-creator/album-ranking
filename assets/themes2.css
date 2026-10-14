@@ -1,0 +1,264 @@
+/* ==========================================================================
+   MORE THEMES (2026-10-14) — ..._20261014150000_more_themes.sql prices them.
+
+   Same contract as the themes in index.html: repaint the tokens and nothing
+   else. NO theme touches --font-display (trap: one definition, on :root), the
+   fixed identity hues (--c-*) or the score colours (--red/--yellow/--green).
+   Each one also owns a ground texture on body, written with the section wash
+   kept as its first layer so the page still changes temperature between tabs.
+
+   Contrast was checked, not eyeballed: --text and --text-dim are >= 4.5:1
+   against --surface-2 in every theme here. No motion anywhere in this file.
+   ========================================================================== */
+
+/* REEL TO REEL — warm analogue tape. Brown-black, cream, amber and oxide. */
+[data-theme="reel"] {
+  --bg:            #120d08;
+  --surface:       #1c150e;
+  --surface-2:     #251c13;
+  --surface-3:     #302419;
+  --surface-4:     #3d2e20;
+  --text:          #f6ead6;
+  --text-dim:      #c4ad8c;
+  --text-faint:    #85715a;
+  --border:        rgba(246,234,214,0.08);
+  --border-strong: rgba(246,234,214,0.17);
+  --gold:          #e9a84b;
+  --gold-glow:     rgba(233,168,75,0.26);
+  --gold-dim:      rgba(233,168,75,0.13);
+  --accent-2:      #d2593c;
+  --accent-2-dim:  rgba(210,89,60,0.16);
+  --radius:        14px;
+  --radius-sm:     8px;
+  --radius-xs:     5px;
+}
+html[data-theme="reel"] body {
+  /* Oxide tape: fine horizontal grain under a warm lamp. */
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 80% 45% at 50% 0%, rgba(233,168,75,0.07) 0%, transparent 70%),
+    repeating-linear-gradient(0deg, rgba(246,234,214,0.018) 0 1px, transparent 1px 3px);
+}
+
+/* CHROME FROST — cold. Blue-steel ground, ice and polished chrome. */
+[data-theme="frost"] {
+  --bg:            #070b10;
+  --surface:       #0e141c;
+  --surface-2:     #151d27;
+  --surface-3:     #1d2733;
+  --surface-4:     #273342;
+  --text:          #eef6ff;
+  --text-dim:      #9fb3c8;
+  --text-faint:    #5f7287;
+  --border:        rgba(214,234,255,0.08);
+  --border-strong: rgba(214,234,255,0.18);
+  --gold:          #a9e5ff;
+  --gold-glow:     rgba(169,229,255,0.26);
+  --gold-dim:      rgba(169,229,255,0.12);
+  --accent-2:      #c4cbe2;
+  --accent-2-dim:  rgba(196,203,226,0.15);
+  --radius:        12px;
+  --radius-sm:     7px;
+  --radius-xs:     4px;
+}
+html[data-theme="frost"] body {
+  /* A cold sheen raked across the top, like light off a chrome rim. */
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    linear-gradient(115deg, transparent 20%, rgba(169,229,255,0.05) 38%, transparent 46%, rgba(196,203,226,0.04) 58%, transparent 66%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(169,229,255,0.05) 0%, transparent 70%);
+}
+
+/* DEEP CANOPY — forest floor. Green-black, brass light through leaves. */
+[data-theme="canopy"] {
+  --bg:            #07110b;
+  --surface:       #0d1a12;
+  --surface-2:     #132319;
+  --surface-3:     #1a2e21;
+  --surface-4:     #233b2b;
+  --text:          #eaf4ea;
+  --text-dim:      #9fbea6;
+  --text-faint:    #5e7d66;
+  --border:        rgba(220,245,225,0.08);
+  --border-strong: rgba(220,245,225,0.17);
+  --gold:          #d8b45e;
+  --gold-glow:     rgba(216,180,94,0.26);
+  --gold-dim:      rgba(216,180,94,0.13);
+  --accent-2:      #6fcf8e;
+  --accent-2-dim:  rgba(111,207,142,0.15);
+}
+html[data-theme="canopy"] body {
+  /* Dappled light: a few soft pools rather than one wash. */
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(circle at 18% 12%, rgba(216,180,94,0.06) 0%, transparent 28%),
+    radial-gradient(circle at 82% 30%, rgba(111,207,142,0.05) 0%, transparent 30%),
+    radial-gradient(circle at 40% 85%, rgba(111,207,142,0.045) 0%, transparent 32%);
+}
+
+/* SOUL TRAIN — 1970s. Chocolate, mustard, rust, everything rounded. */
+[data-theme="soul"] {
+  --bg:            #150b05;
+  --surface:       #20120a;
+  --surface-2:     #2b190e;
+  --surface-3:     #382114;
+  --surface-4:     #472b1a;
+  --text:          #fff0dc;
+  --text-dim:      #d4b08c;
+  --text-faint:    #8f6c4f;
+  --border:        rgba(255,236,210,0.08);
+  --border-strong: rgba(255,236,210,0.18);
+  --gold:          #f0b52f;
+  --gold-glow:     rgba(240,181,47,0.28);
+  --gold-dim:      rgba(240,181,47,0.14);
+  --accent-2:      #d0582a;
+  --accent-2-dim:  rgba(208,88,42,0.17);
+  --radius:        24px;
+  --radius-sm:     14px;
+  --radius-xs:     9px;
+}
+html[data-theme="soul"] body {
+  /* A sunburst rising from below the fold, faint enough to be felt. */
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 90% 50% at 50% 115%, rgba(240,181,47,0.09) 0%, rgba(208,88,42,0.05) 40%, transparent 70%),
+    repeating-conic-gradient(from 0deg at 50% 115%, rgba(240,181,47,0.018) 0deg 6deg, transparent 6deg 12deg);
+}
+
+/* HARD BOP — jazz sleeve. Midnight navy, electric blue, off-white type. */
+[data-theme="bop"] {
+  --bg:            #060a16;
+  --surface:       #0c1222;
+  --surface-2:     #121a2e;
+  --surface-3:     #19233b;
+  --surface-4:     #222e4a;
+  --text:          #f3f1ea;
+  --text-dim:      #a6adbf;
+  --text-faint:    #626b82;
+  --border:        rgba(235,240,255,0.08);
+  --border-strong: rgba(235,240,255,0.18);
+  --gold:          #4b97ff;
+  --gold-glow:     rgba(75,151,255,0.30);
+  --gold-dim:      rgba(75,151,255,0.15);
+  --accent-2:      #efe9d8;
+  --accent-2-dim:  rgba(239,233,216,0.12);
+  --radius:        4px;
+  --radius-sm:     3px;
+  --radius-xs:     2px;
+}
+html[data-theme="bop"] body {
+  /* Square corners and one hard block of colour, like a 1950s sleeve. */
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    linear-gradient(180deg, rgba(75,151,255,0.07) 0, rgba(75,151,255,0.07) 3px, transparent 3px),
+    radial-gradient(ellipse 50% 40% at 0% 100%, rgba(75,151,255,0.06) 0%, transparent 70%);
+}
+
+/* MIDNIGHT VELVET — deep plum, amethyst and champagne. Soft nap. */
+[data-theme="velvet"] {
+  --bg:            #0d0714;
+  --surface:       #170d22;
+  --surface-2:     #20132e;
+  --surface-3:     #2a1a3c;
+  --surface-4:     #36224c;
+  --text:          #f6eefb;
+  --text-dim:      #bba6cf;
+  --text-faint:    #7a6690;
+  --border:        rgba(240,225,255,0.08);
+  --border-strong: rgba(240,225,255,0.18);
+  --gold:          #b98cff;
+  --gold-glow:     rgba(185,140,255,0.30);
+  --gold-dim:      rgba(185,140,255,0.14);
+  --accent-2:      #f0d6a6;
+  --accent-2-dim:  rgba(240,214,166,0.14);
+  --radius:        20px;
+}
+html[data-theme="velvet"] body {
+  /* Velvet nap: light pooling in the middle, falling off at every edge. */
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 90% 70% at 50% 40%, rgba(185,140,255,0.06) 0%, transparent 65%),
+    radial-gradient(ellipse 120% 100% at 50% 50%, transparent 55%, rgba(0,0,0,0.35) 100%);
+}
+
+/* VAPOR SUNSET — sun yellow and hot pink over a violet grid horizon. */
+[data-theme="vapor"] {
+  --bg:            #120a24;
+  --surface:       #1b1033;
+  --surface-2:     #24163f;
+  --surface-3:     #2f1d4f;
+  --surface-4:     #3b2561;
+  --text:          #fff0fa;
+  --text-dim:      #c9a9d8;
+  --text-faint:    #8a6a9e;
+  --border:        rgba(255,225,245,0.09);
+  --border-strong: rgba(255,225,245,0.19);
+  --gold:          #ffcf6e;
+  --gold-glow:     rgba(255,207,110,0.28);
+  --gold-dim:      rgba(255,207,110,0.14);
+  --accent-2:      #ff6ec7;
+  --accent-2-dim:  rgba(255,110,199,0.17);
+}
+html[data-theme="vapor"] body {
+  /* The sun on the horizon and the grid running away under it. Grid lines
+     are 1px in a 40px tile, so they read as lines and not as a fill. */
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 60% 26% at 50% 100%, rgba(255,207,110,0.10) 0%, rgba(255,110,199,0.06) 45%, transparent 75%),
+    linear-gradient(180deg, transparent 72%, rgba(255,110,199,0.035) 72.2%, transparent 72.6%),
+    repeating-linear-gradient(90deg, rgba(255,110,199,0.03) 0 1px, transparent 1px 40px);
+}
+
+/* STROBE — club. True black, acid yellow, UV magenta, hard edges. The one
+   theme where the dim text is barely dim: high contrast is the point. */
+[data-theme="strobe"] {
+  --bg:            #000000;
+  --surface:       #0b0b0b;
+  --surface-2:     #141414;
+  --surface-3:     #1d1d1d;
+  --surface-4:     #282828;
+  --text:          #ffffff;
+  --text-dim:      #c2c2c2;
+  --text-faint:    #7c7c7c;
+  --border:        rgba(255,255,255,0.12);
+  --border-strong: rgba(255,255,255,0.26);
+  --gold:          #e8ff2e;
+  --gold-glow:     rgba(232,255,46,0.30);
+  --gold-dim:      rgba(232,255,46,0.13);
+  --accent-2:      #ff3df2;
+  --accent-2-dim:  rgba(255,61,242,0.17);
+  --radius:        3px;
+  --radius-sm:     2px;
+  --radius-xs:     1px;
+}
+html[data-theme="strobe"] body {
+  /* Two lasers crossing the top of the room and nothing else. */
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    linear-gradient(160deg, transparent 30%, rgba(232,255,46,0.05) 30.3%, transparent 30.8%),
+    linear-gradient(20deg, transparent 62%, rgba(255,61,242,0.05) 62.3%, transparent 62.8%);
+}
+
+/* Shop preview: the signed-in person, at swatch size. --------------------- */
+
+/* The avatar sits over an initial, so a photo that fails to load (or none at
+   all) leaves the letter rather than an empty grey blob. */
+.sw-me { position: relative; display: inline-block; line-height: 0; border-radius: 50%; }
+.sw-me .sw-init {
+  display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;
+  border-radius: 50%; line-height: 1;
+  font: 800 22px/1 var(--font-display); color: var(--bg);
+  background: linear-gradient(135deg, var(--gold), var(--accent-2));
+}
+.sw-me img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.sw-frame .sw-me { width: 58px; height: 58px; }
+
+/* Theme card: the first bar becomes you — avatar dot and name — so the tiny
+   app reads as your app in those colours. */
+.sw-th .sw-th-me { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sw-th .sw-th-me .sw-me { width: 16px; height: 16px; flex-shrink: 0; }
+.sw-th .sw-th-me .sw-init { font-size: 9px; color: #111; background: rgba(255,255,255,.85); }
+.sw-th .sw-th-me u {
+  text-decoration: none; font: 700 10px/1.1 var(--font-body); color: rgba(255,255,255,.9);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
