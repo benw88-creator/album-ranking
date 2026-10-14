@@ -2,6 +2,10 @@ import { test, expect, start } from './fixtures.mjs';
 
 // A crate with dated score history: twelve albums rated through this year,
 // one of them changed its mind. All local, all synthetic.
+// Replay is the day-five prize of a login run (ReplayGate), and these run
+// signed out, so the tests that exercise the open Replay unlock it first.
+const unlock = page => page.evaluate(() => { window.ReplayGate.unlocked = () => true; window.dispatchEvent(new Event('vinall:replay-gate')); });
+
 async function seedCrate(page) {
   await page.addInitScript(() => {
     const now = Date.now(), y0 = new Date(new Date().getFullYear(), 0, 2).getTime(), A = {};
@@ -19,6 +23,7 @@ async function seedCrate(page) {
 test('Replay home lists periods and the story moves, pauses and closes like a sheet', async ({ page }) => {
   await seedCrate(page);
   await start(page);
+  await unlock(page);
   await page.evaluate(() => goToView('replay'));
   await expect(page.locator('#rp-home .rp-hero-word')).toHaveText(String(new Date().getFullYear()));
   await expect(page.locator('#rp-home .rp-card').first()).toBeVisible();
@@ -52,6 +57,7 @@ test('Replay home lists periods and the story moves, pauses and closes like a sh
 
 test('nothing is invented: no ratings means an empty state, and the demo is marked', async ({ page }) => {
   await start(page);
+  await unlock(page);
   await page.evaluate(() => goToView('replay'));
   await expect(page.locator('#rp-home .rp-empty h3')).toHaveText('Nothing to replay yet');
   await page.locator('[data-rp-act="demo"]').click();
@@ -62,6 +68,7 @@ test('Replay fits a 375px phone with no horizontal overflow', async ({ page }) =
   await page.setViewportSize({ width: 375, height: 812 });
   await seedCrate(page);
   await start(page);
+  await unlock(page);
   await page.evaluate(() => goToView('replay'));
   await expect(page.locator('#rp-home .rp-card').first()).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
@@ -70,4 +77,13 @@ test('Replay fits a 375px phone with no horizontal overflow', async ({ page }) =
     await page.keyboard.press('ArrowRight');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
   }
+});
+
+test('locked until a five-day login streak, with the Spotify import and a demo on offer', async ({ page }) => {
+  await seedCrate(page);
+  await start(page);
+  await page.evaluate(() => goToView('replay'));
+  await expect(page.locator('#view-replay')).toContainText('Unlock on 5 day login streak');
+  await expect(page.locator('#view-replay')).toContainText(/Spotify/);
+  await expect(page.locator('#view-replay')).toContainText(/coming soon/i);
 });
