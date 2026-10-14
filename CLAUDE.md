@@ -6067,14 +6067,22 @@ and key repeat are ignored. `scripts/tests/recall.spec.mjs` covers it.
   `loading="lazy"`. The background refresh no longer blanks a feed you can see:
   it builds off-screen, and if you come back before it is ready the old feed and
   its state are restored rather than swapped under you.
-- **The Spin** runs on WAAPI keyframes: a 26px wind-back, a long deceleration and
-  an overshoot that settles back. **The overshoot (≤20px) plus jitter (≤36px)
-  stays inside half a tile (65px)**, so the needle never points at anything but
-  the server's prize — keep that sum under 65 if either changes. The needle flicks
-  per tile crossed (one computed-style read per frame), haptics tick on the slow
-  half, the window charges for Epic and up in the last ~1.1s, the winning tile
-  pops, and a Disc prize counts up to what landed. Reduced motion keeps the old
-  single transition.
+- **The Spin** winds up while `wallet_spin` answers: the strip draws back 30px
+  (`WIND`, at least `CHARGE_MS` 360ms, so a fast answer still reads as a press),
+  the needle and the button charge. Then WAAPI keyframes run 5,000ms: a launch,
+  a long deceleration, and a spring — past the winner by `OVER` (19.5px), short
+  by `UNDER` (3.9px), onto it. **`JITTER` (36.4px) plus the larger of those stays
+  inside half a tile (65px)**, so the needle never points at anything but the
+  server's prize — the module reports an issue if the constants ever break it.
+  Speed lines ride the fast stretch (one opacity track), the needle flicks per
+  tile crossed (one computed-style read per frame), haptics tick on the slow half
+  and on release, the window charges for Epic and up in the last ~1.1s. On
+  landing: the needle settles, the tile pops, a tier-coloured flare opens
+  *behind* the strip where the prize stopped (Rare and up), particles leave the
+  tile in tier colours (`TIER_COLORS`), the result pops by tier, and Legendary
+  and Mythic glow the screen edges (`.draw-edge`). Common gets six white dots
+  and nothing else. A Disc prize counts up to what landed. Reduced motion (system
+  or the Settings toggle) keeps the old single transition and none of the above.
 
 ## Every minigame has its own move
 
