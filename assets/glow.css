@@ -144,6 +144,113 @@
 @keyframes drawRaysIn { to { opacity: 1; } }
 .draw-result.in .dr-tier { animation: drTier 600ms cubic-bezier(.2,.8,.2,1) both; }
 @keyframes drTier { from { letter-spacing: .6em; opacity: 0; } }
+
+/* The wind-up, while the server answers: the strip draws back (script), the
+   needle charges and the window gathers light at its centre. Opacity and
+   transform only. */
+.draw-strip { position: relative; z-index: 1; }   /* above the flare, below the needle */
+.draw-window.priming .draw-needle { animation: needleCharge .18s ease-in-out infinite alternate; }
+@keyframes needleCharge { from { transform: scaleX(1); opacity: .7; } to { transform: scaleX(2.2); opacity: 1; } }
+.draw-window.priming::after {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse 34% 75% at 50% 50%, var(--gold-glow), transparent 72%);
+  animation: primeGlow 360ms ease-out forwards;
+}
+@keyframes primeGlow { to { opacity: 1; } }
+#draw-go { position: relative; }
+#draw-go.charging::after {
+  content: ''; position: absolute; inset: -4px; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--gold), 0 0 22px var(--gold-glow);
+  animation: goCharge .22s ease-in-out infinite alternate;
+}
+@keyframes goCharge { from { opacity: .25; } to { opacity: 1; } }
+
+/* Speed lines over the fast stretch; the script drives its opacity. */
+.draw-streak {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 11px, rgba(255,255,255,.07) 11px 12px),
+    linear-gradient(90deg, rgba(0,0,0,.45), transparent 26%, transparent 74%, rgba(0,0,0,.45));
+}
+
+/* The light behind the prize. Sits under the strip, so it shows in the gaps
+   and above and below the tile — behind it, not over it. The script puts its
+   centre where the prize stopped. Common gets none. */
+.draw-window.hit-rare      { --dc: 47,224,255; }
+.draw-window.hit-epic      { --dc: 196,107,255; }
+.draw-window.hit-legendary { --dc: 255,210,74; }
+.draw-window.hit-mythic    { --dc: 255,45,111; }
+.draw-flare {
+  position: absolute; left: 50%; top: 50%; width: 280px; height: 280px; margin: -140px 0 0 -140px;
+  z-index: 0; pointer-events: none; opacity: 0; border-radius: 50%;
+  background:
+    radial-gradient(closest-side, rgba(var(--dc, 255,255,255), .95), rgba(var(--dc, 255,255,255), .35) 40%, transparent 72%),
+    repeating-conic-gradient(rgba(var(--dc, 255,255,255), .55) 0 6deg, transparent 6deg 20deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000 30%, transparent);
+          mask-image: radial-gradient(closest-side, #000 30%, transparent);
+}
+.draw-flare::after {
+  content: ''; position: absolute; inset: 32%; border-radius: 50%; opacity: 0;
+  border: 2px solid rgba(var(--dc, 255,255,255), .9);
+}
+.draw-window.landed:is(.hit-rare, .hit-epic) .draw-flare { animation: drawFlare 900ms cubic-bezier(.2,.8,.3,1) forwards; }
+.draw-window.landed:is(.hit-legendary, .hit-mythic) .draw-flare { animation: drawFlareBig 1500ms cubic-bezier(.2,.8,.3,1) forwards; }
+.draw-window.landed:not(.hit-common) .draw-flare::after { animation: drawRing 640ms cubic-bezier(.2,.8,.3,1) forwards; }
+.draw-window.landed.hit-mythic .draw-flare {
+  background:
+    radial-gradient(closest-side, rgba(255,255,255,.95), rgba(255,45,111,.45) 40%, transparent 72%),
+    repeating-conic-gradient(rgba(255,45,111,.6) 0 6deg, rgba(34,227,255,.45) 6deg 12deg, transparent 12deg 22deg);
+}
+@keyframes drawFlare { 0% { opacity: 0; transform: scale(.3); } 22% { opacity: .85; } 100% { opacity: 0; transform: scale(1.25) rotate(25deg); } }
+@keyframes drawFlareBig {
+  0% { opacity: 0; transform: scale(.3); } 15% { opacity: 1; transform: scale(1.05); }
+  60% { opacity: .75; } 100% { opacity: 0; transform: scale(1.5) rotate(70deg); }
+}
+@keyframes drawRing { 0% { opacity: 1; transform: scale(.4); } 100% { opacity: 0; transform: scale(2.6); } }
+
+/* The edges of the screen, briefly, for the two tiers worth feeling outside
+   the reel. One fixed layer; its shadow paints once and only opacity moves. */
+.draw-edge {
+  position: fixed; inset: 0; z-index: 9998; pointer-events: none; opacity: 0;
+  animation: drawEdge 1300ms ease-out forwards;
+}
+.draw-edge.t-legendary { box-shadow: inset 0 0 90px 6px rgba(255,200,70,.55); }
+.draw-edge.t-mythic    { box-shadow: inset 0 0 110px 10px rgba(255,45,111,.6), inset 0 0 40px 2px rgba(34,227,255,.45); }
+@keyframes drawEdge { 0% { opacity: 0; } 14% { opacity: 1; } 45% { opacity: .8; } 100% { opacity: 0; } }
+
+/* The reveal, scaled by tier. Common keeps the plain rise. The shimmer has to
+   stay in the list for the top two — the shorthand replaces it (trap 2). */
+.draw-result.in:is(.tier-rare, .tier-epic) .dr-label { animation: drPop 520ms cubic-bezier(.34,1.56,.64,1) 60ms both; }
+.draw-result.in.tier-legendary .dr-label { animation: drawShimmer 2.4s linear infinite, drPopBig 680ms cubic-bezier(.34,1.56,.64,1) 90ms both; }
+.draw-result.in.tier-mythic .dr-label    { animation: drawShimmer 1.6s linear infinite, drPopBig 760ms cubic-bezier(.34,1.56,.64,1) 90ms both; }
+@keyframes drPop    { from { opacity: 0; transform: scale(.7); } }
+@keyframes drPopBig { from { opacity: 0; transform: scale(1.6); } }
+.draw-result:is(.tier-legendary, .tier-mythic) .dr-tier { padding: 6px 12px 6px calc(12px + .26em); border-radius: 999px; }
+.draw-result.tier-legendary .dr-tier { background: rgba(255,210,74,.14); box-shadow: inset 0 0 0 1px rgba(255,210,74,.5); }
+.draw-result.tier-mythic .dr-tier {
+  color: #fff; text-shadow: 0 0 10px #ff2d6f;
+  background: linear-gradient(90deg, rgba(255,45,111,.24), rgba(177,107,255,.2), rgba(34,227,255,.22));
+  box-shadow: inset 0 0 0 1px rgba(255,45,111,.6), 0 0 22px rgba(255,45,111,.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .draw-window.priming .draw-needle,
+  html:not([data-motion="full"]) .draw-window.priming::after,
+  html:not([data-motion="full"]) #draw-go.charging::after,
+  html:not([data-motion="full"]) .draw-window.landed .draw-flare,
+  html:not([data-motion="full"]) .draw-window.landed .draw-flare::after,
+  html:not([data-motion="full"]) .draw-edge,
+  html:not([data-motion="full"]) .draw-result.in .dr-label { animation: none !important; }
+}
+/* Motion set to reduced in Settings, whatever the system says. */
+html[data-motion="none"] .draw-window.priming .draw-needle,
+html[data-motion="none"] .draw-window.priming::after,
+html[data-motion="none"] #draw-go.charging::after,
+html[data-motion="none"] .draw-window.landed .draw-flare,
+html[data-motion="none"] .draw-window.landed .draw-flare::after,
+html[data-motion="none"] .draw-edge,
+html[data-motion="none"] .draw-result.in .dr-label { animation: none !important; }
+
 @media (prefers-reduced-motion: reduce) {
   html:not([data-motion="full"]) .draw-window.charge-mythic,
   html:not([data-motion="full"]) .draw-tile.dt-won,

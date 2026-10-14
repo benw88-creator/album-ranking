@@ -9582,7 +9582,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/you.css?v=1">
 <link rel="stylesheet" href="/assets/games.css?v=1">
 <link rel="stylesheet" href="/assets/store.css?v=1">
-<link rel="stylesheet" href="/assets/glow.css?v=3">
+<link rel="stylesheet" href="/assets/glow.css?v=4">
 <link rel="stylesheet" href="/assets/play.css?v=1">
 <link rel="stylesheet" href="/assets/cards.css?v=1">
 <link rel="stylesheet" href="/assets/foryou.css?v=2">
@@ -10673,8 +10673,10 @@ window.discAmt = function (n) {
       <span class="muted" id="draw-balance"></span></div>
     <div id="col-draw">
       <div class="draw-window" id="draw-window">
+        <div class="draw-flare" id="draw-flare"></div>
         <div class="draw-needle"></div>
         <div class="draw-strip" id="draw-strip"></div>
+        <div class="draw-streak" id="draw-streak"></div>
       </div>
 
       <div class="draw-result" id="draw-result"></div>
@@ -28929,10 +28931,37 @@ window.renderAdminStats = renderAdminStats;
   var TILE = 130;        // 120px wide + 2×5px margin, must match the CSS
   var STRIP_LEN = 70;
   var WIN_INDEX = 62;    // far enough in that it reads as a real run
-  var SPIN_MS = 5200;
+  var SPIN_MS = 5000;
+  /* The wind-up. While the server answers, the strip draws back WIND px
+     against the needle — tension you can see, spent on time the round trip
+     was costing anyway. CHARGE_MS is the shortest it may be, so a fast answer
+     still reads as a press and not a teleport. It replaces the 4.5% wind-back
+     that opened the old 5,200ms run, which is why the run is 5,000 now. */
+  var WIND = 30;
+  var CHARGE_MS = 360;
+  /* Where the strip may stop relative to the prize's centre. The needle must
+     never point at anything but the server's prize, so the worst case — jitter
+     plus the overshoot past it, or jitter plus the spring's one small swing
+     short — stays inside half a tile (65px). Change any of these and redo it. */
+  var JITTER = TILE * 0.28;                 // ±36.4
+  var OVER = Math.min(20, TILE * 0.15);     // 19.5 past
+  var UNDER = OVER * 0.2;                   // 3.9 short
+  if (JITTER + Math.max(OVER, UNDER) >= TILE / 2 && window.reportIssue) {
+    reportIssue('Draw overshoot can leave the prize tile', { jitter: JITTER, over: OVER });
+  }
 
   var items = null, busy = false, _tickRaf = 0;
   var BIG = { epic: 1, legendary: 1, mythic: 1 };
+  /* Particle colours per tier, the hues the tiles and the result already wear.
+     Common is white and few: it lands, it does not celebrate. */
+  var TIER_COLORS = {
+    common:    ['rgba(255,255,255,.8)', 'rgba(255,255,255,.45)'],
+    rare:      ['#2fe0ff', '#a8f2ff', '#ffffff'],
+    epic:      ['#c46bff', '#e9c6ff', '#7d5cff'],
+    legendary: ['#ffd24a', '#fff1c2', '#ff9a3c'],
+    mythic:    ['#ff2d6f', '#ffd24a', '#3dffab', '#22e3ff', '#b16bff']
+  };
+  function calm() { return !!(window.motionReduced && motionReduced()); }
 
   function el(id) { return document.getElementById(id); }
   function W() { return window.Wallet; }
@@ -29033,6 +29062,8 @@ window.renderAdminStats = renderAdminStats;
     var strip = el('draw-strip');
     if (strip.getAnimations) strip.getAnimations().forEach(function (a) { a.cancel(); });
     if (_tickRaf) { cancelAnimationFrame(_tickRaf); _tickRaf = 0; }
+    var streak = el('draw-streak');
+    if (streak && streak.getAnimations) streak.getAnimations().forEach(function (a) { a.cancel(); });
     strip.style.transition = 'none';
     strip.style.transform = 'translate3d(0,0,0)';
     el('draw-window').className = 'draw-window';
@@ -29188,8 +29219,9 @@ window.renderAdminStats = renderAdminStats;
        seconds of reel used to start with the button sitting there inert,
        which made the whole thing feel like it had not registered the press. */
     busy = true;
+    var still = calm();
     var go = el('draw-go');
-    go.classList.remove('arming'); void go.offsetWidth; go.classList.add('arming');
+    go.classList.remove('arming', 'charging'); void go.offsetWidth; go.classList.add('arming', 'charging');
     if (window.ripple) ripple(go);
     if (window.buzz) buzz('tap');
     go.disabled = true;
@@ -29203,12 +29235,28 @@ window.renderAdminStats = renderAdminStats;
        WIN_INDEX changes when the result lands. */
     var strip = el('draw-strip');
     strip.innerHTML = buildStrip(pool, weightedPick(pool)).map(tileHTML).join('');
-    el('draw-window').classList.add('spinning');
+    var wnd0 = el('draw-window');
+    if (!still) {
+      // Tension: the strip draws back against the needle while the server
+      // answers, and the window gathers light around it.
+      wnd0.classList.add('priming');
+      void strip.offsetWidth;
+      strip.style.transition = 'transform ' + CHARGE_MS + 'ms cubic-bezier(.45,0,.55,1)';
+      strip.style.transform = 'translate3d(' + WIND + 'px,0,0)';
+    } else {
+      wnd0.classList.add('spinning');
+    }
 
-    var res = await W().spin();
+    var res = (await Promise.all([
+      W().spin(),
+      still ? null : new Promise(function (ok) { setTimeout(ok, CHARGE_MS); })
+    ]))[0];
+    go.classList.remove('charging');
+    wnd0.classList.remove('priming');
     if (res.error) {
       busy = false;
-      el('draw-window').classList.remove('spinning');
+      wnd0.classList.remove('spinning');
+      strip.style.transform = 'translate3d(0,0,0)';
       go.textContent = spinLabel();
       paintBalance();
       el('draw-result').innerHTML = '<div class="dr-sub">' + esc(res.error) + '</div>';
@@ -29225,23 +29273,33 @@ window.renderAdminStats = renderAdminStats;
     // Land the winning tile under the needle, minus a few pixels of jitter so
     // it never stops perfectly centred twice running.
     var windowW = el('draw-window').offsetWidth;
-    var jitter = (Math.random() * 2 - 1) * (TILE * 0.28);
+    var jitter = (Math.random() * 2 - 1) * JITTER;
     var target = (WIN_INDEX * TILE) + (TILE / 2) - (windowW / 2) + jitter;
+    function at(x) { return 'translate3d(' + x + 'px,0,0)'; }
 
-    var reducedSpin = !!(window.motionReduced && motionReduced());
+    var reducedSpin = still;
+    wnd0.classList.add('spinning');
     if (!reducedSpin && strip.animate) {
-      /* The run as a physical object: a short wind-back, a launch, a long
-         deceleration, and an overshoot that settles back onto the winner.
-         The overshoot is capped so it never crosses into the next tile —
-         jitter (≤36px) plus overshoot (≤20px) stays inside half a tile — so
-         the needle never once points at anything but the server's prize. */
-      var over = Math.min(20, TILE * 0.15);
+      /* The run as a physical object: released from the wind-up (the strip is
+         sitting at +WIND already), a launch that reaches full speed within a
+         few hundred ms, a long deceleration, then a spring — past the winner,
+         a hair short, onto it. See JITTER/OVER/UNDER for why that can never
+         leave the prize's tile. */
       var anim = strip.animate([
-        { transform: 'translate3d(0,0,0)', easing: 'cubic-bezier(.35,0,.65,1)' },
-        { transform: 'translate3d(26px,0,0)', offset: 0.045, easing: 'cubic-bezier(.16,.62,.1,1)' },
-        { transform: 'translate3d(' + (-(target + over)) + 'px,0,0)', offset: 0.92, easing: 'cubic-bezier(.5,0,.25,1)' },
-        { transform: 'translate3d(' + (-target) + 'px,0,0)' }
+        { transform: at(WIND), easing: 'cubic-bezier(.22,.4,.08,1)' },
+        { transform: at(-(target + OVER)), offset: 0.9, easing: 'cubic-bezier(.45,0,.55,1)' },
+        { transform: at(-(target - UNDER)), offset: 0.965, easing: 'cubic-bezier(.45,0,.55,1)' },
+        { transform: at(-target) }
       ], { duration: SPIN_MS, fill: 'forwards' });
+      // Speed lines over the fast stretch only — one opacity track, no blur.
+      var streak = el('draw-streak');
+      if (streak && streak.animate) {
+        streak.animate([
+          { opacity: 0 }, { opacity: 0.9, offset: 0.07 }, { opacity: 0.55, offset: 0.3 },
+          { opacity: 0, offset: 0.55 }, { opacity: 0 }
+        ], { duration: SPIN_MS });
+      }
+      if (window.buzz) buzz('tap');   // the release
       anim.finished.then(function () {
         strip.style.transition = 'none';
         strip.style.transform = 'translate3d(' + (-target) + 'px,0,0)';
@@ -29280,6 +29338,16 @@ window.renderAdminStats = renderAdminStats;
       wnd.classList.add('landed', 'hit-' + (won.tier || 'common'));
       var wonTile = el('draw-strip').children[WIN_INDEX];
       if (wonTile) wonTile.classList.add('dt-won');
+      // The light behind the prize opens where the prize actually stopped —
+      // known from the arithmetic, so no layout read.
+      var flare = el('draw-flare');
+      if (flare) flare.style.left = (windowW / 2 - jitter) + 'px';
+      // The needle takes the hit and settles.
+      var ndl = wnd.querySelector('.draw-needle');
+      if (!still && ndl && ndl.animate) {
+        ndl.animate([{ transform: 'rotate(8deg)' }, { transform: 'rotate(-4deg)' }, { transform: 'rotate(1.5deg)' }, { transform: 'none' }],
+          { duration: 560, easing: 'cubic-bezier(.2,.7,.3,1)' });
+      }
       go.textContent = 'Open another';
       var r = el('draw-result');
       r.className = 'draw-result in tier-' + (won.tier || 'common');
@@ -29378,25 +29446,39 @@ window.renderAdminStats = renderAdminStats;
      there and is still right for the things it was built for — a milestone
      claimed, a war won, a week of streaks — which are achievements. */
 
+  /* A brief glow round the edges of the screen, for the two tiers that should
+     be felt outside the reel. One fixed layer, opacity only, gone in ~1.3s. */
+  function edgeGlow(tier) {
+    var g = document.createElement('div');
+    g.className = 'draw-edge t-' + tier;
+    document.body.appendChild(g);
+    setTimeout(function () { g.remove(); }, 1400);
+  }
+
   function applyFeedback(won) {
-    var wnd = el('draw-window');
-    if (won.tier === 'mythic') {
-      if (window.burst) burst(wnd, { count: 80, spread: 320 });
-      if (window.burst) setTimeout(function () { burst(el('draw-result'), { count: 46, spread: 240 }); }, 160);
-      if (window.buzz) buzz('big');
-    } else if (won.tier === 'legendary') {
-      if (window.burst) burst(wnd, { count: 42, spread: 220 });
-      if (window.burst) setTimeout(function () { burst(el('draw-result'), { count: 20, spread: 150 }); }, 160);
-      if (window.buzz) buzz('big');
-    } else if (won.tier === 'epic') {
-      if (window.burst) burst(wnd, { count: 22, spread: 150 });
-      if (window.buzz) buzz('big');
-    } else if (won.tier === 'rare') {
-      if (window.burst) burst(wnd, { count: 13, spread: 105 });
-      if (window.buzz) buzz('good');
+    var tier = won.tier || 'common';
+    if (window.buzz) buzz(tier === 'common' ? 'tap' : tier === 'rare' ? 'good' : 'big');
+    if (calm() || !window.burst) return;
+    // Particles leave the prize itself, in its own colours.
+    var from = el('draw-strip').children[WIN_INDEX] || el('draw-window');
+    var res = el('draw-result');
+    var c = TIER_COLORS[tier] || TIER_COLORS.common;
+    if (tier === 'mythic') {
+      burst(from, { count: 72, spread: 300, colors: c });
+      setTimeout(function () { burst(res, { count: 44, spread: 240, colors: c }); }, 160);
+      setTimeout(function () { burst(from, { count: 30, spread: 380, colors: c }); }, 340);
+      setTimeout(function () { if (window.buzz) buzz('good'); }, 380);
+      edgeGlow('mythic');
+    } else if (tier === 'legendary') {
+      burst(from, { count: 44, spread: 220, colors: c });
+      setTimeout(function () { burst(res, { count: 20, spread: 150, colors: c }); }, 160);
+      edgeGlow('legendary');
+    } else if (tier === 'epic') {
+      burst(from, { count: 24, spread: 150, colors: c });
+    } else if (tier === 'rare') {
+      burst(from, { count: 14, spread: 105, colors: c });
     } else {
-      if (window.burst) burst(wnd, { count: 8, spread: 70 });
-      if (window.buzz) buzz('tap');
+      burst(from, { count: 6, spread: 56, colors: c });
     }
   }
 
