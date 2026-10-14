@@ -1,0 +1,307 @@
+/* ================================================================
+   TODAY — the day at a glance, the part of the day you are in, the
+   card, and what is coming.
+
+   Loaded last, so these rules win over the older Today block inside
+   index.html by source order as well as by specificity (trap 1). Every
+   option rule is scoped to .today-block: .td-opt is also reused by the
+   report sheet (#report-reasons) and must not change shape there.
+
+   Motion: transform/scale/translate and opacity only, everything runs
+   once on arrival, nothing holds a transform on an element that hovers
+   or presses (trap 12 — `backwards`, never `both`), and nothing here
+   uses the `animation` shorthand on an element that is already animating
+   (trap 2).
+   ================================================================ */
+
+/* ---- header ---------------------------------------------------------- */
+.today-block .today-head { flex-wrap: nowrap; align-items: center; margin-bottom: var(--s3); }
+.today-block .today-title { min-width: 0; gap: var(--s2); }
+.today-titles { min-width: 0; }
+.today-titles h2 { line-height: 1.05; }
+.today-date {
+  font: 600 var(--t-xs)/1.3 var(--font-mono); letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-faint); margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.today-date:empty { display: none; }
+.td-date-s { display: none; }
+@media (max-width: 480px) { .td-date-l { display: none; } .td-date-s { display: inline; } }
+/* A card a thousand pixels wide is a banner, not something to answer. */
+@media (min-width: 900px) { .today-block { max-width: 820px; } }
+.today-block .today-head-right { flex-shrink: 0; gap: var(--s2); }
+
+/* ---- the day at a glance --------------------------------------------- */
+.today-progress {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 16px 12px 12px; margin-bottom: var(--s3);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.today-progress[hidden], .today-section[hidden], .today-next[hidden], .tp-sub[hidden] { display: none; }
+.tp-ring { position: relative; width: 46px; height: 46px; flex: none; }
+.tp-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+.tp-track, .tp-fill { fill: none; stroke-width: 4; }
+.tp-track { stroke: var(--surface-3); }
+.tp-fill {
+  stroke: var(--gold); stroke-linecap: round;
+  stroke-dasharray: 119.38; stroke-dashoffset: 119.38;
+  transition: stroke-dashoffset 640ms var(--ease), stroke 320ms ease;
+}
+.today-progress.is-done .tp-fill { stroke: var(--green); }
+.tp-n {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font: 700 15px/1 var(--font-mono); color: var(--text);
+}
+.tp-text { min-width: 0; }
+.tp-main { font-weight: 600; font-size: var(--t-body); line-height: 1.3; }
+.tp-sub { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+.tp-sub b { font-family: var(--font-mono); color: var(--text); font-weight: 700; }
+.tp-sub i { font-style: normal; color: var(--text-faint); margin: 0 7px; }
+
+/* `scale`, not `transform`: the svg inside owns its rotation. */
+.tp-ring.bump { animation: tpBump 420ms var(--ease); }
+.tp-ring.milestone { animation: tpMilestone 900ms var(--ease); }
+@keyframes tpBump { 0% { scale: 1; } 40% { scale: 1.16; } 100% { scale: 1; } }
+@keyframes tpMilestone { 0% { scale: 1; } 25% { scale: 1.3; } 55% { scale: .96; } 100% { scale: 1; } }
+
+/* ---- which part of the day this card is ------------------------------ */
+.today-section {
+  display: flex; align-items: center; gap: var(--s2);
+  margin: 0 2px 10px;
+  font: 600 var(--t-xs)/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-dim);
+}
+.ts-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ts-c, var(--text-faint)); flex: none; }
+.ts-kind { color: var(--text-faint); }
+.ts-kind::before { content: '·'; margin-right: var(--s2); }
+.today-section.ts-in { animation: tsIn 300ms var(--ease) backwards; }
+@keyframes tsIn { from { opacity: 0; translate: -6px 0; } }
+
+/* The same hues the cards wear, so the label and the card agree. `any`
+   keeps the neutral dot — the ordinary ask stays uncoloured everywhere. */
+.today-section[data-kind="receipt"], .tn-item[data-kind="receipt"]             { --ts-c: var(--c-violet); }
+.today-section[data-kind="rethink"], .tn-item[data-kind="rethink"]             { --ts-c: var(--c-cyan); }
+.today-section[data-kind="contradiction"], .tn-item[data-kind="contradiction"] { --ts-c: var(--c-pink); }
+.today-section[data-kind="rinsed"], .tn-item[data-kind="rinsed"]               { --ts-c: var(--c-lime); }
+.today-section[data-kind="abandoned"], .tn-item[data-kind="abandoned"]         { --ts-c: var(--c-blue); }
+.today-section[data-kind="revisit"], .tn-item[data-kind="revisit"]             { --ts-c: var(--c-cyan); }
+.today-section[data-kind="nostalgia"], .tn-item[data-kind="nostalgia"]         { --ts-c: var(--c-violet); }
+.today-section[data-kind="game"], .tn-item[data-kind="game"]                   { --ts-c: var(--c-lime); }
+
+/* ---- up next ----------------------------------------------------------- */
+.today-next { display: flex; align-items: center; gap: var(--s2); margin-top: var(--s3); padding: 0 2px; }
+.tn-label {
+  font: 600 var(--t-xs)/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-faint); margin-right: 2px;
+}
+.tn-item {
+  position: relative; width: 34px; height: 34px; flex: none; overflow: hidden;
+  display: grid; place-items: center; border-radius: 8px;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text-faint);
+  animation: tnIn 300ms var(--ease) backwards;
+}
+.tn-item:nth-of-type(2) { animation-delay: 50ms; }
+.tn-item:nth-of-type(3) { animation-delay: 100ms; }
+.tn-item img { width: 100%; height: 100%; object-fit: cover; opacity: .72; }
+.tn-item::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  background: var(--ts-c, transparent);
+}
+.tn-glyph { font-size: 13px; }
+.tn-more { font: 600 12px/1 var(--font-mono); color: var(--text-faint); margin-left: 2px; }
+@keyframes tnIn { from { opacity: 0; translate: 0 4px; } }
+
+/* ---- the card ---------------------------------------------------------- */
+.today-block .td-card { padding: 22px 20px 20px; margin-bottom: 0; }
+/* A coloured kind carries a faint wash of its own hue from the top. `any`
+   and the quiet card stay flat surface, exactly as the rule says. */
+.today-block .td-slot[data-kind]:not([data-kind="any"]):not([data-kind="quiet"]) .td-card {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--td-c, var(--gold)) 9%, var(--surface)) 0, var(--surface) 160px);
+  border-color: color-mix(in srgb, var(--td-c, var(--gold)) 24%, var(--border));
+}
+.today-block .td-kicker { font: 700 var(--t-xs)/1.2 var(--font-mono); letter-spacing: .08em; margin-bottom: 8px; }
+.today-block .td-line { color: var(--text-dim); font-size: 14px; margin-bottom: 16px; }
+.today-block .td-line b { color: var(--text); }
+
+.today-block .td-item { gap: 13px; margin-bottom: 16px; }
+.today-block .td-item img { width: 56px; height: 56px; border-radius: 10px; }
+.today-block .td-item-lg img { width: 76px; height: 76px; border-radius: 12px; }
+.today-block .td-item-lg .td-item-nm { font-family: var(--font-display); font-size: 19px; font-weight: 700; line-height: 1.2; }
+.today-block .td-item-lg .td-item-ar { font-size: 14px; margin-top: 2px; }
+.today-block .td-info-btn { width: 24px; height: 24px; font-size: 15px; }
+
+/* The sleeve is a play button (TodayPreview). It had no styles at all, so it
+   wore the browser's own button chrome. A square while it plays: a second
+   triangle over a playing clip would say "press to play". */
+.td-art-play {
+  position: relative; display: block; flex: none; line-height: 0;
+  padding: 0; border: 0; background: none; border-radius: 12px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.td-art-play:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.td-play-ico {
+  position: absolute; right: 5px; bottom: 5px; width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(10, 9, 8, .72); border: 1px solid rgba(255, 255, 255, .18);
+  transition: opacity var(--dur) ease;
+}
+.td-tri { width: 0; height: 0; margin-left: 2px; border-left: 8px solid #fff; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+.td-bars { display: none; width: 8px; height: 8px; border-radius: 1px; background: #fff; }
+.td-art-play.is-playing .td-tri { display: none; }
+.td-art-play.is-playing .td-bars { display: block; }
+.td-art-play.is-loading .td-play-ico { opacity: .55; }
+.td-art-play.no-clip .td-play-ico, .td-art-play.needs-tap .td-play-ico { border-color: var(--red); }
+
+.today-block .td-q {
+  font-size: clamp(20px, 5.4vw, 24px); line-height: 1.25; letter-spacing: -.01em;
+  margin: 2px 0 16px;
+}
+
+/* One-tap options as real targets: full-width rows on a phone, two columns
+   from 700px. "Other…" and "Not this one" sit together underneath, quieter. */
+.today-block .td-opts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+.today-block .td-opt {
+  min-height: 48px; padding: 12px 16px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: flex-start; text-align: left;
+  font-size: 15px; font-weight: 500; line-height: 1.25;
+  transition: background .14s, border-color .14s, opacity .24s ease, transform .1s var(--ease);
+}
+.today-block .td-opt:not(.td-other):not(.td-skip) { grid-column: 1 / -1; }
+.today-block .td-opt.td-other, .today-block .td-opt.td-skip {
+  min-height: 44px; justify-content: center; text-align: center;
+  font-size: 13px; background: transparent;
+}
+/* trap 12: the stagger held `transform` for ever with `both`, so the press
+   scale on .td-opt:active never once applied. The end keyframe is the
+   resting style, so `backwards` is all it needs. */
+.today-block .td-opts .td-opt { animation-fill-mode: backwards; }
+.today-block .td-opt:hover:not(:disabled) { background: var(--surface-3); }
+.today-block .td-opt:active:not(:disabled) { transform: scale(.97); }
+.today-block .td-opt:focus-visible { outline: 2px solid var(--td-c, var(--gold)); outline-offset: 2px; }
+
+@media (min-width: 700px) {
+  .today-block .td-opt:not(.td-other):not(.td-skip) { grid-column: auto; }
+  /* An odd count leaves the last real option on its own: let it span. */
+  .today-block .td-opt:not(.td-other):not(.td-skip):nth-child(odd):nth-last-child(3) { grid-column: 1 / -1; }
+}
+
+/* The answer lands: the chosen one takes the card's colour (gold for the
+   ordinary ask), the rest step back. */
+.today-block .td-opts:has(.chosen) .td-opt:not(.chosen) { opacity: .28; }
+.today-block .td-slot[data-kind]:not([data-kind="any"]):not([data-kind="quiet"]) .td-opt.chosen {
+  background: var(--td-c, var(--gold)); border-color: var(--td-c, var(--gold)); color: #0a0908;
+}
+
+.today-block .td-after { margin-top: 2px; }
+.today-block .td-saved { font-size: 15px; gap: 10px; flex-wrap: wrap; }
+.td-landed {
+  margin-left: auto; padding: 4px 10px; border-radius: 999px;
+  font: 700 12px/1.2 var(--font-mono); color: var(--gold); background: var(--gold-dim);
+  animation: tdLanded 420ms var(--ease) backwards;
+}
+@keyframes tdLanded { from { opacity: 0; translate: 0 5px; } }
+.today-block .td-note-btn { min-height: 36px; }
+
+/* Buttons on the non-question cards: real targets too. */
+.today-block .td-row { gap: 10px; }
+.today-block .td-go, .today-block .td-rethink-save, .td-keep, .td-find { min-height: 44px; padding: 10px 20px; font-size: 14px; }
+.today-block .td-dismiss { min-height: 40px; }
+.td-keep, .td-find {
+  border: none; border-radius: 999px; cursor: pointer;
+  background: var(--gold); color: #16120a; font-family: var(--font-body); font-weight: 700;
+  transition: transform .1s var(--ease), filter .14s;
+}
+.td-keep:hover, .td-find:hover { filter: brightness(1.08); }
+.td-keep:active, .td-find:active { transform: scale(.97); }
+.today-block .td-game-nm { font-size: 26px; }
+
+/* ---- the end of a visit ------------------------------------------------ */
+.td-done-top { display: flex; align-items: center; gap: 14px; margin-bottom: var(--s4); }
+.td-done-top .td-kicker { margin-bottom: 4px; }
+.td-done-mark {
+  width: 46px; height: 46px; flex: none; border-radius: 50%;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent);
+}
+.td-done-mark svg {
+  width: 24px; height: 24px; fill: none; stroke: var(--gold); stroke-width: 2.6;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 22; stroke-dashoffset: 0;
+  animation: tdDraw 520ms var(--ease) 160ms backwards;
+}
+@keyframes tdDraw { from { stroke-dashoffset: 22; } }
+.td-done-title, .td-start .td-done-title {
+  font-family: var(--font-display); font-size: clamp(19px, 5vw, 23px); font-weight: 700; line-height: 1.25;
+}
+.td-start .td-done-title { margin-bottom: 8px; }
+.td-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: var(--s2); margin-bottom: var(--s4); }
+.td-stat {
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; animation: tnIn 320ms var(--ease) backwards;
+}
+.td-stat:nth-child(2) { animation-delay: 60ms; }
+.td-stat:nth-child(3) { animation-delay: 120ms; }
+.td-stat b { display: block; font: 700 21px/1.1 var(--font-mono); color: var(--text); }
+.td-stat span { display: block; margin-top: 4px; font-size: 11px; line-height: 1.3; color: var(--text-dim); }
+.td-recap-h, .td-tomorrow-when {
+  font: 600 var(--t-xs)/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.td-recap-h { color: var(--text-faint); margin-bottom: 6px; }
+.td-recap-row { display: flex; align-items: center; gap: 11px; padding: 6px 0; }
+.td-recap-row + .td-recap-row { border-top: 1px solid var(--border); }
+.td-recap-row img, .td-recap-noart { width: 38px; height: 38px; border-radius: 7px; object-fit: cover; flex: none; background: var(--surface-3); }
+.td-recap-txt { min-width: 0; }
+.td-recap-a { display: block; font-weight: 600; font-size: 14px; }
+.td-recap-a::before { content: '“'; }
+.td-recap-a::after { content: '”'; }
+.td-recap-nm { display: block; font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.td-tomorrow {
+  display: flex; flex-direction: column; gap: 4px; margin-top: var(--s4);
+  padding: 12px 14px; border-radius: var(--radius-sm); border: 1px dashed var(--border-strong);
+  font-size: 13px; color: var(--text-dim); line-height: 1.4;
+}
+.td-tomorrow b { color: var(--text); }
+.td-tomorrow-when { color: var(--gold); }
+.td-done .td-row { margin-top: var(--s4); }
+.td-start .td-row { margin-top: 4px; }
+
+/* ---- loading ----------------------------------------------------------- */
+.td-skel { padding: 22px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.td-skel i { display: block; height: 12px; border-radius: 6px; background: var(--surface-2); margin-bottom: 12px; animation: tdSkel 1.2s ease-in-out infinite alternate; }
+.td-skel i:nth-child(1) { width: 34%; height: 10px; }
+.td-skel i:nth-child(2) { width: 82%; height: 20px; }
+.td-skel i:nth-child(3), .td-skel i:nth-child(4) { height: 44px; border-radius: 14px; margin-bottom: 8px; }
+@keyframes tdSkel { from { opacity: .55; } to { opacity: 1; } }
+
+/* ---- signed out -------------------------------------------------------- */
+.today-block #today-stream .empty { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+
+/* ---- phone ------------------------------------------------------------- */
+@media (max-width: 420px) {
+  .today-block .today-head-right .btn-mini, .today-block .today-auto { padding-left: 10px; padding-right: 10px; }
+  .today-block .td-card { padding: 20px 16px 18px; }
+  .today-progress { padding-right: 12px; }
+}
+
+/* ---- reduced motion: the light stays, the movement goes ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .tp-ring.bump,
+  html:not([data-motion="full"]) .tp-ring.milestone,
+  html:not([data-motion="full"]) .today-section.ts-in,
+  html:not([data-motion="full"]) .tn-item,
+  html:not([data-motion="full"]) .td-landed,
+  html:not([data-motion="full"]) .td-stat,
+  html:not([data-motion="full"]) .td-done-mark svg,
+  html:not([data-motion="full"]) .td-skel i { animation: none; }
+  html:not([data-motion="full"]) .tp-fill { transition: none; }
+}
+html[data-motion="none"] .tp-ring.bump,
+html[data-motion="none"] .tp-ring.milestone,
+html[data-motion="none"] .today-section.ts-in,
+html[data-motion="none"] .tn-item,
+html[data-motion="none"] .td-landed,
+html[data-motion="none"] .td-stat,
+html[data-motion="none"] .td-done-mark svg,
+html[data-motion="none"] .td-skel i { animation: none; }
+html[data-motion="none"] .tp-fill { transition: none; }

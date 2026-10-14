@@ -9587,6 +9587,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/cards.css?v=1">
 <link rel="stylesheet" href="/assets/foryou.css?v=2">
 <link rel="stylesheet" href="/assets/boards.css?v=1">
+<link rel="stylesheet" href="/assets/today.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -10245,14 +10246,16 @@ window.discAmt = function (n) {
 
     <!-- TODAY — the loop. First thing on the page, because everything else
          here is a record of what it already asked. -->
-    <div class="today-block">
+    <div class="today-block" id="today-block">
       <div class="today-head">
         <div class="today-title">
           <span class="today-spark" data-icon="sparkle"></span>
-          <h2>Today</h2>
+          <div class="today-titles">
+            <h2>Today</h2>
+            <div class="today-date" id="today-date"></div>
+          </div>
         </div>
         <div class="today-head-right">
-          <span class="today-count" id="today-count" style="display:none;"></span>
           <span class="today-hint" id="today-hint">Tap an answer</span>
           <!-- Undo lives up here rather than on the card. With auto-advance on,
                the card you want to take back has already gone by the time you
@@ -10266,7 +10269,22 @@ window.discAmt = function (n) {
           <button class="btn-mini" id="today-refresh">Refresh</button>
         </div>
       </div>
+      <!-- The day at a glance: answers against the day's five, the Discs that
+           actually LANDED from them (read back from the wallet, never
+           predicted), and the run of days. Painted by paintCount(). -->
+      <div class="today-progress" id="today-progress" hidden>
+        <div class="tp-ring" id="tp-ring" aria-hidden="true">
+          <svg viewBox="0 0 44 44"><circle class="tp-track" cx="22" cy="22" r="19"/><circle class="tp-fill" id="tp-fill" cx="22" cy="22" r="19"/></svg>
+          <span class="tp-n" id="tp-n">0</span>
+        </div>
+        <div class="tp-text" aria-live="polite">
+          <div class="tp-main" id="tp-main"></div>
+          <div class="tp-sub" id="tp-sub"></div>
+        </div>
+      </div>
+      <div class="today-section" id="today-section" hidden></div>
       <div id="today-stream"></div>
+      <div class="today-next" id="today-next" hidden></div>
     </div>
 
     <!-- Stats sit under Today, not over it. The comment above has always said
@@ -33869,6 +33887,12 @@ window.track = function (name, props) {
       if (r.error) return { error: r.error.message };
       _lore = _lore || {};
       _lore[answeredKey(item.kind, item.id, q.id)] = r.data;
+      // An upsert of a row already held (adding a note, answering a question
+      // that was once skipped) replaces it here too — appending a second copy
+      // counted one answer twice in "today".
+      _loreList = _loreList.filter(function (x) {
+        return !(x.item_kind === item.kind && x.item_id === item.id && x.question_id === q.id);
+      });
       _loreList.unshift(r.data);
       return { data: r.data };
     } catch (e) { return { error: String((e && e.message) || e) }; }
@@ -33901,30 +33925,104 @@ window.track = function (name, props) {
       return !r.skipped && r.choice && new Date(r.created_at).getTime() >= d0.getTime();
     }).length;
   }
+  /* ---- the day, at a glance ----------------------------------------------
+     Three facts and nothing invented. Answers against the day's five (a
+     shape for a visit, not a quota — the stack carries on past it). Discs
+     that LANDED from Today: the difference Wallet.syncAward actually read
+     back off the wallet, tallied per local day on this device, so once the
+     server's daily lore cap is hit the number simply stops moving instead of
+     promising Discs that were never paid. And the run of days with at least
+     one answer, counted from lore_answers itself. */
+  var GOAL = 5;
+  var TP_C = 2 * Math.PI * 19;           // the ring's circumference (r = 19)
+  var DISCS_KEY = 'crate_today_discs', GOAL_KEY = 'crate_today_goal';
+
+  function dayKey(t) {
+    var d = t != null ? new Date(t) : new Date();
+    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  }
+  function discsToday() {
+    try {
+      var o = JSON.parse(localStorage.getItem(DISCS_KEY) || 'null');
+      return o && o.day === dayKey() ? (o.n || 0) : 0;
+    } catch (e) { return 0; }
+  }
+  function addDiscs(g) {
+    if (!(g > 0)) return;
+    try { localStorage.setItem(DISCS_KEY, JSON.stringify({ day: dayKey(), n: discsToday() + g })); } catch (e) {}
+  }
+  // Consecutive local days with a real answer, ending today — or yesterday,
+  // so the run is still shown on a morning before the first answer.
+  function runDays() {
+    var days = {};
+    _loreList.forEach(function (r) { if (r && !r.skipped && r.choice) days[dayKey(r.created_at)] = 1; });
+    var d = new Date(); d.setHours(12, 0, 0, 0);
+    if (!days[dayKey(d)]) d.setDate(d.getDate() - 1);
+    var n = 0;
+    while (days[dayKey(d)]) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+  function todaysAnswers() {
+    var d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    var seen = {};
+    return _loreList.filter(function (r) {
+      if (!r || r.skipped || !r.choice || new Date(r.created_at).getTime() < d0.getTime()) return false;
+      var k = answeredKey(r.item_kind, r.item_id, r.question_id);
+      if (seen[k]) return false;
+      seen[k] = 1;
+      return true;
+    });
+  }
+
   function paintCount(bump) {
-    var el = document.getElementById('today-count');
-    if (!el) return;
-    var n = answeredToday();
-    if (!n) { el.style.display = 'none'; return; }
-    el.style.display = '';
-    // A run is worth naming. Three is where a session stops being a glance.
-    // The emoji is its own span so the container's flex `gap` actually
-    // separates it from the digits — squashed into one text string, letter-
-    // spacing and the mono font kerned the flame right up against the "1".
-    el.innerHTML = (n >= 3 ? '<span aria-hidden="true">🔥</span>' : '') + n + ' today';
-    if (bump) {
-      // Every fifth answer gets the heavier beat. The same small bump forever
-      // stops registering after about four of them, and the whole number that
-      // matters here is whether somebody answers a second question.
-      var milestone = n > 0 && n % 5 === 0;
-      el.classList.remove('bump', 'milestone');
-      void el.offsetWidth;
-      el.classList.add(milestone ? 'milestone' : 'bump');
-      if (milestone) {
-        if (window.burst) burst(el, { count: 18, spread: 95 });
-        if (window.buzz) buzz('big');
-      }
+    var box = document.getElementById('today-progress');
+    if (!box) return;
+    if (!on()) { box.hidden = true; return; }
+    box.hidden = false;
+    var n = answeredToday(), coins = discsToday(), run = runDays();
+    var fill = document.getElementById('tp-fill');
+    if (fill) fill.style.strokeDashoffset = (TP_C * (1 - Math.min(n, GOAL) / GOAL)).toFixed(2);
+    box.classList.toggle('is-done', n >= GOAL);
+    var num = document.getElementById('tp-n');
+    if (num) num.textContent = n;
+    var main = document.getElementById('tp-main');
+    if (main) main.textContent = n < GOAL
+      ? n + ' of ' + GOAL + ' answered today'
+      : (n === GOAL ? 'Today’s five, answered' : 'Today’s five, plus ' + (n - GOAL));
+    var sub = document.getElementById('tp-sub');
+    if (sub) {
+      var parts = [];
+      if (coins) parts.push('<b>+' + coins.toLocaleString('en-GB') + '</b> Discs landed');
+      if (run >= 2) parts.push('<b>' + run + '</b> days running');
+      sub.innerHTML = parts.join('<i aria-hidden="true">·</i>');
+      sub.hidden = !parts.length;
     }
+    if (bump) {
+      // Reaching the five gets the heavier beat, and so does every fifth after
+      // it. The same small bump forever stops registering after about four,
+      // and the number that matters here is whether somebody answers a second.
+      var ring = document.getElementById('tp-ring');
+      var milestone = n > 0 && n % GOAL === 0;
+      if (ring) {
+        ring.classList.remove('bump', 'milestone');
+        void ring.offsetWidth;
+        ring.classList.add(milestone ? 'milestone' : 'bump');
+        if (milestone && window.burst) burst(ring, { count: 18, spread: 95 });
+      }
+      if (milestone && window.buzz) buzz('big');
+    }
+  }
+
+  /* Hitting the five slots a "that is today done" card in straight after the
+     current one — once a day, stamped locally so a reload does not replay it.
+     The stack carries on behind it for anybody who wants more. */
+  function maybeGoal() {
+    if (answeredToday() < GOAL) return;
+    try {
+      if (localStorage.getItem(GOAL_KEY) === dayKey()) return;
+      localStorage.setItem(GOAL_KEY, dayKey());
+    } catch (e) { return; }
+    _queue.splice(_qi + 1, 0, { t: 'done' });
   }
 
   // Tap feedback for a chosen option: the ripple confirms the tap landed, the
@@ -34217,10 +34315,78 @@ window.track = function (name, props) {
       '<button class="td-dismiss" type="button">Not now</button></div></div>';
   }
 
+  /* What comes back soonest, from the two things that come back by
+     themselves: a receipt (45 days after an answer) and second thoughts (six
+     months after a score). Only ever something that will genuinely be in the
+     stack — no "see you tomorrow" over an empty pool. */
+  function tomorrowLine() {
+    var now = Date.now(), best = null;
+    function consider(at, what) {
+      if (!(at > now) || at - now > 7 * DAY) return;
+      if (!best || at < best.at) best = { at: at, what: what };
+    }
+    _loreList.forEach(function (r) {
+      if (r && !r.skipped && r.choice) consider(new Date(r.created_at).getTime() + 45 * DAY,
+        'Something you said about <b>' + esc2(r.item_name) + '</b> comes back.');
+    });
+    var al = albums();
+    Object.keys(al).forEach(function (k) {
+      var a = al[k];
+      if (!a || typeof a.score !== 'number') return;
+      var looked = Math.max(a.ratedAt || 0, a.savedAt || 0);
+      if (looked) consider(looked + RETHINK_AFTER, 'Second thoughts on <b>' + esc2(a.name) + '</b>.');
+    });
+    if (!best) return null;
+    var d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    var days = Math.floor((best.at - d0.getTime()) / DAY);
+    return { when: days < 1 ? 'Later today' : days === 1 ? 'Tomorrow' : 'In ' + days + ' days', what: best.what };
+  }
+
+  /* The end of a visit: rewarding rather than empty. What you did (the real
+     numbers), what you said (quoted verbatim, the same way receipts will
+     quote it back), and what is coming. `caughtUp` is the stack genuinely
+     running dry; otherwise this is the five landing and it can carry on. */
+  function doneCard(caughtUp) {
+    var n = answeredToday(), coins = discsToday(), run = runDays();
+    var stats = (n ? '<div class="td-stat"><b>' + n + '</b><span>answered</span></div>' : '') +
+      (coins ? '<div class="td-stat"><b>+' + coins.toLocaleString('en-GB') + '</b><span>Discs landed</span></div>' : '') +
+      (run >= 2 ? '<div class="td-stat"><b>' + run + '</b><span>days running</span></div>' : '');
+    var recap = todaysAnswers().slice(0, 3).map(function (r) {
+      return '<div class="td-recap-row">' +
+        (r.item_art ? '<img src="' + thumb(esc2(r.item_art), 160) + '" alt="" decoding="async">' : '<span class="td-recap-noart"></span>') +
+        '<div class="td-recap-txt"><span class="td-recap-a">' + esc2(r.choice) + '</span>' +
+        '<span class="td-recap-nm">' + esc2(r.item_name) + '</span></div></div>';
+    }).join('');
+    var tm = tomorrowLine();
+    if (!tm && !caughtUp) tm = { when: 'Tomorrow', what: 'A new stack from your crate.' };
+    var title = caughtUp
+      ? (n ? 'Nothing left to ask today.' : 'Rate a few more records and there will be something new to ask.')
+      : 'That is today done.';
+    return '<div class="td-card td-done">' +
+      '<div class="td-done-top">' +
+        '<span class="td-done-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span>' +
+        '<div><div class="td-kicker">' + (caughtUp ? 'All caught up' : 'Today’s five') + '</div>' +
+        '<div class="td-done-title">' + title + '</div></div>' +
+      '</div>' +
+      (stats ? '<div class="td-stats">' + stats + '</div>' : '') +
+      (recap ? '<div class="td-recap"><div class="td-recap-h">You said</div>' + recap + '</div>' : '') +
+      (tm ? '<div class="td-tomorrow"><span class="td-tomorrow-when">' + tm.when + '</span><span>' + tm.what + '</span></div>' : '') +
+      (caughtUp ? '' : '<div class="td-row"><button class="td-keep" type="button">Keep going</button></div>') +
+    '</div>';
+  }
+
+  // A brand-new account: nothing rated, so nothing to ask about yet.
+  function startCard() {
+    return '<div class="td-card td-start">' +
+      '<div class="td-kicker">Start here</div>' +
+      '<div class="td-done-title">Today asks about records you have rated.</div>' +
+      '<div class="td-line">Rate one and the first question turns up here.</div>' +
+      '<div class="td-row"><button class="td-find" type="button">Find a record</button></div>' +
+    '</div>';
+  }
+
   function quietCard() {
-    return '<div class="td-card td-quiet">' +
-      cardHead('All caught up', 'Rate a few more records and there will be something new to ask.') +
-      '</div>';
+    return Object.keys(albums()).length || Object.keys(songs()).length ? doneCard(true) : startCard();
   }
 
   /* THE CARD'S KIND IS ITS COLOUR, and that is the whole of the theming.
@@ -34242,6 +34408,7 @@ window.track = function (name, props) {
      and a sixth would forget. */
   function kindOf(entry) {
     if (!entry) return 'quiet';
+    if (entry.t === 'done') return 'done';
     if (entry.t === 'game') return 'game';
     if (entry.t === 'revisit') return 'revisit';
     if (entry.t === 'rethink') return 'rethink';
@@ -34250,6 +34417,7 @@ window.track = function (name, props) {
 
   function cardHTML(entry) {
     if (!entry) return quietCard();
+    if (entry.t === 'done') return doneCard(false);
     if (entry.t === 'game') return gameCard();
     if (entry.t === 'revisit') return revisitCard(entry.d);
     if (entry.t === 'rethink') return rethinkCard(entry.d);
@@ -34263,6 +34431,64 @@ window.track = function (name, props) {
 
   function stackEl() { return document.getElementById('today-stream'); }
 
+  /* Structure around the live card. Above it, which part of the day this is:
+     things from your past (they only exist because time has passed), things
+     about right now, or a break. Below it, the next few sleeves — a peek at
+     the depth of the stack, never the questions. Labels are flat names of
+     what the card is about; the card itself does the asking. */
+  var GROUP = {
+    receipt: 'past', rethink: 'past', nostalgia: 'past', contradiction: 'past', abandoned: 'past', revisit: 'past',
+    any: 'now', fresh: 'now', rinsed: 'now', gap: 'now', 'album-love': 'now',
+    game: 'break'
+  };
+  var GROUP_NAME = { past: 'From your past', now: 'Right now', 'break': 'A break' };
+  // Only for cards with no kicker of their own; the rest name themselves.
+  var KIND_NAME = {
+    nostalgia: 'Long held', contradiction: 'An old score', abandoned: 'Gone quiet',
+    any: 'From your crate', fresh: 'Just added', rinsed: 'Played a lot',
+    gap: 'Songs, no album', 'album-love': 'Songs, no album'
+  };
+
+  function paintAround(kind) {
+    var sec = document.getElementById('today-section');
+    var nx = document.getElementById('today-next');
+    var g = GROUP[kind];
+    if (sec) {
+      if (!g) { sec.hidden = true; }
+      else {
+        var html = '<span class="ts-dot" aria-hidden="true"></span><span class="ts-group">' + GROUP_NAME[g] + '</span>' +
+          (KIND_NAME[kind] ? '<span class="ts-kind">' + KIND_NAME[kind] + '</span>' : '');
+        sec.hidden = false;
+        sec.dataset.kind = kind;
+        // Animate only when the label actually changes — the same group twice
+        // running is the same place, not a new one.
+        if (sec._html !== html) {
+          sec.innerHTML = html;
+          sec._html = html;
+          sec.classList.remove('ts-in');
+          void sec.offsetWidth;
+          sec.classList.add('ts-in');
+        }
+      }
+    }
+    if (nx) {
+      var ahead = [];
+      for (var i = _qi + 1; i < _queue.length && ahead.length < 3; i++) {
+        if (_queue[i] && _queue[i].t !== 'done') ahead.push(_queue[i]);
+      }
+      var more = Math.max(0, _queue.length - _qi - 1 - ahead.length);
+      if (!ahead.length || !g) { nx.hidden = true; return; }
+      nx.hidden = false;
+      nx.innerHTML = '<span class="tn-label">Up next</span>' + ahead.map(function (e) {
+        var k = kindOf(e), it = e.d && e.d.item;
+        var inner = it && it.art
+          ? '<img src="' + thumb(esc2(it.art), 120) + '" alt="" decoding="async" loading="lazy">'
+          : '<span class="tn-glyph" aria-hidden="true">' + (k === 'game' ? '&#9654;' : '&#9834;') + '</span>';
+        return '<span class="tn-item" data-kind="' + k + '" title="' + esc2(it ? it.name : 'Something to play') + '">' + inner + '</span>';
+      }).join('') + (more ? '<span class="tn-more">+' + more + '</span>' : '');
+    }
+  }
+
   function mountCard(html, animate) {
     var host = stackEl();
     if (!host) return null;
@@ -34275,6 +34501,7 @@ window.track = function (name, props) {
     el.innerHTML = html;
     if (mountCard._kind) el.dataset.kind = mountCard._kind;
     host.appendChild(el);
+    paintAround(mountCard._kind);
 
     // Height has to be measured after the card is in the document, or the
     // container collapses and the page below snaps up mid-transition.
@@ -34403,6 +34630,13 @@ window.track = function (name, props) {
     var card = slot.querySelector('.td-card');
     if (!card) return;
 
+    var keep = slot.querySelector('.td-keep');
+    if (keep) keep.addEventListener('click', function () { advance(); });
+    var find = slot.querySelector('.td-find');
+    if (find) find.addEventListener('click', function () { if (window.goToView) goToView('foryou'); });
+    // The quiet/start card has no queue entry behind it.
+    if (!entry) return;
+
     var dismiss = slot.querySelector('.td-dismiss');
     if (dismiss) dismiss.addEventListener('click', function () { advance(); });
 
@@ -34473,7 +34707,18 @@ window.track = function (name, props) {
       after.style.display = 'block';
       sizeToSlot();
       paintCount(true);
-      if (window.Wallet && Wallet.syncAward) Wallet.syncAward('lore');
+      maybeGoal();
+      // The Disc figure is whatever the wallet says landed — read back, not
+      // predicted — so past the daily lore cap it simply does not appear.
+      if (window.Wallet && Wallet.syncAward) Promise.resolve(Wallet.syncAward('lore')).then(function (g) {
+        if (!(g > 0)) return;
+        addDiscs(g);
+        paintCount(false);
+        var st = slot.isConnected && slot.querySelector('.td-saved');
+        if (st && !st.querySelector('.td-landed')) {
+          st.insertAdjacentHTML('beforeend', '<span class="td-landed">+' + g.toLocaleString('en-GB') + ' Discs</span>');
+        }
+      }).catch(function () {});
 
       /* The card is answered, so the header Undo now has something to undo —
          and, crucially, something to put back.
@@ -34638,11 +34883,23 @@ window.track = function (name, props) {
     var stamp = new Date().toDateString();
     var host = stackEl();
     if (!host) return;
+    var dateEl = document.getElementById('today-date');
+    if (dateEl) {
+      // Long and short forms both rendered; CSS picks the one that fits
+      // beside the controls, so a phone never shows "WEDNESDAY 14…".
+      try {
+        var dn = new Date();
+        dateEl.innerHTML = '<span class="td-date-l">' + esc2(dn.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })) +
+          '</span><span class="td-date-s">' + esc2(dn.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })) + '</span>';
+      } catch (e) { dateEl.textContent = ''; }
+    }
 
     if (!on()) {
+      paintCount(false);   // hides the progress strip
+      paintAround(null);
       host.style.height = '';
       host.innerHTML = '<div class="empty"><span class="emoji">' + ICONS.sparkle +
-        '</span><h3>Today</h3><p>Log in to save your progress.</p>' +
+        '</span><h3>A few small questions a day</h3><p>About the records you have rated. Log in and your answers are kept.</p>' +
         '<button class="btn-primary" id="today-login" style="margin-top:8px;">Log in</button></div>';
       var b = document.getElementById('today-login');
       if (b) b.addEventListener('click', function () { Cloud.openAuth(); });
@@ -34651,7 +34908,7 @@ window.track = function (name, props) {
 
     if (!force && host.dataset.built === stamp && host.querySelector('.td-live')) return;
 
-    host.innerHTML = '<p class="reco-note">Having a look through your crate…</p>';
+    host.innerHTML = '<div class="td-skel" role="status" aria-label="Having a look through your crate…"><i></i><i></i><i></i><i></i></div>';
     host.style.height = '';
     await loadLore(force);
     // Listening data is optional: no import, no rows, and the two listening
