@@ -22,7 +22,8 @@
 :root {
   --arc-ease: cubic-bezier(.2, .8, .2, 1);
   --arc-spring: cubic-bezier(.34, 1.4, .64, 1);
-  --hue-recall: #ff4f9a; --hue-recall-2: #35e0ff;
+  /* Themed: the recall pair is the theme's pink and cyan slots. */
+  --hue-recall: var(--hue-3); --hue-recall-2: var(--hue-1);
 }
 
 /* ---- the arcade header ------------------------------------------------- */
@@ -43,12 +44,12 @@
 #drop-card      { --g: var(--c-violet); }
 #ew-card        { --g: var(--c-lime); }
 #war-card       { --g: var(--c-cyan); }
-#blitz-card     { --g: #ff8a3d; }
+#blitz-card     { --g: var(--hue-6); }
 #cover-card     { --g: var(--c-blue); }
-#coverx-card    { --g: #ff5a4f; }
-#tracklist-card { --g: #f5c842; }
-#year-card      { --g: #4fd18b; }
-#hl-card        { --g: #8b8cff; }
+#coverx-card    { --g: color-mix(in srgb, var(--hue-3) 55%, var(--hue-6)); }
+#tracklist-card { --g: var(--gold); }
+#year-card      { --g: color-mix(in srgb, var(--hue-4) 60%, var(--hue-1)); }
+#hl-card        { --g: var(--hue-7); }
 
 #games-grid.arcade .game-card {
   grid-column: span 4;
@@ -57,7 +58,7 @@
   min-height: 176px; padding: 22px; border-radius: 22px;
   background:
     radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--g) 16%, transparent), transparent 60%),
-    linear-gradient(180deg, #14111b, #0d0b12);
+    linear-gradient(180deg, var(--surface), var(--bg));
   border: 1px solid color-mix(in srgb, var(--g) 18%, rgba(255,255,255,.06));
   box-shadow: none; transform: none;
   transition: transform 420ms var(--arc-ease), border-color 300ms var(--arc-ease), box-shadow 420ms var(--arc-ease);
@@ -234,7 +235,7 @@ html[data-motion="none"] #games-grid.arcade .gc-art, html[data-motion="none"] #g
 #recall-modal .modal-panel {
   --rc: var(--hue-recall); --rc2: var(--hue-recall-2); --rc-dim: color-mix(in srgb, var(--hue-recall) 16%, transparent);
   max-width: 500px; padding: 26px 28px 26px; overflow: hidden; isolation: isolate;
-  background: radial-gradient(90% 55% at 50% 0%, #1b1022, transparent 70%), #0b0910;
+  background: radial-gradient(90% 55% at 50% 0%, color-mix(in srgb, var(--rc) 12%, var(--bg)), transparent 70%), var(--bg);
   border: 1px solid rgba(255,255,255,.07);
 }
 #recall-modal .rc-atmos { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
@@ -357,7 +358,7 @@ html[data-motion="none"] #games-grid.arcade .gc-art, html[data-motion="none"] #g
 #recall-modal .rc-answer.picked input { border-color: var(--rc2); box-shadow: 0 0 0 4px color-mix(in srgb, var(--rc2) 14%, transparent); }
 #recall-modal .rc-answer.picked .rc-key { color: #06222a; background: var(--rc2); border-color: var(--rc2); }
 #recall-modal .rc-answer.shake input { border-color: #ff6b6b; }
-#recall-modal .rc-sugg { top: calc(100% + 8px); background: #16121d; border-color: rgba(255,255,255,.1); border-radius: 16px; padding: 6px; box-shadow: 0 24px 50px -16px rgba(0,0,0,.9); }
+#recall-modal .rc-sugg { top: calc(100% + 8px); background: var(--surface-2); border-color: rgba(255,255,255,.1); border-radius: 16px; padding: 6px; box-shadow: 0 24px 50px -16px rgba(0,0,0,.9); }
 #recall-modal .rc-sug { min-height: 46px; padding: 10px 12px; border-radius: 10px; align-items: center; }
 #recall-modal .rc-sug + .rc-sug { border-top: 0; }
 #recall-modal .rc-sug span { font-weight: 600; }
@@ -417,16 +418,16 @@ html[data-motion="none"] #recall-modal .rc-wave i, html[data-motion="none"] #rec
 #game { --gh: var(--c-blue); }
 #drop-modal { --gh: var(--c-violet); }
 #ew-modal { --gh: var(--c-lime); }
-#blitz-modal { --gh: #ff8a3d; }
-#hl-modal { --gh: #8b8cff; }
+#blitz-modal { --gh: var(--hue-6); }
+#hl-modal { --gh: var(--hue-7); }
 #war-modal, #war-new-modal { --gh: var(--c-cyan); }
-#leaderboard-modal { --gh: #f5c842; }
+#leaderboard-modal { --gh: var(--gold); }
 :is(#game, #drop-modal, #ew-modal, #blitz-modal, #hl-modal, #war-modal, #war-new-modal, #leaderboard-modal) .modal-panel {
   isolation: isolate;
   background:
     radial-gradient(110% 55% at 0% 0%, color-mix(in srgb, var(--gh) 15%, transparent), transparent 62%),
     radial-gradient(80% 45% at 100% 100%, color-mix(in srgb, var(--gh) 8%, transparent), transparent 70%),
-    #0d0b12;
+    var(--bg);
   border: 1px solid color-mix(in srgb, var(--gh) 20%, rgba(255,255,255,.07));
 }
 :is(#game, #drop-modal, #ew-modal, #blitz-modal, #hl-modal, #war-modal, #war-new-modal, #leaderboard-modal) .modal-head { gap: 12px; margin-bottom: 20px; }
@@ -465,14 +466,14 @@ html[data-motion="none"] #recall-modal .rc-wave i, html[data-motion="none"] #rec
    ================================================================ */
 .shop-item-desc { font-size: 12.5px; line-height: 1.4; color: var(--text-dim); margin: 3px 0 4px; max-width: 34ch; }
 .shop-item-status { font: 600 11px/1 var(--font-mono); color: var(--text-dim); margin-left: 6px; }
-.boost-live { color: #f5c842; }
+.boost-live { color: var(--gold); }
 .shop-swatch .boost-x { display: grid; place-items: center; width: 100%; height: 100%; font: 800 17px/1 var(--font-display); color: #2a1a00; letter-spacing: -.04em; }
-.shop-swatch.boost-on { box-shadow: 0 0 0 2px #f5c842, 0 0 18px -2px rgba(245,200,66,.6); }
+.shop-swatch.boost-on { box-shadow: 0 0 0 2px var(--gold), 0 0 18px -2px color-mix(in srgb, var(--gold) 60%, transparent); }
 /* The header Disc chip while 2× is running: a small gold tag on its corner. */
-#shop-open-btn.boosted { position: relative; border-color: rgba(245,200,66,.7); }
+#shop-open-btn.boosted { position: relative; border-color: color-mix(in srgb, var(--gold) 70%, transparent); }
 #shop-open-btn.boosted::after {
   content: attr(data-boost); position: absolute; top: -7px; right: -7px; padding: 3px 5px; border-radius: 999px;
-  font: 800 9.5px/1 var(--font-display); color: #2a1a00; background: linear-gradient(135deg, #f5c842, #fff3c4);
+  font: 800 9.5px/1 var(--font-display); color: var(--accent-ink); background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 35%, #fff));
   box-shadow: 0 2px 8px rgba(0,0,0,.45);
 }
 

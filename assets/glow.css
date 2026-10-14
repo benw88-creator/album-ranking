@@ -5,7 +5,7 @@
 :root { --gs-spring: cubic-bezier(.34, 1.56, .64, 1); }
 
 .gs {
-  --gs-c: #f5c842;
+  --gs-c: var(--gold);
   position: relative; flex: 1 1 auto; min-width: 0; height: 56px;
   display: flex; align-items: center;
   touch-action: none; -webkit-user-select: none; user-select: none; cursor: grab;

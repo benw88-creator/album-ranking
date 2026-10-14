@@ -17,15 +17,15 @@
   'use strict';
 
   var GAMES = [
-    { g: 'cover',       name: 'Guess the Cover',  short: 'Cover',     hue: '#f5c842', artist: true, modes: [['artist', '']] },
-    { g: 'coverx',      name: 'Cover EXTREME',    short: 'EXTREME',   hue: '#ff5d73', artist: true, modes: [['artist', '']] },
-    { g: 'tracklist',   name: 'Guess from Tracklist', short: 'Tracklist', hue: '#7dd5ff', artist: true, modes: [['artist', '']] },
-    { g: 'year',        name: 'Guess the Year',   short: 'Year',      hue: '#c6ff5d', artist: true, modes: [['artist', '']] },
-    { g: 'blitz',       name: 'Cover Fire',       short: 'Cover Fire', hue: '#ff8a3d', modes: [['daily', 'Today’s Ten', 1], ['solo', 'Solo']] },
-    { g: 'recall',      name: 'Recall',           short: 'Recall',    hue: '#2fe0ff', modes: [['daily', 'Daily', 1], ['endless', 'Endless']] },
-    { g: 'drop',        name: 'Daily Drop',       short: 'Daily Drop', hue: '#85b7eb', modes: [['album', 'Album', 1], ['song', 'Song', 1]] },
-    { g: 'earworm',     name: 'Earworm',          short: 'Earworm',   hue: '#d98cff', modes: [['daily', 'Daily', 1]] },
-    { g: 'higherlower', name: 'Higher or Lower',  short: 'Higher/Lower', hue: '#4fb477', modes: [['streams', 'Streams']] }
+    { g: 'cover',       name: 'Guess the Cover',  short: 'Cover',     hue: 'var(--gold)', artist: true, modes: [['artist', '']] },
+    { g: 'coverx',      name: 'Cover EXTREME',    short: 'EXTREME',   hue: 'var(--hue-3)', artist: true, modes: [['artist', '']] },
+    { g: 'tracklist',   name: 'Guess from Tracklist', short: 'Tracklist', hue: 'var(--hue-1)', artist: true, modes: [['artist', '']] },
+    { g: 'year',        name: 'Guess the Year',   short: 'Year',      hue: 'var(--hue-4)', artist: true, modes: [['artist', '']] },
+    { g: 'blitz',       name: 'Cover Fire',       short: 'Cover Fire', hue: 'var(--hue-6)', modes: [['daily', 'Today’s Ten', 1], ['solo', 'Solo']] },
+    { g: 'recall',      name: 'Recall',           short: 'Recall',    hue: 'var(--hue-recall, var(--hue-3))', modes: [['daily', 'Daily', 1], ['endless', 'Endless']] },
+    { g: 'drop',        name: 'Daily Drop',       short: 'Daily Drop', hue: 'var(--hue-5)', modes: [['album', 'Album', 1], ['song', 'Song', 1]] },
+    { g: 'earworm',     name: 'Earworm',          short: 'Earworm',   hue: 'var(--hue-2)', modes: [['daily', 'Daily', 1]] },
+    { g: 'higherlower', name: 'Higher or Lower',  short: 'Higher/Lower', hue: 'var(--hue-7)', modes: [['streams', 'Streams']] }
   ];
   function gameOf(g) { for (var i = 0; i < GAMES.length; i++) if (GAMES[i].g === g) return GAMES[i]; return null; }
   function isDaily(g, m) { var x = gameOf(g); if (!x) return false; for (var i = 0; i < x.modes.length; i++) if (x.modes[i][0] === m) return !!x.modes[i][2]; return false; }
@@ -164,7 +164,7 @@
     opts = opts || {};
     var gm = gameOf(res.game) || {};
     if (res.error) {
-      host.innerHTML = '<div class="gb-res gb-res-off" style="--gb-c:' + (gm.hue || '#f5c842') + '">' +
+      host.innerHTML = '<div class="gb-res gb-res-off" style="--gb-c:' + (gm.hue || 'var(--gold)') + '">' +
         '<div class="gb-res-why">' + E(REASONS[res.error] || REASONS.off) + '</div>' +
         '<div class="gb-res-meta"><span>' + fmtMs(res.prior && res.prior.elapsed_ms || res.local_ms, true) + '</span></div>' +
         '<button type="button" class="gb-res-open">Leaderboard</button></div>';
@@ -177,7 +177,7 @@
       } else if (!res.score) {
         place = 'No score this time — nothing to rank.';
       }
-      host.innerHTML = '<div class="gb-res' + (res.pb && res.score ? ' gb-pb' : '') + '" style="--gb-c:' + (gm.hue || '#f5c842') + '">' +
+      host.innerHTML = '<div class="gb-res' + (res.pb && res.score ? ' gb-pb' : '') + '" style="--gb-c:' + (gm.hue || 'var(--gold)') + '">' +
         (res.pb && res.score ? '<div class="gb-pb-tag">New personal best</div>' : '') +
         '<div class="gb-res-score"><span class="gb-res-num">0</span><small>points</small></div>' +
         '<div class="gb-res-meta">' +

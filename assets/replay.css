@@ -35,12 +35,14 @@ body[data-section="replay"] { --section: var(--c-pink); --section-dim: var(--c-p
 /* ================================================================
    HOME
    ================================================================ */
-.rp-home { --p1: #3a1d4a; --p2: #b8432f; --p3: #f5c842; }
+/* Until a record's own artwork repaints it (applyPal), the home card wears
+   the equipped theme: its violet slot, its secondary and its accent. */
+.rp-home { --p1: color-mix(in srgb, var(--hue-2) 28%, var(--bg)); --p2: color-mix(in srgb, var(--accent-2) 75%, #000); --p3: var(--gold); }
 .rp-hero {
   position: relative; overflow: hidden; isolation: isolate;
   border-radius: 28px; min-height: 360px; padding: clamp(22px, 4vw, 44px);
   display: grid; align-content: end; gap: 14px; margin-bottom: var(--s5, 24px);
-  background: #0b0810; border: 1px solid rgba(255,255,255,.08);
+  background: color-mix(in srgb, var(--p1) 30%, var(--bg)); border: 1px solid rgba(255,255,255,.08);
   box-shadow: 0 40px 90px -50px color-mix(in srgb, var(--p2) 80%, transparent), inset 0 1px 0 rgba(255,255,255,.06);
   transition: --p1 1.2s var(--rp-ease), --p2 1.2s var(--rp-ease), --p3 1.2s var(--rp-ease);
 }
