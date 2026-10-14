@@ -9605,6 +9605,8 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/profile2.css?v=1">
 <link rel="stylesheet" href="/assets/today.css?v=1">
 <link rel="stylesheet" href="/assets/home2.css?v=1">
+<link rel="stylesheet" href="/assets/charades.css?v=1">
+<link rel="stylesheet" href="/assets/passport.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -10570,6 +10572,15 @@ window.discAmt = function (n) {
         <div class="gc-go">Challenge someone &rarr;</div>
       </div>
 
+      <h3 class="arc-label"><span>Party</span><small>one phone, a room full of people</small></h3>
+      <div class="game-card" id="charades-card">
+        <div class="cz-art" aria-hidden="true"><span class="cz-art-name">Queen</span><i class="cz-art-ring"></i><b>30</b><span class="cz-art-team"><i></i><i></i><i></i><i></i></span></div>
+        <span class="cz-kicker">Pass the phone &middot; 4+ players</span>
+        <h3><span>Artist</span> Charades</h3>
+        <p>No words. No humming. Thirty seconds to make your mates shout &ldquo;Snoop Dogg&rdquo;.</p>
+        <div class="gc-go" id="charades-card-go">Get the party going &rarr;</div>
+      </div>
+
       <h3 class="arc-label"><span>Daily</span></h3>
       <div class="game-card" id="drop-card">
         <div class="gc-art" aria-hidden="true"></div>
@@ -10792,6 +10803,9 @@ window.discAmt = function (n) {
        the story itself is #rp-story, a layer over everything. -->
   <section id="view-about" class="view" style="display:none;"><div id="ab-body" class="ab"></div></section>
   <section id="view-yourmusic" class="view" style="display:none;"><div id="ym-body" class="ym"></div></section>
+  <!-- MUSIC PASSPORT — assets/passport.js. Every artist you rate or play pins
+       a country, placed by MusicBrainz; never guessed. -->
+  <section id="view-passport" class="view" style="display:none;"><div id="pp-body" class="pp"></div></section>
 
   <section id="view-replay" class="view" style="display:none;">
     <div id="rp-home" class="rp-home"></div>
@@ -13891,6 +13905,7 @@ const views = {
   replay: document.getElementById('view-replay'),
   about: document.getElementById('view-about'),
   yourmusic: document.getElementById('view-yourmusic'),
+  passport: document.getElementById('view-passport'),
   'album-detail': document.getElementById('view-album-detail')
 };
 let lastListMode = 'home';
@@ -14034,6 +14049,7 @@ function setMode(mode, fromCode) {
   if (mode === 'replay' && window.Replay) window.Replay.renderHome();
   if (mode === 'about' && window.YouUI) YouUI.renderAbout();
   if (mode === 'yourmusic' && window.YouUI) YouUI.renderYourMusic();
+  if (mode === 'passport' && window.Passport) Passport.render();
   if (mode === 'home' && window.Replay) window.Replay.renderHomeCard();
   if (mode === 'home' && _changed && window.HomeStats) window.HomeStats.enter();
   if (_changed) restoreViewScroll(mode, _restoreY);
@@ -17896,7 +17912,7 @@ async function drawProfile(host,prof,isOwner,profileTok){
     '</div>'+
     mastersHtml(masters,isOwner,prof.username||'they')+
     doneHtml+
-    aboutYouHtml(albumsObj,songsObj,prof,isOwner)+
+    aboutYouHtml(albumsObj,songsObj,prof,isOwner)+(isOwner&&window.Passport?'<div class="prof-section-title">Music Passport</div>'+Passport.teaserHtml():'')+
     tasteMatchHtml(taste,prof.username||'they')+
     '<div class="prof-section-title">Top 3 albums</div>'+
     '<div class="top3" id="prof-top3">'+slots+'</div>'+
@@ -26208,7 +26224,7 @@ window.renderAdminStats = renderAdminStats;
   var GROUPS = [
     { key: 'you', tabs: [
       { mode: 'profile', label: 'Profile' }, { mode: 'replay', label: 'Replay' },
-      { mode: 'about', label: 'About you' }, { mode: 'yourmusic', label: 'Your music' },
+      { mode: 'about', label: 'About you' }, { mode: 'passport', label: 'Passport' }, { mode: 'yourmusic', label: 'Your music' },
       { mode: 'achievements', label: 'Achievements' }, { act: 'activity', label: 'Activity' } ] },
     { key: 'social', tabs: [
       { mode: 'people', label: 'People' }, { mode: 'grooves', label: 'Grooves' } ] }
@@ -27962,7 +27978,8 @@ window.renderAdminStats = renderAdminStats;
     drop: 'Daily Drop', earworm: 'Earworm', higherlower: 'Higher or Lower',
     cover: 'Guess the Cover', coverx: 'Cover EXTREME',
     tracklist: 'Guess from Tracklist', year: 'Guess the Year',
-    blitz: 'Cover Fire', recall: 'Recall', bidwar: 'Bid Wars'
+    blitz: 'Cover Fire', recall: 'Recall', bidwar: 'Bid Wars',
+    charades: 'Artist Charades'
   };
   window.GAME_LABELS = GAME_LABELS;
 
@@ -40650,4 +40667,7 @@ window.track = function (name, props) {
 <script src="/assets/comments.js?v=1" defer></script>
 <script src="/assets/boards.js?v=1"></script>
 <script src="/assets/play.js?v=2"></script>
+<script src="/assets/charades.js?v=1"></script>
+<script src="/assets/passport-core.js?v=1"></script>
+<script src="/assets/passport.js?v=1"></script>
 </html>

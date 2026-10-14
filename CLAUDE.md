@@ -6285,3 +6285,31 @@ the Rewards module (`rewardFor`, `LADDER`), `Wallet.dailyLogin`.
   wallet not loaded yet → locked, and `vinall:replay-gate` fires on load/change.
 - The economy moved: a first week is now 34,500 Discs + a record + Replay (was
   18,000 + a record), and day six alone is 25,000. Asked for explicitly.
+
+## Artist Charades and Music Passport (2026-10-14)
+
+**Artist Charades** — `assets/charades.js` / `charades.css`, `#charades-card` under
+a Party label in the Arcade, `charades` in `GAME_LABELS`. Pass-the-phone, two equal
+teams, 30-second turns, +1 / Skip / −1, rounds or first-to, sudden death on a tie,
+a round ends only when both teams have had a turn. The pool's level is how hard a
+NAME is to act (1 picture / 2 sounds-like / 3 needs a plan), never obscurity.
+Live game mirrored to sessionStorage (`vinall_charades_live`) so Back, a lock
+screen or a reload resumes it; players and settings in `vinall_charades_v1`.
+`.cz` is a `.modal` at z 199 so `ask()` sits above it. Pays no Discs, on purpose.
+
+**Music Passport** — `view-passport` (hub tab after About you, teasers on the
+profile and About you), `assets/passport-core.js` (pure; `node
+scripts/passport.selfcheck.mjs`, in `npm run check`), `assets/passport.js`,
+`assets/passport.css`, `assets/passport-world.json` (Natural Earth 1:50m,
+pre-projected Equal Earth, built by `scripts/passport/world.mjs`) and
+`assets/passport-seed.json` (built by `scripts/passport/seed.mjs`).
+- **Origins come from MusicBrainz, never a guess**: `country`, or `area` when it is
+  a Country; exact name or alias only; two equal matches in two countries are
+  settled by a rated record's release group or left unplaced (and listed).
+- Browser asks MusicBrainz directly (CORS `*`) at 1 req/1.1s, cached for good in
+  `vinall_origins_v1` (public facts, survives account switch); misses retried
+  after 30 days. The seed carries common artists so the map lights at once.
+- "Where next" artists ship only if the seed script's MusicBrainz lookup places
+  them in that country — it dropped e.g. Rihanna (MB: US) from Barbados.
+- Seen stamps: `crate_passport_v1`, merged never replaced (trap 9), local only.
+- Windows has no flag emoji: `flag()` draws a code badge there.
