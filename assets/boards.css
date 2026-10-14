@@ -21,7 +21,7 @@
 /* ---- the results card ---- */
 .gb-slot:empty { display: none; }
 .gb-res {
-  --gb-c: #f5c842;
+  --gb-c: var(--gold);
   position: relative; overflow: hidden; margin: 14px auto 4px; max-width: 360px; padding: 16px 16px 14px;
   border-radius: 18px; text-align: center;
   background: linear-gradient(160deg, color-mix(in srgb, var(--gb-c) 14%, transparent), rgba(255,255,255,.03) 60%);
@@ -62,7 +62,7 @@
 @keyframes gbTag { from { opacity: 0; transform: scale(.6); } }
 
 /* ---- the sheet ---- */
-#leaderboard-modal { --gb-c: #f5c842; }
+#leaderboard-modal { --gb-c: var(--gold); }
 .gb-panel { max-width: 560px; display: flex; flex-direction: column; max-height: min(92vh, 92dvh); overflow: hidden; padding-bottom: 0; }
 .gb-head h2 { font: 800 var(--t-h2, 22px)/1.1 var(--font-display); letter-spacing: -.03em; margin: 0; }
 .gb-head p { margin: 4px 0 12px; color: var(--text-dim); font-size: 12.5px; }

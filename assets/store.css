@@ -24,7 +24,7 @@ button.rw-chip:hover { border-color: rgba(255,255,255,.22); background: rgba(255
 .rw-chip-boost { color: #2a1c00; background: var(--gold); border-color: var(--gold); font-weight: 600; }
 .rw-chip-boost b { color: inherit; }
 .rw-chip-ice { color: #bfe3ff; border-color: rgba(94,184,255,.35); background: rgba(94,184,255,.08); }
-.rw-chip-pick { color: #ff8fb4; border-color: rgba(255,45,111,.45); background: rgba(255,45,111,.1); }
+.rw-chip-pick { color: color-mix(in srgb, var(--hue-3) 70%, #fff); border-color: color-mix(in srgb, var(--hue-3) 45%, transparent); background: color-mix(in srgb, var(--hue-3) 10%, transparent); }
 
 /* ---- Shop: the balance ------------------------------------------------ */
 #view-rewards > .section-head { margin-bottom: 0; }
@@ -79,7 +79,7 @@ button.rw-chip:hover { border-color: rgba(255,255,255,.22); background: rgba(255
 }
 .st-cats button:hover { color: var(--text); }
 .st-cats button em { font: 500 10.5px/1 var(--font-mono); font-style: normal; color: var(--text-faint); }
-.st-cats button[aria-selected="true"] { background: var(--gold); color: #1c1300; font-weight: 600; }
+.st-cats button[aria-selected="true"] { background: var(--btn-bg); color: var(--btn-ink); font-weight: 600; }
 .st-cats button[aria-selected="true"] em { color: inherit; opacity: .65; }
 
 /* ---- Shop: product cards ---------------------------------------------- */

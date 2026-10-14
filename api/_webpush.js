@@ -19,6 +19,7 @@
 // `node scripts/vapid-keys.mjs` prints. VAPID_SUBJECT is a mailto: or https:.
 
 import crypto from 'node:crypto';
+import { pushEndpoint } from './_push-endpoint.js';
 
 export const b64u = {
   enc: (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
@@ -74,10 +75,13 @@ export function encrypt(payload, sub, _salt, _ephemeral) {
 // Returns the push service's status: 201 sent, 404/410 the subscription is
 // dead and should be deleted, anything else is somebody else's bad minute.
 export async function sendPush(sub, data, keys, subject) {
-  const r = await fetch(sub.endpoint, {
+  const endpoint = pushEndpoint(sub.endpoint);
+  const r = await fetch(endpoint, {
     method: 'POST',
+    redirect: 'error',
+    signal: AbortSignal.timeout(8000),
     headers: {
-      Authorization: vapidAuth(sub.endpoint, keys, subject),
+      Authorization: vapidAuth(endpoint, keys, subject),
       'Content-Encoding': 'aes128gcm',
       'Content-Type': 'application/octet-stream',
       TTL: '86400',

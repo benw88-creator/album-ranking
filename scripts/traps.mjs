@@ -14,6 +14,10 @@ const inComment = i => html.lastIndexOf('/*', i) > html.lastIndexOf('*/', i)
   || /^\s*\/\//.test(html.slice(html.lastIndexOf('\n', i) + 1, i));
 const fails = [];
 const fail = (trap, msg) => fails.push(`[${trap}] ${msg}`);
+for (const file of ['index.html', 'CLAUDE.md']) {
+  if (/^(?:<<<<<<<(?: |$)|=======$|>>>>>>>(?: |$))/m.test(fs.readFileSync(path.join(root, file), 'utf8')))
+    fail('merge', `${file} contains unresolved merge markers`);
+}
 
 // 11. Vercel Hobby: a 13th function rejects the WHOLE deploy.
 const routes = fs.readdirSync(path.join(root, 'api')).filter(f => f.endsWith('.js') && !f.startsWith('_'));

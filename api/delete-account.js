@@ -14,6 +14,32 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.s
 
 import { cors } from './_cors.js';
 
+async function removeAvatars(userId, service) {
+  const headers = { apikey: service, Authorization: 'Bearer ' + service, 'Content-Type': 'application/json' };
+  // Delete each page before listing again at offset zero. A fixed limit used
+  // to leave files behind, and storage errors were incorrectly called success.
+  for (let page = 0; page < 20; page++) {
+    const list = await fetch(SUPABASE_URL + '/storage/v1/object/list/avatars', {
+      method: 'POST', headers, signal: AbortSignal.timeout(8000),
+      body: JSON.stringify({ prefix: userId + '/', limit: 100, offset: 0 }),
+    });
+    if (!list.ok) throw new Error('Avatar listing failed');
+    const files = await list.json();
+    if (!Array.isArray(files)) throw new Error('Invalid avatar listing');
+    if (!files.length) return;
+    const names = files.map(f => {
+      if (!f || typeof f.name !== 'string' || !f.name || /[\\/]/.test(f.name) || f.name === '.' || f.name === '..') throw new Error('Invalid avatar file');
+      return userId + '/' + f.name;
+    });
+    const del = await fetch(SUPABASE_URL + '/storage/v1/object/avatars', {
+      method: 'DELETE', headers, signal: AbortSignal.timeout(8000),
+      body: JSON.stringify({ prefixes: names }),
+    });
+    if (!del.ok) throw new Error('Avatar removal failed');
+  }
+  throw new Error('Avatar cleanup needs another attempt');
+}
+
 export default async function handler(req, res) {
   // Answers the preflight and stops. Must be first: the method checks below
   // would 405 an OPTIONS, and three of these routes have one.
@@ -47,6 +73,10 @@ export default async function handler(req, res) {
   if (!userId) { res.status(401).json({ error: 'Not signed in' }); return; }
 
   try {
+    // Storage first: retain the login and rows on failure so the person can
+    // retry. Never report account deletion while a public avatar survives.
+    try { await removeAvatars(userId, SERVICE); }
+    catch (e) { res.status(503).json({ error: 'Could not remove your avatar files. Your account is still active; please try again.' }); return; }
     // Rows first, as the user, so RLS is still the thing deciding what may go.
     const purge = await fetch(SUPABASE_URL + '/rest/v1/rpc/delete_my_data', {
       method: 'POST',
@@ -58,33 +88,6 @@ export default async function handler(req, res) {
       res.status(500).json({ error: 'Could not remove your data', detail: t.slice(0, 200) });
       return;
     }
-
-    // The avatar file. delete_my_data() only clears rows, so before this the
-    // uploaded image outlived the account it belonged to — a photo, under
-    // Apple's own data types, sitting in a public bucket with nobody left to
-    // remove it. Files live at "<user id>/avatar.<ext>", so the whole folder
-    // goes. Best-effort: a storage hiccup must not strand a half-deleted
-    // account, and the rows are already gone by here.
-    try {
-      const ls = await fetch(SUPABASE_URL + '/storage/v1/object/list/avatars', {
-        method: 'POST',
-        headers: { apikey: SERVICE, Authorization: 'Bearer ' + SERVICE, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prefix: userId + '/', limit: 100 }),
-      });
-      if (ls.ok) {
-        const files = await ls.json();
-        const names = (Array.isArray(files) ? files : [])
-          .map((f) => f && f.name).filter(Boolean)
-          .map((n) => userId + '/' + n);
-        if (names.length) {
-          await fetch(SUPABASE_URL + '/storage/v1/object/avatars', {
-            method: 'DELETE',
-            headers: { apikey: SERVICE, Authorization: 'Bearer ' + SERVICE, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prefixes: names }),
-          });
-        }
-      }
-    } catch (e) { /* the account still goes */ }
 
     // Then the login itself, which needs the service role.
     const del = await fetch(SUPABASE_URL + '/auth/v1/admin/users/' + userId, {

@@ -2,8 +2,9 @@
    MORE THEMES (2026-10-14) — ..._20261014150000_more_themes.sql prices them.
 
    Same contract as the themes in index.html: repaint the tokens and nothing
-   else. NO theme touches --font-display (trap: one definition, on :root), the
-   fixed identity hues (--c-*) or the score colours (--red/--yellow/--green).
+   else. NO theme touches --font-display (trap: one definition, on :root) or
+   the score colours (--red/--yellow/--green). Since 2026-10-14 each theme
+   DOES set --hue-1..7, the identity slots behind --c-*, in its own family.
    Each one also owns a ground texture on body, written with the section wash
    kept as its first layer so the page still changes temperature between tabs.
 
@@ -11,34 +12,10 @@
    against --surface-2 in every theme here. No motion anywhere in this file.
    ========================================================================== */
 
-/* REEL TO REEL — warm analogue tape. Brown-black, cream, amber and oxide. */
-[data-theme="reel"] {
-  --bg:            #120d08;
-  --surface:       #1c150e;
-  --surface-2:     #251c13;
-  --surface-3:     #302419;
-  --surface-4:     #3d2e20;
-  --text:          #f6ead6;
-  --text-dim:      #c4ad8c;
-  --text-faint:    #85715a;
-  --border:        rgba(246,234,214,0.08);
-  --border-strong: rgba(246,234,214,0.17);
-  --gold:          #e9a84b;
-  --gold-glow:     rgba(233,168,75,0.26);
-  --gold-dim:      rgba(233,168,75,0.13);
-  --accent-2:      #d2593c;
-  --accent-2-dim:  rgba(210,89,60,0.16);
-  --radius:        14px;
-  --radius-sm:     8px;
-  --radius-xs:     5px;
-}
-html[data-theme="reel"] body {
-  /* Oxide tape: fine horizontal grain under a warm lamp. */
-  background-image:
-    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
-    radial-gradient(ellipse 80% 45% at 50% 0%, rgba(233,168,75,0.07) 0%, transparent 70%),
-    repeating-linear-gradient(0deg, rgba(246,234,214,0.018) 0 1px, transparent 1px 3px);
-}
+/* REEL TO REEL — RETIRED from sale 2026-10-14 (THEMES.reel.retired). It was
+   brown-black with amber and oxide red: Soul Train with sharper corners, and
+   the fourth warm-gold skin in the shop. Anybody who owns or wears it keeps
+   it and sees Soul Train's tokens, which are aliased below. */
 
 /* CHROME FROST — cold. Blue-steel ground, ice and polished chrome. */
 [data-theme="frost"] {
@@ -60,6 +37,14 @@ html[data-theme="reel"] body {
   --radius:        12px;
   --radius-sm:     7px;
   --radius-xs:     4px;
+  /* identity hues, in this skin's own family */
+  --hue-1: #a9e5ff;
+  --hue-2: #b9b4ff;
+  --hue-3: #d6e2f0;
+  --hue-4: #7fe3d0;
+  --hue-5: #6aa8ff;
+  --hue-6: #c4cbe2;
+  --hue-7: #94c8ff;
 }
 html[data-theme="frost"] body {
   /* A cold sheen raked across the top, like light off a chrome rim. */
@@ -86,6 +71,14 @@ html[data-theme="frost"] body {
   --gold-dim:      rgba(216,180,94,0.13);
   --accent-2:      #6fcf8e;
   --accent-2-dim:  rgba(111,207,142,0.15);
+  /* identity hues, in this skin's own family */
+  --hue-1: #6fcf8e;
+  --hue-2: #b5d66b;
+  --hue-3: #d8b45e;
+  --hue-4: #3fbf7f;
+  --hue-5: #5fb3a1;
+  --hue-6: #e0a85a;
+  --hue-7: #8fd9b0;
 }
 html[data-theme="canopy"] body {
   /* Dappled light: a few soft pools rather than one wash. */
@@ -97,7 +90,7 @@ html[data-theme="canopy"] body {
 }
 
 /* SOUL TRAIN — 1970s. Chocolate, mustard, rust, everything rounded. */
-[data-theme="soul"] {
+[data-theme="soul"], [data-theme="reel"] {
   --bg:            #150b05;
   --surface:       #20120a;
   --surface-2:     #2b190e;
@@ -116,8 +109,16 @@ html[data-theme="canopy"] body {
   --radius:        24px;
   --radius-sm:     14px;
   --radius-xs:     9px;
+  /* identity hues, in this skin's own family */
+  --hue-1: #f0b52f;
+  --hue-2: #e07b3f;
+  --hue-3: #d0582a;
+  --hue-4: #b5a642;
+  --hue-5: #c98a5a;
+  --hue-6: #ff9a3d;
+  --hue-7: #d4a86a;
 }
-html[data-theme="soul"] body {
+html[data-theme="soul"] body, html[data-theme="reel"] body {
   /* A sunburst rising from below the fold, faint enough to be felt. */
   background-image:
     radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
@@ -145,6 +146,14 @@ html[data-theme="soul"] body {
   --radius:        4px;
   --radius-sm:     3px;
   --radius-xs:     2px;
+  /* identity hues, in this skin's own family */
+  --hue-1: #4b97ff;
+  --hue-2: #8fb4ff;
+  --hue-3: #ff6b4a;
+  --hue-4: #4fd1c5;
+  --hue-5: #efe9d8;
+  --hue-6: #ffb04a;
+  --hue-7: #6c7dff;
 }
 html[data-theme="bop"] body {
   /* Square corners and one hard block of colour, like a 1950s sleeve. */
@@ -172,6 +181,14 @@ html[data-theme="bop"] body {
   --accent-2:      #f0d6a6;
   --accent-2-dim:  rgba(240,214,166,0.14);
   --radius:        20px;
+  /* identity hues, in this skin's own family */
+  --hue-1: #b98cff;
+  --hue-2: #e08cff;
+  --hue-3: #ff8cc6;
+  --hue-4: #f0d6a6;
+  --hue-5: #8ca8ff;
+  --hue-6: #ffb08c;
+  --hue-7: #c9a6ff;
 }
 html[data-theme="velvet"] body {
   /* Velvet nap: light pooling in the middle, falling off at every edge. */
@@ -198,6 +215,14 @@ html[data-theme="velvet"] body {
   --gold-dim:      rgba(255,207,110,0.14);
   --accent-2:      #ff6ec7;
   --accent-2-dim:  rgba(255,110,199,0.17);
+  /* identity hues, in this skin's own family */
+  --hue-1: #6ee7ff;
+  --hue-2: #b18cff;
+  --hue-3: #ff6ec7;
+  --hue-4: #ffcf6e;
+  --hue-5: #ff9d6e;
+  --hue-6: #ff8a5c;
+  --hue-7: #9d8cff;
 }
 html[data-theme="vapor"] body {
   /* The sun on the horizon and the grid running away under it. Grid lines
@@ -230,6 +255,14 @@ html[data-theme="vapor"] body {
   --radius:        3px;
   --radius-sm:     2px;
   --radius-xs:     1px;
+  /* identity hues, in this skin's own family */
+  --hue-1: #e8ff2e;
+  --hue-2: #ff3df2;
+  --hue-3: #ff2e7e;
+  --hue-4: #b4ff2e;
+  --hue-5: #2ee8ff;
+  --hue-6: #ffb02e;
+  --hue-7: #9b5cff;
 }
 html[data-theme="strobe"] body {
   /* Two lasers crossing the top of the room and nothing else. */
@@ -261,4 +294,56 @@ html[data-theme="strobe"] body {
 .sw-th .sw-th-me u {
   text-decoration: none; font: 700 10px/1.1 var(--font-body); color: rgba(255,255,255,.9);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---- The theme shop: compact, and the preview is the description -------
+
+   The sentence under each theme ("Plum dusk, hot orange, pink neon edge") is
+   gone: the card shows the theme, so describing it was the caption explaining
+   the caption. What is left is the preview, the name, the price and the
+   owned/equipped state, on a tighter grid.
+
+   The mini app inside the swatch carries data-theme="<key>", so the theme's
+   own token block paints it — background, surface, accent, secondary and the
+   five identity hues along the bottom of its card. It is the real theme at
+   swatch size, not a hand-picked second copy of its colours. */
+#shop-list[data-cat="themes"] { grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 12px; }
+#shop-list[data-cat="themes"] .shop-item { border-radius: 16px; }
+#shop-list[data-cat="themes"] .shop-swatch { aspect-ratio: 4 / 3; }
+#shop-list[data-cat="themes"] .shop-item-desc { display: none; }
+#shop-list[data-cat="themes"] .shop-item-info { flex: 1 1 auto; padding: 11px 12px 10px; }
+#shop-list[data-cat="themes"] .shop-item-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#shop-list[data-cat="themes"] .shop-item-cost { margin-top: 5px; font-size: 12px; }
+/* Rows stretch to the tallest card; the button sits on the floor of each. */
+#shop-list[data-cat="themes"] .shop-item > button {
+  margin: 0 12px 12px; width: calc(100% - 24px); min-height: 36px;
+  padding: 7px 12px !important; font-size: 13px !important;
+}
+
+.sw-th {
+  inset: 13% 11%; gap: 6px; padding: 9px;
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  box-shadow: 0 10px 26px -10px rgba(0,0,0,.8), 0 0 24px -8px var(--gold-glow);
+}
+.sw-th i:nth-child(2) { width: 44%; height: 6px; opacity: 1; background: var(--gold); }
+.sw-th i:nth-child(3) {
+  width: 100%; height: auto; min-height: 16px; opacity: 1; border-radius: var(--radius-xs);
+  background:
+    linear-gradient(90deg, var(--hue-1) 0 20%, var(--hue-2) 0 40%, var(--hue-3) 0 60%, var(--hue-4) 0 80%, var(--hue-5) 0) bottom / 100% 3px no-repeat,
+    var(--surface-2);
+  border: 1px solid var(--border);
+}
+.sw-th b { right: 9px; bottom: 9px; width: 16px; height: 16px; background: var(--accent-2); box-shadow: 0 0 10px -2px var(--accent-2); }
+.sw-th .sw-th-me .sw-init { color: var(--bg); background: var(--gold); }
+.sw-th .sw-th-me u { color: var(--text); }
+
+/* Classic has no [data-theme] block — it IS :root — so its preview restates
+   the :root values, or it would inherit whichever theme is equipped. */
+.sw-th[data-theme="classic"] {
+  --bg: #0a0908; --surface-2: #1c1a18; --text: #f0ede8;
+  --border: rgba(255,245,235,0.06); --border-strong: rgba(255,245,235,0.13);
+  --gold: #F5C842; --gold-glow: rgba(245,200,66,0.18); --accent-2: #ff7a4d;
+  --hue-1: #2fd4ff; --hue-2: #b47bff; --hue-3: #ff5fa8; --hue-4: #9ae64b; --hue-5: #5e9bff;
+  --radius-sm: 10px; --radius-xs: 7px;
 }

@@ -4746,9 +4746,10 @@ Each button now carries its own `--nav-c`, assigned by `nth-child` the way the s
 and the minigame grid already do it. `positionNavIndicator` reads that off the active button
 rather than keeping a second copy of the map in JS.
 
-**Fixed neons, never `--accent-2` or `--gold-dim`.** Those are themed, and a destination
-whose identity colour changes when somebody equips Neon Vault has no identity colour. Same
-reason `--c-cyan` and the rest are not themed.
+**Identity SLOTS, never `--accent-2` or `--gold-dim`.** Superseded in part (2026-10-14):
+the five slots are now themed into each skin's own family (see **Themes: the identity hues
+follow the skin**), but each destination still owns a slot, so the bar stays five distinct
+colours under every theme.
 
 **`nth-child` is positional, so `body[data-section]` has to be kept in step BY HAND.**
 Inserting For You at position three shifted every hue after it by one: the bar stayed unique
@@ -4917,10 +4918,10 @@ The app used to have two accents — `--gold` and `--accent-2` — on near-black
 surface looked like every other surface. **That is what "dull" was: not a lack of saturation
 but a lack of difference.**
 
-- **Five fixed hues**: `--c-cyan`, `--c-violet`, `--c-pink`, `--c-lime`, `--c-blue` (plus
-  `-dim` variants). **Deliberately not themed**, exactly like `--red`/`--yellow`/`--green` —
-  they mean the same thing under every skin, so a section keeps its identity when somebody
-  equips Neon Vault.
+- **Five identity slots**: `--c-cyan`, `--c-violet`, `--c-pink`, `--c-lime`, `--c-blue` (plus
+  `-dim` variants). **Themed since 2026-10-14** — they read `--hue-1..5`, which each theme
+  sets in its own family; Classic keeps the original neons. `--red`/`--yellow`/`--green` stay
+  fixed. See **Themes: the identity hues follow the skin**.
 - Use them for **identity and for telling one number from another, never decoratively.** A
   palette applied at random is noise with more steps.
 - **`--section`** is the current tab's hue. `setMode` writes `body[data-section]`, the CSS
@@ -5726,6 +5727,31 @@ transparent at the edge, so there is nothing left at the boundary to draw with.
 **`object-position: center 28%`, not centre.** A square press shot cropped to a
 wide band puts the face in the top third; centring it frames somebody's chest.
 
+#### Superseded again: an editorial feature (`assets/artist.css`)
+
+The banner read dark, empty and disconnected, because the only way to make a
+photo of unknown quality survive a wide band was to darken it. Now the photo is a
+**framed square portrait**, unfiltered — every Deezer artist picture is square,
+so a square frame crops nothing — with a **fanned stack of up to four sleeves**
+behind it (your highest-rated of theirs, the discography from `fetchStudioAlbums`
+filling any gap; each opens its record). The colour comes from **those sleeves,
+small and blurred behind everything** (For You's `.fy-glow` idea, no canvas
+read), plus the photo as a faint bed. Only the words get a scrim, and it carries
+the same bottom mask as the light, so nothing peaks at the boundary.
+
+- The stat line is local only: records rated, songs, your average, your top
+  record. Artist matching is id first, folded name second (traps 4 and 5).
+- **Height is fixed per breakpoint** (318px phone, `clamp(380px, 26vw, 440px)`
+  wide) and nothing inside changes it, so `heroResize` stays the only thing that
+  moves the search field. Images fade in where room is already reserved.
+- Sleeve nodes are reused by src and only moved when out of place — moving a
+  node restarts its entrance, so the discography landing must not re-deal the
+  crate's sleeves.
+- A portrait that fails to load shows a monogram, never an empty frame.
+- The old banner CSS was deleted from `index.html`, not overridden; the debug
+  hook (`?debugArtist=&debugArtistName=&debugArtistId=`) calls the same
+  `paintArtistHero` as the real path, so the two cannot drift layer by layer.
+
 ### Today: the kind of card is its colour
 
 A stack where every card was the same grey with a gold kicker read as **one card shown
@@ -6313,3 +6339,94 @@ pre-projected Equal Earth, built by `scripts/passport/world.mjs`) and
   them in that country — it dropped e.g. Rihanna (MB: US) from Barbados.
 - Seen stamps: `crate_passport_v1`, merged never replaced (trap 9), local only.
 - Windows has no flag emoji: `flag()` draws a code badge there.
+## Themes: the identity hues follow the skin (2026-10-14)
+
+Reported as blue buttons and pink net-worth figures under a green theme. The cause was the
+rule above that `--c-*` were fixed neons: the Shop's section colour was `--c-blue`, the
+Records net worth is `var(--section)` = `--c-pink`, the stat tiles cycled the neons, and the
+arcade cards and game sheets sat on a hardcoded violet-black.
+
+- **`--hue-1..7` on `:root`** are the identity slots (cyan/violet/pink/lime/blue plus a warm
+  and a cool extra for game cards). `--c-*` are `var(--hue-N)` and their `-dim`s are
+  `color-mix` 13%. **Every theme block sets all seven in its own family** (Canopy: leaf, moss,
+  brass, emerald, teal). Classic's values are the old neons, so nothing moved there. Slots keep
+  each destination distinct inside a skin; `--red/--yellow/--green` stay fixed.
+- **Chrome tokens on `:root`**: `--accent`, `--accent-ink`, `--btn-bg`/`--btn-ink`
+  (`.btn-primary`, Shop category tabs), `--hl`, `--glow`, `--focus-ring`, `--card-ground`,
+  `--sheet-ground`, `--stat-1..6` (stat tiles). All derive from `--gold`/`--accent-2`/`--hue-*`,
+  so a theme only sets those and the surfaces. **Do not put a var that reads `--section` in
+  `:root`** — a custom property resolves where it is declared, so it would freeze at Home's gold.
+- The 48 `rgba(245,200,66,…)` gold literals in the main stylesheet are
+  `color-mix(in srgb, var(--gold) N%, transparent)` now; the celebrate/onboarding gold sweeps,
+  `boards.js` game hues, `games.css` card/sheet grounds, `ladder.css` wraps, `glow.css` default
+  and the confetti palette read tokens. Canvas inks (`DitherField`) keep hex — canvas has no vars.
+- `positionNavIndicator()` copies a hue off the active button as a value, so `applyTheme()`
+  re-runs it.
+- **Consolidation.** Reel to Reel was Soul Train with sharper corners — the fourth warm-gold
+  skin. It is `retired: true` in `THEMES`: hidden from the Shop and onboarding unless owned or
+  equipped, `buyTheme` refuses it, and `[data-theme="reel"]` is aliased onto Soul Train's block
+  in `themes2.css`. Its `shop_items` row is untouched (no migration). Citrus is lime-led now
+  (lime + blood orange) and Cassette's secondary is tape-label coral, because blue made it
+  Chrome Frost's twin. Sundown, VHS, Bone, Neon, Citrus and Cassette gained grounds that keep
+  `--section-dim` as their first layer.
+- **Theme shop**: no descriptions, a 156px-min grid, 4:3 previews. The mini app carries
+  `data-theme="<key>"` so the theme's own token block paints it (including a strip of its five
+  hues); `.sw-th[data-theme="classic"]` restates the `:root` values because Classic has no block.
+
+## Performance pass (2026-10-14) — For You's first card, and setMode's forced layouts
+
+Measured with Playwright + Edge at 390×844, CDP CPU throttle 4×, `/api` proxied
+to production. Logged out, For You's first card went from **~13.4s to ~0.5s**
+(first sleeve decoded ~13.7s → ~0.8s) and a reload straight to For You from
+~13s to ~0.25s. Requests on opening it: 23 → 6.
+
+- **The catalogue queue ran ONE request at a time.** `_spPump` awaited each
+  `_spExec` before starting the next, so every `Promise.all` over
+  discographies was serial (0.5–1.7s each). It runs four in flight now
+  (`SP_CONC`); the rate is still held by `SP_GAP` between starts, which is now
+  *reserved* (`_spLast = at`) so concurrent jobs cannot start together, and a
+  429 still pauses everything.
+- **The community pool was always empty.** `Cloud.fetchTrending()` returns
+  `{id, name, artist, art, avg}`; For You read `album_id`/`album_name`…, every
+  row failed `add()`, and logged out the feed fell through to the chart chain
+  for its first card. Both shapes are read now, in `remotePools` and
+  `expand()` step 2.
+- `expand()` used `spotifyFetch` (no cache, no in-flight sharing) and awaited
+  ALL eight chart discographies (step 3) or TWENTY one-by-one (step 1) before
+  adding anything. `discography()` goes through `spotifyGet` (a day's cache,
+  same path shape as `remotePools`), `landFirst()` resolves when the first
+  source adds records and lets the rest land behind it, and `chartArtists()`
+  keeps the public chart for six hours (`fy_chart_v1`). With no local pools the
+  chart is asked for alongside the community fetch, unless Data Saver is on.
+- `albumTracks` shares one `/api/preview` request per artist+album NAME
+  (editions carry different ids and the route is asked by name — three
+  identical requests were measured); each id still gets its own song list.
+- `warmHeads(count)` warms in MIX order and sized to the batch — it used to
+  fire eight lookups (including the `pushed` pool For You never draws from)
+  for a first page of two.
+- **The stash** (`crate_fy_stash_v1`): on leave/pagehide/hidden, up to four
+  cards AFTER the furthest one reached are written down — metadata only,
+  **never a clip url** (signed, ~10 min). The next build paints them in the
+  same frame and builds the real feed behind. Taken (removed) on use, refused
+  unless stamped with the same user id (`'anon'` logged out), 48h TTL, and
+  under `crate_` so `claimLocalState`/logout wipe it. These songs were marked
+  seen when dealt and were never reached — that is why they may come back
+  exactly once. `render()` also rebuilds a feed built for a different owner.
+- Bed and halo are blurred, so they take `thumb(art, 120)`; the sleeve takes
+  500/750/1000 by devicePixelRatio (it is never wider than 460 CSS px). Three
+  1000² decodes per card became one sized decode and two tiny ones.
+- **Boot awaited `/api/app-token` before `Cloud.init()`.** No catalogue call
+  uses that token any more; it is fetched on demand by `getAnyToken()`.
+- **setMode forced layout synchronously.** `positionNavIndicator()` (and the
+  hub-tab scroll) read geometry right after the `display` swap and BEFORE the
+  view's render mutated it, so every switch laid out twice; the CPU profile put
+  ~80% of setMode in that call. Both reads run in the next rAF now. Synchronous
+  time in the nav handler fell e.g. Crate 145→8ms, Games 150→40ms, Profile
+  30→10ms at 4× throttle; click-to-frame is unchanged (the one real layout
+  still happens in the frame) — this is input responsiveness, not paint.
+- `renderCrate` appended a card then read its footer's height, per card — one
+  forced layout each. It appends all, then reads all.
+
+Not changed, and why: startup is dominated by style recalc/layout/text shaping
+of a 286KB stylesheet (4,450 rules) and the splash animations, not by JS (JS
+self-time on load is well under a second at 4×). That is a CSS job.

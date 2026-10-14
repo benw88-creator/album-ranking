@@ -3,11 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node check-scripts.mjs && node traps.mjs && node test-service-worker.mjs && node replay.selfcheck.mjs && node passport.selfcheck.mjs",
+    "check": "node check-scripts.mjs && node traps.mjs && node test-service-worker.mjs && node replay.selfcheck.mjs && node passport.selfcheck.mjs && node launch-api.selfcheck.mjs && node launch-sync.selfcheck.mjs && node launch-db.selfcheck.mjs",
     "test": "playwright test",
     "serve": "node serve.mjs"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
     "@playwright/test": "1.64.0",
     "sharp": "0.35.5"
   }

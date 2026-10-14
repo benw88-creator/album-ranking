@@ -45,15 +45,15 @@
   --border:       rgba(255,245,235,0.06);
   --border-strong:rgba(255,245,235,0.13);
   --gold:         #F5C842;
-  --gold-glow:    rgba(245,200,66,0.18);
-  --gold-dim:     rgba(245,200,66,0.10);
+  --gold-glow:    color-mix(in srgb, var(--gold) 18%, transparent);
+  --gold-dim:     color-mix(in srgb, var(--gold) 10%, transparent);
   /* Secondary accent. Every theme sets its own; used wherever a single
      flat accent was making things look monotone — the CTA gradient, the
      logo's centre dot, the waveform, card hover glow. Keeps the palette
      simple (still only two accents) while giving each theme actual
      colour movement instead of one hue on grey. */
   --accent-2:     #ff7a4d;
-  --accent-2-dim: rgba(255,122,77,0.12);
+  --accent-2-dim: color-mix(in srgb, var(--accent-2) 12%, transparent);
   --red:          #e24b4a;
   --yellow:       #efb927;
   --green:        #4fb477;
@@ -68,16 +68,52 @@
      They are used for section identity and for telling one number apart
      from another, never decoratively — a palette applied at random is just
      noise with more steps. */
-  --c-cyan:    #2fd4ff;
-  --c-violet:  #b47bff;
-  --c-pink:    #ff5fa8;
-  --c-lime:    #9ae64b;
-  --c-blue:    #5e9bff;
-  --c-cyan-dim:   rgba(47,212,255,0.13);
-  --c-violet-dim: rgba(180,123,255,0.13);
-  --c-pink-dim:   rgba(255,95,168,0.13);
-  --c-lime-dim:   rgba(154,230,75,0.13);
-  --c-blue-dim:   rgba(94,155,255,0.13);
+  /* THEMED SINCE 2026-10-14. The five identity slots still exist and still
+     mean "this section / this tile / this kind of card", but each theme now
+     supplies its own five (--hue-1..7) in its own family. A fixed cyan Shop
+     and a fixed pink net-worth figure under a forest-green skin was the
+     complaint: identity survived, but the skin did not. Classic keeps the
+     original neons exactly. Score colours (--red/--yellow/--green) stay
+     fixed — those are semantic, not identity. */
+  --hue-1: #2fd4ff;   /* the cyan slot   — Crate */
+  --hue-2: #b47bff;   /* the violet slot — Arcade */
+  --hue-3: #ff5fa8;   /* the pink slot   — Records, profile */
+  --hue-4: #9ae64b;   /* the lime slot   — For You */
+  --hue-5: #5e9bff;   /* the blue slot   — Shop, people */
+  --hue-6: #ff8a3d;   /* warm extra      — game cards */
+  --hue-7: #8b8cff;   /* cool extra      — game cards */
+  --c-cyan:    var(--hue-1);
+  --c-violet:  var(--hue-2);
+  --c-pink:    var(--hue-3);
+  --c-lime:    var(--hue-4);
+  --c-blue:    var(--hue-5);
+  --c-cyan-dim:   color-mix(in srgb, var(--hue-1) 13%, transparent);
+  --c-violet-dim: color-mix(in srgb, var(--hue-2) 13%, transparent);
+  --c-pink-dim:   color-mix(in srgb, var(--hue-3) 13%, transparent);
+  --c-lime-dim:   color-mix(in srgb, var(--hue-4) 13%, transparent);
+  --c-blue-dim:   color-mix(in srgb, var(--hue-5) 13%, transparent);
+
+  /* ---- chrome tokens --------------------------------------------------
+     What buttons, chips, focus rings, stat values and the nav are painted
+     with. Each is derived from the theme's own tokens, so a theme only has
+     to set --gold/--accent-2/--hue-* and the surfaces to reskin all of it;
+     a theme may override any of these individually. */
+  --accent:       var(--gold);
+  --accent-ink:   #15110a;               /* text ON an accent fill */
+  --btn-bg:       var(--accent);
+  --btn-ink:      var(--accent-ink);
+  --hl:           color-mix(in srgb, var(--accent) 14%, transparent);  /* highlight row/fill */
+  --glow:         color-mix(in srgb, var(--accent) 45%, transparent);  /* halo, focus ring */
+  --focus-ring:   0 0 0 3px color-mix(in srgb, var(--accent) 38%, transparent);
+  --nav-active:   var(--section);
+  --card-ground:  var(--surface);        /* deepest card ground (arcade, game sheets) */
+  --sheet-ground: var(--bg);
+  --stat-1: var(--gold);
+  --stat-2: var(--hue-1);
+  --stat-3: var(--hue-2);
+  --stat-4: var(--hue-4);
+  --stat-5: var(--hue-3);
+  --stat-6: var(--accent-2);
 
   /* The current section's hue. Repainted by setMode via body[data-section],
      so any component can pick it up with var(--section) and belong to
@@ -188,6 +224,14 @@
   --gold-dim:      rgba(255,138,61,0.14);
   --accent-2:      #ff3d7f;
   --accent-2-dim:  rgba(255,61,127,0.16);
+  /* identity hues, in this skin's own family */
+  --hue-1: #ffb347;
+  --hue-2: #c77dff;
+  --hue-3: #ff3d7f;
+  --hue-4: #ffd166;
+  --hue-5: #ff7a6b;
+  --hue-6: #ff8a3d;
+  --hue-7: #e07bff;
 }
 /* Two more to spend Discs on. Inflating what you earn without adding
    anything to buy just brings forward the day Discs stop mattering. */
@@ -207,6 +251,14 @@
   --gold-dim:      rgba(61,255,171,0.13);
   --accent-2:      #ff4fa3;
   --accent-2-dim:  rgba(255,79,163,0.16);
+  /* identity hues, in this skin's own family */
+  --hue-1: #4dffe0;
+  --hue-2: #b6ff5c;
+  --hue-3: #ff4fa3;
+  --hue-4: #3dffab;
+  --hue-5: #7dd3ff;
+  --hue-6: #ffe066;
+  --hue-7: #c38bff;
 }
 [data-theme="bone"] {
   --bg:            #141310;
@@ -224,6 +276,14 @@
   --gold-dim:      rgba(230,220,196,0.12);
   --accent-2:      #b8705a;
   --accent-2-dim:  rgba(184,112,90,0.18);
+  /* identity hues, in this skin's own family */
+  --hue-1: #d9c9a3;
+  --hue-2: #c9a0b4;
+  --hue-3: #d08a70;
+  --hue-4: #b8c49a;
+  --hue-5: #a7b8c9;
+  --hue-6: #d6a77a;
+  --hue-7: #b3a6c9;
 }
 [data-theme="neon"] {
   --bg:            #0a0616;
@@ -241,6 +301,14 @@
   --gold-dim:      rgba(255,61,154,0.14);
   --accent-2:      #22e3ff;
   --accent-2-dim:  rgba(34,227,255,0.16);
+  /* identity hues, in this skin's own family */
+  --hue-1: #22e3ff;
+  --hue-2: #a46bff;
+  --hue-3: #ff3d9a;
+  --hue-4: #7dff6b;
+  --hue-5: #4f7dff;
+  --hue-6: #ff8a3d;
+  --hue-7: #c38bff;
 }
 [data-theme="citrus"] {
   --bg:            #12100a;
@@ -253,11 +321,22 @@
   --text-faint:    #7d7350;
   --border:        rgba(255,247,210,0.09);
   --border-strong: rgba(255,247,210,0.2);
-  --gold:          #ff9f1c;
-  --gold-glow:     rgba(255,159,28,0.28);
-  --gold-dim:      rgba(255,159,28,0.14);
-  --accent-2:      #c6ff3d;
-  --accent-2-dim:  rgba(198,255,61,0.16);
+  /* Lime-led since 2026-10-14: with orange in front it sat between Classic,
+     Sundown and Soul as a fourth warm-gold skin. Lime first, blood orange
+     second is the thing nothing else in the shop is. */
+  --gold:          #c6ff3d;
+  --gold-glow:     rgba(198,255,61,0.26);
+  --gold-dim:      rgba(198,255,61,0.13);
+  --accent-2:      #ff7b2e;
+  --accent-2-dim:  rgba(255,123,46,0.16);
+  /* identity hues, in this skin's own family */
+  --hue-1: #ffd23f;
+  --hue-2: #ff9f1c;
+  --hue-3: #ff5a3c;
+  --hue-4: #c6ff3d;
+  --hue-5: #ffc27a;
+  --hue-6: #ff7b3a;
+  --hue-7: #e8f07a;
 }
 [data-theme="cassette"] {
   --bg:            #0b0d10;
@@ -273,11 +352,20 @@
   --gold:          #12e0c8;
   --gold-glow:     rgba(18,224,200,0.28);
   --gold-dim:      rgba(18,224,200,0.14);
-  --accent-2:      #5eb8ff;
-  --accent-2-dim:  rgba(94,184,255,0.16);
+  /* Coral, the colour of a tape label — blue made it Chrome Frost's twin. */
+  --accent-2:      #ff8a6b;
+  --accent-2-dim:  rgba(255,138,107,0.16);
   --radius:        8px;
   --radius-sm:     5px;
   --radius-xs:     3px;
+  /* identity hues, in this skin's own family */
+  --hue-1: #12e0c8;
+  --hue-2: #8c9eff;
+  --hue-3: #ff8a6b;
+  --hue-4: #7ee8a2;
+  --hue-5: #5eb8ff;
+  --hue-6: #ffb36b;
+  --hue-7: #a7b6ff;
 }
 
 /* TEST PRESSING — the plain one, and the only one with no colour in it.
@@ -305,6 +393,14 @@
   --radius:        6px;
   --radius-sm:     4px;
   --radius-xs:     2px;
+  /* identity hues, in this skin's own family */
+  --hue-1: #e6e8ec;
+  --hue-2: #b9bcc4;
+  --hue-3: #9ea2ab;
+  --hue-4: #cfd2d8;
+  --hue-5: #868a93;
+  --hue-6: #d8dbe0;
+  --hue-7: #a9adb6;
 }
 html[data-theme="press"] body {
   /* The lathe marks on a blank label. Flat grey, no hue. */
@@ -316,15 +412,48 @@ html[data-theme="press"] body {
 /* Background texture per theme — layered behind the existing radial
    glow on body, scoped with html[data-theme=...] so it's more specific
    than the base `body` rule and doesn't need !important. */
+/* Every one keeps the section wash as its first layer so the page still
+   changes temperature between tabs, then adds the skin's own ground. */
 html[data-theme="sundown"] body {
   background-image:
-    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(232,118,63,0.07) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(232,118,63,0.05) 0%, transparent 70%);
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(255,138,61,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(255,61,127,0.07) 0%, transparent 70%),
+    linear-gradient(180deg, transparent 55%, rgba(120,30,80,0.12) 100%);
 }
 html[data-theme="cassette"] body {
   background-image:
-    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(94,184,255,0.05) 0%, transparent 70%),
-    repeating-linear-gradient(0deg, rgba(94,184,255,0.03) 0px, rgba(94,184,255,0.03) 1px, transparent 1px, transparent 3px);
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,138,107,0.05) 0%, transparent 70%),
+    repeating-linear-gradient(0deg, rgba(18,224,200,0.025) 0px, rgba(18,224,200,0.025) 1px, transparent 1px, transparent 3px);
+}
+html[data-theme="vhs"] body {
+  /* Phosphor scanlines and a pink tracking smear near the bottom. */
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(61,255,171,0.06) 0%, transparent 70%),
+    linear-gradient(180deg, transparent 86%, rgba(255,79,163,0.05) 88%, transparent 90%),
+    repeating-linear-gradient(0deg, rgba(61,255,171,0.022) 0 1px, transparent 1px 3px);
+}
+html[data-theme="bone"] body {
+  /* Unglazed porcelain: warm, even, a faint grain. */
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 90% 60% at 50% 30%, rgba(230,220,196,0.05) 0%, transparent 70%),
+    repeating-linear-gradient(45deg, rgba(246,241,231,0.012) 0 1px, transparent 1px 4px);
+}
+html[data-theme="neon"] body {
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 55% 40% at 0% 20%, rgba(255,61,154,0.09) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 36% at 100% 50%, rgba(34,227,255,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 30% at 40% 100%, rgba(164,107,255,0.08) 0%, transparent 72%);
+}
+html[data-theme="citrus"] body {
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(circle at 85% 8%, rgba(198,255,61,0.07) 0%, transparent 34%),
+    radial-gradient(circle at 10% 90%, rgba(255,123,46,0.07) 0%, transparent 38%);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -402,9 +531,9 @@ body[data-section="choice"]       { --section: var(--c-cyan);    --section-dim: 
 body[data-section="foryou"]       { --section: var(--c-lime);    --section-dim: var(--c-lime-dim); }
 body[data-section="games"]        { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
 body[data-section="collection"]   { --section: var(--c-pink);    --section-dim: var(--c-pink-dim); }
-/* A fixed neon, matching its nav button. It used to be --accent-2, which is
-   THEMED — so the Shop's identity colour changed with whatever skin was
-   equipped, which is no identity colour at all. */
+/* The blue SLOT, matching its nav button. --hue-5 is themed into each skin's
+   own family (see :root), so the Shop keeps its identity within a theme
+   without painting a green skin blue. */
 body[data-section="rewards"]      { --section: var(--c-blue);    --section-dim: var(--c-blue-dim); }
 body[data-section="achievements"] { --section: var(--c-blue);    --section-dim: var(--c-blue-dim); }
 body[data-section="wars"]         { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
@@ -544,7 +673,7 @@ header {
       #1a1814 46% 100%);
   box-shadow:
     0 0 0 1px rgba(255,245,235,0.12),
-    0 0 20px rgba(245,200,66,0.12);
+    0 0 20px color-mix(in srgb, var(--gold) 12%, transparent);
 }
 .brand-mark::before {
   content: '';
@@ -663,8 +792,8 @@ button { font-family: var(--font-body); cursor: pointer; border-radius: var(--ra
 button:active { transform: scale(0.96); }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--gold), var(--accent-2));
-  color: #0a0908;
+  background: linear-gradient(135deg, var(--btn-bg), var(--accent-2));
+  color: var(--btn-ink);
   border: none;
   padding: 11px 22px;
   font-weight: 700;
@@ -701,7 +830,7 @@ button:active { transform: scale(0.96); }
   align-items: center;
   gap: 7px;
 }
-.auth-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px rgba(245,200,66,0.6); }
+.auth-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px color-mix(in srgb, var(--gold) 60%, transparent); }
 
 /* ---- NAV ---- */
 /* ---- NAV ---------------------------------------------------------------
@@ -927,14 +1056,14 @@ nav.modes .nav-icon { width: 21px; height: 21px; }
   font-variant-numeric: tabular-nums;
   position: relative; overflow: visible;
   transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 0 0 0 rgba(245,200,66,0.5);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 50%, transparent);
   animation: shopPulse 2.6s ease-in-out infinite;
 }
 .shop-open-btn:hover { background: var(--gold); color: var(--bg); transform: translateY(-1px) scale(1.03); }
 .shop-open-btn svg { flex-shrink: 0; }
 @keyframes shopPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(245,200,66,0.45); }
-  50%      { box-shadow: 0 0 0 6px rgba(245,200,66,0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 45%, transparent); }
+  50%      { box-shadow: 0 0 0 6px transparent; }
 }
 
 /* ---- Discs flying to the wallet ----------------------------------------
@@ -1068,7 +1197,7 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
   border-radius: 18px;
   overflow: hidden;
   max-height: 480px; overflow-y: auto;
-  box-shadow: 0 32px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(245,200,66,0.06);
+  box-shadow: 0 32px 64px rgba(0,0,0,0.7), 0 0 0 1px color-mix(in srgb, var(--gold) 6%, transparent);
   display: none;
   backdrop-filter: blur(12px);
 }
@@ -1186,12 +1315,12 @@ html[data-motion="none"] .view.enter { animation: none; }
    reason the app read as monochrome. Each tile now owns a hue, which also
    makes them individually findable rather than a wall you scan. nth-child so
    this holds however many tiles the row happens to have that day. */
-.stats > .stat:nth-child(6n+1) { --tile: var(--gold); }
-.stats > .stat:nth-child(6n+2) { --tile: var(--c-cyan); }
-.stats > .stat:nth-child(6n+3) { --tile: var(--c-violet); }
-.stats > .stat:nth-child(6n+4) { --tile: var(--c-lime); }
-.stats > .stat:nth-child(6n+5) { --tile: var(--c-pink); }
-.stats > .stat:nth-child(6n+6) { --tile: var(--accent-2); }
+.stats > .stat:nth-child(6n+1) { --tile: var(--stat-1); }
+.stats > .stat:nth-child(6n+2) { --tile: var(--stat-2); }
+.stats > .stat:nth-child(6n+3) { --tile: var(--stat-3); }
+.stats > .stat:nth-child(6n+4) { --tile: var(--stat-4); }
+.stats > .stat:nth-child(6n+5) { --tile: var(--stat-5); }
+.stats > .stat:nth-child(6n+6) { --tile: var(--stat-6); }
 .stats > .stat { --tile: var(--gold); }
 /* Two different stat components exist and they do not share class names:
    the crate row uses .s-val, the Liner Notes row uses .stat-value. Both are
@@ -3431,7 +3560,7 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
    ============================================================ */
 .celebrate {
   position: fixed; inset: 0;
-  background: radial-gradient(ellipse at 50% 60%, rgba(245,200,66,0.08) 0%, rgba(5,4,3,0.97) 60%);
+  background: radial-gradient(ellipse at 50% 60%, color-mix(in srgb, var(--gold) 8%, transparent) 0%, rgba(5,4,3,0.97) 60%);
   backdrop-filter: blur(20px);
   display: none; align-items: center;
   justify-content: center; z-index: 220; overflow: hidden;
@@ -3444,9 +3573,9 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   position: absolute;
   width: 420px; height: 420px;
   border-radius: 50%;
-  border: 2px solid rgba(245,200,66,0.15);
-  box-shadow: 0 0 0 8px rgba(245,200,66,0.04),
-              0 0 80px rgba(245,200,66,0.12);
+  border: 2px solid color-mix(in srgb, var(--gold) 15%, transparent);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--gold) 4%, transparent),
+              0 0 80px color-mix(in srgb, var(--gold) 12%, transparent);
   opacity: 0;
   transform: scale(0.4);
   animation: none;
@@ -3465,7 +3594,7 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   position: absolute;
   width: 320px; height: 320px;
   border-radius: 50%;
-  border: 1px solid rgba(245,200,66,0.08);
+  border: 1px solid color-mix(in srgb, var(--gold) 8%, transparent);
   opacity: 0;
   transform: scale(0.3) rotate(45deg);
   animation: none;
@@ -3499,7 +3628,7 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   font-size: 110px;
   display: block;
   margin-bottom: 4px;
-  filter: drop-shadow(0 0 40px rgba(245,200,66,0.5));
+  filter: drop-shadow(0 0 40px color-mix(in srgb, var(--gold) 50%, transparent));
   transform-origin: 50% 60%;
   animation: none;
 }
@@ -3507,12 +3636,12 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   animation: celebTrophy 1.8s var(--ease) 0.1s both;
 }
 @keyframes celebTrophy {
-  0%   { transform: scale(0.2) rotate(-40deg); opacity: 0; filter: drop-shadow(0 0 0 rgba(245,200,66,0)); }
-  30%  { transform: scale(1.3) rotate(12deg); opacity: 1; filter: drop-shadow(0 0 60px rgba(245,200,66,0.8)); }
+  0%   { transform: scale(0.2) rotate(-40deg); opacity: 0; filter: drop-shadow(0 0 0 transparent); }
+  30%  { transform: scale(1.3) rotate(12deg); opacity: 1; filter: drop-shadow(0 0 60px color-mix(in srgb, var(--gold) 80%, transparent)); }
   55%  { transform: scale(0.95) rotate(-6deg); }
   72%  { transform: scale(1.06) rotate(4deg); }
   85%  { transform: scale(0.98) rotate(-2deg); }
-  100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 32px rgba(245,200,66,0.45)); }
+  100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 32px color-mix(in srgb, var(--gold) 45%, transparent)); }
 }
 
 /* gold sweeping shimmer under the trophy */
@@ -3525,10 +3654,10 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    rgba(245,200,66,0.15) 30deg,
+    color-mix(in srgb, var(--gold) 15%, transparent) 30deg,
     transparent 60deg,
     transparent 120deg,
-    rgba(245,200,66,0.08) 150deg,
+    color-mix(in srgb, var(--gold) 8%, transparent) 150deg,
     transparent 180deg
   );
   opacity: 0;
@@ -3557,7 +3686,7 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   font-family: var(--font-display); font-size: 32px; font-weight: 800;
   margin: 0 0 8px; letter-spacing: -0.025em; line-height: 1.1;
   /* shiny gold gradient sweep on the title */
-  background: linear-gradient(100deg, #c8922a 0%, #F5C842 30%, #fff3b0 50%, #F5C842 70%, #c8922a 100%);
+  background: linear-gradient(100deg, color-mix(in srgb, var(--gold) 72%, #000) 0%, var(--gold) 30%, color-mix(in srgb, var(--gold) 35%, #fff) 50%, var(--gold) 70%, color-mix(in srgb, var(--gold) 72%, #000) 100%);
   background-size: 200% auto;
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -3587,15 +3716,15 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   border: none; border-radius: 14px;
   font-weight: 800; font-family: var(--font-display);
   cursor: pointer; font-size: 16px; letter-spacing: -0.01em;
-  box-shadow: 0 0 0 0 rgba(245,200,66,0.4);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 40%, transparent);
   opacity: 0;
 }
 .celebrate.show .celebrate-btn {
   animation: celebFadeUp 0.5s ease 0.9s both, btnPulse 2s ease-in-out 1.5s infinite;
 }
 @keyframes btnPulse {
-  0%,100% { box-shadow: 0 0 0 0 rgba(245,200,66,0.35); }
-  50% { box-shadow: 0 0 0 12px rgba(245,200,66,0); }
+  0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 35%, transparent); }
+  50% { box-shadow: 0 0 0 12px transparent; }
 }
 .celebrate-btn:hover { background: #ffd84a; transform: scale(1.04); }
 
@@ -3669,7 +3798,7 @@ body.kb-up .suggestions { max-height: min(480px, var(--sugg-max, 480px)); oversc
 .activity-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 119; display: none; }
 .activity-backdrop.open { display: block; }
 .activity-toggle { position: relative; }
-.activity-toggle .dot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); display: none; box-shadow: 0 0 6px rgba(245,200,66,0.7); }
+.activity-toggle .dot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); display: none; box-shadow: 0 0 6px color-mix(in srgb, var(--gold) 70%, transparent); }
 .activity-toggle.has-new .dot { display: block; }
 
 /* ---- RATE VIEW MODAL ---- */
@@ -3747,7 +3876,7 @@ body.kb-up .suggestions { max-height: min(480px, var(--sugg-max, 480px)); oversc
   border: 1px solid transparent;
 }
 .badge-ceo { background: linear-gradient(135deg, #f5d76e, #d4a017); color: #1a0f00; }
-.badge-og { background: rgba(245,200,66,0.15); color: var(--gold); border-color: var(--gold); }
+.badge-og { background: color-mix(in srgb, var(--gold) 15%, transparent); color: var(--gold); border-color: var(--gold); }
 .badge-beta { background: rgba(133,183,235,0.15); color: #85b7eb; border-color: #85b7eb; }
 .badge-critic { background: rgba(79,180,119,0.15); color: var(--green); border-color: var(--green); }
 .badge-verified { background: rgba(133,183,235,0.15); color: #85b7eb; border-color: #85b7eb; }
@@ -3875,7 +4004,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 .list-meta { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
 /* Notifications */
-.notif-item.unread { background: rgba(245,200,66,0.05); border-radius: 8px; }
+.notif-item.unread { background: color-mix(in srgb, var(--gold) 5%, transparent); border-radius: 8px; }
 .notif-item[data-album] { cursor: pointer; }
 .notif-item[data-album]:hover { background: var(--surface-2); border-radius: 8px; }
 .suggest-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--surface-2); border-radius: 12px; }
@@ -3887,7 +4016,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 .groove-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
 .groove-card { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; cursor: pointer; transition: transform 0.14s, border-color 0.14s; }
 .groove-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
-.groove-card.invite { cursor: default; background: rgba(245,200,66,0.04); border-color: rgba(245,200,66,0.2); }
+.groove-card.invite { cursor: default; background: color-mix(in srgb, var(--gold) 4%, transparent); border-color: color-mix(in srgb, var(--gold) 20%, transparent); }
 .groove-ic { width: 44px; height: 44px; border-radius: 11px; background: var(--surface-3); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
 .groove-nm { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
 .groove-meta { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
@@ -4283,7 +4412,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 
 /* Rate slider */
 #rate-slider { -webkit-appearance: none; appearance: none; flex: 1; height: 4px; border-radius: 2px; background: var(--surface-4); outline: none; }
-#rate-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); border: 2px solid var(--bg); cursor: pointer; box-shadow: 0 0 10px rgba(245,200,66,0.4); }
+#rate-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); border: 2px solid var(--bg); cursor: pointer; box-shadow: 0 0 10px color-mix(in srgb, var(--gold) 40%, transparent); }
 #rate-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--gold); border: 2px solid var(--bg); cursor: pointer; }
 
 /* Filter field */
@@ -4377,7 +4506,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 .splash-bloom {
   position: absolute; left: 50%; top: 50%; width: 2px; height: 2px;
   border-radius: 50%; pointer-events: none; opacity: 0;
-  box-shadow: 0 0 90px 50px rgba(245,200,66,0.55), 0 0 200px 120px rgba(255,122,77,0.28);
+  box-shadow: 0 0 90px 50px color-mix(in srgb, var(--gold) 55%, transparent), 0 0 200px 120px color-mix(in srgb, var(--accent-2) 28%, transparent);
   transform: translate(-50%, -50%);
 }
 .splash-gate.is-handing .splash-bloom { animation: splashBloom 620ms 240ms cubic-bezier(.2,.8,.3,1) forwards; }
@@ -4419,8 +4548,8 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
   animation: markLand 520ms var(--ease) forwards;
 }
 @keyframes markLand {
-  0%   { box-shadow: 0 0 0 0 rgba(245,200,66,0.55); }
-  100% { box-shadow: 0 0 0 16px rgba(245,200,66,0); }
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 55%, transparent); }
+  100% { box-shadow: 0 0 0 16px transparent; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4705,13 +4834,13 @@ html[data-motion="none"] .splash-cta.waiting { animation: none; }
     radial-gradient(circle at 38% 32%, #2b2620 0%, #17130f 46%, #0d0b09 100%);
   box-shadow:
     0 0 0 2.5% #060505,
-    inset 0 0 0 1.5px rgba(245,200,66,0.55),
+    inset 0 0 0 1.5px color-mix(in srgb, var(--gold) 55%, transparent),
     inset 0 0 44px rgba(0,0,0,0.55),
-    0 0 70px rgba(245,200,66,0.10);
+    0 0 70px color-mix(in srgb, var(--gold) 10%, transparent);
 }
 .sd-label-ring {
   position: absolute; inset: 15%; border-radius: 50%;
-  border: 1px solid rgba(245,200,66,0.18);
+  border: 1px solid color-mix(in srgb, var(--gold) 18%, transparent);
 }
 /* No spindle hole. The label sits dead centre behind the wordmark, so a black
    8% dot showed between the letters — and through the bloom on the way out —
@@ -4798,235 +4927,9 @@ body.entering-done #artist-hero {
   html:not([data-motion="full"]) body.entering-done #artist-hero { transition: opacity 0.3s linear; }
 }
 
-/* ============================================================
-   ARTIST HERO — top-rated artist as full-bleed background
-   ============================================================ */
-.artist-hero {
-  position: relative;
-  width: 100%;
-  height: 460px;
-  margin-bottom: -64px;
-  overflow: hidden;
-  animation: heroFadeIn 0.6s ease both;
-  transition: height 0.55s var(--ease), margin-bottom 0.55s var(--ease), opacity 0.45s var(--ease);
-}
-/* Shown by expanding from zero height rather than flipping display:none
-   -> block. The flip was the "glitch" when a favourite artist loaded: the
-   whole page below it jumped down 460px in a single frame. Expanding lets
-   the existing height transition carry it smoothly instead. */
-.artist-hero.artist-hero-hidden {
-  height: 0 !important;
-  margin-bottom: 0 !important;
-  opacity: 0;
-  animation: none;
-}
-@keyframes heroFadeIn { from { opacity: 0; } to { opacity: 1; } }
-.artist-hero-bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  /* THE PHOTO IS NOW THE BACKDROP, NOT THE SUBJECT, and that is the fix.
-
-     What was here before: the artist's photo, full bleed, at 375x232. It read
-     badly for every artist and the reason is not the crop — it is that these
-     images are not ours and are not consistent. Deezer's artist pictures are
-     square, they are whatever the label supplied, and the resolution and the
-     framing vary wildly. Drake's is an out-of-focus portrait, deliberately, at
-     source: no amount of object-position rescues that, because there is
-     nothing sharp in the file to show. Others are 1000px upscales of
-     thumbnails. Some are group shots. Some are a logo.
-
-     Forcing any of them to fill a wide band at 1:1 means displaying a photo
-     you do not control at the largest size the page has, which is the most
-     unflattering thing you can do with an image of unknown quality — and half
-     of every square gets cut off to do it.
-
-     So it is blurred hard, darkened, and pushed behind: an ambient wash in the
-     artist's own colours, which is a job a bad photo does perfectly, because a
-     backdrop is SUPPOSED to be out of focus. The face goes in the portrait
-     below at 96px, where a soft source reads as depth of field rather than as
-     a mistake, and where nothing is cropped off. That combination is
-     indifferent to what Deezer hands over, which is the property this needs. */
-  object-fit: cover;
-  /* 28%, not centre. A square press shot cropped to a wide band puts the face
-     in the top third; centring it frames somebody's chest. */
-  object-position: center 28%;
-  /* Sharp now, and darkened only as far as the name needs to stay readable.
-     The brightness is still set for the BRIGHTEST plausible source — a great
-     many press shots are on white, Drake's among them — because a banner that
-     goes pale at the top puts a light band behind the status bar and the
-     app's own header. */
-  filter: contrast(1.05) saturate(1.06) brightness(0.72);
-}
-/* The bed: the same photo, blurred past recognition and scaled beyond the
-   frame, so the sharp one is never sitting on a void. Scale rather than a
-   larger element, because blur() samples nothing outside the box and the
-   edges would otherwise go transparent. */
-.artist-hero-bed {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; object-position: center 28%;
-  filter: blur(34px) saturate(1.4) brightness(0.5);
-  transform: scale(1.25);
-}
-/* The canvas shares the layout but NOT the photo treatment: the grayscale
-   filter above was silently draining the colour the dither picks out of
-   each artist's photo, and object-fit would letterbox a canvas that is
-   already sized to the host in device pixels. */
-/* The dot field used to stop dead at the canvas edge, which read as a
-   rectangle of dots pasted onto the page rather than a portrait emerging
-   out of it. One elliptical mask thins the dots out on every side. It is a
-   single mask rather than four edge gradients on purpose: mask-composite
-   support is patchy, and one ellipse degrades to "no mask" gracefully
-   anywhere it isn't supported. */
-.artist-hero-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  filter: none;
-  object-fit: fill;
-  /* Edge fade only. The previous ellipse ate well into the portrait; these
-     two gradients leave the middle completely untouched and thin out only
-     the outer eighth on each side. Where mask-composite isn't supported the
-     two masks simply add together, which is the old un-masked look — a safe
-     way to fail. */
-  -webkit-mask-image:
-    linear-gradient(to right,  transparent 0%, #000 11%, #000 89%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, #000 9%,  #000 88%, transparent 100%);
-          mask-image:
-    linear-gradient(to right,  transparent 0%, #000 11%, #000 89%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, #000 9%,  #000 88%, transparent 100%);
-  -webkit-mask-composite: source-in;
-          mask-composite: intersect;
-}
-/* A colour-blend wash that replaced the photo's hue with a theme gradient.
-   That made sense over a halftone; over an actual photograph it is the one
-   thing standing between "good quality" and "tinted". Off with the dither. */
-.artist-hero-duotone { display: none; }
-/* Once the dots are printing, the duotone layer has nothing to tint but the
-   canvas — and tinting it would undo the per-artist ink colour. */
-.artist-hero.artist-hero-dithered .artist-hero-duotone { display: none; }
-/* Scrim, reshaped. The old rule darkened the TOP of the band as well, which
-   put a bar across the artist's face for no benefit. Now it only does the
-   two jobs it needs to: keep the name legible on the left, and hand the
-   band over to the page at the bottom. */
-/* Three jobs: keep the name legible, hand the band over to the page at the
-   bottom, and — new — stop the photo ending in a hard horizontal line. The
-   dither used to handle that last one itself, by thinning its dots out at the
-   edges. A photograph cannot, so the scrim does it: the bottom stop is the
-   page's own colour at full strength, and it starts far enough up that there
-   is no visible seam between picture and page. */
-/* The picture DISSOLVES; nothing paints the page's colour over it.
-
-   The old scrim faded down to var(--bg) and its middle stops were the default
-   background typed out as rgba(10,9,8,…). Two things went wrong with that and
-   both of them draw the same hard horizontal line across the bottom of the
-   photograph:
-
-     * The page is not flat --bg. It carries four radial washes, so a band of
-       flat --bg laid over it meets a slightly different colour at the seam,
-       and a seam between two almost-identical colours is exactly the kind of
-       edge an eye picks out.
-     * Under any theme but the default those rgba stops are simply the wrong
-       colour, because they are a literal and --bg is not.
-
-   Masking the media instead means there is nothing to match: the image runs
-   out of opacity and whatever is behind it — theme, washes and all — is what
-   shows through. */
-/* THE BOTTOM EDGE IS MASKED, NOT SCRIMMED, and that distinction is the whole
-   of it. The page below is not flat --bg — it carries four radial washes — so
-   a band of flat colour faded over the photo meets a slightly different colour
-   underneath, and a seam between two almost-identical colours is exactly the
-   edge an eye finds. Masking has nothing to match: the image runs out of
-   opacity and whatever is behind it shows through, theme and washes included.
-
-   Held over a long run (from 40% down) rather than a short one. The banner is
-   now the subject rather than a wash, so it is taller and brighter, and a fade
-   over the last tenth of a tall bright image still reads as an edge. */
-.artist-hero-bed, .artist-hero-bg, .artist-hero-canvas {
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
-          mask-image: linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
-}
-/* THE WHOLE PHOTO, NEVER A CROP. `cover` on a wide band cut the top and
-   bottom off every square press shot — heads included. The sharp image is
-   now its own square, centred and contained, and the blurred bed above fills
-   the sides in the photo's own colours. Its left and right edges feather
-   into the bed so there is no vertical seam; the bottom keeps the long
-   dissolve into the page. The band is wider than tall at every width (232px
-   on a phone, 460 above), so the square always has bed either side of it. */
-.artist-hero-bg {
-  inset: 0 auto auto 50%;
-  width: auto; height: 100%; max-width: 100%;
-  aspect-ratio: 1 / 1;
-  transform: translateX(-50%);
-  object-fit: contain; object-position: center top;
-  -webkit-mask-image:
-    linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%),
-    linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
-          mask-image:
-    linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%),
-    linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
-  -webkit-mask-composite: source-in;
-          mask-composite: intersect;
-}
-.artist-hero-fade {
-  position: absolute;
-  inset: 0;
-  /* Left-hand darkening only, for the name to sit on, and all of it lands on
-     transparent rather than on a colour. */
-  background:
-    /* Top-down as well as bottom-up. The status bar and the app's own header
-       sit against this edge, and a bright source photo was pushing a light
-       band up behind both of them. */
-    linear-gradient(to bottom, rgba(10,9,8,0.72) 0%, rgba(10,9,8,0.28) 34%, transparent 62%),
-    /* THE BOTTOM-UP SCRIM MUST RETURN TO TRANSPARENT AT THE BOTTOM, and this
-       is the hard edge people were seeing. It used to peak at 0.55 black at
-       0% — the hero's own bottom boundary — and then simply stop, so while
-       the photo dissolved correctly the DARKENING did not, and a 55% black
-       band ended in a straight line across the page. It peaks a little way
-       up now and comes back to nothing at the edge, so there is nothing left
-       at the boundary to draw a line with. */
-    linear-gradient(to top, transparent 0%, rgba(0,0,0,0.46) 15%, rgba(0,0,0,0.34) 32%, transparent 64%),
-    linear-gradient(to right, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.34) 34%, transparent 66%);
-}
-.artist-hero-content {
-  position: relative;
-  height: 100%;
-  display: flex;
-  align-items: flex-end;
-  gap: var(--s4);
-  padding-bottom: 76px;
-}
-.artist-hero-words { min-width: 0; flex: 1; }
-@media (max-width: 420px) { .artist-hero-content { gap: var(--s3); } }
-.artist-hero-eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: 8px;
-  text-shadow: 0 2px 12px rgba(0,0,0,0.6);
-}
-.artist-hero-name {
-  font-family: var(--font-display);
-  /* Clamps, because it now shares its line with a 96px portrait and some
-     artists are called The Notorious B.I.G. */
-  font-size: clamp(26px, 8vw, 46px);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.02;
-  text-shadow: 0 4px 24px rgba(0,0,0,0.6);
-  overflow-wrap: anywhere;
-}
-.artist-hero-meta {
-  font-size: 14px;
-  color: var(--text-dim);
-  margin-top: 10px;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.6);
-}
-.artist-hero-meta b { color: var(--text); font-weight: 700; }
+/* ARTIST HERO — the whole of its styling lives in assets/artist.css, loaded
+   after every other stylesheet so nothing further down can outrank it
+   (trap 1). Only the splash hand-off rules above still name #artist-hero. */
 /* The tab bar is wider than a phone screen — six labels plus three icon
    buttons — and being a plain inline-flex it simply pushed the document
    out instead of adapting. Measured at a 487px viewport it ran to 618px,
@@ -5041,29 +4944,6 @@ body.entering-done #artist-hero {
    width cap and make it scrollable. Removed rather than adjusted: the
    behaviour it exists for cannot happen any more. */
 
-@media (max-width: 640px) {
-  /* The portrait sits above the name here rather than beside it, so the
-     scrim's job changes: carry the bottom half, not the left edge. */
-  /* var(--bg) is GONE from here, and it was the hard edge. The first 8% of
-     this gradient was an opaque band of flat background painted over the
-     photo — but the page behind carries four radial washes, so that band met
-     a different colour a pixel below itself and drew a line across the bottom
-     of every hero. The mask on the image is what ends the photo now; this is
-     only darkening, and every stop lands on transparent. */
-  .artist-hero-fade {
-    background:
-      linear-gradient(to bottom, rgba(10,9,8,0.72) 0%, rgba(10,9,8,0.24) 30%, transparent 56%),
-      linear-gradient(to top, transparent 0%, rgba(0,0,0,0.62) 16%, rgba(0,0,0,0.44) 34%, transparent 70%);
-  }
-  /* 360px was over 40% of a phone screen for a band that introduces the page
-     rather than being it, and the -48px pull left the search field sitting on
-     top of the portrait's chin. Shorter, and the overlap is gentler. */
-  .artist-hero { height: 232px; margin-bottom: -28px; }
-  .artist-hero-name { font-size: var(--t-h1); }
-  .artist-hero-eyebrow { font-size: 10px; letter-spacing: 0.14em; }
-  .artist-hero-meta { font-size: var(--t-sm); margin-top: var(--s1); }
-  .artist-hero-content { padding-bottom: var(--s6); }
-}
 
 /* ============================================================
    PROFILE — favourite artist (text-only, no image)
@@ -5096,7 +4976,7 @@ body.entering-done #artist-hero {
   line-height: 1.1;
   /* Shiny gold gradient fill — same technique as the VINALL logo wordmark,
      with an extra highlight stop so it catches light rather than reading flat. */
-  background: linear-gradient(100deg, #d6a93a 0%, #F5C842 28%, #fff3c4 48%, #F5C842 68%, #b8861f 100%);
+  background: linear-gradient(100deg, color-mix(in srgb, var(--gold) 80%, #000) 0%, var(--gold) 28%, color-mix(in srgb, var(--gold) 30%, #fff) 48%, var(--gold) 68%, color-mix(in srgb, var(--gold) 66%, #000) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -8691,8 +8571,8 @@ body[data-section="foryou"] .fy-tabs {
 .dm-toggle.ready .dm-ico-core { animation: dmCore 2.2s ease-in-out infinite; }
 @keyframes dmCore { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.7); } }
 @keyframes dmReady {
-  0%, 100% { box-shadow: 0 0 0 rgba(245,200,66,0); }
-  50%      { box-shadow: 0 0 14px rgba(245,200,66,.4); }
+  0%, 100% { box-shadow: 0 0 0 transparent; }
+  50%      { box-shadow: 0 0 14px color-mix(in srgb, var(--gold) 40%, transparent); }
 }
 .dm-badge {
   position: absolute; top: -4px; right: -4px; width: 8px; height: 8px;
@@ -8738,7 +8618,7 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
    settle rather than a burst of confetti, so repeated claims never feel like
    the same big celebration playing six times in a row. */
 .dm-row.dm-claiming { animation: dmClaim .42s var(--ease); }
-@keyframes dmClaim { 0% { transform: scale(1); } 45% { transform: scale(1.035); background: rgba(245,200,66,.12); } 100% { transform: scale(1); } }
+@keyframes dmClaim { 0% { transform: scale(1); } 45% { transform: scale(1.035); background: color-mix(in srgb, var(--gold) 12%, transparent); } 100% { transform: scale(1); } }
 .list-top-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 /* TOURNAMENT — the main event. A pulsing gold border and a slow diagonal
    sweep of light, own keyframes, own colour. Glowy but not obnoxious: the
@@ -8753,14 +8633,14 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
 .ltb-label { position: relative; z-index: 1; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--gold); }
 .ltb-glow {
   position: absolute; inset: -40%; z-index: 0;
-  background: linear-gradient(115deg, transparent 30%, rgba(245,200,66,.28) 48%, transparent 66%);
+  background: linear-gradient(115deg, transparent 30%, color-mix(in srgb, var(--gold) 28%, transparent) 48%, transparent 66%);
   background-size: 220% 220%;
   animation: ltbSweep 3.4s linear infinite;
 }
 @keyframes ltbSweep { 0% { background-position: 0% 0%; } 100% { background-position: -220% 0%; } }
 @keyframes ltbPulse {
-  0%, 100% { box-shadow: 0 0 0 rgba(245,200,66,0); border-color: var(--gold-dim); }
-  50% { box-shadow: 0 0 22px rgba(245,200,66,.35); border-color: var(--gold); }
+  0%, 100% { box-shadow: 0 0 0 transparent; border-color: var(--gold-dim); }
+  50% { box-shadow: 0 0 22px color-mix(in srgb, var(--gold) 35%, transparent); border-color: var(--gold); }
 }
 /* FILL FROM AN ARTIST — quieter, its own identity: a corner shimmer rather
    than a full sweep or a pulsing border, so the two bulk actions are never
@@ -9108,9 +8988,9 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
 .onb::before {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background:
-    radial-gradient(900px 620px at 12% -8%, rgba(94,184,255,.10), transparent 62%),
-    radial-gradient(760px 540px at 96% 4%, rgba(255,61,154,.09), transparent 60%),
-    radial-gradient(820px 600px at 50% 108%, rgba(245,200,66,.08), transparent 62%);
+    radial-gradient(900px 620px at 12% -8%, color-mix(in srgb, var(--hue-5) 10%, transparent), transparent 62%),
+    radial-gradient(760px 540px at 96% 4%, color-mix(in srgb, var(--hue-3) 9%, transparent), transparent 60%),
+    radial-gradient(820px 600px at 50% 108%, color-mix(in srgb, var(--gold) 8%, transparent), transparent 62%);
 }
 .onb > * { position: relative; z-index: 1; }
 
@@ -9192,9 +9072,9 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
   background: radial-gradient(circle at 38% 32%, #2b2620 0%, #17130f 46%, #0d0b09 100%);
   box-shadow:
     0 0 0 2.5% #060505,
-    inset 0 0 0 1.5px rgba(245,200,66,0.55),
+    inset 0 0 0 1.5px color-mix(in srgb, var(--gold) 55%, transparent),
     inset 0 0 44px rgba(0,0,0,0.55),
-    0 0 70px rgba(245,200,66,0.10);
+    0 0 70px color-mix(in srgb, var(--gold) 10%, transparent);
 }
 @media (prefers-reduced-motion: reduce) { .onb-disc { animation: none; } }
 
@@ -9327,8 +9207,8 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
   display: inline-flex; align-items: center; gap: 6px;
   font: 800 13px/1 var(--font-body); letter-spacing: .08em;
   padding: 8px 12px; border-radius: 999px; color: #1a1408;
-  background: linear-gradient(135deg, #ffe9a8, #F5C842 42%, #ff9d3d);
-  box-shadow: 0 0 0 1px rgba(255,255,255,.35) inset, 0 10px 30px rgba(245,200,66,.42);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--gold) 45%, #fff), var(--gold) 42%, var(--accent-2));
+  box-shadow: 0 0 0 1px rgba(255,255,255,.35) inset, 0 10px 30px color-mix(in srgb, var(--gold) 42%, transparent);
   animation: onbBadge .72s cubic-bezier(.2,1.5,.35,1) .18s both;
 }
 @keyframes onbBadge {
@@ -9359,7 +9239,7 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
   color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .onb-ar:active .onb-ar-img { transform: scale(.94); }
-.onb-ar.on .onb-ar-img { box-shadow: 0 0 0 3px var(--gold), 0 8px 26px rgba(245,200,66,.3); }
+.onb-ar.on .onb-ar-img { box-shadow: 0 0 0 3px var(--gold), 0 8px 26px color-mix(in srgb, var(--gold) 30%, transparent); }
 .onb-ar.on .onb-ar-n { color: var(--gold); }
 .onb-ar.just .onb-ar-img { animation: onbPop .34s var(--ease); }
 .onb-ar.nope .onb-ar-img { animation: onbNope .34s var(--ease); }
@@ -9385,8 +9265,8 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
   z-index: 205; pointer-events: none;
   font: 800 17px/1 var(--font-body); letter-spacing: -.01em;
   color: #1a1408; padding: 11px 18px; border-radius: 999px;
-  background: linear-gradient(135deg, #ffe9a8, #F5C842 50%, #ff9d3d);
-  box-shadow: 0 14px 40px rgba(245,200,66,.4);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--gold) 45%, #fff), var(--gold) 50%, var(--accent-2));
+  box-shadow: 0 14px 40px color-mix(in srgb, var(--gold) 40%, transparent);
   animation: onbPopUp 1.5s var(--ease) both;
 }
 @keyframes onbPopUp {
@@ -9590,23 +9470,24 @@ input, textarea, select, [contenteditable="true"],
 }
 </style>
 <link rel="stylesheet" href="/assets/interactions.css?v=3">
-<link rel="stylesheet" href="/assets/replay.css?v=2">
+<link rel="stylesheet" href="/assets/replay.css?v=3">
 <link rel="stylesheet" href="/assets/you.css?v=1">
-<link rel="stylesheet" href="/assets/games.css?v=1">
-<link rel="stylesheet" href="/assets/store.css?v=2">
-<link rel="stylesheet" href="/assets/glow.css?v=4">
-<link rel="stylesheet" href="/assets/themes2.css?v=1">
+<link rel="stylesheet" href="/assets/games.css?v=2">
+<link rel="stylesheet" href="/assets/store.css?v=3">
+<link rel="stylesheet" href="/assets/glow.css?v=5">
+<link rel="stylesheet" href="/assets/themes2.css?v=2">
 <link rel="stylesheet" href="/assets/play.css?v=1">
 <link rel="stylesheet" href="/assets/cards.css?v=1">
 <link rel="stylesheet" href="/assets/foryou.css?v=3">
 <link rel="stylesheet" href="/assets/comments.css?v=1">
-<link rel="stylesheet" href="/assets/boards.css?v=1">
-<link rel="stylesheet" href="/assets/ladder.css?v=2">
+<link rel="stylesheet" href="/assets/boards.css?v=2">
+<link rel="stylesheet" href="/assets/ladder.css?v=3">
 <link rel="stylesheet" href="/assets/profile2.css?v=1">
 <link rel="stylesheet" href="/assets/today.css?v=1">
 <link rel="stylesheet" href="/assets/home2.css?v=1">
 <link rel="stylesheet" href="/assets/charades.css?v=1">
 <link rel="stylesheet" href="/assets/passport.css?v=1">
+<link rel="stylesheet" href="/assets/artist.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -10148,23 +10029,31 @@ window.discAmt = function (n) {
   <div class="activity-head"><h3>Notifications</h3><button class="activity-close" id="notif-close" aria-label="Close">&times;</button></div>
   <div class="activity-list" id="notif-list"></div>
 </aside>
-<div id="artist-hero" class="artist-hero artist-hero-expanded" style="display:none;">
-  <!-- Two copies of one photo, and the bed is the whole reason the banner
-       survives the source. Deezer's artist pictures are square, whatever the
-       label supplied, and the resolution swings from 1000px to an upscaled
-       thumbnail — so a sharp image stretched across a wide band is sometimes
-       going to be soft. The bed is that same photo blurred and scaled past the
-       edges, so a short or low-res source lands ON something in its own colours
-       instead of on a letterbox. -->
-  <img class="artist-hero-bed" id="artist-hero-bed" alt="" aria-hidden="true" referrerpolicy="no-referrer">
-  <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer" crossorigin="anonymous">
-  <div class="artist-hero-duotone" aria-hidden="true"></div>
+<div id="artist-hero" class="artist-hero" style="display:none;">
+  <!-- An editorial feature, not a banner. The photo is the SUBJECT again, but
+       framed as a square portrait rather than stretched across a wide band:
+       Deezer's artist pictures are square, so a square frame shows the whole
+       of every one and crops nobody's head. The colour comes from the records
+       instead — the sleeves in the stack are repeated behind everything,
+       blurred to light, so the band is lit in this artist's own palette rather
+       than darkened to make a photo of unknown quality survive. See
+       assets/artist.css. -->
+  <div class="ah-ambient" aria-hidden="true">
+    <img class="artist-hero-bed" id="artist-hero-bed" alt="" referrerpolicy="no-referrer" decoding="async">
+    <div class="ah-glows" id="artist-hero-glows"></div>
+  </div>
   <canvas class="artist-hero-canvas" id="artist-hero-canvas" aria-hidden="true" style="display:none;"></canvas>
-  <div class="artist-hero-fade"></div>
+  <div class="artist-hero-fade" aria-hidden="true"></div>
   <div class="artist-hero-content wrap">
+    <div class="ah-visual" id="artist-hero-visual">
+      <figure class="ah-portrait" id="artist-hero-portrait">
+        <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer" crossorigin="anonymous" fetchpriority="high">
+      </figure>
+      <div class="ah-stack" id="artist-hero-stack"></div>
+    </div>
     <div class="artist-hero-words">
-      <div class="artist-hero-eyebrow">Favourite artist</div>
-      <div class="artist-hero-name" id="artist-hero-name"></div>
+      <div class="artist-hero-eyebrow"><span class="ah-rule" aria-hidden="true"></span>Favourite artist</div>
+      <h2 class="artist-hero-name" id="artist-hero-name"></h2>
       <div class="artist-hero-meta" id="artist-hero-meta"></div>
     </div>
   </div>
@@ -11945,9 +11834,17 @@ async function getAppToken(){
 async function getAnyToken(){return(await getAccessToken())||(await getAppToken());}
 
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
-const _spQueue=[];let _spPumping=false,_spLast=0;const SP_GAP=150,_spotifyGetCache={};
+const _spQueue=[];let _spLast=0;const SP_GAP=150,_spotifyGetCache={};
 function spotifyFetch(path,opts){opts=opts||{};return new Promise(function(resolve,reject){const job={path:path,resolve:resolve,reject:reject,skip:opts.skip||null};if(opts.priority){let i=0;while(i<_spQueue.length&&_spQueue[i]._pri)i++;job._pri=true;_spQueue.splice(i,0,job);}else{_spQueue.push(job);}_spPump();});}
-async function _spPump(){if(_spPumping)return;_spPumping=true;while(_spQueue.length){const job=_spQueue.shift();if(job.skip&&job.skip()){const e=new Error('stale');e.stale=true;job.reject(e);continue;}try{job.resolve(await _spExec(job.path,job._pri));}catch(err){job.reject(err);}}_spPumping=false;}
+/* FOUR IN FLIGHT, NOT ONE. The queue dates from the Spotify era and ran every
+   catalogue call strictly one after another, so a Promise.all over eight
+   discographies was eight round trips end to end — measured at 8–12s in front
+   of For You's first card logged out, each call 0.5–1.7s. The RATE is still
+   held by SP_GAP between starts (reserved, so concurrent jobs cannot start
+   together) and a 429 still pauses everything; only the latency stopped
+   stacking. */
+const SP_CONC=4;let _spActive=0;
+function _spPump(){while(_spActive<SP_CONC&&_spQueue.length){const job=_spQueue.shift();if(job.skip&&job.skip()){const e=new Error('stale');e.stale=true;job.reject(e);continue;}_spActive++;_spExec(job.path,job._pri).then(job.resolve,job.reject).then(function(){_spActive--;_spPump();});}}
 
 /* CATALOGUE — Spotify-shaped paths, Deezer underneath.
 
@@ -12018,7 +11915,7 @@ let _spPauseUntil=0;
 async function _spExec(path,pri){
   for(let attempt=0;;attempt++){
     let hold=_spPauseUntil-Date.now();while(hold>0){await sleep(Math.min(hold,1000));hold=_spPauseUntil-Date.now();}
-    if(!pri){const gap=SP_GAP-(Date.now()-_spLast);if(gap>0)await sleep(gap);}_spLast=Date.now();
+    if(!pri){const at=Math.max(Date.now(),_spLast+SP_GAP);_spLast=at;const gap=at-Date.now();if(gap>0)await sleep(gap);}else _spLast=Math.max(_spLast,Date.now());
     const cat=_toCatalogue(path);
     if(!cat){const e=new Error('unsupported-endpoint');e.status=404;e.endpoint=path.split('?')[0];throw e;}
     // No token and no Authorization header: the catalogue needs neither, which
@@ -12744,8 +12641,8 @@ function saveSong(track, score, albumMeta) {
   renderSongs();
   if (window.CertPanel && albumMeta) try { CertPanel.refresh(albumMeta.id); } catch (e) {}
 }
-function removeAlbum(id) { const a = loadAlbums(); delete a[id]; persist(ALBUMS_KEY, a); if (window.Cloud) Cloud.deleteRating('album', id); if (window.Cloud) Cloud.removeFromFeed(id); _recsDirty = true; renderAlbums(); }
-function removeSong(id)  { const s = loadSongs(); delete s[id]; persist(SONGS_KEY, s); if (window.Cloud) Cloud.deleteRating('song', id); _recsDirty = true; renderSongs(); }
+function removeAlbum(id) { const a = loadAlbums(), old = a[id]; delete a[id]; persist(ALBUMS_KEY, a); if (window.Cloud) Cloud.deleteRating('album', id, old); if (window.Cloud) Cloud.removeFromFeed(id); _recsDirty = true; renderAlbums(); }
+function removeSong(id)  { const s = loadSongs(), old = s[id]; delete s[id]; persist(SONGS_KEY, s); if (window.Cloud) Cloud.deleteRating('song', id, old); _recsDirty = true; renderSongs(); }
 window.removeAlbum = removeAlbum;
 window.removeSong = removeSong;
 
@@ -13808,21 +13705,20 @@ async function renderArtistHero() {
   const fav = prof && prof.fav_artist;
 
   if (!fav || !fav.id) { hideArtistHero(hero); _heroBuilt = false; _heroArtistKey = null; return; }
-  if (_heroBuilt && _heroArtistKey === fav.id) { showArtistHero(hero); return; }
+  if (_heroBuilt && _heroArtistKey === fav.id) {
+    showArtistHero(hero);
+    // The stat line and the stack read the crate, which may have moved since
+    // (this runs after every rating). Repaints in place, never resizes.
+    try { paintArtistHeroDetail(hero, fav); } catch (e) {}
+    return;
+  }
 
   // Prefer the image already saved on the profile (avoids an extra API call);
   // only hit Spotify if we don't have one cached on the favourite itself.
   const img = fav.image || await fetchArtistImage(fav.id, fav.name);
   if (!img) { hideArtistHero(hero); return; }
 
-  document.getElementById('artist-hero-bg').src = img;
-  // Same file, second use: the sharp banner and the blurred bed behind it.
-  // One request — the browser serves the second from cache.
-  var bed = document.getElementById('artist-hero-bed');
-  if (bed) bed.src = img;
-  document.getElementById('artist-hero-name').textContent = fav.name;
-  document.getElementById('artist-hero-meta').innerHTML = '';
-  hero.dataset.artistId = fav.id;
+  paintArtistHero(hero, { id: fav.id, name: fav.name, image: img });
   _heroArtistKey = fav.id;
   showArtistHero(hero);
   _heroBuilt = true;
@@ -13833,6 +13729,224 @@ async function renderArtistHero() {
   // any reason (see the catch inside mountArtistHero itself).
   if (window.VinalDither) window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
 }
+
+/* ---- The favourite-artist feature: portrait, stack, light, and a line about you.
+
+   The banner it replaces was a square press photo stretched across a wide band
+   and darkened until it could not look bad — which also meant it could not look
+   good. Three changes, all in service of the artist being the subject:
+
+   * THE PHOTO IS FRAMED, NOT STRETCHED. Deezer's artist pictures are square,
+     so a square frame shows the whole file: no head is cropped, whatever the
+     label supplied. Unfiltered — the darkening is gone, and only the words get
+     a scrim, because only the words need one.
+   * THE LIGHT COMES FROM THE RECORDS. The sleeves in the stack are repeated
+     behind everything, small and blurred, which is For You's .fy-glow idea and
+     needs no canvas read (Deezer images are not reliably CORS-readable). The
+     band ends up in the artist's own palette rather than in black.
+   * THE STAT LINE IS ABOUT YOU, from local data only: how many of theirs you
+     have rated, your average, your top record. Nothing here costs a round trip
+     except the discography, which only fills the stack when your crate holds
+     fewer than four of theirs, and is cached per artist by fetchStudioAlbums.
+
+   Nothing in here may change the hero's HEIGHT. The height is reserved in CSS
+   so the queued-resize rule above (searchBusy / heroResize) stays the only
+   thing that ever moves the search field. Everything below repaints in place. */
+var AH_MAX = 4;
+function _ahFold(s) {
+  // Fold, then strip (trap 5): Beyoncé must become beyonce, never beyonc.
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+function _ahIsBy(rec, fav) {
+  if (!rec || !fav) return false;
+  // An id is an identity; a name is the fallback, because a crate carries
+  // legacy Spotify ids and new Deezer ones for the same artist (trap 4).
+  if (fav.id && rec.artistId && String(rec.artistId) === String(fav.id)) return true;
+  var want = _ahFold(fav.name);
+  if (!want) return false;
+  var a = String(rec.artist || '');
+  if (_ahFold(a) === want) return true;
+  return _ahFold(a.split(/\s*(?:,|&|\bfeat\.?|\bft\.?|\bwith\b)\s*/i)[0]) === want;
+}
+function _ahLocal(fav) {
+  var albums = [], songs = 0;
+  try {
+    var all = loadAlbums() || {};
+    Object.keys(all).forEach(function (k) {
+      var r = all[k];
+      if (_ahIsBy(r, fav) && isFinite(+r.score) && +r.score > 0) albums.push(r);
+    });
+  } catch (e) {}
+  albums.sort(function (a, b) { return (+b.score - +a.score) || ((a.savedAt || 0) - (b.savedAt || 0)); });
+  try {
+    var ss = loadSongs() || {};
+    Object.keys(ss).forEach(function (k) { if (_ahIsBy(ss[k], fav)) songs++; });
+  } catch (e) {}
+  return { albums: albums, songs: songs };
+}
+function _ahMetaHtml(loc, disco) {
+  var n = loc.albums.length, out = [];
+  if (!n) {
+    out.push('<span class="ah-stat ah-stat-quiet">Nothing of theirs rated yet</span>');
+    if (disco && disco.length) out.push('<span class="ah-stat"><b>' + disco.length + '</b> ' + (disco.length === 1 ? 'album' : 'albums') + ' waiting</span>');
+    return '<div class="ah-stats">' + out.join('') + '</div>';
+  }
+  var sum = 0; loc.albums.forEach(function (a) { sum += +a.score; });
+  var avg = Math.round(sum / n), top = loc.albums[0];
+  out.push('<span class="ah-stat"><b>' + n + '</b> ' + (n === 1 ? 'record' : 'records') + ' rated</span>');
+  if (loc.songs) out.push('<span class="ah-stat"><b>' + loc.songs + '</b> ' + (loc.songs === 1 ? 'song' : 'songs') + '</span>');
+  out.push('<span class="ah-stat"><b style="--sc:' + albumColor(avg) + '" class="ah-num">' + avg + '</b> average</span>');
+  return '<div class="ah-stats">' + out.join('') + '</div>' +
+    '<button type="button" class="ah-top" data-ah-open="0" title="Open ' + esc(top.name) + '">' +
+      '<span class="ah-top-k">Your top</span><span class="ah-top-n">' + esc(top.name) + '</span>' +
+      '<span class="ah-top-s" style="--sc:' + albumColor(+top.score) + '">' + Math.round(+top.score) + '</span>' +
+    '</button>';
+}
+function _ahReveal(img, el, cls) {
+  if (!img) return;
+  var done = function () { el.classList.add(cls); };
+  if (img.complete && img.naturalWidth) { done(); return; }
+  img.addEventListener('load', done, { once: true });
+  // A sleeve that fails is taken out rather than left as an empty frame.
+  img.addEventListener('error', function () { if (cls === 'is-in') el.remove(); }, { once: true });
+}
+function _ahPaintStack(hero, items) {
+  var stack = document.getElementById('artist-hero-stack');
+  var glows = document.getElementById('artist-hero-glows');
+  if (!stack) return;
+  var key = items.map(function (x) { return x.id + ':' + (x.score || ''); }).join('|');
+  hero._ahItems = items;
+  if (hero._ahStackKey === key) return;
+  hero._ahStackKey = key;
+  hero.style.setProperty('--ah-n', items.length);
+  hero.classList.toggle('ah-has-stack', items.length > 0);
+  // Nodes are REUSED by src, never rebuilt wholesale: the discography lands a
+  // moment after the crate's own records, and rebuilding would blank the
+  // sleeves already on screen and deal them in a second time.
+  function sync(host, list, make) {
+    var old = {};
+    Array.prototype.forEach.call(host.children, function (n) { old[n.getAttribute('data-src')] = n; });
+    list.forEach(function (it, i) {
+      var n = old[it.src];
+      if (n) delete old[it.src]; else n = make(it);
+      n.style.setProperty('--i', i);
+      if (n.hasAttribute('data-ah-open')) n.setAttribute('data-ah-open', i);
+      // Only touch the DOM when a node is out of place: a moved node is a
+      // removed-and-reinserted node, and that restarts its entrance.
+      if (host.children[i] !== n) host.insertBefore(n, host.children[i] || null);
+    });
+    Object.keys(old).forEach(function (k) { old[k].remove(); });
+  }
+  sync(stack, items.map(function (it) { return { src: thumb(it.art, 320), it: it }; }), function (x) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'ah-sleeve';
+    b.setAttribute('data-src', x.src); b.setAttribute('data-ah-open', '0');
+    b.title = x.it.name || ''; b.setAttribute('aria-label', 'Open ' + (x.it.name || 'record'));
+    var img = new Image(); img.alt = ''; img.decoding = 'async'; img.referrerPolicy = 'no-referrer'; img.src = x.src;
+    b.appendChild(img);
+    _ahReveal(img, b, 'is-in');
+    return b;
+  });
+  if (glows) {
+    // Three is enough light; more is mud. Tiny files — a blur needs no detail.
+    sync(glows, items.slice(0, 3).map(function (it) { return { src: thumb(it.art, 120) }; }), function (x) {
+      var g = new Image(); g.className = 'ah-glow'; g.alt = ''; g.decoding = 'async'; g.referrerPolicy = 'no-referrer';
+      g.setAttribute('data-src', x.src); g.src = x.src;
+      _ahReveal(g, g, 'is-in');
+      return g;
+    });
+  }
+}
+function paintArtistHeroDetail(hero, fav) {
+  var loc = _ahLocal(fav);
+  var items = loc.albums.slice(0, AH_MAX).filter(function (a) { return a.art; });
+  var meta = document.getElementById('artist-hero-meta');
+  var disco = hero._ahDisco && hero._ahDisco.id === fav.id ? hero._ahDisco.list : null;
+  if (items.length < AH_MAX && disco) {
+    var seen = {};
+    items.forEach(function (a) { seen[_ahFold(baseAlbumTitle(a.name))] = 1; });
+    disco.slice().reverse().forEach(function (d) {          // newest first
+      if (items.length >= AH_MAX || !d.art) return;
+      var k = _ahFold(baseAlbumTitle(d.name));
+      if (seen[k]) return; seen[k] = 1;
+      items.push({ id: d.id, name: d.name, art: d.art, year: d.year, artist: fav.name, artistId: fav.id });
+    });
+  }
+  _ahPaintStack(hero, items);
+  if (meta) meta.innerHTML = _ahMetaHtml(loc, disco);
+  // The discography is only worth a request when the crate cannot fill the
+  // stack on its own, and only once per artist per page.
+  if (items.length < AH_MAX && !disco && fav.id && !hero._ahDiscoAsked && typeof fetchStudioAlbums === 'function') {
+    hero._ahDiscoAsked = fav.id;
+    fetchStudioAlbums(fav.id, false, fav.name).then(function (list) {
+      if (hero.dataset.artistId !== String(fav.id)) return;
+      hero._ahDisco = { id: fav.id, list: list || [] };
+      paintArtistHeroDetail(hero, fav);
+    }).catch(function () {});
+  }
+}
+function paintArtistHero(hero, fav) {
+  var bg = document.getElementById('artist-hero-bg');
+  var portrait = document.getElementById('artist-hero-portrait');
+  var bed = document.getElementById('artist-hero-bed');
+  var nameEl = document.getElementById('artist-hero-name');
+  if (hero.dataset.artistId !== String(fav.id || '')) {
+    hero._ahStackKey = null; hero._ahDisco = null; hero._ahDiscoAsked = null;
+  }
+  hero.dataset.artistId = String(fav.id || '');
+  if (bg && bg.getAttribute('src') !== fav.image) {
+    if (portrait) {
+      portrait.classList.remove('is-loaded', 'is-empty');
+      // A photo that never arrives leaves a monogram, not an empty grey frame.
+      portrait.setAttribute('data-initial', String(fav.name || '?').trim().replace(/^the\s+/i, '').charAt(0).toUpperCase());
+      bg.onerror = function () { portrait.classList.add('is-empty'); };
+    }
+    bg.alt = fav.name || '';
+    bg.src = fav.image;
+    _ahReveal(bg, portrait, 'is-loaded');
+  }
+  // Same file, second use: the blurred bed. One request — served from cache.
+  // A small copy is plenty for something blurred past recognition.
+  var bedSrc = thumb(fav.image, 250);
+  if (bed && bed.getAttribute('src') !== bedSrc) { bed.classList.remove('is-in'); bed.src = bedSrc; _ahReveal(bed, bed, 'is-in'); }
+  if (nameEl) {
+    nameEl.textContent = fav.name || '';
+    var len = String(fav.name || '').length;
+    nameEl.classList.toggle('ah-long', len > 14 && len <= 22);
+    nameEl.classList.toggle('ah-xlong', len > 22);
+  }
+  wireArtistHero(hero);
+  paintArtistHeroDetail(hero, fav);
+}
+function wireArtistHero(hero) {
+  if (hero._ahWired) return;
+  hero._ahWired = true;
+  hero.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-ah-open]');
+    if (!b || !hero._ahItems) return;
+    var it = hero._ahItems[+b.getAttribute('data-ah-open')];
+    if (!it || typeof openAlbum !== 'function') return;
+    openAlbum({ id: it.id, name: it.name, artist: it.artist, artistId: it.artistId || hero.dataset.artistId, art: it.art, year: it.year || '', genre: it.genre || '' });
+  });
+  // Depth on a desktop pointer only: the visual leans a few pixels toward the
+  // cursor. Independent `translate`, so the stack's own transforms and the
+  // hover fan are never replaced (trap 2). Touch gets nothing — it has no
+  // hover and a parallax that follows a finger is a parallax that jitters.
+  var fine = false, rm = false;
+  try { fine = matchMedia('(hover: hover) and (pointer: fine)').matches; rm = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  if (!fine) return;
+  var vis = document.getElementById('artist-hero-visual'), raf = 0, px = 0, py = 0;
+  if (!vis) return;
+  function off() { var m = document.documentElement.getAttribute('data-motion'); return m === 'none' || (rm && m !== 'full'); }
+  hero.addEventListener('pointermove', function (e) {
+    if (off()) return;
+    var r = hero.getBoundingClientRect();
+    px = (e.clientX - r.left) / r.width - 0.5; py = (e.clientY - r.top) / r.height - 0.5;
+    if (!raf) raf = requestAnimationFrame(function () { raf = 0; vis.style.setProperty('--ah-px', px.toFixed(3)); vis.style.setProperty('--ah-py', py.toFixed(3)); });
+  });
+  hero.addEventListener('pointerleave', function () { vis.style.setProperty('--ah-px', 0); vis.style.setProperty('--ah-py', 0); });
+}
+window.paintArtistHero = paintArtistHero;
 /* The collapse button is gone. It was a control for getting a feature out of
    the way, which is the app admitting the feature is in the way — and it
    offered a second state that had to be styled, remembered and reasoned about
@@ -13990,7 +14104,13 @@ function setMode(mode, fromCode) {
     b.classList.toggle('active', on);
     if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
-  if (window.positionNavIndicator) window.positionNavIndicator();
+  /* NEXT FRAME, NOT NOW. Reading offsetWidth here forced a full synchronous
+     layout of the new view BEFORE the renders below changed it — so every
+     switch laid the page out twice (once stale, once real), and the profile
+     put 80% of setMode's time in this one call. In a rAF the read happens
+     after every write in this function, the browser lays out once, and the
+     pill still moves in the same frame the view appears. */
+  if (window.positionNavIndicator && !setMode._navRaf) setMode._navRaf = requestAnimationFrame(function () { setMode._navRaf = 0; window.positionNavIndicator(); });
   if (mode === 'home' || mode === 'albums' || mode === 'songs') lastListMode = mode;
   if (mode === 'home') {
     /* Recommendations and release-watching moved to For You with the Discover
@@ -14928,7 +15048,7 @@ function renderAuthArea(connected){
     host.innerHTML=list.map(function(a){
       const img=(a.images&&a.images[0]&&a.images[0].url)||'';
       return '<button class="g-pop-a" data-popid="'+esc(a.id)+'" data-popname="'+esc(a.name)+'">'+
-        (img?'<img src="'+esc(img)+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">':'<span class="g-pop-ph"></span>')+
+        (img?'<img src="'+esc(thumb(img,200))+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">':'<span class="g-pop-ph"></span>')+
         '<span class="g-pop-n">'+esc(a.name)+'</span></button>';
     }).join('');
   }
@@ -15482,7 +15602,7 @@ function celebrate(title,sub,opts){
   /* The accent leads its own confetti rather than replacing it: a single
      colour reads as a loading state, and a palette with the category's colour
      at the front of it reads as that category. */
-  const base=['#4fb477','#F5C842','#85b7eb','#f0ede8','#e24b4a','#6bbf68','#d98cff'];
+  const base=['var(--gold)','var(--accent-2)','var(--hue-1)','#f0ede8','var(--hue-3)','var(--hue-4)','var(--hue-2)'];
   const cols=(opts&&opts.accent)?[opts.accent,opts.accent,'#f0ede8'].concat(base):base;
   const n=(opts&&opts.confetti!=null)?opts.confetti:80;
   for(let i=0;i<n;i++){const s=document.createElement('span');s.className='cf';s.style.background=cols[i%cols.length];s.style.setProperty('--cx',(Math.random()*760-380).toFixed(0)+'px');s.style.setProperty('--cy',(Math.random()*520+120).toFixed(0)+'px');s.style.setProperty('--cr',(Math.random()*720-360).toFixed(0)+'deg');s.style.animationDelay=(Math.random()*0.25).toFixed(2)+'s';ov.appendChild(s);setTimeout(function(){if(s.parentNode)s.parentNode.removeChild(s);},2000);}
@@ -15589,7 +15709,7 @@ async function claimAch(btn){
     stampAchievement(btn.closest('.ach'),res.earned);
   } else if(res.earned>0){
     celebrate(btn.dataset.label,'+'+res.earned.toLocaleString('en-GB')+' Discs',
-      {eyebrow:'Milestone claimed',accent:'#F5C842'});
+      {eyebrow:'Milestone claimed',accent:'var(--gold)'});
   }
   renderAchievements();
 }
@@ -16207,6 +16327,61 @@ const Cloud=(function(){
      old behaviour for old data. */
   function itemStamp(x){return Math.max((x&&x.ratedAt)||0,(x&&x.savedAt)||0);}
   function mergeItemMap(localObj,cloudObj){const out=Object.assign({},cloudObj||{});const loc=localObj||{};Object.keys(loc).forEach(function(id){const a=loc[id],b=out[id];if(!b||itemStamp(a)>=itemStamp(b))out[id]=a;});return out;}
+  const RATING_DELETIONS_KEY='crate_rating_deletions_v1', RATING_PENDING_KEY='crate_rating_delete_pending_v1';
+  const ratingWrites={},ratingDeleteJobs={};
+  let ratingsSyncReady=false;
+  function applyRatingDeletions(map,kind,deletions){
+    const out=Object.assign({},map||{});
+    Object.keys(out).forEach(function(id){const at=+(deletions||{})[kind+'|'+id]||0;if(at&&itemStamp(out[id])<=at)delete out[id];});
+    return out;
+  }
+  function queueRatingWrite(key,uid,work){
+    const job=(ratingWrites[key]||Promise.resolve()).catch(function(){}).then(function(){
+      if(!isOn()||user.id!==uid)return false;
+      return work();
+    });
+    ratingWrites[key]=job;
+    job.finally(function(){if(ratingWrites[key]===job)delete ratingWrites[key];}).catch(function(){});
+    return job;
+  }
+  async function flushRatingDeletes(){
+    if(!isOn())return false;
+    const uid=user.id, entries=lsGet(RATING_PENDING_KEY)||{};
+    const results=await Promise.all(Object.keys(entries).map(function(key){
+      const at=entries[key],cut=key.indexOf('|');
+      const active=ratingDeleteJobs[key];
+      if(active&&active.uid===uid&&active.at===at)return active.job;
+      const job=queueRatingWrite(key,uid,async function(){
+        const res=await sb.rpc('rating_delete',{p_kind:key.slice(0,cut),p_item_id:key.slice(cut+1),p_deleted_ms:at,p_owner:uid});
+        if(res.error)return false;
+        if(!isOn()||user.id!==uid)return false;
+        const pending=lsGet(RATING_PENDING_KEY)||{};
+        if(pending[key]===at){delete pending[key];lsSetRaw(RATING_PENDING_KEY,pending);}
+        return true;
+      }).catch(function(){return false;});
+      const slot={uid:uid,at:at,job:job};ratingDeleteJobs[key]=slot;
+      job.finally(function(){if(ratingDeleteJobs[key]===slot)delete ratingDeleteJobs[key];}).catch(function(){});
+      return job;
+    }));
+    return results.every(Boolean);
+  }
+  async function pullRatingDeletions(){
+    if(!isOn())return false;
+    const uid=user.id, merged=Object.assign({},lsGet(RATING_DELETIONS_KEY)||{}),PAGE=1000;
+    try{
+      for(let from=0;;from+=PAGE){
+        const res=await sb.from('rating_deletions').select('kind,item_id,deleted_ms').eq('user_id',uid)
+          .order('kind').order('item_id').range(from,from+PAGE-1);
+        if(res.error||!isOn()||user.id!==uid)return false;
+        (res.data||[]).forEach(function(r){const key=r.kind+'|'+r.item_id;merged[key]=Math.max(+merged[key]||0,+r.deleted_ms||0);});
+        if((res.data||[]).length<PAGE)break;
+      }
+      // Include deletions made while the download was in flight.
+      const recent=lsGet(RATING_DELETIONS_KEY)||{};
+      Object.keys(recent).forEach(function(k){merged[k]=Math.max(+merged[k]||0,+recent[k]||0);});
+      lsSetRaw(RATING_DELETIONS_KEY,merged);return true;
+    }catch(e){return false;}
+  }
   function mergeClaimed(a,b){return Object.assign({},b||{},a||{});}
   /* Per key, the larger number wins. Used by the game log's play counts and by
      the Higher or Lower bests, which are both maps of independent numbers that
@@ -16256,11 +16431,21 @@ const Cloud=(function(){
   }
 
   async function pullAndMerge(){
-    let rows=[];try{const res=await sb.from('app_state').select('key,value').eq('user_id',user.id);rows=res.data||[];}catch(e){return;}
+    if(!isOn())return;
+    const uid=user.id;
+    ratingsSyncReady=false;
+    // Never reconcile against an unknown deletion history. Pending offline
+    // deletes are retried, and the server also guards writes from old binaries.
+    await flushRatingDeletes();
+    if(!isOn()||user.id!==uid)return;
+    if(!await pullRatingDeletions())return;
+    let rows=[];try{const res=await sb.from('app_state').select('key,value').eq('user_id',uid);if(res.error||!isOn()||user.id!==uid)return;rows=res.data||[];}catch(e){return;}
     const cloud={};rows.forEach(function(r){cloud[r.key]=r.value;});
-    const mAlb=mergeItemMap(lsGet('crate_albums_v1')||{},cloud['crate_albums_v1']||{});
-    const mSng=mergeItemMap(lsGet('crate_songs_v1')||{},cloud['crate_songs_v1']||{});
+    const deleted=lsGet(RATING_DELETIONS_KEY)||{};
+    const mAlb=applyRatingDeletions(mergeItemMap(lsGet('crate_albums_v1')||{},cloud['crate_albums_v1']||{}),'album',deleted);
+    const mSng=applyRatingDeletions(mergeItemMap(lsGet('crate_songs_v1')||{},cloud['crate_songs_v1']||{}),'song',deleted);
     lsSetRaw('crate_albums_v1',mAlb);lsSetRaw('crate_songs_v1',mSng);
+    ratingsSyncReady=true;
     lsSetRaw('crate_claimed',mergeClaimed(lsGet('crate_claimed'),cloud['crate_claimed']));
     // Diary entries merge per DAY, newest write wins, so writing on a phone
     // and then on a laptop keeps both days instead of one clobbering the other.
@@ -16364,7 +16549,13 @@ const Cloud=(function(){
     Promise.all(changed.map(pushKey)).catch(function () {});
   }
 
-  async function pushKey(key){if(!isOn())return;const value=lsGet(key);if(value===null)return;try{await sb.from('app_state').upsert({user_id:user.id,key:key,value:value,updated_at:new Date().toISOString()});}catch(e){}}
+  async function pushKey(key){
+    if(!isOn())return;const uid=user.id;
+    if((key==='crate_albums_v1'||key==='crate_songs_v1')&&!await flushRatingDeletes())return;
+    if(!isOn()||user.id!==uid)return;
+    const value=lsGet(key);if(value===null)return;
+    try{await sb.from('app_state').upsert({user_id:uid,key:key,value:value,updated_at:new Date().toISOString()});}catch(e){}
+  }
   // Seventeen small upserts have no reason to queue behind each other.
   async function pushAll(){await Promise.all(SYNC_KEYS.map(pushKey));}
   function push(key){if(!isOn())return;if(SYNC_KEYS.indexOf(key)===-1)return;clearTimeout(pending[key]);pending[key]=setTimeout(function(){pushKey(key);},600);}
@@ -16526,7 +16717,8 @@ const Cloud=(function(){
      broken by the old code repairs itself on next open with no migration and
      no flag to bump. Costs one id-only select per login. */
   async function reconcileRatings(){
-    if(!isOn())return;
+    if(!isOn()||!ratingsSyncReady)return;
+    const uid=user.id;
     let albums={},songs={};
     try{
       albums=JSON.parse(localStorage.getItem('crate_albums_v1')||'{}');
@@ -16538,10 +16730,10 @@ const Cloud=(function(){
     try{
       for(let from=0;;from+=PAGE){
         const res=await sb.from('ratings').select('kind,item_id')
-          .eq('user_id',user.id).range(from,from+PAGE-1);
+          .eq('user_id',uid).order('kind').order('item_id').range(from,from+PAGE-1);
         // Cannot diff against an unknown remote, so do nothing rather than
         // re-push the entire library on a transient failure.
-        if(res.error)return;
+        if(res.error||!isOn()||user.id!==uid)return;
         const rows=res.data||[];
         rows.forEach(function(r){have[r.kind+'|'+r.item_id]=1;});
         if(rows.length<PAGE||from>20000)break;
@@ -16549,6 +16741,10 @@ const Cloud=(function(){
     }catch(e){return;}
 
     const now=new Date().toISOString(),missing=[];
+    // A local deletion can happen during the paged diff above.
+    const deleted=lsGet(RATING_DELETIONS_KEY)||{};
+    albums=applyRatingDeletions(albums,'album',deleted);
+    songs=applyRatingDeletions(songs,'song',deleted);
     Object.keys(albums).forEach(function(id){
       if(!have['album|'+id])missing.push({user_id:user.id,kind:'album',item_id:id,data:albums[id],updated_at:now});
     });
@@ -16584,6 +16780,7 @@ const Cloud=(function(){
     try{ if(window.PushCtl) await PushCtl.forget(); }catch(e){}
     try{await sb.auth.signOut();}catch(e){}
     user=null;
+    ratingsSyncReady=false;
     wipeLocalAccountState();
     try{localStorage.removeItem(OWNER_KEY);}catch(e){}
     if(window.Wallet&&Wallet.reset)Wallet.reset();
@@ -16948,11 +17145,24 @@ const Cloud=(function(){
      which only ever syncs back to you, not to other people's queries. */
   async function syncRating(kind,itemId,data){
     if(!isOn())return;
-    try{await sb.from('ratings').upsert({user_id:user.id,kind:kind,item_id:itemId,data:data,updated_at:new Date().toISOString()},{onConflict:'user_id,kind,item_id'});}catch(e){}
+    const uid=user.id,key=kind+'|'+itemId;
+    try{
+      if(!await flushRatingDeletes())return;
+      await queueRatingWrite(key,uid,async function(){
+        const at=+(lsGet(RATING_DELETIONS_KEY)||{})[key]||0;
+        if(at&&itemStamp(data)<=at)return false;
+        const res=await sb.from('ratings').upsert({user_id:uid,kind:kind,item_id:itemId,data:data,updated_at:new Date().toISOString()},{onConflict:'user_id,kind,item_id'});
+        return !res.error;
+      });
+    }catch(e){}
   }
-  async function deleteRating(kind,itemId){
+  async function deleteRating(kind,itemId,data){
+    const key=kind+'|'+itemId,deletions=lsGet(RATING_DELETIONS_KEY)||{},pending=lsGet(RATING_PENDING_KEY)||{};
+    const at=Math.max(Date.now(),itemStamp(data)+1,+deletions[key]||0);
+    deletions[key]=at;pending[key]=at;
+    lsSetRaw(RATING_DELETIONS_KEY,deletions);lsSetRaw(RATING_PENDING_KEY,pending);
     if(!isOn())return;
-    try{await sb.from('ratings').delete().eq('user_id',user.id).eq('kind',kind).eq('item_id',itemId);}catch(e){}
+    if(!await flushRatingDeletes())flash('Removed on this device — deletion will sync when connected');
   }
   async function setRatingsVisibility(level){
     if(!isOn())return{error:'not logged in'};
@@ -19718,12 +19928,18 @@ window.handleGrooveLink=handleGrooveLink;
       posts.forEach(function(p){if(p.user_id&&p.user_id!==_myId&&posters.indexOf(p.user_id)===-1)posters.push(p.user_id);});
       Object.assign(_match,await tasteFor(posters));
     }
-    posts.forEach(function(post,i){
+    /* Append all, THEN measure all. measureFoot reads offsetHeight, and
+       interleaving it with appendChild forced one full layout per card —
+       measured as most of the time a switch to the Crate took. One write pass
+       and one read pass is one layout. */
+    const built=posts.map(function(post,i){
       const card=buildCard(post,_scores);
       card.style.animationDelay=(i*0.04)+'s';
       feedEl.appendChild(card);
-      measureFoot(card);
+      return card;
     });
+    const feet=built.map(function(card){const f=card.querySelector('.cf-foot');return f?f.offsetHeight:0;});
+    built.forEach(function(card,i){if(feet[i])card.style.setProperty('--cf-foot',Math.round(feet[i])+'px');else measureFoot(card);});
     _feedCache=_feedCache.concat(posts);
     _offset+=posts.length;
     if(loadMoreBtn)loadMoreBtn.style.display=posts.length>=PAGE?'block':'none';
@@ -19938,26 +20154,28 @@ window.handleGrooveLink=handleGrooveLink;
     const qp=new URLSearchParams(location.search);
     const img=qp.get('debugArtist');
     if(!img)return;
+    // One painter for both paths, so the debug view can no longer drift from
+    // the real one layer by layer. &debugArtistId= lets the stack fall back to
+    // that artist's discography exactly as a real favourite does.
     const hero=document.getElementById('artist-hero');
-    document.getElementById('artist-hero-bg').src=img;
-    // The bed takes the same file. This path has its own code and has to be
-    // told about every layer separately — missing it is what made the debug
-    // view a wash with an empty hole in it last time.
-    const _bed=document.getElementById('artist-hero-bed');
-    if(_bed)_bed.src=img;
-    document.getElementById('artist-hero-name').textContent=qp.get('debugArtistName')||'Test Artist';
-    document.getElementById('artist-hero-meta').innerHTML='';
+    paintArtistHero(hero,{id:qp.get('debugArtistId')||'',name:qp.get('debugArtistName')||'Test Artist',image:img});
     showArtistHero(hero);
     if(window.VinalDither)window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
   }, 1000);
   if(new URLSearchParams(location.search).get('groove')){}
   else if(new URLSearchParams(location.search).get('u')){setMode('profile');}
   else{setMode('home');}
+  /* THE SESSION FIRST, AND NOTHING IN FRONT OF IT. This awaited a round trip
+     to /api/app-token before Cloud.init(), so every load paid a serverless
+     call (a cold Vercel function, measured 0.5-2s) before the session
+     restore could even start — and the splash's GO waits on Cloud.ready,
+     and For You's prewarm waits on that. No catalogue call carries the token
+     any more (see _spExec), so it is fetched on demand by the one place that
+     still asks for it (renderRecommendations, via getAnyToken). */
   const token=await getAccessToken();
-  if(!token)await getAppToken();
-  renderAuthArea(!!token);
   renderStats();
   Cloud.init();
+  renderAuthArea(!!token);
   setTimeout(function(){if(window.handleGrooveLink)handleGrooveLink();},1500);
   setTimeout(function(){if(window.refreshNotifDot)refreshNotifDot();},2500);
   setInterval(function(){if(window.refreshNotifDot&&Cloud.isOn())refreshNotifDot();},60000);
@@ -20965,8 +21183,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   const THEMES = {
     classic:  { name: 'Crate',    cost: 0,    desc: 'The original — near-black, gold and ember.' },
     sundown:  { name: 'Sundown',  cost: 15000, desc: 'Plum dusk, hot orange, pink neon edge.' },
-    cassette: { name: 'Cassette', cost: 15000, desc: 'Deep graphite with turquoise and blue.' },
-    citrus:   { name: 'Citrus',   cost: 25000, desc: 'Espresso dark, blood orange and lime.' },
+    cassette: { name: 'Cassette', cost: 15000, desc: 'Deep graphite, turquoise and tape-label coral.' },
+    citrus:   { name: 'Citrus',   cost: 25000, desc: 'Espresso dark, lime and blood orange.' },
     vhs:      { name: 'VHS Tracking', cost: 30000, desc: 'Bottle-green black with phosphor green and hot pink.' },
     bone:     { name: 'Bone China',   cost: 30000, desc: 'Warm off-white on soot. Quiet, and the only pale one.' },
     neon:     { name: 'Neon Vault', cost: 35000, desc: 'Indigo black, magenta and cyan. Loud.' },
@@ -20976,7 +21194,11 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        overwrites it from shop_items, which is what wallet_buy charges. */
     press:    { name: 'Test Pressing', cost: 2000, desc: 'White label. Silver on black, no colour anywhere.' },
     /* ..._20261014150000_more_themes.sql; tokens in assets/themes2.css. */
-    reel:     { name: 'Reel to Reel',   cost: 12000, desc: 'Warm tape brown, amber and oxide red.' },
+    /* RETIRED from sale 2026-10-14: it was Soul Train with sharper corners.
+       `retired` hides the Buy card unless you own it; an owner keeps it, can
+       still equip it, and sees Soul Train's tokens (aliased in themes2.css).
+       The shop_items row is untouched, so nothing server-side changes. */
+    reel:     { name: 'Reel to Reel',   cost: 12000, desc: 'Warm tape brown, amber and oxide red.', retired: true },
     canopy:   { name: 'Deep Canopy',    cost: 18000, desc: 'Forest-floor green with brass light.' },
     frost:    { name: 'Chrome Frost',   cost: 20000, desc: 'Blue steel, ice and polished chrome.' },
     soul:     { name: 'Soul Train',     cost: 22000, desc: 'Chocolate, mustard and rust. Everything rounded.' },
@@ -20988,13 +21210,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   const SWATCH = {
     classic:  'linear-gradient(135deg,#0a0908 20%,#F5C842 60%,#ff7a4d)',
     sundown:  'linear-gradient(135deg,#1a0a14 20%,#ff8a3d 60%,#ff3d7f)',
-    cassette: 'linear-gradient(135deg,#0b0d10 20%,#12e0c8 60%,#5eb8ff)',
-    citrus:   'linear-gradient(135deg,#12100a 20%,#ff9f1c 60%,#c6ff3d)',
+    cassette: 'linear-gradient(135deg,#0b0d10 20%,#12e0c8 60%,#ff8a6b)',
+    citrus:   'linear-gradient(135deg,#12100a 20%,#c6ff3d 60%,#ff7b2e)',
     vhs:      'linear-gradient(135deg,#07100d 20%,#3dffab 60%,#ff4fa3)',
     bone:     'linear-gradient(135deg,#141310 20%,#e6dcc4 60%,#b8705a)',
     neon:     'linear-gradient(135deg,#0a0616 20%,#ff3d9a 60%,#22e3ff)',
     press:    'linear-gradient(135deg,#0c0c0d 20%,#d8dbe0 60%,#8d919a)',
-    reel:     'linear-gradient(135deg,#120d08 20%,#e9a84b 60%,#d2593c)',
+    reel:     'linear-gradient(135deg,#150b05 20%,#f0b52f 58%,#d0582a)',
     canopy:   'linear-gradient(135deg,#07110b 20%,#2f6b45 55%,#d8b45e)',
     frost:    'linear-gradient(135deg,#070b10 20%,#a9e5ff 60%,#c4cbe2)',
     soul:     'linear-gradient(135deg,#150b05 20%,#f0b52f 58%,#d0582a)',
@@ -21315,6 +21537,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     // once the profile lands. reset() comes through here too, so signing out
     // clears it.
     try { localStorage.setItem('vinall_theme', document.documentElement.dataset.theme || ''); } catch (e) {}
+    /* The nav pill copies its hue off the active button as a value, so it has
+       to be re-read now the hues belong to the theme. */
+    try { if (window.positionNavIndicator) positionNavIndicator(); } catch (e) {}
     /* Everything else on the page reskins for free, because everything else is
        painted from the tokens this line swaps. The artist hero is the one
        surface that is not CSS — it is a canvas of dots inked once, so it keeps
@@ -21959,6 +22184,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   async function buyTheme(key) {
     if (!THEMES[key]) return { error: 'Unknown theme' };
+    if (THEMES[key].retired) return { error: 'No longer sold' };
     const res = await rpc('wallet_buy', { p_kind: 'theme', p_key: key });
     if (res.error) return { error: res.error };
     applyWallet(res.data);
@@ -22208,10 +22434,18 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     const meHtml = '<span class="sw-me"><i class="sw-init">' + esc((w.username || 'Y').charAt(0).toUpperCase()) + '</i>' +
       (w.avatar_url ? '<img src="' + esc(w.avatar_url) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</span>';
 
-    // A theme card is a tiny app in that theme's colours, not a gradient chip.
-    const themeRows = Object.keys(THEMES).map(function (key) {
-      return shopItemRow('theme', key, THEMES[key], SWATCH[key], w.is_admin || w.owned_themes.indexOf(key) !== -1, w.active_theme === key,
-        'sw-theme', '<span class="sw-th"><span class="sw-th-me">' + meHtml + '<u>' + esc(myName) + '</u></span><i></i><i></i><b></b></span>');
+    /* A theme card is a tiny app in that theme's colours, not a gradient chip.
+       The mini app carries data-theme itself, so it is painted by the theme's
+       real tokens — the same ones that would repaint the app — rather than a
+       second, hand-picked copy of them. No description: the preview is it.
+       A retired theme only appears for somebody who already has it. */
+    const themeKeys = Object.keys(THEMES).filter(function (key) {
+      return !THEMES[key].retired || w.owned_themes.indexOf(key) !== -1 || w.active_theme === key;
+    });
+    const themeRows = themeKeys.map(function (key) {
+      const item = Object.assign({}, THEMES[key], { desc: '' });
+      return shopItemRow('theme', key, item, SWATCH[key], w.is_admin || w.owned_themes.indexOf(key) !== -1, w.active_theme === key,
+        'sw-theme', '<span class="sw-th" data-theme="' + key + '"><span class="sw-th-me">' + meHtml + '<u>' + esc(myName) + '</u></span><i></i><i></i><b></b></span>');
     }).join('');
     const bannerRows = Object.keys(BANNERS).map(function (key) {
       const owned = w.is_admin || key === 'none' || w.owned_banners.indexOf(key) !== -1;
@@ -22297,7 +22531,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       return Object.keys(map).filter(function (k) { return k !== 'none' && (w.is_admin || map[k].cost === 0 || (arr || []).indexOf(k) !== -1); }).length;
     }
     const CATS = [
-      { k: 'themes',  label: 'Themes',  rows: themeRows,            have: ownedN(THEMES, w.owned_themes),   of: Object.keys(THEMES).length },
+      { k: 'themes',  label: 'Themes',  rows: themeRows,            have: ownedN(THEMES, w.owned_themes),   of: themeKeys.length },
       { k: 'tags',    label: 'Tags',    rows: suggestRow + tagRows, have: ownedN(TAGS, w.owned_tags),       of: Object.keys(TAGS).length },
       { k: 'flair',   label: 'Flair',   rows: flairRows,            have: ownedN(FLAIRS, w.owned_flairs),   of: Object.keys(FLAIRS).length },
       { k: 'frames',  label: 'Frames',  rows: frameRows,            have: ownedN(FRAMES, w.owned_frames),   of: Object.keys(FRAMES).length },
@@ -23728,7 +23962,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       if (typeof celebrate === 'function') {
         celebrate(ewState.rec.title, ewState.rec.artist || '', {
           eyebrow: 'Earworm in ' + ewState.rows.length + (ewState.hinted ? ' (hint)' : ''),
-          accent: '#d98cff'
+          accent: 'var(--hue-2)'
         });
       }
       // The payout used to be computed here and thrown away — the client
@@ -24719,7 +24953,7 @@ function playDismissAnimation(gateEl, callback) {
         if (typeof celebrate === 'function') {
           celebrate(guess.name, guess.artist || '', {
             eyebrow: 'Daily Drop in ' + st.g.length,
-            accent: '#85b7eb'
+            accent: 'var(--hue-5)'
           });
         }
         if (window.Wallet) Wallet.awardGame('drop', { reason: 'Daily Drop' });
@@ -26270,7 +26504,10 @@ window.renderAdminStats = renderAdminStats;
       bar.querySelectorAll('[data-hub-tab]').forEach(function (b) {
         var on = b.dataset.hubTab === mode;
         b.classList.toggle('active', on);
-        if (on) { b.setAttribute('aria-current', 'page'); if (b.scrollIntoView && bar.scrollWidth > bar.clientWidth) bar.scrollLeft = b.offsetLeft - 16; }
+        /* The scroll is a layout READ, so it waits for the frame: done here it
+           forced a synchronous layout in the middle of setMode, before the
+           view's own render had run. */
+        if (on) { b.setAttribute('aria-current', 'page'); requestAnimationFrame(function () { if (bar.scrollWidth > bar.clientWidth) bar.scrollLeft = b.offsetLeft - 16; }); }
         else b.removeAttribute('aria-current');
       });
     });
@@ -29230,6 +29467,9 @@ window.renderAdminStats = renderAdminStats;
   }
 
   function tileHTML(it) {
+    // An empty pool (spin_items failed to load) picks nothing; draw a blank
+    // Common tile rather than throwing and leaving the reel unpainted.
+    it = it || { tier: 'common', label: '' };
     return '<div class="draw-tile t-' + esc(it.tier || 'common') + '">' +
       '<span class="dt-chip" style="background:' + swatchFor(it) + '"></span>' +
       '<span class="dt-nm">' + esc(it.label) + '</span></div>';
@@ -30587,7 +30827,7 @@ window.renderAdminStats = renderAdminStats;
     again.textContent = runsLeft === 0 ? 'Back tomorrow' : 'Go again';
     if (wasBest && score >= 3 && typeof celebrate === 'function') {
       celebrate(score + ' in a row', points + ' points', {
-        eyebrow: 'Higher or Lower — new best', accent: '#4fb477'
+        eyebrow: 'Higher or Lower — new best', accent: 'var(--hue-7)'
       });
     }
     // Five in a row is the bar. Below that it is a warm-up, and paying for a
@@ -31481,7 +31721,7 @@ window.renderAdminStats = renderAdminStats;
       }
       if (won && typeof celebrate === 'function') {
         celebrate(n(score) + ' to ' + n(theirs), '', {
-          eyebrow: 'Cover Fire — won', accent: '#F5C842'
+          eyebrow: 'Cover Fire — won', accent: 'var(--gold)'
         });
       }
     } catch (e) { note(String((e && e.message) || e)); }
@@ -35767,6 +36007,11 @@ window.track = function (name, props) {
       if (!v) return null;
       var o = JSON.parse(v);
       if (!o || !o.t || !o.m || (Date.now() - o.t) > ALB_TTL) { localStorage.removeItem(CK + id); return null; }
+      // Older cached Apple replies discarded the corresponding store link.
+      // Refresh those once rather than presenting a generic search as credit.
+      if (Object.keys(o.m).some(function(k){return typeof o.m[k] === 'string' && /itunes\.apple\.com|mzstatic\.com/.test(o.m[k]);})) {
+        localStorage.removeItem(CK + id); return null;
+      }
       return o.m;
     } catch (e) { return null; }
   }
@@ -35834,9 +36079,9 @@ window.track = function (name, props) {
     return fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
       var want = norm(meta.name || ''), map = {};
       ((j && j.results) || []).forEach(function (r) {
-        if (!r || !r.previewUrl || norm(r.collectionName) !== want) return;
+        if (!r || !r.previewUrl || !/^https:\/\/(music|itunes)\.apple\.com\//.test(r.trackViewUrl || '') || norm(r.collectionName) !== want) return;
         var k = norm(r.trackName);
-        if (k && !map[k]) map[k] = r.previewUrl;
+        if (k && !map[k]) map[k] = { url: r.previewUrl, link: r.trackViewUrl, source: 'apple' };
       });
       return map;
     }).catch(function () { return {}; });
@@ -35941,7 +36186,8 @@ window.track = function (name, props) {
   function previewFor(t) {
     if (!t) return null;
     if (t.preview) return t.preview;
-    return (album && album.map) ? (album.map[norm(t.name)] || null) : null;
+    var entry = (album && album.map) ? album.map[norm(t.name)] : null;
+    return entry && typeof entry === 'object' ? entry.url : (entry || null);
   }
 
   // Thirty per cent of tracks have no preview, so the row says which it is
@@ -36149,10 +36395,11 @@ window.track = function (name, props) {
     }
     // The audio may have come from either source, so the store link says
     // which — both of their terms want the clip kept beside a link back.
-    var fromApple = /itunes\.apple\.com/.test((a && a.src) || '');
+    var credit = album && album.map && album.map[norm(cur.name)];
+    var fromApple = !!(credit && credit.source === 'apple' && credit.url === ((a && a.src) || '')) || /itunes\.apple\.com/.test((a && a.src) || '');
     srcA.textContent = (fromApple ? 'Apple Music' : 'Deezer') + ' ↗';
     srcA.href = fromApple
-      ? 'https://music.apple.com/search?term=' + encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim())
+      ? ((credit && credit.link) || '#')
       : 'https://www.deezer.com/search/' + encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim());
     srcA.style.display = noPrev ? 'none' : '';
     /* Paused is its own mark, not the absence of one. Clearing it said the
@@ -37100,20 +37347,20 @@ window.track = function (name, props) {
        broken one. */
     var got = await Promise.all([
       (window.Cloud && Cloud.fetchTrending) ? Cloud.fetchTrending().catch(function () { return []; }) : [],
-      Promise.all(tops.map(function (t) {
-        // The name rides along because a crate from before the catalogue moved
-        // carries Spotify artist ids, and the route 400s on one with no name.
-        var q = { include_groups: 'album' };
-        if (t.name) q.name = t.name;
-        return spotifyGet('/artists/' + encodeURIComponent(t.k) + '/albums?' + new URLSearchParams(q).toString())
-          .catch(function () { return null; });
-      })),
+      // The name rides along because a crate from before the catalogue moved
+      // carries Spotify artist ids, and the route 400s on one with no name.
+      Promise.all(tops.map(function (t) { return discography(t.k, t.name); })),
       (window.Cloud && Cloud.suggestionList) ? Cloud.suggestionList('song', null, 60).catch(function () { return []; }) : [],
     ]);
 
+    /* fetchTrending returns {id, name, artist, art, avg} — grouped rows, not
+       crate_feed columns. This read `r.album_id` and friends, every row failed
+       add()'s `!c.id` check, and the community pool was silently ALWAYS empty:
+       logged out, For You fell through to the chart chain (chart, then eight
+       discographies, then previews) for its first card. Both shapes accepted. */
     (got[0] || []).forEach(function (r) {
-      add({ id: r.album_id, name: r.album_name, artist: r.album_artist, art: r.album_art,
-            communityScore: r.avg != null ? r.avg : r.score });
+      add({ id: r.id || r.album_id, name: r.name || r.album_name, artist: r.artist || r.album_artist,
+            art: r.art || r.album_art, communityScore: r.avg != null ? r.avg : r.score });
     });
     (got[1] || []).forEach(function (d, i) {
       ((d && d.items) || []).forEach(function (al) {
@@ -37192,12 +37439,24 @@ window.track = function (name, props) {
      has to look that clip up a second time. Cached whole, then drawn from a
      couple at a time, which is what makes ten records into a hundred songs
      for ten requests. */
-  var _inflight = {};
+  var _inflight = {}, _byName = {};
   function albumTracks(alb) {
     if (_tracks[alb.id]) return Promise.resolve(_tracks[alb.id]);
     if (_inflight[alb.id]) return _inflight[alb.id];
+    /* /api/preview is asked by NAME, and a discography lists a record once per
+       edition under different ids — measured, three identical requests for
+       one Taylor Swift album in front of the first card. The response is
+       shared by name; each id still gets its own box (its own song list), so
+       drawFrom's exclusions are unchanged. */
+    var nk = norm(alb.artist) + '|' + norm(alb.name);
     var tok = _feedTok;
-    var p = albumTracksFetch(alb).then(function (box) {
+    var raw = _byName[nk] || (_byName[nk] = albumTracksFetch(alb).then(function (box) {
+      setTimeout(function () { if (_byName[nk] === raw) delete _byName[nk]; }, 0);
+      return box;
+    }));
+    var p = raw.then(function (b) {
+      return { alb: alb, list: b.list.slice(), art: alb.art || b.art || '', link: b.link };
+    }).then(function (box) {
       if (_inflight[alb.id] === p) delete _inflight[alb.id];
       // A rebuild started meanwhile: hand the box back, but do not plant it in
       // the new feed's cache, whose exclusions it was never checked against.
@@ -37298,6 +37557,112 @@ window.track = function (name, props) {
 
      Everything added goes through the same drawFrom exclusions, so nothing
      here can smuggle a seen or rated song back in. */
+  /* ONE PATH SHAPE FOR A DISCOGRAPHY, so remotePools and expand() share
+     spotifyGet's memory/localStorage cache (a day — discographies do not
+     change) and its in-flight map. expand() used spotifyFetch, which has
+     neither: every reload re-asked for every chart artist's albums, and two
+     callers asking for one artist made two requests. */
+  function discography(id, name) {
+    var q = { include_groups: 'album' };
+    if (name) q.name = name;
+    return spotifyGet('/artists/' + encodeURIComponent(id) + '/albums?' + new URLSearchParams(q).toString())
+      .catch(function () { return null; });
+  }
+  /* The chart is public, identical for everybody and changes daily, so a
+     copy is kept for six hours. Not account data — no owner stamp needed. */
+  var _chartP = null, CHART_KEY = 'fy_chart_v1', CHART_TTL = 6 * 3600 * 1000;
+  function chartArtists() {
+    if (_chartP) return _chartP;
+    try {
+      var c = JSON.parse(localStorage.getItem(CHART_KEY) || 'null');
+      if (c && c.x > Date.now() && c.a && c.a.length) return (_chartP = Promise.resolve(c.a));
+    } catch (e) {}
+    _chartP = fetch(((window.Native && Native.api) || '') + '/api/catalogue?path=chart-artists&limit=50')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (ch) {
+        var a = ((ch && (ch.artists || ch.items)) || []).map(function (x) { return { id: x.id, name: x.name }; })
+          .filter(function (x) { return x && x.id; });
+        if (a.length) { try { localStorage.setItem(CHART_KEY, JSON.stringify({ x: Date.now() + CHART_TTL, a: a })); } catch (e) {} }
+        else _chartP = null;
+        return a;
+      })
+      .catch(function () { _chartP = null; return []; });
+    return _chartP;
+  }
+  /* Feed each source's albums into Discovery AS IT LANDS, and resolve as soon
+     as one of them added something (or all are done). The rest keep arriving
+     into the same pools behind the first card. Pinned to the feed that asked:
+     a rebuild in the meantime gets nothing planted in it. */
+  /* ---- THE STASH: what you were dealt and never reached ---------------
+     A cold For You is several round trips however they are arranged, so the
+     next visit should not pay them before painting. When the feed is left or
+     the page goes away, the cards AFTER the furthest one you actually reached
+     are written down — metadata only — and the next build paints them in the
+     same frame and builds the real feed behind them.
+
+     - NEVER the clip url. Those are signed and die in about ten minutes; a
+       stashed card carries no clip, and playCard's VinalAudio.play resolves a
+       fresh one when it is reached.
+     - PER ACCOUNT. The key is under `crate_`, so claimLocalState and logout
+       wipe it with the rest of the account's local state, and the entry is
+       stamped with the user id (or 'anon') and refused on any mismatch.
+     - TAKEN, NOT READ. It is removed the moment it is used, so a card can be
+       painted from it once. These songs were marked seen when they were dealt;
+       the person never reached them, which is why they may come back exactly
+       once, and only these. A song rated since is dropped. */
+  var STASH_KEY = 'crate_fy_stash_v1', STASH_MAX = 4, STASH_TTL = 48 * 3600 * 1000;
+  var _maxViewed = -1, _owner = null;
+  function ownerId() {
+    try { var u = window.Cloud && Cloud.getUser && Cloud.getUser(); return (u && u.id) || 'anon'; } catch (e) { return 'anon'; }
+  }
+  function saveData() { try { return !!(navigator.connection && navigator.connection.saveData); } catch (e) { return false; } }
+  function saveStash() {
+    try {
+      if (_feed !== 'you' || !_items.length || _owner !== ownerId()) return;
+      var tail = _items.slice(_maxViewed + 1).filter(function (c) {
+        return c && c.myScore == null && !(_ctx && _ctx.ratedSong[c.skey]);
+      }).slice(0, STASH_MAX).map(function (c) {
+        return { key: c.key, skey: c.skey, title: c.title, artist: c.artist, artistId: c.artistId || '',
+          albumId: c.albumId, albumName: c.albumName, art: c.art || '', year: c.year || '', why: c.why || '', pool: c.pool };
+      });
+      if (tail.length) localStorage.setItem(STASH_KEY, JSON.stringify({ u: _owner, at: Date.now(), items: tail }));
+      else localStorage.removeItem(STASH_KEY);
+    } catch (e) {}
+  }
+  function takeStash() {
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem(STASH_KEY) || 'null'); localStorage.removeItem(STASH_KEY); } catch (e) {}
+    if (!s || s.u !== _owner || !(Date.now() - s.at < STASH_TTL) || !Array.isArray(s.items)) return [];
+    return s.items.filter(function (c) {
+      return c && c.title && c.skey && !_ctx.ratedSong[c.skey] && !(window.loadSongs && (loadSongs() || {})[c.key]);
+    }).map(function (c) { c.clip = null; return c; });
+  }
+  window.addEventListener('pagehide', saveStash);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) saveStash(); });
+
+  var _expSeen = {};
+  function landFirst(srcs) {
+    var pools = _pools, ctx = _ctx, tok = _feedTok;
+    return new Promise(function (res) {
+      var left = srcs.length, done = false;
+      if (!left) return res(false);
+      srcs.forEach(function (s) {
+        s.p.then(function (d) {
+          var added = false;
+          if (tok === _feedTok) ((d && d.items) || []).forEach(function (al) {
+            if (!al || !al.id || ctx.ratedAlbum[al.id] || _expSeen[al.id]) return;
+            _expSeen[al.id] = 1;
+            pools.discovery.push({ id: al.id, name: al.name, artist: s.name,
+              art: (al.images && al.images[0] && al.images[0].url) || '', _pool: 'discovery', _why: s.why });
+            added = true;
+          });
+          left--;
+          if (!done && (added || !left)) { done = true; res(added); }
+        });
+      });
+    });
+  }
+
   async function expand() {
     _widen++;
     var before = 0;
@@ -37312,27 +37677,23 @@ window.track = function (name, props) {
           .filter(function (x) { return x.a && x.a.n; })
           .sort(function (x, y) { return (y.a.sum / y.a.n) - (x.a.sum / x.a.n); })
           .slice(6, 26);
-        for (var i = 0; i < more.length; i++) {
-          var d = null;
-          try {
-            d = await spotifyFetch('/artists/' + encodeURIComponent(more[i].k) +
-                  '/albums?include_groups=album&name=' + encodeURIComponent(more[i].a.name || ''));
-          } catch (e) {}
-          ((d && d.items) || []).forEach(function (al) {
-            if (!al || !al.id || _ctx.ratedAlbum[al.id]) return;
-            _pools.discovery.push({ id: al.id, name: al.name, artist: more[i].a.name,
-              art: (al.images && al.images[0] && al.images[0].url) || '', _pool: 'discovery',
-              _why: 'More from ' + (more[i].a.name || 'an artist you rate') });
-          });
-        }
+        /* Twenty discographies were awaited ONE AFTER ANOTHER in a for-loop.
+           Now they are queued together (the catalogue queue holds the rate)
+           and the feed carries on as soon as the first lands. */
+        await landFirst(more.map(function (m) {
+          return { name: m.a.name, why: 'More from ' + (m.a.name || 'an artist you rate'),
+            p: discography(m.k, m.a.name) };
+        }));
       } else if (_widen === 2) {
         /* 2. WHAT THE CRATE IS PLAYING. Already fetched once for the community
               signal; asked for in full here. */
         var tr = (window.Cloud && Cloud.fetchTrending) ? await Cloud.fetchTrending() : [];
         (tr || []).forEach(function (r) {
-          if (!r || !r.album_id || _ctx.ratedAlbum[r.album_id]) return;
-          _pools.discovery.push({ id: r.album_id, name: r.album_name, artist: r.album_artist,
-            art: r.album_art, _pool: 'discovery', _why: 'The Crate is rating this' });
+          var id = r && (r.id || r.album_id);   // same shape fix as remotePools
+          if (!id || _ctx.ratedAlbum[id] || _expSeen[id]) return;
+          _expSeen[id] = 1;
+          _pools.discovery.push({ id: id, name: r.name || r.album_name, artist: r.artist || r.album_artist,
+            art: r.art || r.album_art, _pool: 'discovery', _why: 'The Crate is rating this' });
         });
       } else {
         /* 3. THE CHART, AND IT REPEATS. Nothing about you at all, which is the
@@ -37352,26 +37713,13 @@ window.track = function (name, props) {
            bottomless" has never once returned a record. Measured logged out:
            five widenings, zero candidates, "You have heard the lot" over a
            chart that was one fetch away. Same fetch the Popular tab uses. */
-        var ch = null;
-        try {
-          var cr = await fetch(((window.Native && Native.api) || '') + '/api/catalogue?path=chart-artists&limit=50');
-          if (cr.ok) ch = await cr.json();
-        } catch (e) {}
-        var arts = (ch && (ch.artists || ch.items)) || [];
+        var arts = await chartArtists();
         var from = (_widen - 3) * 8, take = arts.slice(from, from + 8);
-        var got = await Promise.all(take.map(function (a) {
-          return spotifyFetch('/artists/' + encodeURIComponent(a.id) +
-                 '/albums?include_groups=album&name=' + encodeURIComponent(a.name || ''))
-            .catch(function () { return null; });
+        /* All eight used to be awaited before any record was added, so the
+           first card waited for the slowest discography of eight. */
+        await landFirst(take.map(function (a) {
+          return { name: a.name, why: 'Big right now', p: discography(a.id, a.name) };
         }));
-        got.forEach(function (dd, k) {
-          ((dd && dd.items) || []).forEach(function (al) {
-            if (!al || !al.id || _ctx.ratedAlbum[al.id]) return;
-            _pools.discovery.push({ id: al.id, name: al.name, artist: take[k].name,
-              art: (al.images && al.images[0] && al.images[0].url) || '', _pool: 'discovery',
-              _why: 'Big right now' });
-          });
-        });
       }
     } catch (e) {}
 
@@ -37405,9 +37753,13 @@ window.track = function (name, props) {
      front of the first card. They are all known in advance: the heads of
      whichever pools the mix is about to read. albumTracks caches, so warming
      one costs nothing when the loop reaches it. */
-  async function warmHeads() {
-    var want = [];
-    Object.keys(_pools).forEach(function (k) {
+  async function warmHeads(count) {
+    /* In MIX order and sized to the batch. It warmed two heads of EVERY pool —
+       including pools this feed never draws from (`pushed` on For You) — so a
+       first page of two cards fired eight preview lookups, all competing with
+       the one the first card was actually waiting on. */
+    var want = [], order = (FEEDS[_feed] || FEEDS.you).map(function (s) { return s.pool; });
+    order.forEach(function (k) {
       (_pools[k] || []).slice(0, 2).forEach(function (a) {
         if (a && a.id && !_tracks[a.id] && want.indexOf(a) === -1) want.push(a);
       });
@@ -37416,12 +37768,12 @@ window.track = function (name, props) {
     /* Fired, not awaited. Waiting on all six made the first card exactly as
        slow as the slowest album lookup; now each draw waits only for its own
        album, and the rest are already on the way when the loop reaches them. */
-    want.slice(0, 8).forEach(function (a) { albumTracks(a).catch(function () { return null; }); });
+    want.slice(0, Math.min(8, (count || 2) + 2)).forEach(function (a) { albumTracks(a).catch(function () { return null; }); });
   }
 
   async function drawSongs(count) {
     var out = [];
-    await warmHeads();
+    await warmHeads(count);
     /* A BATCH ENDS WHEN EVERY POOL HAS BEEN TRIED, NOT AFTER FOUR MISSES.
 
        It was a global `dry < 4`: four draws that produced nothing, from any
@@ -37489,18 +37841,31 @@ window.track = function (name, props) {
      to be the same one, and the sleeve fell through to the album page whenever
      it was tapped on a card that was not already the playing one — which is
      most taps. The sleeve plays; the title and the album name open. */
+  /* THREE COPIES OF THE SLEEVE, ONE OF THEM SHARP. Every card decoded the
+     1000px cover three times — the bed and the halo are blurred past
+     recognition, so a 1000x1000 bitmap (4MB decoded) was being thrown away by
+     a blur filter twice per card. They take a 120px copy now; the sleeve
+     itself takes what its box needs at this screen's density (it is never
+     wider than 460 CSS px). thumb() only ever shrinks and leaves an unknown
+     url alone, so a non-Deezer cover is drawn exactly as before. */
+  var _mainPx = (function () {
+    var need = 460 * Math.min(3, window.devicePixelRatio || 1);
+    return need <= 500 ? 500 : need <= 750 ? 750 : 1000;
+  })();
   function cardHtml(c, i) {
-    var art = esc(c.art || '');
+    var raw = c.art || '';
+    var art = esc(window.thumb ? thumb(raw, _mainPx) : raw);
+    var soft = esc(window.thumb ? thumb(raw, 120) : raw);
     return '<article class="fy-card" data-i="' + i + '" data-pool="' + esc(c.pool) + '" style="--fy-tint:' + tintFor(7) + ';--fy-v:.7">' +
       // The bed: the same sleeve, blurred past recognition, giving the page the
       // record's colours without competing with the record.
       '<div class="fy-bed-wrap" aria-hidden="true">' +
-        (art ? '<img class="fy-bed" src="' + art + '" alt="" decoding="async"' + (i > 2 ? ' loading="lazy"' : '') + ' onerror="this.style.display=\'none\'">' : '') +
+        (art ? '<img class="fy-bed" src="' + soft + '" alt="" decoding="async"' + (i > 2 ? ' loading="lazy"' : '') + ' onerror="this.style.display=\'none\'">' : '') +
       '</div>' +
       // The record itself, whole and square. `data-play`, never `data-open` —
       // one control, one verb.
       '<div class="fy-art-wrap">' +
-        (art ? '<img class="fy-glow" src="' + art + '" alt="" aria-hidden="true" decoding="async"' + (i > 2 ? ' loading="lazy"' : '') + ' onerror="this.remove()">' : '') +
+        (art ? '<img class="fy-glow" src="' + soft + '" alt="" aria-hidden="true" decoding="async"' + (i > 2 ? ' loading="lazy"' : '') + ' onerror="this.remove()">' : '') +
         '<button class="fy-art" data-play="' + i + '" aria-label="Play ' + esc(c.title || '') + '">' +
           (art ? '<img class="fy-main" src="' + art + '" alt="" decoding="async"' + (i === 0 ? ' fetchpriority="high"' : i > 2 ? ' loading="lazy"' : '') + '>' : '') +
           '<span class="fy-cue"></span>' +
@@ -37681,6 +38046,7 @@ window.track = function (name, props) {
     for (var w = at + 1; w <= at + 2 && w < cards.length; w++)
       cards[w].querySelectorAll('img[loading="lazy"]').forEach(function (im) { im.loading = 'eager'; });
     var i = parseInt(card.dataset.i, 10);
+    if (i > _maxViewed) _maxViewed = i;
     if (i < 0) { stopAll(); topUp(); return; }
     if (i >= _items.length - LOOKAHEAD) topUp();
     if (i >= 0 && i !== _playing) playCard(i);
@@ -38063,9 +38429,9 @@ window.track = function (name, props) {
     var saved = bg ? { items: _items, tracks: _tracks, used: _used, mixAt: _mixAt, mixTaken: _mixTaken, widen: _widen, ctx: _ctx, pools: _pools, remote: _remote } : null;
     if (bg) {
       _busy = true;
-      var mineBg = ++_feedTok;
+      var mineBg = ++_feedTok, ownerBg = ownerId();
       try {
-        _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0;
+        _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0; _expSeen = {};
         _ctx = buildContext(); _pools = localPools(_ctx);
         _remote = remotePools(_ctx, _pools).catch(function () { return _pools; });
         if (!(_pools.yours.length + _pools.partial.length + _pools.shortlist.length) || _feed === 'pushed') await _remote;
@@ -38076,7 +38442,7 @@ window.track = function (name, props) {
           return;
         }
         stopAll(); if (_io) { _io.disconnect(); _io = null; }
-        clearTimeout(_settle); _settle = 0; _navTarget = null; _activeCard = 0;
+        clearTimeout(_settle); _settle = 0; _navTarget = null; _activeCard = 0; _maxViewed = -1; _owner = ownerBg;
         _items = nextFirst;
         host.innerHTML = nextFirst.map(cardHtml).join('');
         host.scrollTo({ top: 0, behavior: 'instant' });
@@ -38098,12 +38464,26 @@ window.track = function (name, props) {
     host.scrollTo({ top: 0, behavior: 'instant' });
     _busy = true;
     var mine = ++_feedTok;
-    host.innerHTML = '<div class="fy-loading ld-line">Finding songs for you&hellip;</div>';
+    _maxViewed = -1; _owner = ownerId();
     host.setAttribute('aria-busy', 'true');
     try {
-      _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0;
+      _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0; _expSeen = {};
       _ctx = buildContext();
       _pools = localPools(_ctx);
+      /* PAINT FIRST, BUILD BEHIND. Cards this account was dealt last time and
+         never reached are on screen in the same frame as the press; the pools
+         and the top-up carry on under them. See takeStash(). */
+      var stash = _feed === 'you' ? takeStash() : [];
+      if (stash.length) {
+        stash.forEach(function (c) { _used[c.skey] = true; });
+        _items = stash;
+        host.innerHTML = stash.map(cardHtml).join('');
+        fitFeed();
+        _built = true;
+        if (document.body.dataset.section === 'foryou') observe(host);
+      } else {
+        host.innerHTML = '<div class="fy-loading ld-line">Finding songs for you&hellip;</div>';
+      }
 
       /* THE REMOTE HALF DOES NOT BLOCK THE FIRST CARD. It is kicked off here
          and awaited only where there is genuinely nothing to show without it:
@@ -38114,7 +38494,14 @@ window.track = function (name, props) {
          still in the post. */
       var localHas = _pools.yours.length + _pools.partial.length + _pools.shortlist.length;
       _remote = remotePools(_ctx, _pools).catch(function () { return _pools; });
-      if (!localHas || _feed === 'pushed') await _remote;
+      /* Nothing local means Discovery is all there is, and if the community
+         has nothing this week the feed falls to the chart. Ask for the chart
+         NOW, alongside, so that fall-through is not a fresh round trip (it is
+         cached six hours, and discographies a day, so this is usually free). */
+      if (!localHas && _feed === 'you' && !saveData()) chartArtists().then(function (a) {
+        a.slice(0, 2).forEach(function (x) { discography(x.id, x.name); });
+      });
+      if ((!localHas || _feed === 'pushed') && !stash.length) await _remote;
       if (mine !== _feedTok) return;
 
       // The records that went into the pools, for the `repeat` signal.
@@ -38124,6 +38511,11 @@ window.track = function (name, props) {
       });
       writeSeen(SEEN_ALBUMS, seenA);
 
+      if (stash.length) {
+        window.ForYou._last = { ctx: _ctx, pools: _pools };
+        topUp();
+        return;
+      }
       var first = await drawSongs(FIRST_PAGE);
       if (mine !== _feedTok) return;
       if (!first.length) {
@@ -38165,6 +38557,8 @@ window.track = function (name, props) {
        instead. The threshold is measured from when leave() actually ran, not
        from anything guessed at render time. */
     if (!force && _leftAt && (Date.now() - _leftAt > 10000)) force = true;
+    // A feed built for another account (or before signing in) is not this one's.
+    if (_built && _owner !== ownerId()) force = true;
     _leftAt = 0; _onFeed = true; clearTimeout(_fresh);
     if (!_built) { build(force); return; }
     // Re-measured on every entry: the header is a different height logged in
@@ -38203,6 +38597,7 @@ window.track = function (name, props) {
     build(true);
   }
   function leave() {
+    saveStash();
     stopAll(); clearTimeout(_settle); _settle = 0; _navTarget = null; if (_io) { _io.disconnect(); _io = null; }
     if (window.SongComments) { SongComments.blur(); SongComments.close(); }
     if (!_onFeed) return;
@@ -38213,7 +38608,8 @@ window.track = function (name, props) {
      so it is not competing with Home for the first paint. */
   function prewarm() {
     var go = function () { if (!_built && !_busy && document.body.dataset.section !== 'foryou') build(); };
-    setTimeout(function () { (window.requestIdleCallback || setTimeout)(go, { timeout: 1200 }); }, 700);
+    // Data Saver: build on the visit, never speculatively.
+    if (!saveData()) setTimeout(function () { (window.requestIdleCallback || setTimeout)(go, { timeout: 1200 }); }, 700);
     // Hovering or pressing the tab is a strong hint: start now rather than on click.
     var tab = document.querySelector('#modes button[data-mode="foryou"]');
     if (tab) ['pointerenter', 'pointerdown', 'focus'].forEach(function (ev) { tab.addEventListener(ev, go, { passive: true }); });
@@ -38958,7 +39354,7 @@ window.track = function (name, props) {
       .forEach(function (g) {
         Object.keys(g[1]).forEach(function (k) {
           var it = g[1][k];
-          if (!it || !it.cost || k === 'none' || (have[g[0]] || []).indexOf(k) !== -1) return;
+          if (!it || !it.cost || it.retired || k === 'none' || (have[g[0]] || []).indexOf(k) !== -1) return;
           pool.push({ kind: g[0], key: k, name: it.name, desc: it.desc || '', cost: it.cost, sw: g[2][k] });
         });
       });
@@ -40665,7 +41061,7 @@ window.track = function (name, props) {
 <script src="/assets/you.js?v=2"></script>
 <script src="/assets/glow.js?v=3"></script>
 <script src="/assets/comments.js?v=1" defer></script>
-<script src="/assets/boards.js?v=1"></script>
+<script src="/assets/boards.js?v=2"></script>
 <script src="/assets/play.js?v=2"></script>
 <script src="/assets/charades.js?v=1"></script>
 <script src="/assets/passport-core.js?v=1"></script>
