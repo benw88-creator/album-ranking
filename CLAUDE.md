@@ -4746,9 +4746,10 @@ Each button now carries its own `--nav-c`, assigned by `nth-child` the way the s
 and the minigame grid already do it. `positionNavIndicator` reads that off the active button
 rather than keeping a second copy of the map in JS.
 
-**Fixed neons, never `--accent-2` or `--gold-dim`.** Those are themed, and a destination
-whose identity colour changes when somebody equips Neon Vault has no identity colour. Same
-reason `--c-cyan` and the rest are not themed.
+**Identity SLOTS, never `--accent-2` or `--gold-dim`.** Superseded in part (2026-10-14):
+the five slots are now themed into each skin's own family (see **Themes: the identity hues
+follow the skin**), but each destination still owns a slot, so the bar stays five distinct
+colours under every theme.
 
 **`nth-child` is positional, so `body[data-section]` has to be kept in step BY HAND.**
 Inserting For You at position three shifted every hue after it by one: the bar stayed unique
@@ -4917,10 +4918,10 @@ The app used to have two accents — `--gold` and `--accent-2` — on near-black
 surface looked like every other surface. **That is what "dull" was: not a lack of saturation
 but a lack of difference.**
 
-- **Five fixed hues**: `--c-cyan`, `--c-violet`, `--c-pink`, `--c-lime`, `--c-blue` (plus
-  `-dim` variants). **Deliberately not themed**, exactly like `--red`/`--yellow`/`--green` —
-  they mean the same thing under every skin, so a section keeps its identity when somebody
-  equips Neon Vault.
+- **Five identity slots**: `--c-cyan`, `--c-violet`, `--c-pink`, `--c-lime`, `--c-blue` (plus
+  `-dim` variants). **Themed since 2026-10-14** — they read `--hue-1..5`, which each theme
+  sets in its own family; Classic keeps the original neons. `--red`/`--yellow`/`--green` stay
+  fixed. See **Themes: the identity hues follow the skin**.
 - Use them for **identity and for telling one number from another, never decoratively.** A
   palette applied at random is noise with more steps.
 - **`--section`** is the current tab's hue. `setMode` writes `body[data-section]`, the CSS
@@ -6310,3 +6311,37 @@ the Rewards module (`rewardFor`, `LADDER`), `Wallet.dailyLogin`.
   wallet not loaded yet → locked, and `vinall:replay-gate` fires on load/change.
 - The economy moved: a first week is now 34,500 Discs + a record + Replay (was
   18,000 + a record), and day six alone is 25,000. Asked for explicitly.
+
+## Themes: the identity hues follow the skin (2026-10-14)
+
+Reported as blue buttons and pink net-worth figures under a green theme. The cause was the
+rule above that `--c-*` were fixed neons: the Shop's section colour was `--c-blue`, the
+Records net worth is `var(--section)` = `--c-pink`, the stat tiles cycled the neons, and the
+arcade cards and game sheets sat on a hardcoded violet-black.
+
+- **`--hue-1..7` on `:root`** are the identity slots (cyan/violet/pink/lime/blue plus a warm
+  and a cool extra for game cards). `--c-*` are `var(--hue-N)` and their `-dim`s are
+  `color-mix` 13%. **Every theme block sets all seven in its own family** (Canopy: leaf, moss,
+  brass, emerald, teal). Classic's values are the old neons, so nothing moved there. Slots keep
+  each destination distinct inside a skin; `--red/--yellow/--green` stay fixed.
+- **Chrome tokens on `:root`**: `--accent`, `--accent-ink`, `--btn-bg`/`--btn-ink`
+  (`.btn-primary`, Shop category tabs), `--hl`, `--glow`, `--focus-ring`, `--card-ground`,
+  `--sheet-ground`, `--stat-1..6` (stat tiles). All derive from `--gold`/`--accent-2`/`--hue-*`,
+  so a theme only sets those and the surfaces. **Do not put a var that reads `--section` in
+  `:root`** — a custom property resolves where it is declared, so it would freeze at Home's gold.
+- The 48 `rgba(245,200,66,…)` gold literals in the main stylesheet are
+  `color-mix(in srgb, var(--gold) N%, transparent)` now; the celebrate/onboarding gold sweeps,
+  `boards.js` game hues, `games.css` card/sheet grounds, `ladder.css` wraps, `glow.css` default
+  and the confetti palette read tokens. Canvas inks (`DitherField`) keep hex — canvas has no vars.
+- `positionNavIndicator()` copies a hue off the active button as a value, so `applyTheme()`
+  re-runs it.
+- **Consolidation.** Reel to Reel was Soul Train with sharper corners — the fourth warm-gold
+  skin. It is `retired: true` in `THEMES`: hidden from the Shop and onboarding unless owned or
+  equipped, `buyTheme` refuses it, and `[data-theme="reel"]` is aliased onto Soul Train's block
+  in `themes2.css`. Its `shop_items` row is untouched (no migration). Citrus is lime-led now
+  (lime + blood orange) and Cassette's secondary is tape-label coral, because blue made it
+  Chrome Frost's twin. Sundown, VHS, Bone, Neon, Citrus and Cassette gained grounds that keep
+  `--section-dim` as their first layer.
+- **Theme shop**: no descriptions, a 156px-min grid, 4:3 previews. The mini app carries
+  `data-theme="<key>"` so the theme's own token block paints it (including a strip of its five
+  hues); `.sw-th[data-theme="classic"]` restates the `:root` values because Classic has no block.

@@ -45,15 +45,15 @@
   --border:       rgba(255,245,235,0.06);
   --border-strong:rgba(255,245,235,0.13);
   --gold:         #F5C842;
-  --gold-glow:    rgba(245,200,66,0.18);
-  --gold-dim:     rgba(245,200,66,0.10);
+  --gold-glow:    color-mix(in srgb, var(--gold) 18%, transparent);
+  --gold-dim:     color-mix(in srgb, var(--gold) 10%, transparent);
   /* Secondary accent. Every theme sets its own; used wherever a single
      flat accent was making things look monotone — the CTA gradient, the
      logo's centre dot, the waveform, card hover glow. Keeps the palette
      simple (still only two accents) while giving each theme actual
      colour movement instead of one hue on grey. */
   --accent-2:     #ff7a4d;
-  --accent-2-dim: rgba(255,122,77,0.12);
+  --accent-2-dim: color-mix(in srgb, var(--accent-2) 12%, transparent);
   --red:          #e24b4a;
   --yellow:       #efb927;
   --green:        #4fb477;
@@ -68,16 +68,52 @@
      They are used for section identity and for telling one number apart
      from another, never decoratively — a palette applied at random is just
      noise with more steps. */
-  --c-cyan:    #2fd4ff;
-  --c-violet:  #b47bff;
-  --c-pink:    #ff5fa8;
-  --c-lime:    #9ae64b;
-  --c-blue:    #5e9bff;
-  --c-cyan-dim:   rgba(47,212,255,0.13);
-  --c-violet-dim: rgba(180,123,255,0.13);
-  --c-pink-dim:   rgba(255,95,168,0.13);
-  --c-lime-dim:   rgba(154,230,75,0.13);
-  --c-blue-dim:   rgba(94,155,255,0.13);
+  /* THEMED SINCE 2026-10-14. The five identity slots still exist and still
+     mean "this section / this tile / this kind of card", but each theme now
+     supplies its own five (--hue-1..7) in its own family. A fixed cyan Shop
+     and a fixed pink net-worth figure under a forest-green skin was the
+     complaint: identity survived, but the skin did not. Classic keeps the
+     original neons exactly. Score colours (--red/--yellow/--green) stay
+     fixed — those are semantic, not identity. */
+  --hue-1: #2fd4ff;   /* the cyan slot   — Crate */
+  --hue-2: #b47bff;   /* the violet slot — Arcade */
+  --hue-3: #ff5fa8;   /* the pink slot   — Records, profile */
+  --hue-4: #9ae64b;   /* the lime slot   — For You */
+  --hue-5: #5e9bff;   /* the blue slot   — Shop, people */
+  --hue-6: #ff8a3d;   /* warm extra      — game cards */
+  --hue-7: #8b8cff;   /* cool extra      — game cards */
+  --c-cyan:    var(--hue-1);
+  --c-violet:  var(--hue-2);
+  --c-pink:    var(--hue-3);
+  --c-lime:    var(--hue-4);
+  --c-blue:    var(--hue-5);
+  --c-cyan-dim:   color-mix(in srgb, var(--hue-1) 13%, transparent);
+  --c-violet-dim: color-mix(in srgb, var(--hue-2) 13%, transparent);
+  --c-pink-dim:   color-mix(in srgb, var(--hue-3) 13%, transparent);
+  --c-lime-dim:   color-mix(in srgb, var(--hue-4) 13%, transparent);
+  --c-blue-dim:   color-mix(in srgb, var(--hue-5) 13%, transparent);
+
+  /* ---- chrome tokens --------------------------------------------------
+     What buttons, chips, focus rings, stat values and the nav are painted
+     with. Each is derived from the theme's own tokens, so a theme only has
+     to set --gold/--accent-2/--hue-* and the surfaces to reskin all of it;
+     a theme may override any of these individually. */
+  --accent:       var(--gold);
+  --accent-ink:   #15110a;               /* text ON an accent fill */
+  --btn-bg:       var(--accent);
+  --btn-ink:      var(--accent-ink);
+  --hl:           color-mix(in srgb, var(--accent) 14%, transparent);  /* highlight row/fill */
+  --glow:         color-mix(in srgb, var(--accent) 45%, transparent);  /* halo, focus ring */
+  --focus-ring:   0 0 0 3px color-mix(in srgb, var(--accent) 38%, transparent);
+  --nav-active:   var(--section);
+  --card-ground:  var(--surface);        /* deepest card ground (arcade, game sheets) */
+  --sheet-ground: var(--bg);
+  --stat-1: var(--gold);
+  --stat-2: var(--hue-1);
+  --stat-3: var(--hue-2);
+  --stat-4: var(--hue-4);
+  --stat-5: var(--hue-3);
+  --stat-6: var(--accent-2);
 
   /* The current section's hue. Repainted by setMode via body[data-section],
      so any component can pick it up with var(--section) and belong to
@@ -188,6 +224,14 @@
   --gold-dim:      rgba(255,138,61,0.14);
   --accent-2:      #ff3d7f;
   --accent-2-dim:  rgba(255,61,127,0.16);
+  /* identity hues, in this skin's own family */
+  --hue-1: #ffb347;
+  --hue-2: #c77dff;
+  --hue-3: #ff3d7f;
+  --hue-4: #ffd166;
+  --hue-5: #ff7a6b;
+  --hue-6: #ff8a3d;
+  --hue-7: #e07bff;
 }
 /* Two more to spend Discs on. Inflating what you earn without adding
    anything to buy just brings forward the day Discs stop mattering. */
@@ -207,6 +251,14 @@
   --gold-dim:      rgba(61,255,171,0.13);
   --accent-2:      #ff4fa3;
   --accent-2-dim:  rgba(255,79,163,0.16);
+  /* identity hues, in this skin's own family */
+  --hue-1: #4dffe0;
+  --hue-2: #b6ff5c;
+  --hue-3: #ff4fa3;
+  --hue-4: #3dffab;
+  --hue-5: #7dd3ff;
+  --hue-6: #ffe066;
+  --hue-7: #c38bff;
 }
 [data-theme="bone"] {
   --bg:            #141310;
@@ -224,6 +276,14 @@
   --gold-dim:      rgba(230,220,196,0.12);
   --accent-2:      #b8705a;
   --accent-2-dim:  rgba(184,112,90,0.18);
+  /* identity hues, in this skin's own family */
+  --hue-1: #d9c9a3;
+  --hue-2: #c9a0b4;
+  --hue-3: #d08a70;
+  --hue-4: #b8c49a;
+  --hue-5: #a7b8c9;
+  --hue-6: #d6a77a;
+  --hue-7: #b3a6c9;
 }
 [data-theme="neon"] {
   --bg:            #0a0616;
@@ -241,6 +301,14 @@
   --gold-dim:      rgba(255,61,154,0.14);
   --accent-2:      #22e3ff;
   --accent-2-dim:  rgba(34,227,255,0.16);
+  /* identity hues, in this skin's own family */
+  --hue-1: #22e3ff;
+  --hue-2: #a46bff;
+  --hue-3: #ff3d9a;
+  --hue-4: #7dff6b;
+  --hue-5: #4f7dff;
+  --hue-6: #ff8a3d;
+  --hue-7: #c38bff;
 }
 [data-theme="citrus"] {
   --bg:            #12100a;
@@ -253,11 +321,22 @@
   --text-faint:    #7d7350;
   --border:        rgba(255,247,210,0.09);
   --border-strong: rgba(255,247,210,0.2);
-  --gold:          #ff9f1c;
-  --gold-glow:     rgba(255,159,28,0.28);
-  --gold-dim:      rgba(255,159,28,0.14);
-  --accent-2:      #c6ff3d;
-  --accent-2-dim:  rgba(198,255,61,0.16);
+  /* Lime-led since 2026-10-14: with orange in front it sat between Classic,
+     Sundown and Soul as a fourth warm-gold skin. Lime first, blood orange
+     second is the thing nothing else in the shop is. */
+  --gold:          #c6ff3d;
+  --gold-glow:     rgba(198,255,61,0.26);
+  --gold-dim:      rgba(198,255,61,0.13);
+  --accent-2:      #ff7b2e;
+  --accent-2-dim:  rgba(255,123,46,0.16);
+  /* identity hues, in this skin's own family */
+  --hue-1: #ffd23f;
+  --hue-2: #ff9f1c;
+  --hue-3: #ff5a3c;
+  --hue-4: #c6ff3d;
+  --hue-5: #ffc27a;
+  --hue-6: #ff7b3a;
+  --hue-7: #e8f07a;
 }
 [data-theme="cassette"] {
   --bg:            #0b0d10;
@@ -273,11 +352,20 @@
   --gold:          #12e0c8;
   --gold-glow:     rgba(18,224,200,0.28);
   --gold-dim:      rgba(18,224,200,0.14);
-  --accent-2:      #5eb8ff;
-  --accent-2-dim:  rgba(94,184,255,0.16);
+  /* Coral, the colour of a tape label — blue made it Chrome Frost's twin. */
+  --accent-2:      #ff8a6b;
+  --accent-2-dim:  rgba(255,138,107,0.16);
   --radius:        8px;
   --radius-sm:     5px;
   --radius-xs:     3px;
+  /* identity hues, in this skin's own family */
+  --hue-1: #12e0c8;
+  --hue-2: #8c9eff;
+  --hue-3: #ff8a6b;
+  --hue-4: #7ee8a2;
+  --hue-5: #5eb8ff;
+  --hue-6: #ffb36b;
+  --hue-7: #a7b6ff;
 }
 
 /* TEST PRESSING — the plain one, and the only one with no colour in it.
@@ -305,6 +393,14 @@
   --radius:        6px;
   --radius-sm:     4px;
   --radius-xs:     2px;
+  /* identity hues, in this skin's own family */
+  --hue-1: #e6e8ec;
+  --hue-2: #b9bcc4;
+  --hue-3: #9ea2ab;
+  --hue-4: #cfd2d8;
+  --hue-5: #868a93;
+  --hue-6: #d8dbe0;
+  --hue-7: #a9adb6;
 }
 html[data-theme="press"] body {
   /* The lathe marks on a blank label. Flat grey, no hue. */
@@ -316,15 +412,48 @@ html[data-theme="press"] body {
 /* Background texture per theme — layered behind the existing radial
    glow on body, scoped with html[data-theme=...] so it's more specific
    than the base `body` rule and doesn't need !important. */
+/* Every one keeps the section wash as its first layer so the page still
+   changes temperature between tabs, then adds the skin's own ground. */
 html[data-theme="sundown"] body {
   background-image:
-    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(232,118,63,0.07) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(232,118,63,0.05) 0%, transparent 70%);
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(255,138,61,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(255,61,127,0.07) 0%, transparent 70%),
+    linear-gradient(180deg, transparent 55%, rgba(120,30,80,0.12) 100%);
 }
 html[data-theme="cassette"] body {
   background-image:
-    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(94,184,255,0.05) 0%, transparent 70%),
-    repeating-linear-gradient(0deg, rgba(94,184,255,0.03) 0px, rgba(94,184,255,0.03) 1px, transparent 1px, transparent 3px);
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,138,107,0.05) 0%, transparent 70%),
+    repeating-linear-gradient(0deg, rgba(18,224,200,0.025) 0px, rgba(18,224,200,0.025) 1px, transparent 1px, transparent 3px);
+}
+html[data-theme="vhs"] body {
+  /* Phosphor scanlines and a pink tracking smear near the bottom. */
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(61,255,171,0.06) 0%, transparent 70%),
+    linear-gradient(180deg, transparent 86%, rgba(255,79,163,0.05) 88%, transparent 90%),
+    repeating-linear-gradient(0deg, rgba(61,255,171,0.022) 0 1px, transparent 1px 3px);
+}
+html[data-theme="bone"] body {
+  /* Unglazed porcelain: warm, even, a faint grain. */
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 90% 60% at 50% 30%, rgba(230,220,196,0.05) 0%, transparent 70%),
+    repeating-linear-gradient(45deg, rgba(246,241,231,0.012) 0 1px, transparent 1px 4px);
+}
+html[data-theme="neon"] body {
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(ellipse 55% 40% at 0% 20%, rgba(255,61,154,0.09) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 36% at 100% 50%, rgba(34,227,255,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 30% at 40% 100%, rgba(164,107,255,0.08) 0%, transparent 72%);
+}
+html[data-theme="citrus"] body {
+  background-image:
+    radial-gradient(ellipse 70% 34% at 50% 0%, var(--section-dim) 0%, transparent 72%),
+    radial-gradient(circle at 85% 8%, rgba(198,255,61,0.07) 0%, transparent 34%),
+    radial-gradient(circle at 10% 90%, rgba(255,123,46,0.07) 0%, transparent 38%);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -402,9 +531,9 @@ body[data-section="choice"]       { --section: var(--c-cyan);    --section-dim: 
 body[data-section="foryou"]       { --section: var(--c-lime);    --section-dim: var(--c-lime-dim); }
 body[data-section="games"]        { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
 body[data-section="collection"]   { --section: var(--c-pink);    --section-dim: var(--c-pink-dim); }
-/* A fixed neon, matching its nav button. It used to be --accent-2, which is
-   THEMED — so the Shop's identity colour changed with whatever skin was
-   equipped, which is no identity colour at all. */
+/* The blue SLOT, matching its nav button. --hue-5 is themed into each skin's
+   own family (see :root), so the Shop keeps its identity within a theme
+   without painting a green skin blue. */
 body[data-section="rewards"]      { --section: var(--c-blue);    --section-dim: var(--c-blue-dim); }
 body[data-section="achievements"] { --section: var(--c-blue);    --section-dim: var(--c-blue-dim); }
 body[data-section="wars"]         { --section: var(--c-violet);  --section-dim: var(--c-violet-dim); }
@@ -544,7 +673,7 @@ header {
       #1a1814 46% 100%);
   box-shadow:
     0 0 0 1px rgba(255,245,235,0.12),
-    0 0 20px rgba(245,200,66,0.12);
+    0 0 20px color-mix(in srgb, var(--gold) 12%, transparent);
 }
 .brand-mark::before {
   content: '';
@@ -663,8 +792,8 @@ button { font-family: var(--font-body); cursor: pointer; border-radius: var(--ra
 button:active { transform: scale(0.96); }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--gold), var(--accent-2));
-  color: #0a0908;
+  background: linear-gradient(135deg, var(--btn-bg), var(--accent-2));
+  color: var(--btn-ink);
   border: none;
   padding: 11px 22px;
   font-weight: 700;
@@ -701,7 +830,7 @@ button:active { transform: scale(0.96); }
   align-items: center;
   gap: 7px;
 }
-.auth-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px rgba(245,200,66,0.6); }
+.auth-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px color-mix(in srgb, var(--gold) 60%, transparent); }
 
 /* ---- NAV ---- */
 /* ---- NAV ---------------------------------------------------------------
@@ -927,14 +1056,14 @@ nav.modes .nav-icon { width: 21px; height: 21px; }
   font-variant-numeric: tabular-nums;
   position: relative; overflow: visible;
   transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 0 0 0 rgba(245,200,66,0.5);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 50%, transparent);
   animation: shopPulse 2.6s ease-in-out infinite;
 }
 .shop-open-btn:hover { background: var(--gold); color: var(--bg); transform: translateY(-1px) scale(1.03); }
 .shop-open-btn svg { flex-shrink: 0; }
 @keyframes shopPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(245,200,66,0.45); }
-  50%      { box-shadow: 0 0 0 6px rgba(245,200,66,0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 45%, transparent); }
+  50%      { box-shadow: 0 0 0 6px transparent; }
 }
 
 /* ---- Discs flying to the wallet ----------------------------------------
@@ -1068,7 +1197,7 @@ html[data-motion="none"] .disc-particle { animation: none; display: none; }
   border-radius: 18px;
   overflow: hidden;
   max-height: 480px; overflow-y: auto;
-  box-shadow: 0 32px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(245,200,66,0.06);
+  box-shadow: 0 32px 64px rgba(0,0,0,0.7), 0 0 0 1px color-mix(in srgb, var(--gold) 6%, transparent);
   display: none;
   backdrop-filter: blur(12px);
 }
@@ -1186,12 +1315,12 @@ html[data-motion="none"] .view.enter { animation: none; }
    reason the app read as monochrome. Each tile now owns a hue, which also
    makes them individually findable rather than a wall you scan. nth-child so
    this holds however many tiles the row happens to have that day. */
-.stats > .stat:nth-child(6n+1) { --tile: var(--gold); }
-.stats > .stat:nth-child(6n+2) { --tile: var(--c-cyan); }
-.stats > .stat:nth-child(6n+3) { --tile: var(--c-violet); }
-.stats > .stat:nth-child(6n+4) { --tile: var(--c-lime); }
-.stats > .stat:nth-child(6n+5) { --tile: var(--c-pink); }
-.stats > .stat:nth-child(6n+6) { --tile: var(--accent-2); }
+.stats > .stat:nth-child(6n+1) { --tile: var(--stat-1); }
+.stats > .stat:nth-child(6n+2) { --tile: var(--stat-2); }
+.stats > .stat:nth-child(6n+3) { --tile: var(--stat-3); }
+.stats > .stat:nth-child(6n+4) { --tile: var(--stat-4); }
+.stats > .stat:nth-child(6n+5) { --tile: var(--stat-5); }
+.stats > .stat:nth-child(6n+6) { --tile: var(--stat-6); }
 .stats > .stat { --tile: var(--gold); }
 /* Two different stat components exist and they do not share class names:
    the crate row uses .s-val, the Liner Notes row uses .stat-value. Both are
@@ -3431,7 +3560,7 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
    ============================================================ */
 .celebrate {
   position: fixed; inset: 0;
-  background: radial-gradient(ellipse at 50% 60%, rgba(245,200,66,0.08) 0%, rgba(5,4,3,0.97) 60%);
+  background: radial-gradient(ellipse at 50% 60%, color-mix(in srgb, var(--gold) 8%, transparent) 0%, rgba(5,4,3,0.97) 60%);
   backdrop-filter: blur(20px);
   display: none; align-items: center;
   justify-content: center; z-index: 220; overflow: hidden;
@@ -3444,9 +3573,9 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   position: absolute;
   width: 420px; height: 420px;
   border-radius: 50%;
-  border: 2px solid rgba(245,200,66,0.15);
-  box-shadow: 0 0 0 8px rgba(245,200,66,0.04),
-              0 0 80px rgba(245,200,66,0.12);
+  border: 2px solid color-mix(in srgb, var(--gold) 15%, transparent);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--gold) 4%, transparent),
+              0 0 80px color-mix(in srgb, var(--gold) 12%, transparent);
   opacity: 0;
   transform: scale(0.4);
   animation: none;
@@ -3465,7 +3594,7 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   position: absolute;
   width: 320px; height: 320px;
   border-radius: 50%;
-  border: 1px solid rgba(245,200,66,0.08);
+  border: 1px solid color-mix(in srgb, var(--gold) 8%, transparent);
   opacity: 0;
   transform: scale(0.3) rotate(45deg);
   animation: none;
@@ -3499,7 +3628,7 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   font-size: 110px;
   display: block;
   margin-bottom: 4px;
-  filter: drop-shadow(0 0 40px rgba(245,200,66,0.5));
+  filter: drop-shadow(0 0 40px color-mix(in srgb, var(--gold) 50%, transparent));
   transform-origin: 50% 60%;
   animation: none;
 }
@@ -3507,12 +3636,12 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   animation: celebTrophy 1.8s var(--ease) 0.1s both;
 }
 @keyframes celebTrophy {
-  0%   { transform: scale(0.2) rotate(-40deg); opacity: 0; filter: drop-shadow(0 0 0 rgba(245,200,66,0)); }
-  30%  { transform: scale(1.3) rotate(12deg); opacity: 1; filter: drop-shadow(0 0 60px rgba(245,200,66,0.8)); }
+  0%   { transform: scale(0.2) rotate(-40deg); opacity: 0; filter: drop-shadow(0 0 0 transparent); }
+  30%  { transform: scale(1.3) rotate(12deg); opacity: 1; filter: drop-shadow(0 0 60px color-mix(in srgb, var(--gold) 80%, transparent)); }
   55%  { transform: scale(0.95) rotate(-6deg); }
   72%  { transform: scale(1.06) rotate(4deg); }
   85%  { transform: scale(0.98) rotate(-2deg); }
-  100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 32px rgba(245,200,66,0.45)); }
+  100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 32px color-mix(in srgb, var(--gold) 45%, transparent)); }
 }
 
 /* gold sweeping shimmer under the trophy */
@@ -3525,10 +3654,10 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    rgba(245,200,66,0.15) 30deg,
+    color-mix(in srgb, var(--gold) 15%, transparent) 30deg,
     transparent 60deg,
     transparent 120deg,
-    rgba(245,200,66,0.08) 150deg,
+    color-mix(in srgb, var(--gold) 8%, transparent) 150deg,
     transparent 180deg
   );
   opacity: 0;
@@ -3557,7 +3686,7 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   font-family: var(--font-display); font-size: 32px; font-weight: 800;
   margin: 0 0 8px; letter-spacing: -0.025em; line-height: 1.1;
   /* shiny gold gradient sweep on the title */
-  background: linear-gradient(100deg, #c8922a 0%, #F5C842 30%, #fff3b0 50%, #F5C842 70%, #c8922a 100%);
+  background: linear-gradient(100deg, color-mix(in srgb, var(--gold) 72%, #000) 0%, var(--gold) 30%, color-mix(in srgb, var(--gold) 35%, #fff) 50%, var(--gold) 70%, color-mix(in srgb, var(--gold) 72%, #000) 100%);
   background-size: 200% auto;
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -3587,15 +3716,15 @@ html[data-motion="none"] input[type="checkbox"] { transition: none; }
   border: none; border-radius: 14px;
   font-weight: 800; font-family: var(--font-display);
   cursor: pointer; font-size: 16px; letter-spacing: -0.01em;
-  box-shadow: 0 0 0 0 rgba(245,200,66,0.4);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 40%, transparent);
   opacity: 0;
 }
 .celebrate.show .celebrate-btn {
   animation: celebFadeUp 0.5s ease 0.9s both, btnPulse 2s ease-in-out 1.5s infinite;
 }
 @keyframes btnPulse {
-  0%,100% { box-shadow: 0 0 0 0 rgba(245,200,66,0.35); }
-  50% { box-shadow: 0 0 0 12px rgba(245,200,66,0); }
+  0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 35%, transparent); }
+  50% { box-shadow: 0 0 0 12px transparent; }
 }
 .celebrate-btn:hover { background: #ffd84a; transform: scale(1.04); }
 
@@ -3669,7 +3798,7 @@ body.kb-up .suggestions { max-height: min(480px, var(--sugg-max, 480px)); oversc
 .activity-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 119; display: none; }
 .activity-backdrop.open { display: block; }
 .activity-toggle { position: relative; }
-.activity-toggle .dot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); display: none; box-shadow: 0 0 6px rgba(245,200,66,0.7); }
+.activity-toggle .dot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); display: none; box-shadow: 0 0 6px color-mix(in srgb, var(--gold) 70%, transparent); }
 .activity-toggle.has-new .dot { display: block; }
 
 /* ---- RATE VIEW MODAL ---- */
@@ -3747,7 +3876,7 @@ body.kb-up .suggestions { max-height: min(480px, var(--sugg-max, 480px)); oversc
   border: 1px solid transparent;
 }
 .badge-ceo { background: linear-gradient(135deg, #f5d76e, #d4a017); color: #1a0f00; }
-.badge-og { background: rgba(245,200,66,0.15); color: var(--gold); border-color: var(--gold); }
+.badge-og { background: color-mix(in srgb, var(--gold) 15%, transparent); color: var(--gold); border-color: var(--gold); }
 .badge-beta { background: rgba(133,183,235,0.15); color: #85b7eb; border-color: #85b7eb; }
 .badge-critic { background: rgba(79,180,119,0.15); color: var(--green); border-color: var(--green); }
 .badge-verified { background: rgba(133,183,235,0.15); color: #85b7eb; border-color: #85b7eb; }
@@ -3875,7 +4004,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 .list-meta { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
 /* Notifications */
-.notif-item.unread { background: rgba(245,200,66,0.05); border-radius: 8px; }
+.notif-item.unread { background: color-mix(in srgb, var(--gold) 5%, transparent); border-radius: 8px; }
 .notif-item[data-album] { cursor: pointer; }
 .notif-item[data-album]:hover { background: var(--surface-2); border-radius: 8px; }
 .suggest-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--surface-2); border-radius: 12px; }
@@ -3887,7 +4016,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 .groove-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
 .groove-card { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; cursor: pointer; transition: transform 0.14s, border-color 0.14s; }
 .groove-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
-.groove-card.invite { cursor: default; background: rgba(245,200,66,0.04); border-color: rgba(245,200,66,0.2); }
+.groove-card.invite { cursor: default; background: color-mix(in srgb, var(--gold) 4%, transparent); border-color: color-mix(in srgb, var(--gold) 20%, transparent); }
 .groove-ic { width: 44px; height: 44px; border-radius: 11px; background: var(--surface-3); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
 .groove-nm { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
 .groove-meta { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
@@ -4283,7 +4412,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 
 /* Rate slider */
 #rate-slider { -webkit-appearance: none; appearance: none; flex: 1; height: 4px; border-radius: 2px; background: var(--surface-4); outline: none; }
-#rate-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); border: 2px solid var(--bg); cursor: pointer; box-shadow: 0 0 10px rgba(245,200,66,0.4); }
+#rate-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); border: 2px solid var(--bg); cursor: pointer; box-shadow: 0 0 10px color-mix(in srgb, var(--gold) 40%, transparent); }
 #rate-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--gold); border: 2px solid var(--bg); cursor: pointer; }
 
 /* Filter field */
@@ -4377,7 +4506,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 .splash-bloom {
   position: absolute; left: 50%; top: 50%; width: 2px; height: 2px;
   border-radius: 50%; pointer-events: none; opacity: 0;
-  box-shadow: 0 0 90px 50px rgba(245,200,66,0.55), 0 0 200px 120px rgba(255,122,77,0.28);
+  box-shadow: 0 0 90px 50px color-mix(in srgb, var(--gold) 55%, transparent), 0 0 200px 120px color-mix(in srgb, var(--accent-2) 28%, transparent);
   transform: translate(-50%, -50%);
 }
 .splash-gate.is-handing .splash-bloom { animation: splashBloom 620ms 240ms cubic-bezier(.2,.8,.3,1) forwards; }
@@ -4419,8 +4548,8 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
   animation: markLand 520ms var(--ease) forwards;
 }
 @keyframes markLand {
-  0%   { box-shadow: 0 0 0 0 rgba(245,200,66,0.55); }
-  100% { box-shadow: 0 0 0 16px rgba(245,200,66,0); }
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 55%, transparent); }
+  100% { box-shadow: 0 0 0 16px transparent; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4705,13 +4834,13 @@ html[data-motion="none"] .splash-cta.waiting { animation: none; }
     radial-gradient(circle at 38% 32%, #2b2620 0%, #17130f 46%, #0d0b09 100%);
   box-shadow:
     0 0 0 2.5% #060505,
-    inset 0 0 0 1.5px rgba(245,200,66,0.55),
+    inset 0 0 0 1.5px color-mix(in srgb, var(--gold) 55%, transparent),
     inset 0 0 44px rgba(0,0,0,0.55),
-    0 0 70px rgba(245,200,66,0.10);
+    0 0 70px color-mix(in srgb, var(--gold) 10%, transparent);
 }
 .sd-label-ring {
   position: absolute; inset: 15%; border-radius: 50%;
-  border: 1px solid rgba(245,200,66,0.18);
+  border: 1px solid color-mix(in srgb, var(--gold) 18%, transparent);
 }
 /* No spindle hole. The label sits dead centre behind the wordmark, so a black
    8% dot showed between the letters — and through the bloom on the way out —
@@ -4847,7 +4976,7 @@ body.entering-done #artist-hero {
   line-height: 1.1;
   /* Shiny gold gradient fill — same technique as the VINALL logo wordmark,
      with an extra highlight stop so it catches light rather than reading flat. */
-  background: linear-gradient(100deg, #d6a93a 0%, #F5C842 28%, #fff3c4 48%, #F5C842 68%, #b8861f 100%);
+  background: linear-gradient(100deg, color-mix(in srgb, var(--gold) 80%, #000) 0%, var(--gold) 28%, color-mix(in srgb, var(--gold) 30%, #fff) 48%, var(--gold) 68%, color-mix(in srgb, var(--gold) 66%, #000) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -8442,8 +8571,8 @@ body[data-section="foryou"] .fy-tabs {
 .dm-toggle.ready .dm-ico-core { animation: dmCore 2.2s ease-in-out infinite; }
 @keyframes dmCore { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.7); } }
 @keyframes dmReady {
-  0%, 100% { box-shadow: 0 0 0 rgba(245,200,66,0); }
-  50%      { box-shadow: 0 0 14px rgba(245,200,66,.4); }
+  0%, 100% { box-shadow: 0 0 0 transparent; }
+  50%      { box-shadow: 0 0 14px color-mix(in srgb, var(--gold) 40%, transparent); }
 }
 .dm-badge {
   position: absolute; top: -4px; right: -4px; width: 8px; height: 8px;
@@ -8489,7 +8618,7 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
    settle rather than a burst of confetti, so repeated claims never feel like
    the same big celebration playing six times in a row. */
 .dm-row.dm-claiming { animation: dmClaim .42s var(--ease); }
-@keyframes dmClaim { 0% { transform: scale(1); } 45% { transform: scale(1.035); background: rgba(245,200,66,.12); } 100% { transform: scale(1); } }
+@keyframes dmClaim { 0% { transform: scale(1); } 45% { transform: scale(1.035); background: color-mix(in srgb, var(--gold) 12%, transparent); } 100% { transform: scale(1); } }
 .list-top-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 /* TOURNAMENT — the main event. A pulsing gold border and a slow diagonal
    sweep of light, own keyframes, own colour. Glowy but not obnoxious: the
@@ -8504,14 +8633,14 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
 .ltb-label { position: relative; z-index: 1; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--gold); }
 .ltb-glow {
   position: absolute; inset: -40%; z-index: 0;
-  background: linear-gradient(115deg, transparent 30%, rgba(245,200,66,.28) 48%, transparent 66%);
+  background: linear-gradient(115deg, transparent 30%, color-mix(in srgb, var(--gold) 28%, transparent) 48%, transparent 66%);
   background-size: 220% 220%;
   animation: ltbSweep 3.4s linear infinite;
 }
 @keyframes ltbSweep { 0% { background-position: 0% 0%; } 100% { background-position: -220% 0%; } }
 @keyframes ltbPulse {
-  0%, 100% { box-shadow: 0 0 0 rgba(245,200,66,0); border-color: var(--gold-dim); }
-  50% { box-shadow: 0 0 22px rgba(245,200,66,.35); border-color: var(--gold); }
+  0%, 100% { box-shadow: 0 0 0 transparent; border-color: var(--gold-dim); }
+  50% { box-shadow: 0 0 22px color-mix(in srgb, var(--gold) 35%, transparent); border-color: var(--gold); }
 }
 /* FILL FROM AN ARTIST — quieter, its own identity: a corner shimmer rather
    than a full sweep or a pulsing border, so the two bulk actions are never
@@ -8859,9 +8988,9 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
 .onb::before {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background:
-    radial-gradient(900px 620px at 12% -8%, rgba(94,184,255,.10), transparent 62%),
-    radial-gradient(760px 540px at 96% 4%, rgba(255,61,154,.09), transparent 60%),
-    radial-gradient(820px 600px at 50% 108%, rgba(245,200,66,.08), transparent 62%);
+    radial-gradient(900px 620px at 12% -8%, color-mix(in srgb, var(--hue-5) 10%, transparent), transparent 62%),
+    radial-gradient(760px 540px at 96% 4%, color-mix(in srgb, var(--hue-3) 9%, transparent), transparent 60%),
+    radial-gradient(820px 600px at 50% 108%, color-mix(in srgb, var(--gold) 8%, transparent), transparent 62%);
 }
 .onb > * { position: relative; z-index: 1; }
 
@@ -8943,9 +9072,9 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
   background: radial-gradient(circle at 38% 32%, #2b2620 0%, #17130f 46%, #0d0b09 100%);
   box-shadow:
     0 0 0 2.5% #060505,
-    inset 0 0 0 1.5px rgba(245,200,66,0.55),
+    inset 0 0 0 1.5px color-mix(in srgb, var(--gold) 55%, transparent),
     inset 0 0 44px rgba(0,0,0,0.55),
-    0 0 70px rgba(245,200,66,0.10);
+    0 0 70px color-mix(in srgb, var(--gold) 10%, transparent);
 }
 @media (prefers-reduced-motion: reduce) { .onb-disc { animation: none; } }
 
@@ -9078,8 +9207,8 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
   display: inline-flex; align-items: center; gap: 6px;
   font: 800 13px/1 var(--font-body); letter-spacing: .08em;
   padding: 8px 12px; border-radius: 999px; color: #1a1408;
-  background: linear-gradient(135deg, #ffe9a8, #F5C842 42%, #ff9d3d);
-  box-shadow: 0 0 0 1px rgba(255,255,255,.35) inset, 0 10px 30px rgba(245,200,66,.42);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--gold) 45%, #fff), var(--gold) 42%, var(--accent-2));
+  box-shadow: 0 0 0 1px rgba(255,255,255,.35) inset, 0 10px 30px color-mix(in srgb, var(--gold) 42%, transparent);
   animation: onbBadge .72s cubic-bezier(.2,1.5,.35,1) .18s both;
 }
 @keyframes onbBadge {
@@ -9110,7 +9239,7 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
   color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .onb-ar:active .onb-ar-img { transform: scale(.94); }
-.onb-ar.on .onb-ar-img { box-shadow: 0 0 0 3px var(--gold), 0 8px 26px rgba(245,200,66,.3); }
+.onb-ar.on .onb-ar-img { box-shadow: 0 0 0 3px var(--gold), 0 8px 26px color-mix(in srgb, var(--gold) 30%, transparent); }
 .onb-ar.on .onb-ar-n { color: var(--gold); }
 .onb-ar.just .onb-ar-img { animation: onbPop .34s var(--ease); }
 .onb-ar.nope .onb-ar-img { animation: onbNope .34s var(--ease); }
@@ -9136,8 +9265,8 @@ html[data-motion="none"] .dm-toggle.ready .dm-ico-core { animation: none; }
   z-index: 205; pointer-events: none;
   font: 800 17px/1 var(--font-body); letter-spacing: -.01em;
   color: #1a1408; padding: 11px 18px; border-radius: 999px;
-  background: linear-gradient(135deg, #ffe9a8, #F5C842 50%, #ff9d3d);
-  box-shadow: 0 14px 40px rgba(245,200,66,.4);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--gold) 45%, #fff), var(--gold) 50%, var(--accent-2));
+  box-shadow: 0 14px 40px color-mix(in srgb, var(--gold) 40%, transparent);
   animation: onbPopUp 1.5s var(--ease) both;
 }
 @keyframes onbPopUp {
@@ -9341,18 +9470,18 @@ input, textarea, select, [contenteditable="true"],
 }
 </style>
 <link rel="stylesheet" href="/assets/interactions.css?v=3">
-<link rel="stylesheet" href="/assets/replay.css?v=2">
+<link rel="stylesheet" href="/assets/replay.css?v=3">
 <link rel="stylesheet" href="/assets/you.css?v=1">
-<link rel="stylesheet" href="/assets/games.css?v=1">
-<link rel="stylesheet" href="/assets/store.css?v=2">
-<link rel="stylesheet" href="/assets/glow.css?v=4">
-<link rel="stylesheet" href="/assets/themes2.css?v=1">
+<link rel="stylesheet" href="/assets/games.css?v=2">
+<link rel="stylesheet" href="/assets/store.css?v=3">
+<link rel="stylesheet" href="/assets/glow.css?v=5">
+<link rel="stylesheet" href="/assets/themes2.css?v=2">
 <link rel="stylesheet" href="/assets/play.css?v=1">
 <link rel="stylesheet" href="/assets/cards.css?v=1">
 <link rel="stylesheet" href="/assets/foryou.css?v=3">
 <link rel="stylesheet" href="/assets/comments.css?v=1">
-<link rel="stylesheet" href="/assets/boards.css?v=1">
-<link rel="stylesheet" href="/assets/ladder.css?v=2">
+<link rel="stylesheet" href="/assets/boards.css?v=2">
+<link rel="stylesheet" href="/assets/ladder.css?v=3">
 <link rel="stylesheet" href="/assets/profile2.css?v=1">
 <link rel="stylesheet" href="/assets/today.css?v=1">
 <link rel="stylesheet" href="/assets/home2.css?v=1">
@@ -15443,7 +15572,7 @@ function celebrate(title,sub,opts){
   /* The accent leads its own confetti rather than replacing it: a single
      colour reads as a loading state, and a palette with the category's colour
      at the front of it reads as that category. */
-  const base=['#4fb477','#F5C842','#85b7eb','#f0ede8','#e24b4a','#6bbf68','#d98cff'];
+  const base=['var(--gold)','var(--accent-2)','var(--hue-1)','#f0ede8','var(--hue-3)','var(--hue-4)','var(--hue-2)'];
   const cols=(opts&&opts.accent)?[opts.accent,opts.accent,'#f0ede8'].concat(base):base;
   const n=(opts&&opts.confetti!=null)?opts.confetti:80;
   for(let i=0;i<n;i++){const s=document.createElement('span');s.className='cf';s.style.background=cols[i%cols.length];s.style.setProperty('--cx',(Math.random()*760-380).toFixed(0)+'px');s.style.setProperty('--cy',(Math.random()*520+120).toFixed(0)+'px');s.style.setProperty('--cr',(Math.random()*720-360).toFixed(0)+'deg');s.style.animationDelay=(Math.random()*0.25).toFixed(2)+'s';ov.appendChild(s);setTimeout(function(){if(s.parentNode)s.parentNode.removeChild(s);},2000);}
@@ -15550,7 +15679,7 @@ async function claimAch(btn){
     stampAchievement(btn.closest('.ach'),res.earned);
   } else if(res.earned>0){
     celebrate(btn.dataset.label,'+'+res.earned.toLocaleString('en-GB')+' Discs',
-      {eyebrow:'Milestone claimed',accent:'#F5C842'});
+      {eyebrow:'Milestone claimed',accent:'var(--gold)'});
   }
   renderAchievements();
 }
@@ -20922,8 +21051,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   const THEMES = {
     classic:  { name: 'Crate',    cost: 0,    desc: 'The original — near-black, gold and ember.' },
     sundown:  { name: 'Sundown',  cost: 15000, desc: 'Plum dusk, hot orange, pink neon edge.' },
-    cassette: { name: 'Cassette', cost: 15000, desc: 'Deep graphite with turquoise and blue.' },
-    citrus:   { name: 'Citrus',   cost: 25000, desc: 'Espresso dark, blood orange and lime.' },
+    cassette: { name: 'Cassette', cost: 15000, desc: 'Deep graphite, turquoise and tape-label coral.' },
+    citrus:   { name: 'Citrus',   cost: 25000, desc: 'Espresso dark, lime and blood orange.' },
     vhs:      { name: 'VHS Tracking', cost: 30000, desc: 'Bottle-green black with phosphor green and hot pink.' },
     bone:     { name: 'Bone China',   cost: 30000, desc: 'Warm off-white on soot. Quiet, and the only pale one.' },
     neon:     { name: 'Neon Vault', cost: 35000, desc: 'Indigo black, magenta and cyan. Loud.' },
@@ -20933,7 +21062,11 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        overwrites it from shop_items, which is what wallet_buy charges. */
     press:    { name: 'Test Pressing', cost: 2000, desc: 'White label. Silver on black, no colour anywhere.' },
     /* ..._20261014150000_more_themes.sql; tokens in assets/themes2.css. */
-    reel:     { name: 'Reel to Reel',   cost: 12000, desc: 'Warm tape brown, amber and oxide red.' },
+    /* RETIRED from sale 2026-10-14: it was Soul Train with sharper corners.
+       `retired` hides the Buy card unless you own it; an owner keeps it, can
+       still equip it, and sees Soul Train's tokens (aliased in themes2.css).
+       The shop_items row is untouched, so nothing server-side changes. */
+    reel:     { name: 'Reel to Reel',   cost: 12000, desc: 'Warm tape brown, amber and oxide red.', retired: true },
     canopy:   { name: 'Deep Canopy',    cost: 18000, desc: 'Forest-floor green with brass light.' },
     frost:    { name: 'Chrome Frost',   cost: 20000, desc: 'Blue steel, ice and polished chrome.' },
     soul:     { name: 'Soul Train',     cost: 22000, desc: 'Chocolate, mustard and rust. Everything rounded.' },
@@ -20945,13 +21078,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   const SWATCH = {
     classic:  'linear-gradient(135deg,#0a0908 20%,#F5C842 60%,#ff7a4d)',
     sundown:  'linear-gradient(135deg,#1a0a14 20%,#ff8a3d 60%,#ff3d7f)',
-    cassette: 'linear-gradient(135deg,#0b0d10 20%,#12e0c8 60%,#5eb8ff)',
-    citrus:   'linear-gradient(135deg,#12100a 20%,#ff9f1c 60%,#c6ff3d)',
+    cassette: 'linear-gradient(135deg,#0b0d10 20%,#12e0c8 60%,#ff8a6b)',
+    citrus:   'linear-gradient(135deg,#12100a 20%,#c6ff3d 60%,#ff7b2e)',
     vhs:      'linear-gradient(135deg,#07100d 20%,#3dffab 60%,#ff4fa3)',
     bone:     'linear-gradient(135deg,#141310 20%,#e6dcc4 60%,#b8705a)',
     neon:     'linear-gradient(135deg,#0a0616 20%,#ff3d9a 60%,#22e3ff)',
     press:    'linear-gradient(135deg,#0c0c0d 20%,#d8dbe0 60%,#8d919a)',
-    reel:     'linear-gradient(135deg,#120d08 20%,#e9a84b 60%,#d2593c)',
+    reel:     'linear-gradient(135deg,#150b05 20%,#f0b52f 58%,#d0582a)',
     canopy:   'linear-gradient(135deg,#07110b 20%,#2f6b45 55%,#d8b45e)',
     frost:    'linear-gradient(135deg,#070b10 20%,#a9e5ff 60%,#c4cbe2)',
     soul:     'linear-gradient(135deg,#150b05 20%,#f0b52f 58%,#d0582a)',
@@ -21272,6 +21405,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     // once the profile lands. reset() comes through here too, so signing out
     // clears it.
     try { localStorage.setItem('vinall_theme', document.documentElement.dataset.theme || ''); } catch (e) {}
+    /* The nav pill copies its hue off the active button as a value, so it has
+       to be re-read now the hues belong to the theme. */
+    try { if (window.positionNavIndicator) positionNavIndicator(); } catch (e) {}
     /* Everything else on the page reskins for free, because everything else is
        painted from the tokens this line swaps. The artist hero is the one
        surface that is not CSS — it is a canvas of dots inked once, so it keeps
@@ -21916,6 +22052,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   async function buyTheme(key) {
     if (!THEMES[key]) return { error: 'Unknown theme' };
+    if (THEMES[key].retired) return { error: 'No longer sold' };
     const res = await rpc('wallet_buy', { p_kind: 'theme', p_key: key });
     if (res.error) return { error: res.error };
     applyWallet(res.data);
@@ -22165,10 +22302,18 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     const meHtml = '<span class="sw-me"><i class="sw-init">' + esc((w.username || 'Y').charAt(0).toUpperCase()) + '</i>' +
       (w.avatar_url ? '<img src="' + esc(w.avatar_url) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</span>';
 
-    // A theme card is a tiny app in that theme's colours, not a gradient chip.
-    const themeRows = Object.keys(THEMES).map(function (key) {
-      return shopItemRow('theme', key, THEMES[key], SWATCH[key], w.is_admin || w.owned_themes.indexOf(key) !== -1, w.active_theme === key,
-        'sw-theme', '<span class="sw-th"><span class="sw-th-me">' + meHtml + '<u>' + esc(myName) + '</u></span><i></i><i></i><b></b></span>');
+    /* A theme card is a tiny app in that theme's colours, not a gradient chip.
+       The mini app carries data-theme itself, so it is painted by the theme's
+       real tokens — the same ones that would repaint the app — rather than a
+       second, hand-picked copy of them. No description: the preview is it.
+       A retired theme only appears for somebody who already has it. */
+    const themeKeys = Object.keys(THEMES).filter(function (key) {
+      return !THEMES[key].retired || w.owned_themes.indexOf(key) !== -1 || w.active_theme === key;
+    });
+    const themeRows = themeKeys.map(function (key) {
+      const item = Object.assign({}, THEMES[key], { desc: '' });
+      return shopItemRow('theme', key, item, SWATCH[key], w.is_admin || w.owned_themes.indexOf(key) !== -1, w.active_theme === key,
+        'sw-theme', '<span class="sw-th" data-theme="' + key + '"><span class="sw-th-me">' + meHtml + '<u>' + esc(myName) + '</u></span><i></i><i></i><b></b></span>');
     }).join('');
     const bannerRows = Object.keys(BANNERS).map(function (key) {
       const owned = w.is_admin || key === 'none' || w.owned_banners.indexOf(key) !== -1;
@@ -22254,7 +22399,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       return Object.keys(map).filter(function (k) { return k !== 'none' && (w.is_admin || map[k].cost === 0 || (arr || []).indexOf(k) !== -1); }).length;
     }
     const CATS = [
-      { k: 'themes',  label: 'Themes',  rows: themeRows,            have: ownedN(THEMES, w.owned_themes),   of: Object.keys(THEMES).length },
+      { k: 'themes',  label: 'Themes',  rows: themeRows,            have: ownedN(THEMES, w.owned_themes),   of: themeKeys.length },
       { k: 'tags',    label: 'Tags',    rows: suggestRow + tagRows, have: ownedN(TAGS, w.owned_tags),       of: Object.keys(TAGS).length },
       { k: 'flair',   label: 'Flair',   rows: flairRows,            have: ownedN(FLAIRS, w.owned_flairs),   of: Object.keys(FLAIRS).length },
       { k: 'frames',  label: 'Frames',  rows: frameRows,            have: ownedN(FRAMES, w.owned_frames),   of: Object.keys(FRAMES).length },
@@ -23685,7 +23830,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       if (typeof celebrate === 'function') {
         celebrate(ewState.rec.title, ewState.rec.artist || '', {
           eyebrow: 'Earworm in ' + ewState.rows.length + (ewState.hinted ? ' (hint)' : ''),
-          accent: '#d98cff'
+          accent: 'var(--hue-2)'
         });
       }
       // The payout used to be computed here and thrown away — the client
@@ -24676,7 +24821,7 @@ function playDismissAnimation(gateEl, callback) {
         if (typeof celebrate === 'function') {
           celebrate(guess.name, guess.artist || '', {
             eyebrow: 'Daily Drop in ' + st.g.length,
-            accent: '#85b7eb'
+            accent: 'var(--hue-5)'
           });
         }
         if (window.Wallet) Wallet.awardGame('drop', { reason: 'Daily Drop' });
@@ -30543,7 +30688,7 @@ window.renderAdminStats = renderAdminStats;
     again.textContent = runsLeft === 0 ? 'Back tomorrow' : 'Go again';
     if (wasBest && score >= 3 && typeof celebrate === 'function') {
       celebrate(score + ' in a row', points + ' points', {
-        eyebrow: 'Higher or Lower — new best', accent: '#4fb477'
+        eyebrow: 'Higher or Lower — new best', accent: 'var(--hue-7)'
       });
     }
     // Five in a row is the bar. Below that it is a warm-up, and paying for a
@@ -31437,7 +31582,7 @@ window.renderAdminStats = renderAdminStats;
       }
       if (won && typeof celebrate === 'function') {
         celebrate(n(score) + ' to ' + n(theirs), '', {
-          eyebrow: 'Cover Fire — won', accent: '#F5C842'
+          eyebrow: 'Cover Fire — won', accent: 'var(--gold)'
         });
       }
     } catch (e) { note(String((e && e.message) || e)); }
@@ -38914,7 +39059,7 @@ window.track = function (name, props) {
       .forEach(function (g) {
         Object.keys(g[1]).forEach(function (k) {
           var it = g[1][k];
-          if (!it || !it.cost || k === 'none' || (have[g[0]] || []).indexOf(k) !== -1) return;
+          if (!it || !it.cost || it.retired || k === 'none' || (have[g[0]] || []).indexOf(k) !== -1) return;
           pool.push({ kind: g[0], key: k, name: it.name, desc: it.desc || '', cost: it.cost, sw: g[2][k] });
         });
       });
@@ -40621,6 +40766,6 @@ window.track = function (name, props) {
 <script src="/assets/you.js?v=2"></script>
 <script src="/assets/glow.js?v=3"></script>
 <script src="/assets/comments.js?v=1" defer></script>
-<script src="/assets/boards.js?v=1"></script>
+<script src="/assets/boards.js?v=2"></script>
 <script src="/assets/play.js?v=2"></script>
 </html>
