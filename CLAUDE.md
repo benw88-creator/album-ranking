@@ -2545,6 +2545,15 @@ then the tab says "Not switched on yet" and reports once to `client_errors`.
   and older picks keep playing from Deezer. No waveform for YouTube picks: the bars are a ruler.
 - Featured artists come from Deezer `contributors`, then `(feat. …)` in the title, then a typed
   name. Contributors are incomplete (SICKO MODE credits Travis Scott alone).
+- **Beat drops** are the fifth category (`drop`, hue `--cc-drop` #ff7a33, fixed and scoped
+  to the Choice CSS). Same table, triggers, caps and rules as the other four — it is one
+  more entry in `CATS` and one more value in `moments_category_check`
+  (`..._20261014200000_beat_drops.sql`, **apply by hand**). Before it lands, the filter
+  reads fine (empty) and a post is refused with 23514; the picker turns that into "not
+  switched on yet", marks the chip *soon* for the session and reports once. Its motif is
+  a groove that spikes (`IC_DROP`): the tall bars land once on arrival and bounce while
+  playing, and the window's left edge is drawn as the hit — transform/opacity only, still
+  under reduced motion.
 
 ## The outward layer — reviews, share links, push, your people, import/export
 
