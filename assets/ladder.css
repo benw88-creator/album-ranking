@@ -1,0 +1,159 @@
+/* ================================================================
+   THE SEVEN-DAY LADDER — third shape (login_ladder_v3).
+   Loaded last so it wins over the original .rw-day rules (trap 1).
+   ================================================================ */
+
+/* ---- the week header: what you are working toward ---- */
+.rw-week {
+  position: relative; overflow: hidden; margin: 6px 0 12px; padding: 16px 16px 14px;
+  border-radius: 18px; border: 1px solid var(--border-strong);
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 55%),
+    linear-gradient(160deg, var(--surface-2), var(--surface));
+}
+.rw-week-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rw-week-k { font: 700 10.5px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--text-faint); }
+.rw-week-next { margin-top: 7px; font-size: 15px; color: var(--text-dim); line-height: 1.3; }
+.rw-week-next b { color: var(--text); font-weight: 700; }
+.rw-flame {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 58px; height: 58px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 65%, color-mix(in srgb, var(--gold) 45%, transparent), transparent 70%);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--gold) 60%, transparent), 0 0 24px color-mix(in srgb, var(--gold) 25%, transparent);
+}
+.rw-flame span { font: 800 22px/1 var(--font-mono); color: var(--gold); }
+.rw-flame small { font: 700 8.5px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); margin-top: 4px; }
+.rw-track { margin-top: 14px; height: 6px; border-radius: 3px; background: var(--surface-4, rgba(255,255,255,.08)); overflow: hidden; }
+.rw-track i { display: block; height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--gold-dim, #8a6d1f), var(--gold));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--gold) 55%, transparent);
+  transform-origin: left; animation: rwFill 900ms cubic-bezier(.2,.9,.25,1) backwards; }
+@keyframes rwFill { from { transform: scaleX(0); } }
+.rw-week-foot { margin-top: 10px; font-size: 12px; color: var(--text-faint); line-height: 1.4; }
+.rw-week-foot b { color: var(--c-pink); font-weight: 700; }
+
+/* ---- the tiles ---- */
+#view-rewards .rw-ladder { grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 0 0 26px; }
+.rw-day {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  min-height: 132px; padding: 12px 6px 10px; border-radius: 16px; text-align: center;
+  border: 1px solid var(--border); background: linear-gradient(170deg, var(--surface-2), var(--surface));
+  font: inherit; color: inherit; overflow: hidden;
+  animation: rwIn 420ms cubic-bezier(.2,.9,.25,1) backwards; animation-delay: calc(var(--d, 1) * 40ms);
+}
+@keyframes rwIn { from { opacity: 0; transform: translateY(8px); } }
+.rw-day .rw-d { font: 700 9.5px/1 var(--font-mono); letter-spacing: .1em; }
+.rw-art { height: 44px; display: grid; place-items: center; margin: 10px 0 6px; color: var(--gold); }
+.rw-art svg { width: 26px; height: 26px; }
+.rw-day .rw-amt { margin-top: 0; font: 800 18px/1.1 var(--font-mono); }
+.rw-day .rw-unit { margin-top: 3px; font-size: 9.5px; letter-spacing: .06em; line-height: 1.25; max-width: 100%; }
+.rw-day.done { opacity: .78; }
+.rw-day .rw-tick { top: 7px; right: 8px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--gold); color: #120f0a; font-size: 10px; font-weight: 800; }
+.rw-day.next { border-color: color-mix(in srgb, var(--gold) 35%, var(--border)); }
+.rw-day.next::after { content: 'Tomorrow'; position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 0;
+  font: 700 8.5px/1.2 var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
+  background: color-mix(in srgb, var(--gold) 14%, transparent); color: var(--gold); }
+.rw-day.live { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 10px 34px color-mix(in srgb, var(--gold) 30%, transparent); cursor: pointer; }
+.rw-day.live .rw-take { margin-top: auto; }
+
+/* Day six: the big Disc day reads bigger. */
+.rw-day.rw-big .rw-amt { font-size: 21px; color: var(--gold); text-shadow: 0 0 18px color-mix(in srgb, var(--gold) 45%, transparent); }
+
+/* Day five, week one: Wrapped — a foil-wrapped V. */
+.rw-day.rw-wrapped { border-color: color-mix(in srgb, var(--c-violet) 45%, var(--border));
+  background: linear-gradient(170deg, color-mix(in srgb, var(--c-violet) 22%, var(--surface-2)), var(--surface)); }
+.rw-day.rw-wrapped .rw-amt { font-size: 12px; font-family: var(--font-body); letter-spacing: -.01em; }
+.rw-day.rw-wrapped .rw-unit { color: var(--c-violet); }
+.rw-wrap { position: relative; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; overflow: hidden;
+  background: linear-gradient(135deg, #b98cff, #6be0ff 50%, #ff7ad9);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--c-violet) 45%, transparent); }
+.rw-wrap b { font: 900 22px/1 var(--font-display); color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.rw-wrap::after { content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0px, rgba(255,255,255,.55) 20px, transparent 40px, transparent 120px);
+  background-size: 120px 100%; animation: rwFoil 2.8s linear infinite; }
+@keyframes rwFoil { from { background-position: -120px 0; } to { background-position: 0 0; } }
+
+/* Day five, later weeks: a tag. The chip is the art; keep it inside the tile. */
+.rw-day.rw-tag .rw-art { max-width: 100%; }
+.rw-day.rw-tag .rw-art > * { max-width: 100%; transform: scale(.72); }
+.rw-day.rw-tag .rw-amt { font-size: 13px; }
+.rw-day.rw-tag .rw-unit { color: var(--c-lime); }
+
+/* Day seven, week one. */
+.rw-day.rw-grand { border-color: color-mix(in srgb, var(--gold) 55%, var(--border));
+  background: radial-gradient(100% 80% at 50% 30%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 70%), linear-gradient(170deg, var(--surface-2), var(--surface)); }
+.rw-grand-art svg { width: 34px; height: 34px; animation: rwSpin 6s linear infinite; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--gold) 55%, transparent)); }
+@keyframes rwSpin { to { rotate: 360deg; } }
+.rw-day.rw-grand .rw-amt { font-size: 12px; font-family: var(--font-body); }
+.rw-day.rw-grand .rw-unit > * { transform: scale(.7); transform-origin: center top; }
+
+/* Day seven, every week after: the box. A real cube, turning. */
+.rw-day.rw-mystery { border-color: color-mix(in srgb, var(--c-pink) 50%, var(--border));
+  background: radial-gradient(100% 80% at 50% 30%, color-mix(in srgb, var(--c-pink) 24%, transparent), transparent 70%), linear-gradient(170deg, var(--surface-2), var(--surface)); }
+.rw-day.rw-mystery .rw-amt { font-size: 20px; letter-spacing: .08em; color: var(--c-pink); text-shadow: 0 0 16px color-mix(in srgb, var(--c-pink) 60%, transparent); }
+.rw-day.rw-mystery .rw-unit { color: var(--text-dim); }
+.rw-box { --s: 30px; position: relative; width: var(--s); height: var(--s); perspective: 220px; }
+.rw-cube { position: absolute; inset: 0; transform-style: preserve-3d; animation: rwCube 7s cubic-bezier(.45,.05,.55,.95) infinite; }
+.rw-face {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font: 900 16px/1 var(--font-display); font-style: normal; color: #fff;
+  background: linear-gradient(135deg, #ff5fb8, #8b5cf6 55%, #22d3ee);
+  border: 1px solid rgba(255,255,255,.55); border-radius: 4px;
+  box-shadow: inset 0 0 10px rgba(255,255,255,.35);
+  text-shadow: 0 0 8px rgba(255,255,255,.8);
+  backface-visibility: hidden;
+}
+.rw-f { transform: translateZ(calc(var(--s) / 2)); }
+.rw-b { transform: rotateY(180deg) translateZ(calc(var(--s) / 2)); }
+.rw-l { transform: rotateY(-90deg) translateZ(calc(var(--s) / 2)); }
+.rw-r { transform: rotateY(90deg) translateZ(calc(var(--s) / 2)); }
+.rw-t { transform: rotateX(90deg) translateZ(calc(var(--s) / 2)); }
+.rw-u { transform: rotateX(-90deg) translateZ(calc(var(--s) / 2)); }
+@keyframes rwCube {
+  0%   { transform: rotateX(-18deg) rotateY(0deg) translateY(0); }
+  45%  { transform: rotateX(-24deg) rotateY(200deg) translateY(-3px); }
+  50%  { transform: rotateX(-24deg) rotateY(215deg) translateY(-4px) rotateZ(3deg); }
+  55%  { transform: rotateX(-24deg) rotateY(205deg) translateY(-3px) rotateZ(-3deg); }
+  100% { transform: rotateX(-18deg) rotateY(360deg) translateY(0); }
+}
+.rw-box-glow { position: absolute; left: 50%; bottom: -8px; width: 34px; height: 8px; margin-left: -17px; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--c-pink) 70%, transparent), transparent);
+  animation: rwShadow 7s ease-in-out infinite; }
+@keyframes rwShadow { 50% { opacity: .5; transform: scaleX(.8); } }
+/* Larger cube when it is the day you can open. */
+.rw-day.rw-mystery.live .rw-box { --s: 36px; }
+
+/* "IT'S VIRJI ISN'T IT" and other ladder exclusives in the Shop: a reward,
+   not a product. */
+.shop-item.is-exclusive { border-style: dashed; }
+.si-excl { font: 700 10.5px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
+.si-lock { font: 700 11px/1 var(--font-mono); color: var(--text-faint); white-space: nowrap; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 99px; }
+
+/* ---- phones: two rows, day seven is the hero ---- */
+@media (max-width: 700px) {
+  #view-rewards .rw-ladder { grid-template-columns: repeat(3, 1fr); }
+  .rw-day { min-height: 118px; }
+  .rw-day.grand { grid-column: 1 / -1; display: grid; grid-template-columns: 64px 1fr auto; grid-template-rows: auto auto auto;
+    align-items: center; column-gap: 14px; min-height: 104px; padding: 12px 16px; text-align: left; }
+  .rw-day.grand .rw-d { grid-column: 1 / -1; }
+  .rw-day.grand .rw-art { grid-row: 2 / 4; grid-column: 1; margin: 4px 0 0; justify-self: center; }
+  .rw-day.grand .rw-amt { grid-column: 2; align-self: end; font-size: 17px; }
+  .rw-day.grand .rw-unit { grid-column: 2; align-self: start; justify-self: start; }
+  .rw-day.grand .rw-unit > * { transform-origin: left top; }
+  .rw-day.grand .rw-take, .rw-day.grand .rw-tick { grid-column: 3; grid-row: 2 / 4; }
+  .rw-day.rw-mystery .rw-amt { font-size: 24px; }
+  .rw-day.grand.rw-mystery .rw-box { --s: 42px; }
+  .rw-day.grand.next::after { left: auto; right: 0; top: 0; bottom: auto; padding: 4px 10px; border-radius: 0 0 0 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .rw-cube, html:not([data-motion="full"]) .rw-box-glow,
+  html:not([data-motion="full"]) .rw-wrap::after, html:not([data-motion="full"]) .rw-grand-art svg,
+  html:not([data-motion="full"]) .rw-day, html:not([data-motion="full"]) .rw-track i { animation: none; }
+  html:not([data-motion="full"]) .rw-cube { transform: rotateX(-18deg) rotateY(-30deg); }
+}
+html[data-motion="none"] .rw-cube, html[data-motion="none"] .rw-box-glow, html[data-motion="none"] .rw-wrap::after,
+html[data-motion="none"] .rw-grand-art svg, html[data-motion="none"] .rw-day, html[data-motion="none"] .rw-track i { animation: none; }
+html[data-motion="none"] .rw-cube { transform: rotateX(-18deg) rotateY(-30deg); }

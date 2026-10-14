@@ -102,3 +102,53 @@ html[data-motion="none"] .fy-card.is-playing .fy-art::before { animation: none; 
    outline said "done" without saying what; the number lives on the Rate
    button ("Rated 8"), not stamped over the artwork. */
 .fy-card.is-rated .fy-art { outline: 2px solid color-mix(in srgb, var(--fy-tint) 65%, transparent); outline-offset: 3px; }
+
+/* ---- the fire: the record lights the room --------------------------------
+   A second copy of the sleeve sits BEHIND the art, blurred hard and saturated,
+   so the glow is made of the album's own colours rather than a colour guessed
+   for it. While the clip plays it turns slowly and breathes; a blurred image
+   rotating reads as moving heat, not a spinning picture. Transform/opacity
+   only, so the compositor carries it. The score halo (::before, the slider's
+   colour) sits over it: the record's light, tinted by your verdict. */
+.fy-glow {
+  position: absolute; left: -22%; top: -22%; z-index: -2; pointer-events: none;
+  width: 144%; height: 144%;
+  object-fit: cover; border-radius: 50%;
+  filter: blur(38px) saturate(1.9) brightness(1.15);
+  opacity: .7;
+  transition: opacity 600ms ease, transform 900ms var(--gs-spring, ease);
+  will-change: transform, opacity;
+}
+.fy-card.is-playing .fy-glow { opacity: .9; animation: fyEmber 14s linear infinite, fyBreathe 3.6s ease-in-out infinite; }
+.fy-card:has(.gs-drag) .fy-glow { opacity: calc(.7 + var(--fy-v, .7) * .3); transform: scale(calc(1 + var(--fy-v, .7) * .12)); }
+/* rotate and scale as independent properties, so the two animations and the
+   drag's transform never replace one another (trap 2). */
+@keyframes fyEmber { to { rotate: 360deg; } }
+@keyframes fyBreathe { 0%, 100% { scale: 1; } 50% { scale: 1.09; } }
+
+/* The bed: more of the album's colour, heat rising from the foot in the
+   score's colour, and a vignette so the words still read. */
+.fy-bed { filter: blur(52px) saturate(1.65) brightness(.5); }
+.fy-bed-wrap::before {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    radial-gradient(120% 60% at 50% 108%, color-mix(in srgb, var(--fy-tint) 38%, transparent), transparent 60%),
+    radial-gradient(80% 50% at 50% 42%, rgba(255,140,60,.10), transparent 70%);
+  mix-blend-mode: screen; opacity: .55; transition: opacity 400ms ease;
+}
+.fy-card.is-playing .fy-bed-wrap::before { opacity: .85; }
+.fy-card:has(.gs-drag) .fy-bed-wrap::before { opacity: calc(.6 + var(--fy-v, .7) * .4); }
+.fy-bed-wrap::after { z-index: 2; background:
+  radial-gradient(140% 90% at 50% 45%, transparent 40%, rgba(4,3,3,.55)),
+  linear-gradient(to bottom, rgba(6,5,5,.5), rgba(6,5,5,.08) 38%, rgba(6,5,5,.8)); }
+
+/* The words and the tray pick up the same light. */
+.fy-why { color: color-mix(in srgb, var(--fy-tint) 70%, #fff); }
+.fy-eq i { background: color-mix(in srgb, var(--fy-tint) 75%, #fff); box-shadow: 0 0 8px color-mix(in srgb, var(--fy-tint) 60%, transparent); }
+.fy-rate { transition: border-color 300ms ease, box-shadow 300ms ease; }
+.fy-card:has(.gs-drag) .fy-rate { border-color: color-mix(in srgb, var(--fy-tint) 55%, transparent); box-shadow: 0 0 26px color-mix(in srgb, var(--fy-tint) 28%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .fy-card.is-playing .fy-glow { animation: none; }
+}
+html[data-motion="none"] .fy-card.is-playing .fy-glow { animation: none; }
