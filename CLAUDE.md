@@ -6276,3 +6276,61 @@ the Rewards module (`rewardFor`, `LADDER`), `Wallet.dailyLogin`.
   wallet not loaded yet → locked, and `vinall:replay-gate` fires on load/change.
 - The economy moved: a first week is now 34,500 Discs + a record + Replay (was
   18,000 + a record), and day six alone is 25,000. Asked for explicitly.
+
+## Performance pass (2026-10-14) — For You's first card, and setMode's forced layouts
+
+Measured with Playwright + Edge at 390×844, CDP CPU throttle 4×, `/api` proxied
+to production. Logged out, For You's first card went from **~13.4s to ~0.5s**
+(first sleeve decoded ~13.7s → ~0.8s) and a reload straight to For You from
+~13s to ~0.25s. Requests on opening it: 23 → 6.
+
+- **The catalogue queue ran ONE request at a time.** `_spPump` awaited each
+  `_spExec` before starting the next, so every `Promise.all` over
+  discographies was serial (0.5–1.7s each). It runs four in flight now
+  (`SP_CONC`); the rate is still held by `SP_GAP` between starts, which is now
+  *reserved* (`_spLast = at`) so concurrent jobs cannot start together, and a
+  429 still pauses everything.
+- **The community pool was always empty.** `Cloud.fetchTrending()` returns
+  `{id, name, artist, art, avg}`; For You read `album_id`/`album_name`…, every
+  row failed `add()`, and logged out the feed fell through to the chart chain
+  for its first card. Both shapes are read now, in `remotePools` and
+  `expand()` step 2.
+- `expand()` used `spotifyFetch` (no cache, no in-flight sharing) and awaited
+  ALL eight chart discographies (step 3) or TWENTY one-by-one (step 1) before
+  adding anything. `discography()` goes through `spotifyGet` (a day's cache,
+  same path shape as `remotePools`), `landFirst()` resolves when the first
+  source adds records and lets the rest land behind it, and `chartArtists()`
+  keeps the public chart for six hours (`fy_chart_v1`). With no local pools the
+  chart is asked for alongside the community fetch, unless Data Saver is on.
+- `albumTracks` shares one `/api/preview` request per artist+album NAME
+  (editions carry different ids and the route is asked by name — three
+  identical requests were measured); each id still gets its own song list.
+- `warmHeads(count)` warms in MIX order and sized to the batch — it used to
+  fire eight lookups (including the `pushed` pool For You never draws from)
+  for a first page of two.
+- **The stash** (`crate_fy_stash_v1`): on leave/pagehide/hidden, up to four
+  cards AFTER the furthest one reached are written down — metadata only,
+  **never a clip url** (signed, ~10 min). The next build paints them in the
+  same frame and builds the real feed behind. Taken (removed) on use, refused
+  unless stamped with the same user id (`'anon'` logged out), 48h TTL, and
+  under `crate_` so `claimLocalState`/logout wipe it. These songs were marked
+  seen when dealt and were never reached — that is why they may come back
+  exactly once. `render()` also rebuilds a feed built for a different owner.
+- Bed and halo are blurred, so they take `thumb(art, 120)`; the sleeve takes
+  500/750/1000 by devicePixelRatio (it is never wider than 460 CSS px). Three
+  1000² decodes per card became one sized decode and two tiny ones.
+- **Boot awaited `/api/app-token` before `Cloud.init()`.** No catalogue call
+  uses that token any more; it is fetched on demand by `getAnyToken()`.
+- **setMode forced layout synchronously.** `positionNavIndicator()` (and the
+  hub-tab scroll) read geometry right after the `display` swap and BEFORE the
+  view's render mutated it, so every switch laid out twice; the CPU profile put
+  ~80% of setMode in that call. Both reads run in the next rAF now. Synchronous
+  time in the nav handler fell e.g. Crate 145→8ms, Games 150→40ms, Profile
+  30→10ms at 4× throttle; click-to-frame is unchanged (the one real layout
+  still happens in the frame) — this is input responsiveness, not paint.
+- `renderCrate` appended a card then read its footer's height, per card — one
+  forced layout each. It appends all, then reads all.
+
+Not changed, and why: startup is dominated by style recalc/layout/text shaping
+of a 286KB stylesheet (4,450 rules) and the splash animations, not by JS (JS
+self-time on load is well under a second at 4×). That is a CSS job.

@@ -72,3 +72,33 @@ test('autoplay refusal asks for a tap and clears its cue after playback', async 
   await expect(card).toHaveClass(/is-playing/);
   await expect(card).not.toHaveClass(/needs-tap/);
 });
+async function reopen(page) {
+  await page.reload();
+  await page.waitForFunction(() => typeof window.goToView === 'function');
+  const go = page.locator('#splash-cta');
+  if (await go.isVisible()) await go.click();
+  await expect(page.locator('#splash-gate')).toHaveCount(0);
+  await page.evaluate(() => goToView('foryou'));
+}
+test('unreached cards are stashed without clip urls and paint first on reload, once, for the same account only', async ({ page }) => {
+  await enterFeed(page);
+  const reached = await page.locator('.fy-card[data-i="0"] .fy-title').textContent();
+  await page.locator('#modes [data-mode="games"]').click();
+  const stash = await page.evaluate(() => JSON.parse(localStorage.getItem('crate_fy_stash_v1')));
+  expect(stash.u).toBe('anon');
+  expect(stash.items.length).toBeGreaterThan(0);
+  expect(stash.items.length).toBeLessThanOrEqual(4);
+  // Signed preview urls die in minutes: none may be written down.
+  expect(JSON.stringify(stash)).not.toMatch(/preview|\.wav|\.mp3|"clip"/);
+  expect(stash.items.map(c => c.title)).not.toContain(reached);
+  const first = stash.items[0].title;
+  await reopen(page);
+  await expect(page.locator('.fy-card[data-i="0"] .fy-title')).toHaveText(first);
+  // Taken, not read: the same card cannot be painted from it twice.
+  expect(await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('crate_fy_stash_v1') || 'null'); return s ? s.items.map(c => c.title) : []; })).not.toContain(first);
+  // Another account's stash is refused.
+  await page.evaluate(() => localStorage.setItem('crate_fy_stash_v1', JSON.stringify({ u: 'someone-else', at: Date.now(), items: [{ title: 'Not yours', skey: 'x|y', key: 'k' }] })));
+  await reopen(page);
+  await expect(page.locator('#fy-feed .fy-card').first()).toBeVisible();
+  await expect(page.locator('#fy-feed')).not.toContainText('Not yours');
+});

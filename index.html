@@ -11896,9 +11896,17 @@ async function getAppToken(){
 async function getAnyToken(){return(await getAccessToken())||(await getAppToken());}
 
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
-const _spQueue=[];let _spPumping=false,_spLast=0;const SP_GAP=150,_spotifyGetCache={};
+const _spQueue=[];let _spLast=0;const SP_GAP=150,_spotifyGetCache={};
 function spotifyFetch(path,opts){opts=opts||{};return new Promise(function(resolve,reject){const job={path:path,resolve:resolve,reject:reject,skip:opts.skip||null};if(opts.priority){let i=0;while(i<_spQueue.length&&_spQueue[i]._pri)i++;job._pri=true;_spQueue.splice(i,0,job);}else{_spQueue.push(job);}_spPump();});}
-async function _spPump(){if(_spPumping)return;_spPumping=true;while(_spQueue.length){const job=_spQueue.shift();if(job.skip&&job.skip()){const e=new Error('stale');e.stale=true;job.reject(e);continue;}try{job.resolve(await _spExec(job.path,job._pri));}catch(err){job.reject(err);}}_spPumping=false;}
+/* FOUR IN FLIGHT, NOT ONE. The queue dates from the Spotify era and ran every
+   catalogue call strictly one after another, so a Promise.all over eight
+   discographies was eight round trips end to end — measured at 8–12s in front
+   of For You's first card logged out, each call 0.5–1.7s. The RATE is still
+   held by SP_GAP between starts (reserved, so concurrent jobs cannot start
+   together) and a 429 still pauses everything; only the latency stopped
+   stacking. */
+const SP_CONC=4;let _spActive=0;
+function _spPump(){while(_spActive<SP_CONC&&_spQueue.length){const job=_spQueue.shift();if(job.skip&&job.skip()){const e=new Error('stale');e.stale=true;job.reject(e);continue;}_spActive++;_spExec(job.path,job._pri).then(job.resolve,job.reject).then(function(){_spActive--;_spPump();});}}
 
 /* CATALOGUE — Spotify-shaped paths, Deezer underneath.
 
@@ -11969,7 +11977,7 @@ let _spPauseUntil=0;
 async function _spExec(path,pri){
   for(let attempt=0;;attempt++){
     let hold=_spPauseUntil-Date.now();while(hold>0){await sleep(Math.min(hold,1000));hold=_spPauseUntil-Date.now();}
-    if(!pri){const gap=SP_GAP-(Date.now()-_spLast);if(gap>0)await sleep(gap);}_spLast=Date.now();
+    if(!pri){const at=Math.max(Date.now(),_spLast+SP_GAP);_spLast=at;const gap=at-Date.now();if(gap>0)await sleep(gap);}else _spLast=Math.max(_spLast,Date.now());
     const cat=_toCatalogue(path);
     if(!cat){const e=new Error('unsupported-endpoint');e.status=404;e.endpoint=path.split('?')[0];throw e;}
     // No token and no Authorization header: the catalogue needs neither, which
@@ -13940,7 +13948,13 @@ function setMode(mode, fromCode) {
     b.classList.toggle('active', on);
     if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
-  if (window.positionNavIndicator) window.positionNavIndicator();
+  /* NEXT FRAME, NOT NOW. Reading offsetWidth here forced a full synchronous
+     layout of the new view BEFORE the renders below changed it — so every
+     switch laid the page out twice (once stale, once real), and the profile
+     put 80% of setMode's time in this one call. In a rAF the read happens
+     after every write in this function, the browser lays out once, and the
+     pill still moves in the same frame the view appears. */
+  if (window.positionNavIndicator && !setMode._navRaf) setMode._navRaf = requestAnimationFrame(function () { setMode._navRaf = 0; window.positionNavIndicator(); });
   if (mode === 'home' || mode === 'albums' || mode === 'songs') lastListMode = mode;
   if (mode === 'home') {
     /* Recommendations and release-watching moved to For You with the Discover
@@ -14877,7 +14891,7 @@ function renderAuthArea(connected){
     host.innerHTML=list.map(function(a){
       const img=(a.images&&a.images[0]&&a.images[0].url)||'';
       return '<button class="g-pop-a" data-popid="'+esc(a.id)+'" data-popname="'+esc(a.name)+'">'+
-        (img?'<img src="'+esc(img)+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">':'<span class="g-pop-ph"></span>')+
+        (img?'<img src="'+esc(thumb(img,200))+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">':'<span class="g-pop-ph"></span>')+
         '<span class="g-pop-n">'+esc(a.name)+'</span></button>';
     }).join('');
   }
@@ -19667,12 +19681,18 @@ window.handleGrooveLink=handleGrooveLink;
       posts.forEach(function(p){if(p.user_id&&p.user_id!==_myId&&posters.indexOf(p.user_id)===-1)posters.push(p.user_id);});
       Object.assign(_match,await tasteFor(posters));
     }
-    posts.forEach(function(post,i){
+    /* Append all, THEN measure all. measureFoot reads offsetHeight, and
+       interleaving it with appendChild forced one full layout per card —
+       measured as most of the time a switch to the Crate took. One write pass
+       and one read pass is one layout. */
+    const built=posts.map(function(post,i){
       const card=buildCard(post,_scores);
       card.style.animationDelay=(i*0.04)+'s';
       feedEl.appendChild(card);
-      measureFoot(card);
+      return card;
     });
+    const feet=built.map(function(card){const f=card.querySelector('.cf-foot');return f?f.offsetHeight:0;});
+    built.forEach(function(card,i){if(feet[i])card.style.setProperty('--cf-foot',Math.round(feet[i])+'px');else measureFoot(card);});
     _feedCache=_feedCache.concat(posts);
     _offset+=posts.length;
     if(loadMoreBtn)loadMoreBtn.style.display=posts.length>=PAGE?'block':'none';
@@ -19902,11 +19922,17 @@ window.handleGrooveLink=handleGrooveLink;
   if(new URLSearchParams(location.search).get('groove')){}
   else if(new URLSearchParams(location.search).get('u')){setMode('profile');}
   else{setMode('home');}
+  /* THE SESSION FIRST, AND NOTHING IN FRONT OF IT. This awaited a round trip
+     to /api/app-token before Cloud.init(), so every load paid a serverless
+     call (a cold Vercel function, measured 0.5-2s) before the session
+     restore could even start — and the splash's GO waits on Cloud.ready,
+     and For You's prewarm waits on that. No catalogue call carries the token
+     any more (see _spExec), so it is fetched on demand by the one place that
+     still asks for it (renderRecommendations, via getAnyToken). */
   const token=await getAccessToken();
-  if(!token)await getAppToken();
-  renderAuthArea(!!token);
   renderStats();
   Cloud.init();
+  renderAuthArea(!!token);
   setTimeout(function(){if(window.handleGrooveLink)handleGrooveLink();},1500);
   setTimeout(function(){if(window.refreshNotifDot)refreshNotifDot();},2500);
   setInterval(function(){if(window.refreshNotifDot&&Cloud.isOn())refreshNotifDot();},60000);
@@ -26219,7 +26245,10 @@ window.renderAdminStats = renderAdminStats;
       bar.querySelectorAll('[data-hub-tab]').forEach(function (b) {
         var on = b.dataset.hubTab === mode;
         b.classList.toggle('active', on);
-        if (on) { b.setAttribute('aria-current', 'page'); if (b.scrollIntoView && bar.scrollWidth > bar.clientWidth) bar.scrollLeft = b.offsetLeft - 16; }
+        /* The scroll is a layout READ, so it waits for the frame: done here it
+           forced a synchronous layout in the middle of setMode, before the
+           view's own render had run. */
+        if (on) { b.setAttribute('aria-current', 'page'); requestAnimationFrame(function () { if (bar.scrollWidth > bar.clientWidth) bar.scrollLeft = b.offsetLeft - 16; }); }
         else b.removeAttribute('aria-current');
       });
     });
@@ -37021,20 +37050,20 @@ window.track = function (name, props) {
        broken one. */
     var got = await Promise.all([
       (window.Cloud && Cloud.fetchTrending) ? Cloud.fetchTrending().catch(function () { return []; }) : [],
-      Promise.all(tops.map(function (t) {
-        // The name rides along because a crate from before the catalogue moved
-        // carries Spotify artist ids, and the route 400s on one with no name.
-        var q = { include_groups: 'album' };
-        if (t.name) q.name = t.name;
-        return spotifyGet('/artists/' + encodeURIComponent(t.k) + '/albums?' + new URLSearchParams(q).toString())
-          .catch(function () { return null; });
-      })),
+      // The name rides along because a crate from before the catalogue moved
+      // carries Spotify artist ids, and the route 400s on one with no name.
+      Promise.all(tops.map(function (t) { return discography(t.k, t.name); })),
       (window.Cloud && Cloud.suggestionList) ? Cloud.suggestionList('song', null, 60).catch(function () { return []; }) : [],
     ]);
 
+    /* fetchTrending returns {id, name, artist, art, avg} — grouped rows, not
+       crate_feed columns. This read `r.album_id` and friends, every row failed
+       add()'s `!c.id` check, and the community pool was silently ALWAYS empty:
+       logged out, For You fell through to the chart chain (chart, then eight
+       discographies, then previews) for its first card. Both shapes accepted. */
     (got[0] || []).forEach(function (r) {
-      add({ id: r.album_id, name: r.album_name, artist: r.album_artist, art: r.album_art,
-            communityScore: r.avg != null ? r.avg : r.score });
+      add({ id: r.id || r.album_id, name: r.name || r.album_name, artist: r.artist || r.album_artist,
+            art: r.art || r.album_art, communityScore: r.avg != null ? r.avg : r.score });
     });
     (got[1] || []).forEach(function (d, i) {
       ((d && d.items) || []).forEach(function (al) {
@@ -37113,12 +37142,24 @@ window.track = function (name, props) {
      has to look that clip up a second time. Cached whole, then drawn from a
      couple at a time, which is what makes ten records into a hundred songs
      for ten requests. */
-  var _inflight = {};
+  var _inflight = {}, _byName = {};
   function albumTracks(alb) {
     if (_tracks[alb.id]) return Promise.resolve(_tracks[alb.id]);
     if (_inflight[alb.id]) return _inflight[alb.id];
+    /* /api/preview is asked by NAME, and a discography lists a record once per
+       edition under different ids — measured, three identical requests for
+       one Taylor Swift album in front of the first card. The response is
+       shared by name; each id still gets its own box (its own song list), so
+       drawFrom's exclusions are unchanged. */
+    var nk = norm(alb.artist) + '|' + norm(alb.name);
     var tok = _feedTok;
-    var p = albumTracksFetch(alb).then(function (box) {
+    var raw = _byName[nk] || (_byName[nk] = albumTracksFetch(alb).then(function (box) {
+      setTimeout(function () { if (_byName[nk] === raw) delete _byName[nk]; }, 0);
+      return box;
+    }));
+    var p = raw.then(function (b) {
+      return { alb: alb, list: b.list.slice(), art: alb.art || b.art || '', link: b.link };
+    }).then(function (box) {
       if (_inflight[alb.id] === p) delete _inflight[alb.id];
       // A rebuild started meanwhile: hand the box back, but do not plant it in
       // the new feed's cache, whose exclusions it was never checked against.
@@ -37219,6 +37260,112 @@ window.track = function (name, props) {
 
      Everything added goes through the same drawFrom exclusions, so nothing
      here can smuggle a seen or rated song back in. */
+  /* ONE PATH SHAPE FOR A DISCOGRAPHY, so remotePools and expand() share
+     spotifyGet's memory/localStorage cache (a day — discographies do not
+     change) and its in-flight map. expand() used spotifyFetch, which has
+     neither: every reload re-asked for every chart artist's albums, and two
+     callers asking for one artist made two requests. */
+  function discography(id, name) {
+    var q = { include_groups: 'album' };
+    if (name) q.name = name;
+    return spotifyGet('/artists/' + encodeURIComponent(id) + '/albums?' + new URLSearchParams(q).toString())
+      .catch(function () { return null; });
+  }
+  /* The chart is public, identical for everybody and changes daily, so a
+     copy is kept for six hours. Not account data — no owner stamp needed. */
+  var _chartP = null, CHART_KEY = 'fy_chart_v1', CHART_TTL = 6 * 3600 * 1000;
+  function chartArtists() {
+    if (_chartP) return _chartP;
+    try {
+      var c = JSON.parse(localStorage.getItem(CHART_KEY) || 'null');
+      if (c && c.x > Date.now() && c.a && c.a.length) return (_chartP = Promise.resolve(c.a));
+    } catch (e) {}
+    _chartP = fetch(((window.Native && Native.api) || '') + '/api/catalogue?path=chart-artists&limit=50')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (ch) {
+        var a = ((ch && (ch.artists || ch.items)) || []).map(function (x) { return { id: x.id, name: x.name }; })
+          .filter(function (x) { return x && x.id; });
+        if (a.length) { try { localStorage.setItem(CHART_KEY, JSON.stringify({ x: Date.now() + CHART_TTL, a: a })); } catch (e) {} }
+        else _chartP = null;
+        return a;
+      })
+      .catch(function () { _chartP = null; return []; });
+    return _chartP;
+  }
+  /* Feed each source's albums into Discovery AS IT LANDS, and resolve as soon
+     as one of them added something (or all are done). The rest keep arriving
+     into the same pools behind the first card. Pinned to the feed that asked:
+     a rebuild in the meantime gets nothing planted in it. */
+  /* ---- THE STASH: what you were dealt and never reached ---------------
+     A cold For You is several round trips however they are arranged, so the
+     next visit should not pay them before painting. When the feed is left or
+     the page goes away, the cards AFTER the furthest one you actually reached
+     are written down — metadata only — and the next build paints them in the
+     same frame and builds the real feed behind them.
+
+     - NEVER the clip url. Those are signed and die in about ten minutes; a
+       stashed card carries no clip, and playCard's VinalAudio.play resolves a
+       fresh one when it is reached.
+     - PER ACCOUNT. The key is under `crate_`, so claimLocalState and logout
+       wipe it with the rest of the account's local state, and the entry is
+       stamped with the user id (or 'anon') and refused on any mismatch.
+     - TAKEN, NOT READ. It is removed the moment it is used, so a card can be
+       painted from it once. These songs were marked seen when they were dealt;
+       the person never reached them, which is why they may come back exactly
+       once, and only these. A song rated since is dropped. */
+  var STASH_KEY = 'crate_fy_stash_v1', STASH_MAX = 4, STASH_TTL = 48 * 3600 * 1000;
+  var _maxViewed = -1, _owner = null;
+  function ownerId() {
+    try { var u = window.Cloud && Cloud.getUser && Cloud.getUser(); return (u && u.id) || 'anon'; } catch (e) { return 'anon'; }
+  }
+  function saveData() { try { return !!(navigator.connection && navigator.connection.saveData); } catch (e) { return false; } }
+  function saveStash() {
+    try {
+      if (_feed !== 'you' || !_items.length || _owner !== ownerId()) return;
+      var tail = _items.slice(_maxViewed + 1).filter(function (c) {
+        return c && c.myScore == null && !(_ctx && _ctx.ratedSong[c.skey]);
+      }).slice(0, STASH_MAX).map(function (c) {
+        return { key: c.key, skey: c.skey, title: c.title, artist: c.artist, artistId: c.artistId || '',
+          albumId: c.albumId, albumName: c.albumName, art: c.art || '', year: c.year || '', why: c.why || '', pool: c.pool };
+      });
+      if (tail.length) localStorage.setItem(STASH_KEY, JSON.stringify({ u: _owner, at: Date.now(), items: tail }));
+      else localStorage.removeItem(STASH_KEY);
+    } catch (e) {}
+  }
+  function takeStash() {
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem(STASH_KEY) || 'null'); localStorage.removeItem(STASH_KEY); } catch (e) {}
+    if (!s || s.u !== _owner || !(Date.now() - s.at < STASH_TTL) || !Array.isArray(s.items)) return [];
+    return s.items.filter(function (c) {
+      return c && c.title && c.skey && !_ctx.ratedSong[c.skey] && !(window.loadSongs && (loadSongs() || {})[c.key]);
+    }).map(function (c) { c.clip = null; return c; });
+  }
+  window.addEventListener('pagehide', saveStash);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) saveStash(); });
+
+  var _expSeen = {};
+  function landFirst(srcs) {
+    var pools = _pools, ctx = _ctx, tok = _feedTok;
+    return new Promise(function (res) {
+      var left = srcs.length, done = false;
+      if (!left) return res(false);
+      srcs.forEach(function (s) {
+        s.p.then(function (d) {
+          var added = false;
+          if (tok === _feedTok) ((d && d.items) || []).forEach(function (al) {
+            if (!al || !al.id || ctx.ratedAlbum[al.id] || _expSeen[al.id]) return;
+            _expSeen[al.id] = 1;
+            pools.discovery.push({ id: al.id, name: al.name, artist: s.name,
+              art: (al.images && al.images[0] && al.images[0].url) || '', _pool: 'discovery', _why: s.why });
+            added = true;
+          });
+          left--;
+          if (!done && (added || !left)) { done = true; res(added); }
+        });
+      });
+    });
+  }
+
   async function expand() {
     _widen++;
     var before = 0;
@@ -37233,27 +37380,23 @@ window.track = function (name, props) {
           .filter(function (x) { return x.a && x.a.n; })
           .sort(function (x, y) { return (y.a.sum / y.a.n) - (x.a.sum / x.a.n); })
           .slice(6, 26);
-        for (var i = 0; i < more.length; i++) {
-          var d = null;
-          try {
-            d = await spotifyFetch('/artists/' + encodeURIComponent(more[i].k) +
-                  '/albums?include_groups=album&name=' + encodeURIComponent(more[i].a.name || ''));
-          } catch (e) {}
-          ((d && d.items) || []).forEach(function (al) {
-            if (!al || !al.id || _ctx.ratedAlbum[al.id]) return;
-            _pools.discovery.push({ id: al.id, name: al.name, artist: more[i].a.name,
-              art: (al.images && al.images[0] && al.images[0].url) || '', _pool: 'discovery',
-              _why: 'More from ' + (more[i].a.name || 'an artist you rate') });
-          });
-        }
+        /* Twenty discographies were awaited ONE AFTER ANOTHER in a for-loop.
+           Now they are queued together (the catalogue queue holds the rate)
+           and the feed carries on as soon as the first lands. */
+        await landFirst(more.map(function (m) {
+          return { name: m.a.name, why: 'More from ' + (m.a.name || 'an artist you rate'),
+            p: discography(m.k, m.a.name) };
+        }));
       } else if (_widen === 2) {
         /* 2. WHAT THE CRATE IS PLAYING. Already fetched once for the community
               signal; asked for in full here. */
         var tr = (window.Cloud && Cloud.fetchTrending) ? await Cloud.fetchTrending() : [];
         (tr || []).forEach(function (r) {
-          if (!r || !r.album_id || _ctx.ratedAlbum[r.album_id]) return;
-          _pools.discovery.push({ id: r.album_id, name: r.album_name, artist: r.album_artist,
-            art: r.album_art, _pool: 'discovery', _why: 'The Crate is rating this' });
+          var id = r && (r.id || r.album_id);   // same shape fix as remotePools
+          if (!id || _ctx.ratedAlbum[id] || _expSeen[id]) return;
+          _expSeen[id] = 1;
+          _pools.discovery.push({ id: id, name: r.name || r.album_name, artist: r.artist || r.album_artist,
+            art: r.art || r.album_art, _pool: 'discovery', _why: 'The Crate is rating this' });
         });
       } else {
         /* 3. THE CHART, AND IT REPEATS. Nothing about you at all, which is the
@@ -37273,26 +37416,13 @@ window.track = function (name, props) {
            bottomless" has never once returned a record. Measured logged out:
            five widenings, zero candidates, "You have heard the lot" over a
            chart that was one fetch away. Same fetch the Popular tab uses. */
-        var ch = null;
-        try {
-          var cr = await fetch(((window.Native && Native.api) || '') + '/api/catalogue?path=chart-artists&limit=50');
-          if (cr.ok) ch = await cr.json();
-        } catch (e) {}
-        var arts = (ch && (ch.artists || ch.items)) || [];
+        var arts = await chartArtists();
         var from = (_widen - 3) * 8, take = arts.slice(from, from + 8);
-        var got = await Promise.all(take.map(function (a) {
-          return spotifyFetch('/artists/' + encodeURIComponent(a.id) +
-                 '/albums?include_groups=album&name=' + encodeURIComponent(a.name || ''))
-            .catch(function () { return null; });
+        /* All eight used to be awaited before any record was added, so the
+           first card waited for the slowest discography of eight. */
+        await landFirst(take.map(function (a) {
+          return { name: a.name, why: 'Big right now', p: discography(a.id, a.name) };
         }));
-        got.forEach(function (dd, k) {
-          ((dd && dd.items) || []).forEach(function (al) {
-            if (!al || !al.id || _ctx.ratedAlbum[al.id]) return;
-            _pools.discovery.push({ id: al.id, name: al.name, artist: take[k].name,
-              art: (al.images && al.images[0] && al.images[0].url) || '', _pool: 'discovery',
-              _why: 'Big right now' });
-          });
-        });
       }
     } catch (e) {}
 
@@ -37326,9 +37456,13 @@ window.track = function (name, props) {
      front of the first card. They are all known in advance: the heads of
      whichever pools the mix is about to read. albumTracks caches, so warming
      one costs nothing when the loop reaches it. */
-  async function warmHeads() {
-    var want = [];
-    Object.keys(_pools).forEach(function (k) {
+  async function warmHeads(count) {
+    /* In MIX order and sized to the batch. It warmed two heads of EVERY pool —
+       including pools this feed never draws from (`pushed` on For You) — so a
+       first page of two cards fired eight preview lookups, all competing with
+       the one the first card was actually waiting on. */
+    var want = [], order = (FEEDS[_feed] || FEEDS.you).map(function (s) { return s.pool; });
+    order.forEach(function (k) {
       (_pools[k] || []).slice(0, 2).forEach(function (a) {
         if (a && a.id && !_tracks[a.id] && want.indexOf(a) === -1) want.push(a);
       });
@@ -37337,12 +37471,12 @@ window.track = function (name, props) {
     /* Fired, not awaited. Waiting on all six made the first card exactly as
        slow as the slowest album lookup; now each draw waits only for its own
        album, and the rest are already on the way when the loop reaches them. */
-    want.slice(0, 8).forEach(function (a) { albumTracks(a).catch(function () { return null; }); });
+    want.slice(0, Math.min(8, (count || 2) + 2)).forEach(function (a) { albumTracks(a).catch(function () { return null; }); });
   }
 
   async function drawSongs(count) {
     var out = [];
-    await warmHeads();
+    await warmHeads(count);
     /* A BATCH ENDS WHEN EVERY POOL HAS BEEN TRIED, NOT AFTER FOUR MISSES.
 
        It was a global `dry < 4`: four draws that produced nothing, from any
@@ -37410,18 +37544,31 @@ window.track = function (name, props) {
      to be the same one, and the sleeve fell through to the album page whenever
      it was tapped on a card that was not already the playing one — which is
      most taps. The sleeve plays; the title and the album name open. */
+  /* THREE COPIES OF THE SLEEVE, ONE OF THEM SHARP. Every card decoded the
+     1000px cover three times — the bed and the halo are blurred past
+     recognition, so a 1000x1000 bitmap (4MB decoded) was being thrown away by
+     a blur filter twice per card. They take a 120px copy now; the sleeve
+     itself takes what its box needs at this screen's density (it is never
+     wider than 460 CSS px). thumb() only ever shrinks and leaves an unknown
+     url alone, so a non-Deezer cover is drawn exactly as before. */
+  var _mainPx = (function () {
+    var need = 460 * Math.min(3, window.devicePixelRatio || 1);
+    return need <= 500 ? 500 : need <= 750 ? 750 : 1000;
+  })();
   function cardHtml(c, i) {
-    var art = esc(c.art || '');
+    var raw = c.art || '';
+    var art = esc(window.thumb ? thumb(raw, _mainPx) : raw);
+    var soft = esc(window.thumb ? thumb(raw, 120) : raw);
     return '<article class="fy-card" data-i="' + i + '" data-pool="' + esc(c.pool) + '" style="--fy-tint:' + tintFor(7) + ';--fy-v:.7">' +
       // The bed: the same sleeve, blurred past recognition, giving the page the
       // record's colours without competing with the record.
       '<div class="fy-bed-wrap" aria-hidden="true">' +
-        (art ? '<img class="fy-bed" src="' + art + '" alt="" decoding="async"' + (i > 2 ? ' loading="lazy"' : '') + ' onerror="this.style.display=\'none\'">' : '') +
+        (art ? '<img class="fy-bed" src="' + soft + '" alt="" decoding="async"' + (i > 2 ? ' loading="lazy"' : '') + ' onerror="this.style.display=\'none\'">' : '') +
       '</div>' +
       // The record itself, whole and square. `data-play`, never `data-open` —
       // one control, one verb.
       '<div class="fy-art-wrap">' +
-        (art ? '<img class="fy-glow" src="' + art + '" alt="" aria-hidden="true" decoding="async"' + (i > 2 ? ' loading="lazy"' : '') + ' onerror="this.remove()">' : '') +
+        (art ? '<img class="fy-glow" src="' + soft + '" alt="" aria-hidden="true" decoding="async"' + (i > 2 ? ' loading="lazy"' : '') + ' onerror="this.remove()">' : '') +
         '<button class="fy-art" data-play="' + i + '" aria-label="Play ' + esc(c.title || '') + '">' +
           (art ? '<img class="fy-main" src="' + art + '" alt="" decoding="async"' + (i === 0 ? ' fetchpriority="high"' : i > 2 ? ' loading="lazy"' : '') + '>' : '') +
           '<span class="fy-cue"></span>' +
@@ -37602,6 +37749,7 @@ window.track = function (name, props) {
     for (var w = at + 1; w <= at + 2 && w < cards.length; w++)
       cards[w].querySelectorAll('img[loading="lazy"]').forEach(function (im) { im.loading = 'eager'; });
     var i = parseInt(card.dataset.i, 10);
+    if (i > _maxViewed) _maxViewed = i;
     if (i < 0) { stopAll(); topUp(); return; }
     if (i >= _items.length - LOOKAHEAD) topUp();
     if (i >= 0 && i !== _playing) playCard(i);
@@ -37984,9 +38132,9 @@ window.track = function (name, props) {
     var saved = bg ? { items: _items, tracks: _tracks, used: _used, mixAt: _mixAt, mixTaken: _mixTaken, widen: _widen, ctx: _ctx, pools: _pools, remote: _remote } : null;
     if (bg) {
       _busy = true;
-      var mineBg = ++_feedTok;
+      var mineBg = ++_feedTok, ownerBg = ownerId();
       try {
-        _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0;
+        _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0; _expSeen = {};
         _ctx = buildContext(); _pools = localPools(_ctx);
         _remote = remotePools(_ctx, _pools).catch(function () { return _pools; });
         if (!(_pools.yours.length + _pools.partial.length + _pools.shortlist.length) || _feed === 'pushed') await _remote;
@@ -37997,7 +38145,7 @@ window.track = function (name, props) {
           return;
         }
         stopAll(); if (_io) { _io.disconnect(); _io = null; }
-        clearTimeout(_settle); _settle = 0; _navTarget = null; _activeCard = 0;
+        clearTimeout(_settle); _settle = 0; _navTarget = null; _activeCard = 0; _maxViewed = -1; _owner = ownerBg;
         _items = nextFirst;
         host.innerHTML = nextFirst.map(cardHtml).join('');
         host.scrollTo({ top: 0, behavior: 'instant' });
@@ -38019,12 +38167,26 @@ window.track = function (name, props) {
     host.scrollTo({ top: 0, behavior: 'instant' });
     _busy = true;
     var mine = ++_feedTok;
-    host.innerHTML = '<div class="fy-loading ld-line">Finding songs for you&hellip;</div>';
+    _maxViewed = -1; _owner = ownerId();
     host.setAttribute('aria-busy', 'true');
     try {
-      _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0;
+      _items = []; _tracks = {}; _used = {}; _mixAt = 0; _mixTaken = 0; _widen = 0; _expSeen = {};
       _ctx = buildContext();
       _pools = localPools(_ctx);
+      /* PAINT FIRST, BUILD BEHIND. Cards this account was dealt last time and
+         never reached are on screen in the same frame as the press; the pools
+         and the top-up carry on under them. See takeStash(). */
+      var stash = _feed === 'you' ? takeStash() : [];
+      if (stash.length) {
+        stash.forEach(function (c) { _used[c.skey] = true; });
+        _items = stash;
+        host.innerHTML = stash.map(cardHtml).join('');
+        fitFeed();
+        _built = true;
+        if (document.body.dataset.section === 'foryou') observe(host);
+      } else {
+        host.innerHTML = '<div class="fy-loading ld-line">Finding songs for you&hellip;</div>';
+      }
 
       /* THE REMOTE HALF DOES NOT BLOCK THE FIRST CARD. It is kicked off here
          and awaited only where there is genuinely nothing to show without it:
@@ -38035,7 +38197,14 @@ window.track = function (name, props) {
          still in the post. */
       var localHas = _pools.yours.length + _pools.partial.length + _pools.shortlist.length;
       _remote = remotePools(_ctx, _pools).catch(function () { return _pools; });
-      if (!localHas || _feed === 'pushed') await _remote;
+      /* Nothing local means Discovery is all there is, and if the community
+         has nothing this week the feed falls to the chart. Ask for the chart
+         NOW, alongside, so that fall-through is not a fresh round trip (it is
+         cached six hours, and discographies a day, so this is usually free). */
+      if (!localHas && _feed === 'you' && !saveData()) chartArtists().then(function (a) {
+        a.slice(0, 2).forEach(function (x) { discography(x.id, x.name); });
+      });
+      if ((!localHas || _feed === 'pushed') && !stash.length) await _remote;
       if (mine !== _feedTok) return;
 
       // The records that went into the pools, for the `repeat` signal.
@@ -38045,6 +38214,11 @@ window.track = function (name, props) {
       });
       writeSeen(SEEN_ALBUMS, seenA);
 
+      if (stash.length) {
+        window.ForYou._last = { ctx: _ctx, pools: _pools };
+        topUp();
+        return;
+      }
       var first = await drawSongs(FIRST_PAGE);
       if (mine !== _feedTok) return;
       if (!first.length) {
@@ -38086,6 +38260,8 @@ window.track = function (name, props) {
        instead. The threshold is measured from when leave() actually ran, not
        from anything guessed at render time. */
     if (!force && _leftAt && (Date.now() - _leftAt > 10000)) force = true;
+    // A feed built for another account (or before signing in) is not this one's.
+    if (_built && _owner !== ownerId()) force = true;
     _leftAt = 0; _onFeed = true; clearTimeout(_fresh);
     if (!_built) { build(force); return; }
     // Re-measured on every entry: the header is a different height logged in
@@ -38124,6 +38300,7 @@ window.track = function (name, props) {
     build(true);
   }
   function leave() {
+    saveStash();
     stopAll(); clearTimeout(_settle); _settle = 0; _navTarget = null; if (_io) { _io.disconnect(); _io = null; }
     if (window.SongComments) { SongComments.blur(); SongComments.close(); }
     if (!_onFeed) return;
@@ -38134,7 +38311,8 @@ window.track = function (name, props) {
      so it is not competing with Home for the first paint. */
   function prewarm() {
     var go = function () { if (!_built && !_busy && document.body.dataset.section !== 'foryou') build(); };
-    setTimeout(function () { (window.requestIdleCallback || setTimeout)(go, { timeout: 1200 }); }, 700);
+    // Data Saver: build on the visit, never speculatively.
+    if (!saveData()) setTimeout(function () { (window.requestIdleCallback || setTimeout)(go, { timeout: 1200 }); }, 700);
     // Hovering or pressing the tab is a strong hint: start now rather than on click.
     var tab = document.querySelector('#modes button[data-mode="foryou"]');
     if (tab) ['pointerenter', 'pointerdown', 'focus'].forEach(function (ev) { tab.addEventListener(ev, go, { passive: true }); });
