@@ -5717,6 +5717,31 @@ transparent at the edge, so there is nothing left at the boundary to draw with.
 **`object-position: center 28%`, not centre.** A square press shot cropped to a
 wide band puts the face in the top third; centring it frames somebody's chest.
 
+#### Superseded again: an editorial feature (`assets/artist.css`)
+
+The banner read dark, empty and disconnected, because the only way to make a
+photo of unknown quality survive a wide band was to darken it. Now the photo is a
+**framed square portrait**, unfiltered — every Deezer artist picture is square,
+so a square frame crops nothing — with a **fanned stack of up to four sleeves**
+behind it (your highest-rated of theirs, the discography from `fetchStudioAlbums`
+filling any gap; each opens its record). The colour comes from **those sleeves,
+small and blurred behind everything** (For You's `.fy-glow` idea, no canvas
+read), plus the photo as a faint bed. Only the words get a scrim, and it carries
+the same bottom mask as the light, so nothing peaks at the boundary.
+
+- The stat line is local only: records rated, songs, your average, your top
+  record. Artist matching is id first, folded name second (traps 4 and 5).
+- **Height is fixed per breakpoint** (318px phone, `clamp(380px, 26vw, 440px)`
+  wide) and nothing inside changes it, so `heroResize` stays the only thing that
+  moves the search field. Images fade in where room is already reserved.
+- Sleeve nodes are reused by src and only moved when out of place — moving a
+  node restarts its entrance, so the discography landing must not re-deal the
+  crate's sleeves.
+- A portrait that fails to load shows a monogram, never an empty frame.
+- The old banner CSS was deleted from `index.html`, not overridden; the debug
+  hook (`?debugArtist=&debugArtistName=&debugArtistId=`) calls the same
+  `paintArtistHero` as the real path, so the two cannot drift layer by layer.
+
 ### Today: the kind of card is its colour
 
 A stack where every card was the same grey with a gold kicker read as **one card shown

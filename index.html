@@ -4798,235 +4798,9 @@ body.entering-done #artist-hero {
   html:not([data-motion="full"]) body.entering-done #artist-hero { transition: opacity 0.3s linear; }
 }
 
-/* ============================================================
-   ARTIST HERO — top-rated artist as full-bleed background
-   ============================================================ */
-.artist-hero {
-  position: relative;
-  width: 100%;
-  height: 460px;
-  margin-bottom: -64px;
-  overflow: hidden;
-  animation: heroFadeIn 0.6s ease both;
-  transition: height 0.55s var(--ease), margin-bottom 0.55s var(--ease), opacity 0.45s var(--ease);
-}
-/* Shown by expanding from zero height rather than flipping display:none
-   -> block. The flip was the "glitch" when a favourite artist loaded: the
-   whole page below it jumped down 460px in a single frame. Expanding lets
-   the existing height transition carry it smoothly instead. */
-.artist-hero.artist-hero-hidden {
-  height: 0 !important;
-  margin-bottom: 0 !important;
-  opacity: 0;
-  animation: none;
-}
-@keyframes heroFadeIn { from { opacity: 0; } to { opacity: 1; } }
-.artist-hero-bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  /* THE PHOTO IS NOW THE BACKDROP, NOT THE SUBJECT, and that is the fix.
-
-     What was here before: the artist's photo, full bleed, at 375x232. It read
-     badly for every artist and the reason is not the crop — it is that these
-     images are not ours and are not consistent. Deezer's artist pictures are
-     square, they are whatever the label supplied, and the resolution and the
-     framing vary wildly. Drake's is an out-of-focus portrait, deliberately, at
-     source: no amount of object-position rescues that, because there is
-     nothing sharp in the file to show. Others are 1000px upscales of
-     thumbnails. Some are group shots. Some are a logo.
-
-     Forcing any of them to fill a wide band at 1:1 means displaying a photo
-     you do not control at the largest size the page has, which is the most
-     unflattering thing you can do with an image of unknown quality — and half
-     of every square gets cut off to do it.
-
-     So it is blurred hard, darkened, and pushed behind: an ambient wash in the
-     artist's own colours, which is a job a bad photo does perfectly, because a
-     backdrop is SUPPOSED to be out of focus. The face goes in the portrait
-     below at 96px, where a soft source reads as depth of field rather than as
-     a mistake, and where nothing is cropped off. That combination is
-     indifferent to what Deezer hands over, which is the property this needs. */
-  object-fit: cover;
-  /* 28%, not centre. A square press shot cropped to a wide band puts the face
-     in the top third; centring it frames somebody's chest. */
-  object-position: center 28%;
-  /* Sharp now, and darkened only as far as the name needs to stay readable.
-     The brightness is still set for the BRIGHTEST plausible source — a great
-     many press shots are on white, Drake's among them — because a banner that
-     goes pale at the top puts a light band behind the status bar and the
-     app's own header. */
-  filter: contrast(1.05) saturate(1.06) brightness(0.72);
-}
-/* The bed: the same photo, blurred past recognition and scaled beyond the
-   frame, so the sharp one is never sitting on a void. Scale rather than a
-   larger element, because blur() samples nothing outside the box and the
-   edges would otherwise go transparent. */
-.artist-hero-bed {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; object-position: center 28%;
-  filter: blur(34px) saturate(1.4) brightness(0.5);
-  transform: scale(1.25);
-}
-/* The canvas shares the layout but NOT the photo treatment: the grayscale
-   filter above was silently draining the colour the dither picks out of
-   each artist's photo, and object-fit would letterbox a canvas that is
-   already sized to the host in device pixels. */
-/* The dot field used to stop dead at the canvas edge, which read as a
-   rectangle of dots pasted onto the page rather than a portrait emerging
-   out of it. One elliptical mask thins the dots out on every side. It is a
-   single mask rather than four edge gradients on purpose: mask-composite
-   support is patchy, and one ellipse degrades to "no mask" gracefully
-   anywhere it isn't supported. */
-.artist-hero-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  filter: none;
-  object-fit: fill;
-  /* Edge fade only. The previous ellipse ate well into the portrait; these
-     two gradients leave the middle completely untouched and thin out only
-     the outer eighth on each side. Where mask-composite isn't supported the
-     two masks simply add together, which is the old un-masked look — a safe
-     way to fail. */
-  -webkit-mask-image:
-    linear-gradient(to right,  transparent 0%, #000 11%, #000 89%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, #000 9%,  #000 88%, transparent 100%);
-          mask-image:
-    linear-gradient(to right,  transparent 0%, #000 11%, #000 89%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, #000 9%,  #000 88%, transparent 100%);
-  -webkit-mask-composite: source-in;
-          mask-composite: intersect;
-}
-/* A colour-blend wash that replaced the photo's hue with a theme gradient.
-   That made sense over a halftone; over an actual photograph it is the one
-   thing standing between "good quality" and "tinted". Off with the dither. */
-.artist-hero-duotone { display: none; }
-/* Once the dots are printing, the duotone layer has nothing to tint but the
-   canvas — and tinting it would undo the per-artist ink colour. */
-.artist-hero.artist-hero-dithered .artist-hero-duotone { display: none; }
-/* Scrim, reshaped. The old rule darkened the TOP of the band as well, which
-   put a bar across the artist's face for no benefit. Now it only does the
-   two jobs it needs to: keep the name legible on the left, and hand the
-   band over to the page at the bottom. */
-/* Three jobs: keep the name legible, hand the band over to the page at the
-   bottom, and — new — stop the photo ending in a hard horizontal line. The
-   dither used to handle that last one itself, by thinning its dots out at the
-   edges. A photograph cannot, so the scrim does it: the bottom stop is the
-   page's own colour at full strength, and it starts far enough up that there
-   is no visible seam between picture and page. */
-/* The picture DISSOLVES; nothing paints the page's colour over it.
-
-   The old scrim faded down to var(--bg) and its middle stops were the default
-   background typed out as rgba(10,9,8,…). Two things went wrong with that and
-   both of them draw the same hard horizontal line across the bottom of the
-   photograph:
-
-     * The page is not flat --bg. It carries four radial washes, so a band of
-       flat --bg laid over it meets a slightly different colour at the seam,
-       and a seam between two almost-identical colours is exactly the kind of
-       edge an eye picks out.
-     * Under any theme but the default those rgba stops are simply the wrong
-       colour, because they are a literal and --bg is not.
-
-   Masking the media instead means there is nothing to match: the image runs
-   out of opacity and whatever is behind it — theme, washes and all — is what
-   shows through. */
-/* THE BOTTOM EDGE IS MASKED, NOT SCRIMMED, and that distinction is the whole
-   of it. The page below is not flat --bg — it carries four radial washes — so
-   a band of flat colour faded over the photo meets a slightly different colour
-   underneath, and a seam between two almost-identical colours is exactly the
-   edge an eye finds. Masking has nothing to match: the image runs out of
-   opacity and whatever is behind it shows through, theme and washes included.
-
-   Held over a long run (from 40% down) rather than a short one. The banner is
-   now the subject rather than a wash, so it is taller and brighter, and a fade
-   over the last tenth of a tall bright image still reads as an edge. */
-.artist-hero-bed, .artist-hero-bg, .artist-hero-canvas {
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
-          mask-image: linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
-}
-/* THE WHOLE PHOTO, NEVER A CROP. `cover` on a wide band cut the top and
-   bottom off every square press shot — heads included. The sharp image is
-   now its own square, centred and contained, and the blurred bed above fills
-   the sides in the photo's own colours. Its left and right edges feather
-   into the bed so there is no vertical seam; the bottom keeps the long
-   dissolve into the page. The band is wider than tall at every width (232px
-   on a phone, 460 above), so the square always has bed either side of it. */
-.artist-hero-bg {
-  inset: 0 auto auto 50%;
-  width: auto; height: 100%; max-width: 100%;
-  aspect-ratio: 1 / 1;
-  transform: translateX(-50%);
-  object-fit: contain; object-position: center top;
-  -webkit-mask-image:
-    linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%),
-    linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
-          mask-image:
-    linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%),
-    linear-gradient(to bottom, #000 0%, #000 40%, rgba(0,0,0,0.88) 58%, rgba(0,0,0,0.55) 74%, rgba(0,0,0,0.20) 88%, transparent 100%);
-  -webkit-mask-composite: source-in;
-          mask-composite: intersect;
-}
-.artist-hero-fade {
-  position: absolute;
-  inset: 0;
-  /* Left-hand darkening only, for the name to sit on, and all of it lands on
-     transparent rather than on a colour. */
-  background:
-    /* Top-down as well as bottom-up. The status bar and the app's own header
-       sit against this edge, and a bright source photo was pushing a light
-       band up behind both of them. */
-    linear-gradient(to bottom, rgba(10,9,8,0.72) 0%, rgba(10,9,8,0.28) 34%, transparent 62%),
-    /* THE BOTTOM-UP SCRIM MUST RETURN TO TRANSPARENT AT THE BOTTOM, and this
-       is the hard edge people were seeing. It used to peak at 0.55 black at
-       0% — the hero's own bottom boundary — and then simply stop, so while
-       the photo dissolved correctly the DARKENING did not, and a 55% black
-       band ended in a straight line across the page. It peaks a little way
-       up now and comes back to nothing at the edge, so there is nothing left
-       at the boundary to draw a line with. */
-    linear-gradient(to top, transparent 0%, rgba(0,0,0,0.46) 15%, rgba(0,0,0,0.34) 32%, transparent 64%),
-    linear-gradient(to right, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.34) 34%, transparent 66%);
-}
-.artist-hero-content {
-  position: relative;
-  height: 100%;
-  display: flex;
-  align-items: flex-end;
-  gap: var(--s4);
-  padding-bottom: 76px;
-}
-.artist-hero-words { min-width: 0; flex: 1; }
-@media (max-width: 420px) { .artist-hero-content { gap: var(--s3); } }
-.artist-hero-eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: 8px;
-  text-shadow: 0 2px 12px rgba(0,0,0,0.6);
-}
-.artist-hero-name {
-  font-family: var(--font-display);
-  /* Clamps, because it now shares its line with a 96px portrait and some
-     artists are called The Notorious B.I.G. */
-  font-size: clamp(26px, 8vw, 46px);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.02;
-  text-shadow: 0 4px 24px rgba(0,0,0,0.6);
-  overflow-wrap: anywhere;
-}
-.artist-hero-meta {
-  font-size: 14px;
-  color: var(--text-dim);
-  margin-top: 10px;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.6);
-}
-.artist-hero-meta b { color: var(--text); font-weight: 700; }
+/* ARTIST HERO — the whole of its styling lives in assets/artist.css, loaded
+   after every other stylesheet so nothing further down can outrank it
+   (trap 1). Only the splash hand-off rules above still name #artist-hero. */
 /* The tab bar is wider than a phone screen — six labels plus three icon
    buttons — and being a plain inline-flex it simply pushed the document
    out instead of adapting. Measured at a 487px viewport it ran to 618px,
@@ -5041,29 +4815,6 @@ body.entering-done #artist-hero {
    width cap and make it scrollable. Removed rather than adjusted: the
    behaviour it exists for cannot happen any more. */
 
-@media (max-width: 640px) {
-  /* The portrait sits above the name here rather than beside it, so the
-     scrim's job changes: carry the bottom half, not the left edge. */
-  /* var(--bg) is GONE from here, and it was the hard edge. The first 8% of
-     this gradient was an opaque band of flat background painted over the
-     photo — but the page behind carries four radial washes, so that band met
-     a different colour a pixel below itself and drew a line across the bottom
-     of every hero. The mask on the image is what ends the photo now; this is
-     only darkening, and every stop lands on transparent. */
-  .artist-hero-fade {
-    background:
-      linear-gradient(to bottom, rgba(10,9,8,0.72) 0%, rgba(10,9,8,0.24) 30%, transparent 56%),
-      linear-gradient(to top, transparent 0%, rgba(0,0,0,0.62) 16%, rgba(0,0,0,0.44) 34%, transparent 70%);
-  }
-  /* 360px was over 40% of a phone screen for a band that introduces the page
-     rather than being it, and the -48px pull left the search field sitting on
-     top of the portrait's chin. Shorter, and the overlap is gentler. */
-  .artist-hero { height: 232px; margin-bottom: -28px; }
-  .artist-hero-name { font-size: var(--t-h1); }
-  .artist-hero-eyebrow { font-size: 10px; letter-spacing: 0.14em; }
-  .artist-hero-meta { font-size: var(--t-sm); margin-top: var(--s1); }
-  .artist-hero-content { padding-bottom: var(--s6); }
-}
 
 /* ============================================================
    PROFILE — favourite artist (text-only, no image)
@@ -9570,6 +9321,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/profile2.css?v=1">
 <link rel="stylesheet" href="/assets/today.css?v=1">
 <link rel="stylesheet" href="/assets/home2.css?v=1">
+<link rel="stylesheet" href="/assets/artist.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -10111,23 +9863,31 @@ window.discAmt = function (n) {
   <div class="activity-head"><h3>Notifications</h3><button class="activity-close" id="notif-close" aria-label="Close">&times;</button></div>
   <div class="activity-list" id="notif-list"></div>
 </aside>
-<div id="artist-hero" class="artist-hero artist-hero-expanded" style="display:none;">
-  <!-- Two copies of one photo, and the bed is the whole reason the banner
-       survives the source. Deezer's artist pictures are square, whatever the
-       label supplied, and the resolution swings from 1000px to an upscaled
-       thumbnail — so a sharp image stretched across a wide band is sometimes
-       going to be soft. The bed is that same photo blurred and scaled past the
-       edges, so a short or low-res source lands ON something in its own colours
-       instead of on a letterbox. -->
-  <img class="artist-hero-bed" id="artist-hero-bed" alt="" aria-hidden="true" referrerpolicy="no-referrer">
-  <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer" crossorigin="anonymous">
-  <div class="artist-hero-duotone" aria-hidden="true"></div>
+<div id="artist-hero" class="artist-hero" style="display:none;">
+  <!-- An editorial feature, not a banner. The photo is the SUBJECT again, but
+       framed as a square portrait rather than stretched across a wide band:
+       Deezer's artist pictures are square, so a square frame shows the whole
+       of every one and crops nobody's head. The colour comes from the records
+       instead — the sleeves in the stack are repeated behind everything,
+       blurred to light, so the band is lit in this artist's own palette rather
+       than darkened to make a photo of unknown quality survive. See
+       assets/artist.css. -->
+  <div class="ah-ambient" aria-hidden="true">
+    <img class="artist-hero-bed" id="artist-hero-bed" alt="" referrerpolicy="no-referrer" decoding="async">
+    <div class="ah-glows" id="artist-hero-glows"></div>
+  </div>
   <canvas class="artist-hero-canvas" id="artist-hero-canvas" aria-hidden="true" style="display:none;"></canvas>
-  <div class="artist-hero-fade"></div>
+  <div class="artist-hero-fade" aria-hidden="true"></div>
   <div class="artist-hero-content wrap">
+    <div class="ah-visual" id="artist-hero-visual">
+      <figure class="ah-portrait" id="artist-hero-portrait">
+        <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer" crossorigin="anonymous" fetchpriority="high">
+      </figure>
+      <div class="ah-stack" id="artist-hero-stack"></div>
+    </div>
     <div class="artist-hero-words">
-      <div class="artist-hero-eyebrow">Favourite artist</div>
-      <div class="artist-hero-name" id="artist-hero-name"></div>
+      <div class="artist-hero-eyebrow"><span class="ah-rule" aria-hidden="true"></span>Favourite artist</div>
+      <h2 class="artist-hero-name" id="artist-hero-name"></h2>
       <div class="artist-hero-meta" id="artist-hero-meta"></div>
     </div>
   </div>
@@ -13759,21 +13519,20 @@ async function renderArtistHero() {
   const fav = prof && prof.fav_artist;
 
   if (!fav || !fav.id) { hideArtistHero(hero); _heroBuilt = false; _heroArtistKey = null; return; }
-  if (_heroBuilt && _heroArtistKey === fav.id) { showArtistHero(hero); return; }
+  if (_heroBuilt && _heroArtistKey === fav.id) {
+    showArtistHero(hero);
+    // The stat line and the stack read the crate, which may have moved since
+    // (this runs after every rating). Repaints in place, never resizes.
+    try { paintArtistHeroDetail(hero, fav); } catch (e) {}
+    return;
+  }
 
   // Prefer the image already saved on the profile (avoids an extra API call);
   // only hit Spotify if we don't have one cached on the favourite itself.
   const img = fav.image || await fetchArtistImage(fav.id, fav.name);
   if (!img) { hideArtistHero(hero); return; }
 
-  document.getElementById('artist-hero-bg').src = img;
-  // Same file, second use: the sharp banner and the blurred bed behind it.
-  // One request — the browser serves the second from cache.
-  var bed = document.getElementById('artist-hero-bed');
-  if (bed) bed.src = img;
-  document.getElementById('artist-hero-name').textContent = fav.name;
-  document.getElementById('artist-hero-meta').innerHTML = '';
-  hero.dataset.artistId = fav.id;
+  paintArtistHero(hero, { id: fav.id, name: fav.name, image: img });
   _heroArtistKey = fav.id;
   showArtistHero(hero);
   _heroBuilt = true;
@@ -13784,6 +13543,224 @@ async function renderArtistHero() {
   // any reason (see the catch inside mountArtistHero itself).
   if (window.VinalDither) window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
 }
+
+/* ---- The favourite-artist feature: portrait, stack, light, and a line about you.
+
+   The banner it replaces was a square press photo stretched across a wide band
+   and darkened until it could not look bad — which also meant it could not look
+   good. Three changes, all in service of the artist being the subject:
+
+   * THE PHOTO IS FRAMED, NOT STRETCHED. Deezer's artist pictures are square,
+     so a square frame shows the whole file: no head is cropped, whatever the
+     label supplied. Unfiltered — the darkening is gone, and only the words get
+     a scrim, because only the words need one.
+   * THE LIGHT COMES FROM THE RECORDS. The sleeves in the stack are repeated
+     behind everything, small and blurred, which is For You's .fy-glow idea and
+     needs no canvas read (Deezer images are not reliably CORS-readable). The
+     band ends up in the artist's own palette rather than in black.
+   * THE STAT LINE IS ABOUT YOU, from local data only: how many of theirs you
+     have rated, your average, your top record. Nothing here costs a round trip
+     except the discography, which only fills the stack when your crate holds
+     fewer than four of theirs, and is cached per artist by fetchStudioAlbums.
+
+   Nothing in here may change the hero's HEIGHT. The height is reserved in CSS
+   so the queued-resize rule above (searchBusy / heroResize) stays the only
+   thing that ever moves the search field. Everything below repaints in place. */
+var AH_MAX = 4;
+function _ahFold(s) {
+  // Fold, then strip (trap 5): Beyoncé must become beyonce, never beyonc.
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+function _ahIsBy(rec, fav) {
+  if (!rec || !fav) return false;
+  // An id is an identity; a name is the fallback, because a crate carries
+  // legacy Spotify ids and new Deezer ones for the same artist (trap 4).
+  if (fav.id && rec.artistId && String(rec.artistId) === String(fav.id)) return true;
+  var want = _ahFold(fav.name);
+  if (!want) return false;
+  var a = String(rec.artist || '');
+  if (_ahFold(a) === want) return true;
+  return _ahFold(a.split(/\s*(?:,|&|\bfeat\.?|\bft\.?|\bwith\b)\s*/i)[0]) === want;
+}
+function _ahLocal(fav) {
+  var albums = [], songs = 0;
+  try {
+    var all = loadAlbums() || {};
+    Object.keys(all).forEach(function (k) {
+      var r = all[k];
+      if (_ahIsBy(r, fav) && isFinite(+r.score) && +r.score > 0) albums.push(r);
+    });
+  } catch (e) {}
+  albums.sort(function (a, b) { return (+b.score - +a.score) || ((a.savedAt || 0) - (b.savedAt || 0)); });
+  try {
+    var ss = loadSongs() || {};
+    Object.keys(ss).forEach(function (k) { if (_ahIsBy(ss[k], fav)) songs++; });
+  } catch (e) {}
+  return { albums: albums, songs: songs };
+}
+function _ahMetaHtml(loc, disco) {
+  var n = loc.albums.length, out = [];
+  if (!n) {
+    out.push('<span class="ah-stat ah-stat-quiet">Nothing of theirs rated yet</span>');
+    if (disco && disco.length) out.push('<span class="ah-stat"><b>' + disco.length + '</b> ' + (disco.length === 1 ? 'album' : 'albums') + ' waiting</span>');
+    return '<div class="ah-stats">' + out.join('') + '</div>';
+  }
+  var sum = 0; loc.albums.forEach(function (a) { sum += +a.score; });
+  var avg = Math.round(sum / n), top = loc.albums[0];
+  out.push('<span class="ah-stat"><b>' + n + '</b> ' + (n === 1 ? 'record' : 'records') + ' rated</span>');
+  if (loc.songs) out.push('<span class="ah-stat"><b>' + loc.songs + '</b> ' + (loc.songs === 1 ? 'song' : 'songs') + '</span>');
+  out.push('<span class="ah-stat"><b style="--sc:' + albumColor(avg) + '" class="ah-num">' + avg + '</b> average</span>');
+  return '<div class="ah-stats">' + out.join('') + '</div>' +
+    '<button type="button" class="ah-top" data-ah-open="0" title="Open ' + esc(top.name) + '">' +
+      '<span class="ah-top-k">Your top</span><span class="ah-top-n">' + esc(top.name) + '</span>' +
+      '<span class="ah-top-s" style="--sc:' + albumColor(+top.score) + '">' + Math.round(+top.score) + '</span>' +
+    '</button>';
+}
+function _ahReveal(img, el, cls) {
+  if (!img) return;
+  var done = function () { el.classList.add(cls); };
+  if (img.complete && img.naturalWidth) { done(); return; }
+  img.addEventListener('load', done, { once: true });
+  // A sleeve that fails is taken out rather than left as an empty frame.
+  img.addEventListener('error', function () { if (cls === 'is-in') el.remove(); }, { once: true });
+}
+function _ahPaintStack(hero, items) {
+  var stack = document.getElementById('artist-hero-stack');
+  var glows = document.getElementById('artist-hero-glows');
+  if (!stack) return;
+  var key = items.map(function (x) { return x.id + ':' + (x.score || ''); }).join('|');
+  hero._ahItems = items;
+  if (hero._ahStackKey === key) return;
+  hero._ahStackKey = key;
+  hero.style.setProperty('--ah-n', items.length);
+  hero.classList.toggle('ah-has-stack', items.length > 0);
+  // Nodes are REUSED by src, never rebuilt wholesale: the discography lands a
+  // moment after the crate's own records, and rebuilding would blank the
+  // sleeves already on screen and deal them in a second time.
+  function sync(host, list, make) {
+    var old = {};
+    Array.prototype.forEach.call(host.children, function (n) { old[n.getAttribute('data-src')] = n; });
+    list.forEach(function (it, i) {
+      var n = old[it.src];
+      if (n) delete old[it.src]; else n = make(it);
+      n.style.setProperty('--i', i);
+      if (n.hasAttribute('data-ah-open')) n.setAttribute('data-ah-open', i);
+      // Only touch the DOM when a node is out of place: a moved node is a
+      // removed-and-reinserted node, and that restarts its entrance.
+      if (host.children[i] !== n) host.insertBefore(n, host.children[i] || null);
+    });
+    Object.keys(old).forEach(function (k) { old[k].remove(); });
+  }
+  sync(stack, items.map(function (it) { return { src: thumb(it.art, 320), it: it }; }), function (x) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'ah-sleeve';
+    b.setAttribute('data-src', x.src); b.setAttribute('data-ah-open', '0');
+    b.title = x.it.name || ''; b.setAttribute('aria-label', 'Open ' + (x.it.name || 'record'));
+    var img = new Image(); img.alt = ''; img.decoding = 'async'; img.referrerPolicy = 'no-referrer'; img.src = x.src;
+    b.appendChild(img);
+    _ahReveal(img, b, 'is-in');
+    return b;
+  });
+  if (glows) {
+    // Three is enough light; more is mud. Tiny files — a blur needs no detail.
+    sync(glows, items.slice(0, 3).map(function (it) { return { src: thumb(it.art, 120) }; }), function (x) {
+      var g = new Image(); g.className = 'ah-glow'; g.alt = ''; g.decoding = 'async'; g.referrerPolicy = 'no-referrer';
+      g.setAttribute('data-src', x.src); g.src = x.src;
+      _ahReveal(g, g, 'is-in');
+      return g;
+    });
+  }
+}
+function paintArtistHeroDetail(hero, fav) {
+  var loc = _ahLocal(fav);
+  var items = loc.albums.slice(0, AH_MAX).filter(function (a) { return a.art; });
+  var meta = document.getElementById('artist-hero-meta');
+  var disco = hero._ahDisco && hero._ahDisco.id === fav.id ? hero._ahDisco.list : null;
+  if (items.length < AH_MAX && disco) {
+    var seen = {};
+    items.forEach(function (a) { seen[_ahFold(baseAlbumTitle(a.name))] = 1; });
+    disco.slice().reverse().forEach(function (d) {          // newest first
+      if (items.length >= AH_MAX || !d.art) return;
+      var k = _ahFold(baseAlbumTitle(d.name));
+      if (seen[k]) return; seen[k] = 1;
+      items.push({ id: d.id, name: d.name, art: d.art, year: d.year, artist: fav.name, artistId: fav.id });
+    });
+  }
+  _ahPaintStack(hero, items);
+  if (meta) meta.innerHTML = _ahMetaHtml(loc, disco);
+  // The discography is only worth a request when the crate cannot fill the
+  // stack on its own, and only once per artist per page.
+  if (items.length < AH_MAX && !disco && fav.id && !hero._ahDiscoAsked && typeof fetchStudioAlbums === 'function') {
+    hero._ahDiscoAsked = fav.id;
+    fetchStudioAlbums(fav.id, false, fav.name).then(function (list) {
+      if (hero.dataset.artistId !== String(fav.id)) return;
+      hero._ahDisco = { id: fav.id, list: list || [] };
+      paintArtistHeroDetail(hero, fav);
+    }).catch(function () {});
+  }
+}
+function paintArtistHero(hero, fav) {
+  var bg = document.getElementById('artist-hero-bg');
+  var portrait = document.getElementById('artist-hero-portrait');
+  var bed = document.getElementById('artist-hero-bed');
+  var nameEl = document.getElementById('artist-hero-name');
+  if (hero.dataset.artistId !== String(fav.id || '')) {
+    hero._ahStackKey = null; hero._ahDisco = null; hero._ahDiscoAsked = null;
+  }
+  hero.dataset.artistId = String(fav.id || '');
+  if (bg && bg.getAttribute('src') !== fav.image) {
+    if (portrait) {
+      portrait.classList.remove('is-loaded', 'is-empty');
+      // A photo that never arrives leaves a monogram, not an empty grey frame.
+      portrait.setAttribute('data-initial', String(fav.name || '?').trim().replace(/^the\s+/i, '').charAt(0).toUpperCase());
+      bg.onerror = function () { portrait.classList.add('is-empty'); };
+    }
+    bg.alt = fav.name || '';
+    bg.src = fav.image;
+    _ahReveal(bg, portrait, 'is-loaded');
+  }
+  // Same file, second use: the blurred bed. One request — served from cache.
+  // A small copy is plenty for something blurred past recognition.
+  var bedSrc = thumb(fav.image, 250);
+  if (bed && bed.getAttribute('src') !== bedSrc) { bed.classList.remove('is-in'); bed.src = bedSrc; _ahReveal(bed, bed, 'is-in'); }
+  if (nameEl) {
+    nameEl.textContent = fav.name || '';
+    var len = String(fav.name || '').length;
+    nameEl.classList.toggle('ah-long', len > 14 && len <= 22);
+    nameEl.classList.toggle('ah-xlong', len > 22);
+  }
+  wireArtistHero(hero);
+  paintArtistHeroDetail(hero, fav);
+}
+function wireArtistHero(hero) {
+  if (hero._ahWired) return;
+  hero._ahWired = true;
+  hero.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-ah-open]');
+    if (!b || !hero._ahItems) return;
+    var it = hero._ahItems[+b.getAttribute('data-ah-open')];
+    if (!it || typeof openAlbum !== 'function') return;
+    openAlbum({ id: it.id, name: it.name, artist: it.artist, artistId: it.artistId || hero.dataset.artistId, art: it.art, year: it.year || '', genre: it.genre || '' });
+  });
+  // Depth on a desktop pointer only: the visual leans a few pixels toward the
+  // cursor. Independent `translate`, so the stack's own transforms and the
+  // hover fan are never replaced (trap 2). Touch gets nothing — it has no
+  // hover and a parallax that follows a finger is a parallax that jitters.
+  var fine = false, rm = false;
+  try { fine = matchMedia('(hover: hover) and (pointer: fine)').matches; rm = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  if (!fine) return;
+  var vis = document.getElementById('artist-hero-visual'), raf = 0, px = 0, py = 0;
+  if (!vis) return;
+  function off() { var m = document.documentElement.getAttribute('data-motion'); return m === 'none' || (rm && m !== 'full'); }
+  hero.addEventListener('pointermove', function (e) {
+    if (off()) return;
+    var r = hero.getBoundingClientRect();
+    px = (e.clientX - r.left) / r.width - 0.5; py = (e.clientY - r.top) / r.height - 0.5;
+    if (!raf) raf = requestAnimationFrame(function () { raf = 0; vis.style.setProperty('--ah-px', px.toFixed(3)); vis.style.setProperty('--ah-py', py.toFixed(3)); });
+  });
+  hero.addEventListener('pointerleave', function () { vis.style.setProperty('--ah-px', 0); vis.style.setProperty('--ah-py', 0); });
+}
+window.paintArtistHero = paintArtistHero;
 /* The collapse button is gone. It was a control for getting a feature out of
    the way, which is the app admitting the feature is in the way — and it
    offered a second state that had to be styled, remembered and reasoned about
@@ -19887,15 +19864,11 @@ window.handleGrooveLink=handleGrooveLink;
     const qp=new URLSearchParams(location.search);
     const img=qp.get('debugArtist');
     if(!img)return;
+    // One painter for both paths, so the debug view can no longer drift from
+    // the real one layer by layer. &debugArtistId= lets the stack fall back to
+    // that artist's discography exactly as a real favourite does.
     const hero=document.getElementById('artist-hero');
-    document.getElementById('artist-hero-bg').src=img;
-    // The bed takes the same file. This path has its own code and has to be
-    // told about every layer separately — missing it is what made the debug
-    // view a wash with an empty hole in it last time.
-    const _bed=document.getElementById('artist-hero-bed');
-    if(_bed)_bed.src=img;
-    document.getElementById('artist-hero-name').textContent=qp.get('debugArtistName')||'Test Artist';
-    document.getElementById('artist-hero-meta').innerHTML='';
+    paintArtistHero(hero,{id:qp.get('debugArtistId')||'',name:qp.get('debugArtistName')||'Test Artist',image:img});
     showArtistHero(hero);
     if(window.VinalDither)window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
   }, 1000);

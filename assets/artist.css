@@ -1,0 +1,365 @@
+/* ================================================================
+   FAVOURITE ARTIST — an editorial feature at the top of Home.
+
+   Loaded after every other stylesheet so nothing later in the cascade can
+   outrank it (trap 1). The old banner rules were deleted from index.html
+   rather than overridden: there is one place this is styled.
+
+   What changed, and why:
+
+   * THE PHOTO IS A FRAMED PORTRAIT, NOT A STRETCHED BANNER. Deezer artist
+     pictures are square; a square frame shows the whole file, so nobody's
+     head is ever cropped and a soft source reads as a photograph rather than
+     as a blown-up thumbnail. It is shown as supplied — no brightness filter.
+   * THE LIGHT COMES FROM THE RECORDS. Up to three of the artist's sleeves
+     sit behind everything, tiny and blurred to light (For You's .fy-glow
+     idea), plus the photo itself as a faint bed. No canvas colour reads:
+     Deezer images are not reliably CORS-readable.
+   * THE STACK. Up to four sleeves — your highest-rated of theirs first, the
+     discography filling any gap — fanned out from behind the portrait.
+     Each opens its record.
+   * ONLY THE WORDS GET A SCRIM, and it is masked like the ambient layer so
+     it returns to nothing at the hero's bottom edge. A darkening that peaks
+     at the boundary draws a hard line across the page (see CLAUDE.md, "the
+     favourite-artist photo dissolves instead of ending").
+
+   THE HEIGHT IS FIXED PER BREAKPOINT and nothing inside may change it: the
+   search field sits directly below this block, and heroResize() in
+   index.html is the only thing allowed to move it. Images fade in where they
+   already have room; nothing reflows when one decodes.
+
+   Motion: entrance and hover use opacity and the independent translate /
+   rotate properties, so they never replace a transform set elsewhere
+   (trap 2), and the entrance fills `backwards`, never `both`, because the
+   sleeves hover (trap 12). Hover depth is desktop-pointer only.
+   ================================================================ */
+
+.artist-hero {
+  --ah-h: 318px;
+  --ah-pw: min(136px, 36vw);       /* portrait */
+  --ah-sw: min(100px, 27vw);       /* sleeve */
+  --ah-step: min(46px, 12.2vw);    /* fan step */
+  --ah-tuck: .42;                  /* how much of a sleeve hides behind the portrait */
+  --ah-scrim: color-mix(in srgb, var(--bg) 82%, transparent);
+  --ah-dissolve: linear-gradient(to bottom, #000 0%, #000 58%, rgba(0,0,0,.72) 76%, rgba(0,0,0,.28) 90%, transparent 100%);
+  position: relative;
+  width: 100%;
+  height: calc(var(--ah-h) + env(safe-area-inset-top, 0px));
+  margin-bottom: -6px;
+  overflow: hidden;
+  isolation: isolate;
+  animation: ahHeroIn .6s ease backwards;
+  transition: height .55s var(--ease), margin-bottom .55s var(--ease), opacity .45s var(--ease);
+}
+/* Shown by growing from zero height rather than flipping display, so the page
+   below eases into place (see showArtistHero). */
+.artist-hero.artist-hero-hidden {
+  height: 0 !important;
+  margin-bottom: 0 !important;
+  opacity: 0;
+  animation: none;
+}
+@keyframes ahHeroIn { from { opacity: 0; } }
+
+/* ---- Light ------------------------------------------------------------ */
+.ah-ambient {
+  position: absolute; inset: 0; z-index: -2; pointer-events: none;
+  -webkit-mask-image: var(--ah-dissolve);
+          mask-image: var(--ah-dissolve);
+}
+.artist-hero-bed {
+  position: absolute; left: -10%; top: -10%; width: 120%; height: 120%;
+  object-fit: cover; object-position: center 28%;
+  filter: blur(46px) saturate(1.45);
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+.artist-hero-bed.is-in { opacity: .38; }
+.ah-glows { position: absolute; inset: 0; }
+.ah-glow {
+  position: absolute; aspect-ratio: 1 / 1; border-radius: 50%;
+  object-fit: cover;
+  filter: blur(64px) saturate(1.8);
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+.ah-glow.is-in { opacity: .58; }
+.ah-glow:nth-child(1) { left: -22%; top: -38%; width: 92%; }
+.ah-glow:nth-child(2) { right: -30%; top: -14%; width: 82%; }
+.ah-glow:nth-child(3) { left: 8%;  bottom: -52%; width: 84%; }
+.ah-glow:nth-child(3).is-in { opacity: .42; }
+
+.artist-hero-canvas { display: none; }
+
+/* The scrim sits under the words only, and is masked with the ambient layer
+   so it is nothing at the bottom edge. --bg rather than black, so a theme's
+   own ground is what the words sit on. */
+.artist-hero-fade {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(to bottom, color-mix(in srgb, var(--bg) 46%, transparent) 0%, transparent calc(env(safe-area-inset-top, 0px) + 56px)),
+    radial-gradient(130% 62% at 0% 92%, var(--ah-scrim) 0%, color-mix(in srgb, var(--bg) 50%, transparent) 46%, transparent 78%);
+  -webkit-mask-image: var(--ah-dissolve);
+          mask-image: var(--ah-dissolve);
+}
+
+/* ---- Layout ------------------------------------------------------------ */
+.artist-hero-content {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  row-gap: var(--s4);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 18px);
+  padding-bottom: 24px;
+  box-sizing: border-box;
+}
+
+/* ---- The portrait and the stack -------------------------------------- */
+.ah-visual {
+  position: relative;
+  width: 100%;
+  height: var(--ah-pw);
+}
+.ah-portrait {
+  position: absolute; left: 0; top: 0; z-index: 10;
+  width: var(--ah-pw); aspect-ratio: 1 / 1;
+  margin: 0;
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--surface-2);
+  box-shadow:
+    0 22px 44px -16px rgba(0,0,0,.75),
+    0 0 0 1px color-mix(in srgb, var(--text) 14%, transparent);
+  transition: transform .6s var(--ease), translate .6s var(--ease);
+}
+/* A hairline of light along the top edge: the frame is lit from above, which
+   is most of what separates a framed print from a pasted rectangle. */
+.ah-portrait::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--text) 16%, transparent), transparent 30%);
+  mix-blend-mode: soft-light;
+}
+.ah-portrait img {
+  display: block;
+  width: 100%; height: 100%;
+  /* The frame is square and so is every Deezer artist picture, so `cover`
+     crops nothing. The position only matters for the odd non-square file,
+     and keeps the top — where heads are. */
+  object-fit: cover; object-position: center 22%;
+  opacity: 0;
+  scale: 1.05;
+  transition: opacity .7s ease, scale 1.4s var(--ease);
+}
+.ah-portrait.is-loaded img { opacity: 1; scale: 1; }
+/* The photo failed (or Deezer has none): a monogram in the frame, never an
+   empty grey square. */
+.ah-portrait.is-empty {
+  display: grid; place-items: center;
+  background: radial-gradient(120% 120% at 30% 20%, var(--surface-3), var(--surface) 70%);
+}
+.ah-portrait.is-empty img { display: none; }
+.ah-portrait.is-empty::before {
+  content: attr(data-initial);
+  font-family: var(--font-display); font-weight: 800;
+  font-size: calc(var(--ah-pw) * .46); line-height: 1; letter-spacing: -.04em;
+  color: var(--gold);
+}
+
+.ah-stack { position: absolute; inset: 0; transition: translate .6s var(--ease); }
+.ah-sleeve {
+  position: absolute;
+  top: calc((var(--ah-pw) - var(--ah-sw)) / 2);
+  left: calc(var(--ah-pw) - var(--ah-sw) * var(--ah-tuck) + var(--i) * var(--ah-step));
+  z-index: calc(9 - var(--i));
+  width: var(--ah-sw); aspect-ratio: 1 / 1;
+  padding: 0; margin: 0; border: 0;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--surface-3);
+  cursor: pointer;
+  transform: rotate(calc(3deg + var(--i) * 3.2deg)) translateY(calc(var(--i) * 3px));
+  transform-origin: 30% 90%;
+  filter: brightness(calc(1 - var(--i) * .1));
+  box-shadow:
+    0 16px 30px -12px rgba(0,0,0,.8),
+    0 0 0 1px color-mix(in srgb, var(--text) 8%, transparent);
+  opacity: 0;
+  transition: transform .5s var(--ease), filter .4s ease, opacity .4s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.ah-sleeve img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ah-sleeve.is-in {
+  opacity: 1;
+  animation: ahDeal .8s var(--ease) backwards;
+  animation-delay: calc(140ms + var(--i) * 85ms);
+}
+/* Dealt out from behind the portrait. Independent properties, so the fan's
+   own transform is untouched; `to` is the element's resting value. */
+@keyframes ahDeal {
+  from { opacity: 0; translate: calc(-26px - var(--i) * 34px) 0; rotate: -8deg; }
+}
+.ah-sleeve:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+/* ---- The words --------------------------------------------------------- */
+/* Directly under the portrait on a phone, so the block reads as one unit
+   whether or not there is a top-record line to fill the space. */
+.artist-hero-words { min-width: 0; align-self: start; }
+.artist-hero-eyebrow {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.ah-rule { width: 22px; height: 1.5px; border-radius: 2px; background: currentColor; opacity: .8; }
+.artist-hero-name {
+  margin: 8px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(34px, 10.6vw, 46px);
+  font-weight: 800;
+  letter-spacing: -.045em;
+  line-height: .95;
+  color: var(--text);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  text-shadow: 0 2px 28px color-mix(in srgb, var(--bg) 70%, transparent);
+}
+.artist-hero-name.ah-long  { font-size: clamp(28px, 8.4vw, 38px); }
+.artist-hero-name.ah-xlong { font-size: clamp(24px, 7vw, 32px); }
+.artist-hero-meta { margin-top: 10px; }
+.ah-stats {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: 2px 0;
+  font-size: var(--t-sm);
+  color: var(--text-dim);
+}
+.ah-stat { white-space: nowrap; }
+.ah-stat + .ah-stat::before {
+  content: ''; display: inline-block; vertical-align: middle;
+  width: 3px; height: 3px; border-radius: 50%;
+  margin: 0 10px 2px;
+  background: var(--text-faint);
+}
+.ah-stat b { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.ah-stat b.ah-num { color: var(--sc); }
+.ah-stat-quiet { font-style: italic; }
+.ah-top {
+  display: inline-flex; align-items: center; gap: 10px;
+  max-width: 100%;
+  margin-top: 10px;
+  padding: 4px 4px 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+          backdrop-filter: blur(12px);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-sm);
+  cursor: pointer;
+  transition: border-color .3s ease, background-color .3s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.ah-top-k {
+  flex-shrink: 0;
+  font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--text-dim);
+}
+.ah-top-n { min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ah-top-s {
+  flex-shrink: 0;
+  min-width: 34px; height: 26px; padding: 0 8px; box-sizing: border-box;
+  display: inline-grid; place-items: center;
+  border-radius: 999px;
+  background: var(--sc);
+  color: var(--bg);
+  font-family: var(--font-display); font-weight: 800; font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.ah-top:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* ---- Wide: words left, the portrait and its records right -------------- */
+@media (min-width: 760px) {
+  .artist-hero {
+    --ah-h: clamp(380px, 26vw, 440px);
+    --ah-pw: clamp(196px, 19vw, 296px);
+    --ah-sw: clamp(136px, 13vw, 200px);
+    --ah-step: clamp(40px, 4.4vw, 70px);
+    margin-bottom: -10px;
+  }
+  .artist-hero-content {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr);
+    column-gap: clamp(24px, 4vw, 72px);
+    align-items: center;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 34px);
+    padding-bottom: 46px;
+  }
+  .ah-visual {
+    grid-column: 2; grid-row: 1;
+    width: calc(var(--ah-pw) + var(--ah-sw) * (1 - var(--ah-tuck)) + (var(--ah-n, 1) - 1) * var(--ah-step) + 28px);
+  }
+  .artist-hero:not(.ah-has-stack) .ah-visual { width: var(--ah-pw); }
+  .ah-portrait { border-radius: 28px; }
+  .ah-sleeve { border-radius: 9px; }
+  .artist-hero-words { grid-column: 1; grid-row: 1; align-self: center; padding-bottom: 4px; }
+  .artist-hero-eyebrow { font-size: 12px; gap: 12px; }
+  .ah-rule { width: 32px; }
+  .artist-hero-name {
+    margin-top: 14px;
+    font-size: clamp(52px, 6vw, 104px);
+    letter-spacing: -.05em;
+    line-height: .9;
+  }
+  .artist-hero-name.ah-long  { font-size: clamp(44px, 4.6vw, 80px); }
+  .artist-hero-name.ah-xlong { font-size: clamp(36px, 3.6vw, 62px); }
+  .artist-hero-meta { margin-top: 18px; }
+  .ah-stats { font-size: 15px; }
+  .ah-top { margin-top: 16px; font-size: 14px; padding: 5px 5px 5px 14px; }
+  .ah-top-s { height: 28px; min-width: 38px; font-size: 14px; }
+
+  .artist-hero-fade {
+    background:
+      radial-gradient(70% 95% at 4% 58%, var(--ah-scrim) 0%, color-mix(in srgb, var(--bg) 46%, transparent) 42%, transparent 74%);
+  }
+  .ah-glow:nth-child(1) { left: auto; right: 2%; top: -36%; width: 46%; }
+  .ah-glow:nth-child(2) { right: auto; left: -10%; top: -46%; width: 40%; }
+  .ah-glow:nth-child(3) { left: 36%; bottom: -70%; width: 40%; }
+  .ah-glow.is-in { opacity: .52; }
+  .ah-glow:nth-child(3).is-in { opacity: .36; }
+}
+
+/* ---- Depth on a desktop pointer only ----------------------------------- */
+@media (hover: hover) and (pointer: fine) {
+  .ah-portrait { translate: calc(var(--ah-px, 0) * 8px) calc(var(--ah-py, 0) * 6px); }
+  .ah-stack    { translate: calc(var(--ah-px, 0) * 18px) calc(var(--ah-py, 0) * 10px); }
+  .ah-visual:hover .ah-portrait { transform: translateY(-4px) rotate(-1.2deg); }
+  .ah-visual:hover .ah-sleeve {
+    transform: translateX(calc(10px + var(--i) * 18px)) rotate(calc(5deg + var(--i) * 4.4deg)) translateY(calc(var(--i) * 4px));
+    filter: brightness(calc(1 - var(--i) * .06));
+  }
+  .ah-visual:hover .ah-sleeve:hover {
+    transform: translateX(calc(10px + var(--i) * 18px)) translateY(-14px) rotate(calc(1deg + var(--i) * 2deg));
+    filter: none;
+  }
+  .ah-top:hover {
+    border-color: color-mix(in srgb, var(--gold) 45%, transparent);
+    background-color: color-mix(in srgb, var(--surface-3) 78%, transparent);
+  }
+}
+
+/* ---- Reduced motion: fades stay, movement goes ------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .ah-sleeve.is-in { animation: none; }
+  html:not([data-motion="full"]) .ah-portrait img { scale: 1; transition: opacity .4s linear; }
+  html:not([data-motion="full"]) .ah-portrait,
+  html:not([data-motion="full"]) .ah-stack,
+  html:not([data-motion="full"]) .ah-sleeve { translate: none; transition: opacity .3s linear; }
+}
+html[data-motion="none"] .ah-sleeve.is-in { animation: none; }
+html[data-motion="none"] .ah-portrait img { scale: 1; transition: opacity .4s linear; }
+html[data-motion="none"] .ah-portrait,
+html[data-motion="none"] .ah-stack,
+html[data-motion="none"] .ah-sleeve { translate: none; transition: opacity .3s linear; }
