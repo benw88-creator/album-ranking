@@ -2,6 +2,13 @@
 
 ## Second pass — safety, UK compliance, moderation, abuse (2026-10-14)
 
+**Released 2026-10-15** with owner approval: both migrations applied to production via
+`supabase db query --linked -f` (read-only drift check first: schema unchanged; harness 10/10),
+verified through the live Data API, then commits 11f1954 and ac8078a pushed and confirmed
+served. Migration HISTORY for 20261015000000/100000/200000 is still unrecorded; repair is a
+separate, approval-only step. Live verification found and fixed one pre-existing bug: the
+album sheet's ratings list embedded `profiles(...)` with no FK and always 400'd.
+
 Nothing below is deployed or applied. Two migrations wait for approval, in
 order: `20261015100000_ratings_visibility_policy.sql` then
 `20261015200000_launch_safety_and_moderation.sql`. The client changes are
