@@ -85,6 +85,23 @@ try {
     const failed=await deletion({failPurge:true});assert.equal(failed.r.code,500);
     assert.ok(!failed.calls.some(([p])=>p.includes('/auth/v1/admin/')));
   });
+  await check('moderation avatar purge: admins only, target folder only, never touches the account',async()=>{
+    const target='22222222-2222-4222-8222-222222222222';
+    for(const admin of [false,true]){
+      let files=[{name:'a.jpg'}];const calls=[];
+      globalThis.fetch=async(url,opts={})=>{
+        const path=new URL(url).pathname;calls.push(path);
+        if(path==='/auth/v1/user')return response({id:uid});
+        if(path.endsWith('/rpc/is_admin'))return response(admin);
+        if(path.endsWith('/object/list/avatars')){assert.equal(JSON.parse(opts.body).prefix,target+'/');return response(files);}
+        if(path.endsWith('/object/avatars')){assert.deepEqual(JSON.parse(opts.body).prefixes,[target+'/a.jpg']);files=[];return response({});}
+        throw new Error('Unexpected request: '+path);
+      };
+      const r=res();await deleteAccount({method:'POST',headers:{authorization:'Bearer t'},body:{moderate:'avatar',user:target}},r);
+      assert.equal(r.code,admin?200:403);assert.equal(files.length,admin?0:1);
+      assert.ok(!calls.some(p=>p.includes('delete_my_data')||p.includes('/admin/')));
+    }
+  });
   console.log(`launch API selfcheck: ${groups} groups passed (mocked network)`);
 } finally {
   globalThis.fetch=originalFetch;

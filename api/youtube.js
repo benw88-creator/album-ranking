@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     const q = artist + ' ' + title.replace(/\((feat|ft|with)[^)]*\)/gi, '');
     const s = await fetch('https://www.googleapis.com/youtube/v3/search?' + new URLSearchParams({
       part: 'snippet', type: 'video', maxResults: '10', videoEmbeddable: 'true',
-      videoCategoryId: '10', q, key
+      videoCategoryId: '10', safeSearch: 'strict', q, key
     })).then(r => r.json());
     if (s.error) throw new Error(s.error.message || 'search failed');
     const ids = (s.items || []).map(i => i.id && i.id.videoId).filter(Boolean);

@@ -19266,7 +19266,7 @@ window.renderProfile=renderProfile;
 /* ================================================================
    13. NOTIFICATIONS + SUGGESTIONS
    ================================================================ */
-function notifText(n){const who=esc((n.data&&n.data.username)||'Someone');if(n.type==='follow')return who+' followed you';if(n.type==='suggestion'){const it=(n.data&&n.data.item)||{};const kind=(n.data&&n.data.kind)||'album';const label=kind==='list'?'the list':(kind==='song'?'the song':'the album');return who+' recommended '+label+' <b>'+esc(it.name||'')+'</b>'+(it.artist?' by '+esc(it.artist):'');}if(n.type==='groove_invite')return who+' invited you to a Groove';if(n.type==='rated_too'){const it=(n.data&&n.data.item)||{};return who+' gave <b>'+esc(it.name||'a record')+'</b> '+esc(String(n.data.score))+(n.data.yours!=null?' — you gave it '+esc(String(n.data.yours)):'');}if(n.type==='review_like'){const it=(n.data&&n.data.item)||{};return who+' liked your review of <b>'+esc(it.name||'a record')+'</b>';}if(n.type==='blitz_challenge')return who+' challenged you to <b>Cover Fire</b>';if(n.type==='blitz_turn')return who+' scored <b>'+esc(String((n.data&&n.data.score)||0))+'</b> in Cover Fire \u2014 your go';if(n.type==='blitz_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' at Cover Fire'):o==='lost'?(who+' beat you at Cover Fire'):('You and '+who+' tied at Cover Fire');}if(n.type==='bid_war_challenge')return who+' challenged you to a <b>Bid War</b>';if(n.type==='bid_war_turn')return who+' has bid &mdash; your move';if(n.type==='bid_war_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' in a Bid War'):o==='lost'?(who+' beat you in a Bid War'):('Your Bid War with '+who+' ended level');}if(n.type==='report_update')return (n.data&&n.data.outcome)==='actioned'?'Thanks for your report — we have <b>taken action</b>':'Thanks for your report — we reviewed it and <b>left it up</b>';if(n.type==='content_removed')return 'A moderator removed something you posted'+(n.data&&n.data.note?': '+esc(n.data.note):'')+'. To appeal, email vinall.support@gmail.com';return who+' did something';}
+function notifText(n){const who=esc((n.data&&n.data.username)||'Someone');if(n.type==='follow')return who+' followed you';if(n.type==='suggestion'){const it=(n.data&&n.data.item)||{};const kind=(n.data&&n.data.kind)||'album';const label=kind==='list'?'the list':(kind==='song'?'the song':'the album');return who+' recommended '+label+' <b>'+esc(it.name||'')+'</b>'+(it.artist?' by '+esc(it.artist):'');}if(n.type==='groove_invite')return who+' invited you to a Groove';if(n.type==='rated_too'){const it=(n.data&&n.data.item)||{};return who+' gave <b>'+esc(it.name||'a record')+'</b> '+esc(String(n.data.score))+(n.data.yours!=null?' — you gave it '+esc(String(n.data.yours)):'');}if(n.type==='review_like'){const it=(n.data&&n.data.item)||{};return who+' liked your review of <b>'+esc(it.name||'a record')+'</b>';}if(n.type==='blitz_challenge')return who+' challenged you to <b>Cover Fire</b>';if(n.type==='blitz_turn')return who+' scored <b>'+esc(String((n.data&&n.data.score)||0))+'</b> in Cover Fire \u2014 your go';if(n.type==='blitz_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' at Cover Fire'):o==='lost'?(who+' beat you at Cover Fire'):('You and '+who+' tied at Cover Fire');}if(n.type==='bid_war_challenge')return who+' challenged you to a <b>Bid War</b>';if(n.type==='bid_war_turn')return who+' has bid &mdash; your move';if(n.type==='bid_war_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' in a Bid War'):o==='lost'?(who+' beat you in a Bid War'):('Your Bid War with '+who+' ended level');}if(n.type==='report_update')return (n.data&&n.data.outcome)==='actioned'?'Thanks for your report — we have <b>taken action</b>':'Thanks for your report — we reviewed it and <b>left it up</b>';if(n.type==='report_new')return 'New report to review'+(n.data&&n.data.reason?': '+esc(n.data.reason):'')+' — open your profile';if(n.type==='content_removed')return 'A moderator removed something you posted'+(n.data&&n.data.note?': '+esc(n.data.note):'')+'. To appeal, email vinall.support@gmail.com';return who+' did something';}
 function notifEmoji(t){return t==='follow'?ICONS.people:(t==='suggestion'||t==='rated_too'||t==='review_like')?ICONS.note:t==='groove_invite'?ICONS.groove:(t==='bid_war_challenge'||t==='bid_war_turn'||t==='bid_war_result'||t==='blitz_challenge'||t==='blitz_turn'||t==='blitz_result')?ICONS.trophy:ICONS.bell;}
 
 async function renderNotifications(){
@@ -26039,7 +26039,8 @@ window.isBlocked = isBlocked;
 window.loadBlocks = loadBlocks;
 
 const REPORT_REASONS = ['Harassment or bullying', 'Hate speech', 'Sexual content',
-                        'Child safety concern', 'Threats, violence or self-harm', 'Illegal content',
+                        'Child safety concern', 'Asking to meet up or for personal details',
+                        'Threats, violence or self-harm', 'Illegal content',
                         'Spam or scam', 'Impersonation', 'Something else'];
 
 function drawSafety(host, prof, isOwner) {
@@ -26118,7 +26119,10 @@ async function submitReport() {
     } else {
       document.getElementById('report-modal').classList.remove('open');
       if (window.celebrate) {} // no celebration for this, obviously
-      say('Thanks', 'That has been sent for review.');
+      // Reports about danger or harm point to help as well as to the queue.
+      say('Thanks', /safety|meet up|self-harm|Threats/.test(chosen.dataset.reason)
+        ? 'That has been sent for review and safety reports are looked at first. If anyone is in immediate danger, call 999. If you want to talk to someone: Childline 0800 1111 (under 19, free, 24/7) or Samaritans 116 123 (free, 24/7).'
+        : 'That has been sent for review.');
     }
   } catch (e) { err.textContent = String((e && e.message) || e); }
   btn.disabled = false; btn.textContent = 'Send report';

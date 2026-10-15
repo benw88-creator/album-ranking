@@ -75,3 +75,22 @@ test('a celebration over onboarding or an open sheet can still be dismissed', as
     await page.evaluate(() => document.querySelectorAll('.onb.open, .modal.open').forEach(n => n.classList.remove('open')));
   }
 });
+
+test('the reports queue puts safety reports first, flags overdue ones and shows a reported photo', async ({ page }) => {
+  const now = Date.now(), ago = h => new Date(now - h * 36e5).toISOString();
+  const rows = [
+    { kind: 'comment', target: 'sc:1', target_user: null, target_username: 'spammer', reports: 1, first_at: ago(60), content: 'buy now', items: [{ reason: 'Spam or scam', reporter: 'a' }] },
+    { kind: 'user', target: '22222222-2222-4222-8222-222222222222', target_user: '22222222-2222-4222-8222-222222222222', target_username: 'creep', reports: 1, first_at: ago(30), content: 'creep — hi', items: [{ reason: 'Asking to meet up or for personal details', reporter: 'b' }] },
+  ];
+  await page.route('**/rest/v1/rpc/admin_reports', route => route.fulfill({ json: rows }));
+  await page.route('**/rest/v1/profiles?**', route => route.fulfill({ json: [{ id: rows[1].target_user, avatar_url: 'data:image/gif;base64,R0lGODlhAQABAAAAACw=' }] }));
+  await start(page);
+  await page.evaluate(() => { const a = document.createElement('div'); a.id = 'mod-anchor'; document.body.appendChild(a); return ModQueue.mount(a); });
+  const cards = page.locator('#admin-mod .mod-row');
+  await expect(cards).toHaveCount(2);
+  await expect(cards.nth(0)).toContainText('Safety');
+  await expect(cards.nth(0)).toContainText('overdue');          // safety, 30h > 24h
+  await expect(cards.nth(0).locator('img')).toHaveCount(1);       // reported photo shown
+  await expect(cards.nth(1)).toContainText('overdue');          // ordinary, 60h > 48h
+  await expect(page.locator('#admin-mod [data-view="actioned"]')).toBeVisible();
+});

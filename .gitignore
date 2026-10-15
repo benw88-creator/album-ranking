@@ -37,3 +37,6 @@ app/build/
 # NATIVE icon sets it produces are committed; these sources are not.
 app/assets/
 app/build-device/
+
+# Private UK compliance records (DPIA, Online Safety Act assessments). The repo is public.
+compliance/

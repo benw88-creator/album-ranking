@@ -52,10 +52,30 @@ export default async function handler(req, res) {
   const jwt = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   if (!jwt) { res.status(401).json({ error: 'Not signed in' }); return; }
 
-  // Deleting an account is irreversible, so the request has to say so out
-  // loud. A stray POST from anywhere else cannot wipe somebody by accident.
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
+
+  // Moderation: delete a reported user's avatar FILES. admin_resolve already
+  // clears avatar_url, but the object stays publicly reachable at its URL until
+  // storage removes it, which only the service role can do. Rides this route
+  // because it owns the avatar purge and Hobby allows twelve functions (trap 11).
+  // is_admin() runs as the caller, so the database decides who is an admin.
+  if (body && body.moderate === 'avatar') {
+    const target = String(body.user || '');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(target)) { res.status(400).json({ error: 'Bad user' }); return; }
+    try {
+      const a = await fetch(SUPABASE_URL + '/rest/v1/rpc/is_admin', {
+        method: 'POST', headers: { apikey: SERVICE, Authorization: 'Bearer ' + jwt, 'Content-Type': 'application/json' }, body: '{}',
+      });
+      if (!a.ok || (await a.json()) !== true) { res.status(403).json({ error: 'Admins only' }); return; }
+      await removeAvatars(target, SERVICE);
+      res.status(200).json({ ok: true });
+    } catch (e) { res.status(503).json({ error: 'Could not remove the avatar files' }); }
+    return;
+  }
+
+  // Deleting an account is irreversible, so the request has to say so out
+  // loud. A stray POST from anywhere else cannot wipe somebody by accident.
   if (!body || body.confirm !== 'DELETE') {
     res.status(400).json({ error: 'Deletion not confirmed' });
     return;

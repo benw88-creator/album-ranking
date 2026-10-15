@@ -52,6 +52,9 @@ export function compose(n) {
     case 'bid_war_challenge': return { title: who + ' challenged you to a Bid War', url: '/' };
     case 'bid_war_turn': return { title: who + ' has bid', body: 'Your move.', url: '/' };
     case 'bid_war_result': return { title: d.outcome === 'won' ? 'You won your Bid War with ' + who : d.outcome === 'lost' ? who + ' won your Bid War' : 'Your Bid War with ' + who + ' ended level', url: '/' };
+    case 'report_update': return { title: d.outcome === 'actioned' ? 'We took action on your report' : 'We reviewed your report and left it up', url: '/' };
+    case 'content_removed': return { title: 'A moderator removed something you posted', body: d.note || 'To appeal, email vinall.support@gmail.com', url: '/' };
+    case 'report_new': return { title: 'New report to review', body: d.reason || '', url: '/?u=' + encodeURIComponent(n.user_id || '') };
     default: return { title: who + ' — something new on VINALL', url: '/' };
   }
 }
