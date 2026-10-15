@@ -41,9 +41,26 @@ if (hidden.length) {
 console.log(`ok — anon reads public ratings; ${hidden.length} non-public profile(s), none readable by anon`);
 
 if (process.argv.includes('--accounts')) {
-  const env = k => process.env[k] || (() => { throw new Error('missing ' + k); })();
-  const A = await signIn(env('VERIFY_A_EMAIL'), env('VERIFY_A_PASSWORD'));
-  const B = await signIn(env('VERIFY_B_EMAIL'), env('VERIFY_B_PASSWORD'));
+  // Missing values are asked for on the terminal; passwords are not echoed.
+  const ask = (q, hide) => new Promise(res => {
+    process.stdout.write(q);
+    let v = '';
+    process.stdin.setRawMode?.(true); process.stdin.resume(); process.stdin.setEncoding('utf8');
+    const on = c => {
+      // Raw mode delivers paste markers (ESC[200~ … ESC[201~) and other escape
+      // sequences as characters; strip them or a pasted password arrives corrupted.
+      for (const ch of c.replace(/\x1b\[[0-9;]*[~A-Za-z]/g, '')) {
+        if (ch === '\r' || ch === '\n') { process.stdin.setRawMode?.(false); process.stdin.pause(); process.stdin.off('data', on); process.stdout.write('\n'); return res(v); }
+        if (ch === '\u0003') process.exit(130);
+        if (ch === '\u007f' || ch === '\b') { if (v) { v = v.slice(0, -1); process.stdout.write('\b \b'); } }
+        else if (ch >= ' ') { v += ch; process.stdout.write(hide ? '*' : ch); }
+      }
+    };
+    process.stdin.on('data', on);
+  });
+  const env = async (k, q, hide) => process.env[k] || await ask(q, hide);
+  const A = await signIn(await env('VERIFY_A_EMAIL', 'Test account A email: '), await env('VERIFY_A_PASSWORD', 'Test account A password (hidden): ', true));
+  const B = await signIn(await env('VERIFY_B_EMAIL', 'Test account B email: '), await env('VERIFY_B_PASSWORD', 'Test account B password (hidden): ', true));
   const item = 'vinall-privacy-check';
   const countA = token => rest(`ratings?select=item_id&user_id=eq.${A.id}&item_id=eq.${item}`, { token }).then(r => r.length);
   const setVis = v => rest(`profiles?id=eq.${A.id}`, { token: A.token, method: 'PATCH', body: { ratings_visibility: v } });
