@@ -9,7 +9,7 @@ served. Migration HISTORY for 20261015000000/100000/200000 is still unrecorded; 
 separate, approval-only step. Live verification found and fixed one pre-existing bug: the
 album sheet's ratings list embedded `profiles(...)` with no FK and always 400'd.
 
-Nothing below is deployed or applied. Two migrations wait for approval, in
+(Historical, pre-release:) two migrations waited for approval, in
 order: `20261015100000_ratings_visibility_policy.sql` then
 `20261015200000_launch_safety_and_moderation.sql`. The client changes are
 safe to ship before them (each degrades: the moderation queue says "not

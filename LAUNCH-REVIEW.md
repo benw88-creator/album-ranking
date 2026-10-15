@@ -1,4 +1,11 @@
-# Independent launch review — NO-GO
+# Independent launch review — blocker since resolved
+
+> **Status 2026-10-15:** the ratings-privacy blocker below is fixed in production
+> (`ratings are public to read` dropped by 20261015100000; read-only re-check passes).
+> The NO-GO verdict is historical. Still open: the two-account matrix
+> (`verify-ratings-privacy.mjs --accounts`) and migration-history repair — note that
+> **64 local versions** are unrecorded remotely, not just the three launch ones; all
+> probed objects through 20261015200000 are present.
 
 Reviewed commit `ad65b5fc1abcd9e2ea45b9cc0745ca0376f1da2d`, the launch migration,
 application changes, tests and read-only production schema metadata. This review
