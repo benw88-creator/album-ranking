@@ -17413,9 +17413,12 @@ const Cloud=(function(){
   async function fetchAlbumPageRatings(albumId){
     if(!sb)return[];
     try{
-      // join profiles to get username+avatar alongside the rating data
-      const res=await sb.from('ratings').select('user_id,data,updated_at,profiles(username,avatar_url)').eq('kind','album').eq('item_id',albumId).order('updated_at',{ascending:false});
-      return (res.data||[]).map(function(r){return Object.assign({},r.data,{user_id:r.user_id,username:(r.profiles&&r.profiles.username)||'user',avatar_url:(r.profiles&&r.profiles.avatar_url)||''});});
+      /* Two reads, not an embed: ratings has no FK to profiles, so PostgREST
+         answered profiles(...) with a 400 and this list was always empty. */
+      const res=await sb.from('ratings').select('user_id,data,updated_at').eq('kind','album').eq('item_id',albumId).order('updated_at',{ascending:false});
+      const rows=res.data||[],ids=[...new Set(rows.map(function(r){return r.user_id;}))],who={};
+      if(ids.length){const p=await sb.from('profiles').select('id,username,avatar_url').in('id',ids);(p.data||[]).forEach(function(x){who[x.id]=x;});}
+      return rows.map(function(r){const p=who[r.user_id]||{};return Object.assign({},r.data,{user_id:r.user_id,username:p.username||'user',avatar_url:p.avatar_url||''});});
     }catch(e){return[];}
   }
   async function fetchLists(uid){if(!sb)return[];try{const res=await sb.from('lists').select('*').eq('user_id',uid).order('updated_at',{ascending:false});return res.data||[];}catch(e){return[];}}
