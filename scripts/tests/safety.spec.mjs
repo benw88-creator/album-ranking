@@ -57,3 +57,21 @@ test('adults keep their settings', async ({ page }) => {
   await page.waitForTimeout(300);
   expect(seen.vis).toBe(null);
 });
+
+// interactions.js inerts everything outside the open sheet; overlays stacked
+// above it (the celebration over onboarding or a game sheet) must stay clickable.
+test('a celebration over onboarding or an open sheet can still be dismissed', async ({ page }) => {
+  await start(page);
+  for (const open of [
+    () => document.getElementById('onb').classList.add('open'),
+    () => document.querySelector('.modal').classList.add('open'),
+  ]) {
+    await page.evaluate(open);
+    await page.evaluate(() => window.celebrate('Recall', 'Unlocked'));
+    await expect(page.locator('#celebrate')).toHaveClass(/show/);
+    expect(await page.evaluate(() => document.getElementById('celebrate').inert)).toBe(false);
+    await page.locator('#celebrate-btn').click();
+    await expect(page.locator('#celebrate')).not.toHaveClass(/show/);
+    await page.evaluate(() => document.querySelectorAll('.onb.open, .modal.open').forEach(n => n.classList.remove('open')));
+  }
+});

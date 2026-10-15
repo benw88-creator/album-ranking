@@ -45,9 +45,14 @@
     document.body.classList.toggle('layer-open', !!active);
     if (active) {
       // Walk ancestors too: some sheets live inside .wrap, others are siblings.
+      // Never inert anything stacked ABOVE the open layer: #celebrate (220), the
+      // tier reveal (210) and the age gate (230) sit over onboarding and sheets by
+      // design, and an inert overlay swallows every click on it.
+      var zTop = parseInt(getComputedStyle(active).zIndex, 10) || 0;
       for (var node = active; node && node !== document.body; node = node.parentElement) {
         Array.from(node.parentElement.children).forEach(function (sibling) {
           if (sibling === node || /^(SCRIPT|STYLE|LINK)$/.test(sibling.tagName)) return;
+          if ((parseInt(getComputedStyle(sibling).zIndex, 10) || 0) > zTop) return;
           if (!inerted.has(sibling)) { inerted.set(sibling, sibling.inert); sibling.inert = true; }
         });
       }
