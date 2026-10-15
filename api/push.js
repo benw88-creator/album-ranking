@@ -91,6 +91,12 @@ export default async function handler(req, res) {
     msg = { title: who, body: String(row.body || '').slice(0, 140), url: '/?dm=' + row.sender_id, tag: 'dm-' + row.sender_id };
   } else {
     to = row.user_id;
+    // data.username is written by the sending client; the lock screen shows the
+    // actor's real name instead, so nobody can push under somebody else's.
+    if (row.actor_id) {
+      const p = await sb('profiles?select=username&id=eq.' + row.actor_id).then(r => r.ok ? r.json() : []);
+      row.data = { ...(row.data || {}), username: (p[0] && p[0].username) || 'Someone' };
+    }
     msg = compose(row);
     msg.tag = 'n-' + row.id;
   }
