@@ -51,6 +51,19 @@ if (process.argv.includes('--accounts')) {
     rest(`follows?follower_id=eq.${A.id}&following_id=eq.${B.id}`, { token: A.token, method: 'DELETE' }),
     rest(`follows?follower_id=eq.${B.id}&following_id=eq.${A.id}`, { token: B.token, method: 'DELETE' }),
   ]);
+  // Snapshot exactly what is touched, so cleanup restores it rather than a default.
+  const snapshot = async () => ({
+    vis: (await rest(`profiles?select=ratings_visibility&id=eq.${A.id}`, { token: A.token }))[0]?.ratings_visibility,
+    ab: (await rest(`follows?select=follower_id&follower_id=eq.${A.id}&following_id=eq.${B.id}`, { token: A.token })).length,
+    ba: (await rest(`follows?select=follower_id&follower_id=eq.${B.id}&following_id=eq.${A.id}`, { token: B.token })).length,
+    rating: await countA(A.token),
+  });
+  const before = await snapshot();
+  assert.equal(before.rating, 0, 'test item already rated on account A; refusing to overwrite it');
+  // Leaving public fires unpublish_private_feed_trg, which deletes A's crate_feed
+  // posts for good. Restoring visibility would not bring them back.
+  const posts = await rest(`crate_feed?select=id&user_id=eq.${A.id}&limit=1`, { token: A.token });
+  assert.equal(posts.length, 0, 'account A has Crate feed posts that going private would delete; use an account with none');
   try {
     await unfollow();
     await rest('ratings?on_conflict=user_id,kind,item_id', { token: A.token, method: 'POST', prefer: 'resolution=merge-duplicates',
@@ -66,12 +79,20 @@ if (process.argv.includes('--accounts')) {
     await rest('follows', { token: A.token, method: 'POST', body: { follower_id: A.id, following_id: B.id } });
     assert.equal(await countA(B.token), 1, 'mutual friend reads friends-only');
     assert.equal(await countA(), 0, 'anon cannot read friends-only');
+    await setVis('private');
+    assert.equal(await countA(B.token), 0, 'mutual friend cannot read private');
     await setVis('public');
     assert.equal(await countA(), 1, 'anon reads public');
+    assert.equal(await countA(B.token), 1, 'signed-in user reads public');
     console.log('ok — owner, anon, stranger, one-way follower, mutual friend and public all behave');
   } finally {
     await unfollow().catch(e => console.error('cleanup follows:', e.message));
-    await setVis('public').catch(e => console.error('cleanup visibility:', e.message));
+    if (before.ab) await rest('follows', { token: A.token, method: 'POST', body: { follower_id: A.id, following_id: B.id } }).catch(e => console.error('restore A→B follow:', e.message));
+    if (before.ba) await rest('follows', { token: B.token, method: 'POST', body: { follower_id: B.id, following_id: A.id } }).catch(e => console.error('restore B→A follow:', e.message));
+    await setVis(before.vis || 'public').catch(e => console.error('cleanup visibility:', e.message));
     await rest(`ratings?user_id=eq.${A.id}&item_id=eq.${item}`, { token: A.token, method: 'DELETE' }).catch(e => console.error('cleanup rating:', e.message));
+    const after = await snapshot();
+    assert.deepEqual(after, before, 'accounts not restored: ' + JSON.stringify({ before, after }));
+    console.log('ok — restored: A visibility ' + after.vis + ', A→B follow ' + !!after.ab + ', B→A follow ' + !!after.ba + ', test rating removed');
   }
 }
