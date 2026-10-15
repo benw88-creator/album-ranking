@@ -6433,7 +6433,7 @@ The DPIA and the Online Safety Act assessments live in `compliance/`, which is
   item text capped at 120 and filtered; 60/hour) plus admin report alerts and
   pg_cron retention (`analytics_events` 13 months, `client_errors` 90 days, both
   stated in privacy v1.5). Applied 15 Oct. `api/push.js` shows the actor's real name.
-- Terms and privacy are **v1.5**. Report reasons include "Asking to meet up or for
+- **VINALL is operated by Excus Ltd** (company no. 17517058), the data controller and Online Safety Act provider. The director signs off company-level matters; Ben is the day-to-day admin. Terms and privacy are **v1.6**, and both name the company. Report reasons include "Asking to meet up or for
   personal details"; safety reports signpost Childline, Samaritans and 999.
   YouTube search uses `safeSearch: 'strict'`.
 - Birth year: the question is gone, the values are deleted, and
