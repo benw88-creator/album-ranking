@@ -922,7 +922,13 @@ migrations written since, not a full history — the core tables are not in ther
 the rest needs `supabase db pull`, which needs Docker, which needs WSL2, which needs admin
 rights — so it can only be done from the main PC, not the school laptop.
 
-**Several migrations were applied by hand in the SQL editor and are therefore not recorded in
+**History repaired 2026-10-15:** all 76 local migrations are now recorded remotely. The 65 that
+were applied by hand were each verified present in production (every created object, every
+live function body against its newest definition, data sentinels for the data-only ones) and
+recorded with `supabase migration repair --status applied` — no SQL re-run. Record future
+hand-applied migrations the same way. The paragraph below is the history of how it drifted.
+
+**Several migrations were applied by hand in the SQL editor and were therefore not recorded in
 Supabase's migration history**: `..._090000_protect_is_admin.sql`,
 `..._20260908120000_groove_roles.sql` and `..._20260909120000_listening_history.sql` (the last
 two applied 2026-09-09). A future `supabase db push` will try to apply all of them again.
