@@ -20,6 +20,9 @@
 
 import { cors } from './_cors.js';
 
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
+const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZnh5ZWJlanBreWhzd29scndpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMDI0MTYsImV4cCI6MjA5Njc3ODQxNn0.x9zL_qKAt465D-5Vw6bu8IIn-RxgUdfVbUoe1i4rsZs';
+
 const BAD = /\b(karaoke|cover|tribute|instrumental|8-?bit|slowed|sped up|reverb|nightcore|remix|lyrics?|reaction|live at|live from|concert|tutorial|piano version|1 hour|loop)\b/i;
 
 function loose(s) {
@@ -38,6 +41,16 @@ export default async function handler(req, res) {
   const artist = String((req.query && req.query.artist) || '').slice(0, 120);
   const title = String((req.query && req.query.title) || '').slice(0, 160);
   if (!artist || !title) { res.status(400).json({ error: 'artist and title are required' }); return; }
+
+  // Signed in only. Each uncached search spends 1% of the day's quota, and the
+  // edge cache is keyed on the query, so an open route was ~99 requests from
+  // switching Community Choice off for everybody.
+  const jwt = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  if (!jwt) { res.status(401).json({ error: 'Sign in to pick from YouTube' }); return; }
+  try {
+    const u = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + jwt } });
+    if (!u.ok) { res.status(401).json({ error: 'Session expired — log in again' }); return; }
+  } catch (e) { res.status(502).json({ error: 'Could not verify your session' }); return; }
 
   try {
     const q = artist + ' ' + title.replace(/\((feat|ft|with)[^)]*\)/gi, '');

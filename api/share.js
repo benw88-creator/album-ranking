@@ -154,7 +154,7 @@ ${best ? `<blockquote style="--c:${scoreColor(best.score)}">${esc(words(best.not
     }
 
     if (t === 'u' && /^[A-Za-z0-9_]{3,20}$/.test(k)) {
-      const [p] = await sb('profiles?select=id,username,bio,avatar_url,top3,ratings_visibility&username=ilike.' + k);
+      const [p] = await sb('profiles?select=id,username,bio,avatar_url,top3,ratings_visibility&username=ilike.' + encodeURIComponent(k.replace(/_/g, '\\_')));  // _ is a LIKE wildcard: /u/a__ must not match anybody
       if (!p) return notFound(res);
       const open = (p.ratings_visibility || 'public') === 'public';
       const top = open ? (p.top3 || []).filter(Boolean).slice(0, 3) : [];

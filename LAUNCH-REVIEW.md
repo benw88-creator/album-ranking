@@ -153,6 +153,20 @@ production. Target project: `cqfxyebejpkyhswolrwi`; application:
    playback and persistence on devices. Backend requests must continue using
    `https://www.vinall.xyz`, not the redirecting apex for CORS preflights.
 
+## Second pass (2026-10-14): what to approve, in order
+
+1. `20261015100000_ratings_visibility_policy.sql` (privacy blocker), then
+   `node scripts/verify-ratings-privacy.mjs --accounts` with two dedicated test
+   accounts (VERIFY_A_EMAIL/PASSWORD, VERIFY_B_EMAIL/PASSWORD). It writes only
+   those accounts' own rows and restores them.
+2. `20261015200000_launch_safety_and_moderation.sql`. Only data change: OG
+   badge for the 4 accounts with `[]`. Re-run `safety-review.mjs` against a
+   fresh `snapshot-safety.mjs` immediately before, in case production moved.
+3. Push the client (`main` deploys). Then, as the admin account, open your
+   profile: the Reports queue should say "Nothing waiting".
+4. Separately: `migration repair` for 20261015000000, 20261015100000 and
+   20261015200000 only if applied outside the migration workflow.
+
 ## Rollback boundaries
 
 - If the policy migration fails before COMMIT, its transaction rolls back;

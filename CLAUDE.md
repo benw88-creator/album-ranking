@@ -6373,6 +6373,32 @@ arcade cards and game sheets sat on a hardcoded violet-black.
   `data-theme="<key>"` so the theme's own token block paints it (including a strip of its five
   hues); `.sw-th[data-theme="classic"]` restates the `:root` values because Classic has no block.
 
+## Safety, age and moderation (2026-10-14)
+
+`assets/safety.js` and `..._20261015200000_launch_safety_and_moderation.sql`
+(**apply by hand, after 20261015100000**). See `LAUNCH-FIXES.md`.
+
+- **Age**: `AgeCheck.ensure(u)` asks once per account (auth `user_metadata.age_band`:
+  `under13` | `13-17` | `adult`), after sign-in so Apple/Google sign-in is covered.
+  Under 13 is signed out. 13–17 starts `ratings_visibility = 'friends'`. Only the
+  band is kept. Not a `.modal` (Back must not dismiss it). Onboarding waits on it.
+- **Non-public ratings never reach `crate_feed`**: `postToFeed` and `tellFollowers`
+  skip, `saveProfile` deletes your feed rows on leaving public, and the
+  `crate_feed_guard` trigger refuses them and stamps the real username/avatar.
+- **Text filter**: `is_abusive_text()` (server) and `hasSlur` (client) fold
+  accents/leetspeak and match WORDS. Never go back to substring matching: it
+  rejected "Scunthorpe". Feed notes are blanked, not refused, so a bulk import
+  cannot fail on one row.
+- **Reports**: any `[data-report]` button (kind, `data-rid`, `data-ruid`,
+  `data-rlabel`) is handled by one capture-phase listener. Album comments are
+  `fc:<id>`, song comments `sc:<id>`, reviews/feed posts the `crate_feed` id.
+  Admins work the queue on their own profile (`ModQueue`, `admin_reports`,
+  `admin_resolve`); suspension sets `auth.users.banned_until` and drops sessions
+  (an access token lives up to an hour).
+- **Album comments** use `feed_comments.album_id`; `feed_id` is a uuid FK to
+  `crate_feed` and `album:<id>` never fitted it.
+- **YouTube** loads nothing until `vinall_yt_ok` consent; `/api/youtube` needs a session.
+
 ## Performance pass (2026-10-14) — For You's first card, and setMode's forced layouts
 
 Measured with Playwright + Edge at 390×844, CDP CPU throttle 4×, `/api` proxied

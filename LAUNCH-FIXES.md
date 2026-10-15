@@ -1,6 +1,48 @@
 # VINALL launch technical fixes
 
-**Current review: NO-GO — one confirmed production ratings-privacy policy
+## Second pass — safety, UK compliance, moderation, abuse (2026-10-14)
+
+Nothing below is deployed or applied. Two migrations wait for approval, in
+order: `20261015100000_ratings_visibility_policy.sql` then
+`20261015200000_launch_safety_and_moderation.sql`. The client changes are
+safe to ship before them (each degrades: the moderation queue says "not
+switched on", album comments keep failing as they do today). Ship the client
+**after** the second migration if you want album comments to work on release.
+
+| Finding (verified against live definitions, read-only) | Fix | Where |
+| --- | --- | --- |
+| Anon can read private/friends ratings (`ratings are public to read`) | Drop the policy; guards | migration ...100000 |
+| "Just me"/"Friends" still published every score and note to the public `crate_feed`, reviews and `rated_too` notifications | Client skips; server refuses non-public authors' rows and unpublishes on leaving public | index.html, migration ...200000 §6 |
+| `crate_feed.username/avatar_url` were client-supplied: anyone could post as anyone | Server sets them from `profiles`, and resyncs on rename | §6 |
+| `collection_sell` refunded on every concurrent call (unlocked read, unchecked DELETE) | Row lock; only the call that deletes is paid | §1 |
+| Completionist milestones minted 12,000 Discs per invented `artistId`, without limit | Two comp claims per UTC day (trigger, no retyped function) | §2 |
+| `badges` and referral columns stopped being pinned (20260921140000 rebuilt the economy trigger from an older copy); 4 accounts never got OG | Separate invoker pin trigger; OG re-granted. No forged badges or referral counts found in production | §3 |
+| Higher or Lower accepted any streak to 2,000 | Bounded by the player's rated albums, 0.7s/guess floor | §4 |
+| Album-page comments could never save: `feed_id` is a uuid FK, the client wrote `album:<id>` | `feed_comments.album_id`; client reads/writes it | §4b, index.html |
+| Slur filter was client-only (bypassable) except song comments, and substring-based ("Scunthorpe", "conspicuous" rejected) | `is_abusive_text()` on comments, lists, grooves, moments, suggestions, profiles; feed notes dropped not refused (bulk import); client `hasSlur` mirrors it | §5, index.html |
+| No admin way to see or act on reports, no suspension, reporters never heard back | `admin_reports`, `admin_resolve` (dismiss/remove/suspend), `admin_unsuspend`; queue on the admin's own profile; reporter and author notified | §7, assets/safety.js |
+| Report only on profiles and song comments | Also reviews, Crate feed posts, album comments, Community Choice picks; child-safety, threats/self-harm and illegal-content reasons | index.html, safety.js |
+| No delete for your own album comments | Delete control | safety.js |
+| Blocked users still appeared in album-page ratings | Filtered | index.html |
+| No age question anywhere (email or Apple/Google sign-in) | One-time 13+ age-band question per account; under-13 signed out; 13–17 start friends-only | assets/safety.js |
+| YouTube embed/probe loaded youtube.com (cookies) before any choice | One-time consent before anything loads from YouTube; decline keeps Deezer | index.html |
+| `/api/youtube` open: ~99 anonymous requests exhaust the day's quota | Requires a signed-in session | api/youtube.js |
+| `/u/<name>` share pages: `_` was a LIKE wildcard | Escaped | api/share.js |
+
+Checks: `npm run check` (all groups), Playwright chrome 37/37 including the
+new `tests/safety.spec.mjs` (age bands). Migration ...200000 was run twice in
+PGlite against a read-only snapshot of the production schema
+(`scripts/audit-artifacts/snapshot-safety.mjs` + `safety-review.mjs`,
+gitignored with the snapshot): 10 groups pass. Live ratings check:
+`node scripts/verify-ratings-privacy.mjs` (read-only) passes; `--accounts`
+runs the full matrix after approval with two dedicated test accounts.
+
+Legal pages are v1.4 (age question, visibility effect, YouTube consent,
+moderation, appeals). They promise a **48-hour** review target and a 14-day
+appeal reply — operational commitments; change the numbers if they cannot be
+kept.
+
+**Previous review: NO-GO — one confirmed production ratings-privacy policy
 defect.** See `LAUNCH-REVIEW.md` for independent verification and the safe,
 approval-dependent correction/release sequence. Production already contains
 the launch migration's objects and serves the merged HEAD frontend; this was

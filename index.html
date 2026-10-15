@@ -11402,7 +11402,7 @@ window.discAmt = function (n) {
       <button data-vis="friends" style="flex:1;">Friends</button>
       <button data-vis="public" style="flex:1;">Anyone</button>
     </div>
-    <div class="reco-note" id="pedit-visibility-note" style="margin-top:6px;">Friends means mutual follows &mdash; you follow each other.</div>
+    <div class="reco-note" id="pedit-visibility-note" style="margin-top:6px;">Friends means mutual follows &mdash; you follow each other. Just me and Friends also keep your scores and notes out of the public Crate feed and album reviews.</div>
     <button class="btn-primary g-btn-full" id="pedit-save" style="margin-top:18px;">Save profile</button>
     <div class="g-error" id="pedit-error"></div>
   </div>
@@ -16678,7 +16678,10 @@ const Cloud=(function(){
     /* AFTER the merge, which is what makes the flag per-account rather than
        per-device: before it, this browser's localStorage may still belong to
        the last person who signed in here. */
-    if(window.Onboard)try{Onboard.maybeStart();}catch(e){}
+    /* The age question comes first and is not awaited here (Cloud.ready waits
+       on this function). Onboarding only starts once it is answered 13+. */
+    if(window.AgeCheck)AgeCheck.ensure(u).then(function(ok){if(ok&&window.Onboard)try{Onboard.maybeStart();}catch(e){}});
+    else if(window.Onboard)try{Onboard.maybeStart();}catch(e){}
     
     try{renderStats();renderAlbums();renderSongs();renderActivity();_recsDirty=true;if(window.refreshNotifDot)refreshNotifDot();if(currentMode==='home'){renderArtistHero();if(window.renderToday)renderToday(true);if(window.renderDiary)renderDiary();}if(window.Reminders)Reminders.sync();if(window.warmCollection)warmCollection();if(currentMode==='foryou'&&window.ForYou){ForYou.build(true);}else if(window.ForYou){/* Warmed quietly while hidden (display:none skips the IntersectionObserver,
       so nothing plays or scrolls by itself) so the FIRST time somebody opens
@@ -17102,7 +17105,7 @@ const Cloud=(function(){
   function getUser(){return user;}
   function client(){return sb;}
   async function fetchProfile(uid){if(!sb)return null;try{const res=await sb.from('profiles').select('*').eq('id',uid).single();return res.data||null;}catch(e){return null;}}
-  async function saveProfile(fields){if(!isOn())return{error:'not logged in'};try{const row=Object.assign({id:user.id,updated_at:new Date().toISOString()},fields);const res=await sb.from('profiles').upsert(row).select().single();if(!res.error&&res.data&&window.Wallet&&Wallet.noteProfile)Wallet.noteProfile(res.data);return res.error?{error:res.error.message}:{data:res.data};}catch(e){return{error:String(e&&e.message||e)};}}
+  async function saveProfile(fields){if(!isOn())return{error:'not logged in'};try{const row=Object.assign({id:user.id,updated_at:new Date().toISOString()},fields);const res=await sb.from('profiles').upsert(row).select().single();if(!res.error&&res.data&&window.Wallet&&Wallet.noteProfile)Wallet.noteProfile(res.data);/* Leaving public takes your posts out of the public feed and album reviews (the server does this too). */if(!res.error&&fields.ratings_visibility&&fields.ratings_visibility!=='public'){try{await sb.from('crate_feed').delete().eq('user_id',user.id);}catch(e){}}return res.error?{error:res.error.message}:{data:res.data};}catch(e){return{error:String(e&&e.message||e)};}}
   async function uploadAvatar(file){if(!isOn())return{error:'not logged in'};try{const ext=(file.name.split('.').pop()||'jpg').toLowerCase();const path=user.id+'/avatar.'+ext;const up=await sb.storage.from('avatars').upload(path,file,{upsert:true,cacheControl:'3600'});if(up.error)return{error:up.error.message};const pub=sb.storage.from('avatars').getPublicUrl(path);const url=(pub.data&&pub.data.publicUrl)?pub.data.publicUrl+'?t='+Date.now():'';return{url:url};}catch(e){return{error:String(e&&e.message||e)};}}
   async function likeSong(rec){if(!isOn())return;try{await sb.from('liked_songs').upsert({user_id:user.id,track_key:rec.id,name:rec.name,artist:rec.artist,art:rec.art},{onConflict:'user_id,track_key'});}catch(e){}}
   async function unlikeSong(id){if(!isOn())return;try{await sb.from('liked_songs').delete().eq('user_id',user.id).eq('track_key',id);}catch(e){}}
@@ -17174,6 +17177,10 @@ const Cloud=(function(){
     if(!isOn())return;
     try{
       let me=null;try{me=await fetchProfile(user.id);}catch(e){}
+      /* The feed is public to read, so a private or friends-only crate must
+         not post to it — otherwise "Just me" hides the grid and publishes the
+         same scores and notes here. The server refuses these rows too. */
+      if(me&&me.ratings_visibility&&me.ratings_visibility!=='public')return;
       // upsert by user+album so re-rating just updates the existing row
       await sb.from('crate_feed').upsert({
         user_id:user.id,
@@ -17383,8 +17390,11 @@ const Cloud=(function(){
     if(!isOn())return{error:'not logged in'};
     try{
       let me=null;try{me=await fetchProfile(user.id);}catch(e){}
+      /* feed_id is a uuid FK to crate_feed, so album-page comments ('album:<id>')
+         go in album_id instead (20261015200000). They could never save before. */
+      const album=String(feedId).indexOf('album:')===0?String(feedId).slice(6):null;
       const res=await sb.from('feed_comments').insert({
-        feed_id:feedId,user_id:user.id,
+        feed_id:album?null:feedId,album_id:album,user_id:user.id,
         username:(me&&me.username)||'user_'+user.id.slice(0,8),
         avatar_url:(me&&me.avatar_url)||'',
         body:body
@@ -17395,7 +17405,8 @@ const Cloud=(function(){
   async function fetchComments(feedId){
     if(!sb)return[];
     try{
-      const res=await sb.from('feed_comments').select('*').eq('feed_id',feedId).order('created_at',{ascending:true});
+      const album=String(feedId).indexOf('album:')===0?String(feedId).slice(6):null;
+      const res=await (album?sb.from('feed_comments').select('*').eq('album_id',album):sb.from('feed_comments').select('*').eq('feed_id',feedId)).order('created_at',{ascending:true});
       return res.data||[];
     }catch(e){return[];}
   }
@@ -17404,7 +17415,7 @@ const Cloud=(function(){
     try{
       // join profiles to get username+avatar alongside the rating data
       const res=await sb.from('ratings').select('user_id,data,updated_at,profiles(username,avatar_url)').eq('kind','album').eq('item_id',albumId).order('updated_at',{ascending:false});
-      return (res.data||[]).map(function(r){return Object.assign({},r.data,{username:(r.profiles&&r.profiles.username)||'user',avatar_url:(r.profiles&&r.profiles.avatar_url)||''});});
+      return (res.data||[]).map(function(r){return Object.assign({},r.data,{user_id:r.user_id,username:(r.profiles&&r.profiles.username)||'user',avatar_url:(r.profiles&&r.profiles.avatar_url)||''});});
     }catch(e){return[];}
   }
   async function fetchLists(uid){if(!sb)return[];try{const res=await sb.from('lists').select('*').eq('user_id',uid).order('updated_at',{ascending:false});return res.data||[];}catch(e){return[];}}
@@ -17560,8 +17571,10 @@ async function searchItems(query,kind){
 }
 
 function sanitizeText(s,max){return String(s||'').replace(/[<>]/g,'').slice(0,max).trim();}
-const BAD_WORDS=['nigger','faggot','retard','kike','spic','chink','cunt'];
-function hasSlur(s){const n=String(s||'').toLowerCase().replace(/[^a-z]/g,'');return BAD_WORDS.some(function(w){return n.indexOf(w)!==-1;});}
+/* Mirrors public.is_abusive_text (20261015200000): fold accents and leetspeak,
+   match WORDS (so Scunthorpe and conspicuous pass), and a few long ones squashed
+   (so f.a.g.g.o.t is caught). The server is the boundary; this answers early. */
+function hasSlur(s){const f=String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[013457@$]/g,function(c){return {"0":"o","1":"i","3":"e","4":"a","5":"s","7":"t","@":"a","$":"s"}[c];});const w=" "+f.replace(/[^a-z]+/g," ")+" ",q=f.replace(/[^a-z]/g,"");return /\s(nigg(er|a|az|ers)|faggots?|fags?|retards?|kikes?|spics?|chinks?|cunts?|trann(y|ies)|kys)\s/.test(w)||/(nigger|faggot|killyourself|hopeyoudie|^kys$)/.test(q);}
 function validUsername(u){return/^[a-zA-Z0-9_]{3,20}$/.test(u);}
 
 var _profileRenderTok = 0;
@@ -19250,7 +19263,7 @@ window.renderProfile=renderProfile;
 /* ================================================================
    13. NOTIFICATIONS + SUGGESTIONS
    ================================================================ */
-function notifText(n){const who=esc((n.data&&n.data.username)||'Someone');if(n.type==='follow')return who+' followed you';if(n.type==='suggestion'){const it=(n.data&&n.data.item)||{};const kind=(n.data&&n.data.kind)||'album';const label=kind==='list'?'the list':(kind==='song'?'the song':'the album');return who+' recommended '+label+' <b>'+esc(it.name||'')+'</b>'+(it.artist?' by '+esc(it.artist):'');}if(n.type==='groove_invite')return who+' invited you to a Groove';if(n.type==='rated_too'){const it=(n.data&&n.data.item)||{};return who+' gave <b>'+esc(it.name||'a record')+'</b> '+esc(String(n.data.score))+(n.data.yours!=null?' — you gave it '+esc(String(n.data.yours)):'');}if(n.type==='review_like'){const it=(n.data&&n.data.item)||{};return who+' liked your review of <b>'+esc(it.name||'a record')+'</b>';}if(n.type==='blitz_challenge')return who+' challenged you to <b>Cover Fire</b>';if(n.type==='blitz_turn')return who+' scored <b>'+esc(String((n.data&&n.data.score)||0))+'</b> in Cover Fire \u2014 your go';if(n.type==='blitz_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' at Cover Fire'):o==='lost'?(who+' beat you at Cover Fire'):('You and '+who+' tied at Cover Fire');}if(n.type==='bid_war_challenge')return who+' challenged you to a <b>Bid War</b>';if(n.type==='bid_war_turn')return who+' has bid &mdash; your move';if(n.type==='bid_war_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' in a Bid War'):o==='lost'?(who+' beat you in a Bid War'):('Your Bid War with '+who+' ended level');}return who+' did something';}
+function notifText(n){const who=esc((n.data&&n.data.username)||'Someone');if(n.type==='follow')return who+' followed you';if(n.type==='suggestion'){const it=(n.data&&n.data.item)||{};const kind=(n.data&&n.data.kind)||'album';const label=kind==='list'?'the list':(kind==='song'?'the song':'the album');return who+' recommended '+label+' <b>'+esc(it.name||'')+'</b>'+(it.artist?' by '+esc(it.artist):'');}if(n.type==='groove_invite')return who+' invited you to a Groove';if(n.type==='rated_too'){const it=(n.data&&n.data.item)||{};return who+' gave <b>'+esc(it.name||'a record')+'</b> '+esc(String(n.data.score))+(n.data.yours!=null?' — you gave it '+esc(String(n.data.yours)):'');}if(n.type==='review_like'){const it=(n.data&&n.data.item)||{};return who+' liked your review of <b>'+esc(it.name||'a record')+'</b>';}if(n.type==='blitz_challenge')return who+' challenged you to <b>Cover Fire</b>';if(n.type==='blitz_turn')return who+' scored <b>'+esc(String((n.data&&n.data.score)||0))+'</b> in Cover Fire \u2014 your go';if(n.type==='blitz_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' at Cover Fire'):o==='lost'?(who+' beat you at Cover Fire'):('You and '+who+' tied at Cover Fire');}if(n.type==='bid_war_challenge')return who+' challenged you to a <b>Bid War</b>';if(n.type==='bid_war_turn')return who+' has bid &mdash; your move';if(n.type==='bid_war_result'){const o=(n.data&&n.data.outcome)||'';return o==='won'?('You beat '+who+' in a Bid War'):o==='lost'?(who+' beat you in a Bid War'):('Your Bid War with '+who+' ended level');}if(n.type==='report_update')return (n.data&&n.data.outcome)==='actioned'?'Thanks for your report — we have <b>taken action</b>':'Thanks for your report — we reviewed it and <b>left it up</b>';if(n.type==='content_removed')return 'A moderator removed something you posted'+(n.data&&n.data.note?': '+esc(n.data.note):'')+'. To appeal, email vinall.support@gmail.com';return who+' did something';}
 function notifEmoji(t){return t==='follow'?ICONS.people:(t==='suggestion'||t==='rated_too'||t==='review_like')?ICONS.note:t==='groove_invite'?ICONS.groove:(t==='bid_war_challenge'||t==='bid_war_turn'||t==='bid_war_result'||t==='blitz_challenge'||t==='blitz_turn'||t==='blitz_result')?ICONS.trophy:ICONS.bell;}
 
 async function renderNotifications(){
@@ -19775,6 +19788,7 @@ window.handleGrooveLink=handleGrooveLink;
           (listed ? 'Shortlisted' : 'Not heard') + '</button>';
     }
     html += '<button class="cf-action-btn cf-comment-btn" data-action="ap" aria-label="Discuss">💬</button>';
+    if (!isMine && post.id) html += '<button class="cf-action-btn" data-report="feed" data-rid="' + esc(post.id) + '" data-ruid="' + esc(post.user_id || '') + '" data-rlabel="' + esc((post.username || 'user') + '’s post') + '" aria-label="Report this post" title="Report">⚑</button>';
     bar.innerHTML = html;
   }
 
@@ -20039,7 +20053,11 @@ window.handleGrooveLink=handleGrooveLink;
       '<div class="ap-comment-bubble">'+
         '<div class="ap-comment-name">'+esc(c.username||'user')+'</div>'+
         '<div class="ap-comment-body">'+esc(c.body)+'</div>'+
-        '<div class="ap-comment-time">'+esc(timeAgo2(c.created_at))+'</div>'+
+        '<div class="ap-comment-time">'+esc(timeAgo2(c.created_at))+
+          (c.id?(window.Cloud&&Cloud.getUser&&Cloud.getUser()&&Cloud.getUser().id===c.user_id
+            ?' · <button class="ap-comment-act" data-comment-del="'+esc(c.id)+'">Delete</button>'
+            :' · <button class="ap-comment-act" data-report="comment" data-rid="fc:'+esc(c.id)+'" data-ruid="'+esc(c.user_id||'')+'" data-rlabel="'+esc((c.username||'user')+'’s comment')+'">Report</button>'):'')+
+        '</div>'+
       '</div>';
     return row;
   }
@@ -20109,7 +20127,7 @@ window.handleGrooveLink=handleGrooveLink;
       avgEl.textContent=avg;
       avgEl.style.setProperty('--score',albumColor(avg));
       document.getElementById('ap-avg-count').textContent=ratings.length+' rating'+(ratings.length===1?'':'s');
-      document.getElementById('ap-ratings-list').innerHTML=ratings.map(function(r){
+      document.getElementById('ap-ratings-list').innerHTML=ratings.filter(function(r){return !(r.user_id&&window.isBlocked&&isBlocked(r.user_id));}).map(function(r){
         const col=albumColor(r.score||0);
         return'<div class="ap-rating-row" style="--score:'+col+'">'+
           '<img class="ap-rating-av" src="'+esc(r.avatar_url||DEFAULT_AV)+'" alt="" onerror="this.src=\''+DEFAULT_AV+'\'">'+
@@ -26018,6 +26036,7 @@ window.isBlocked = isBlocked;
 window.loadBlocks = loadBlocks;
 
 const REPORT_REASONS = ['Harassment or bullying', 'Hate speech', 'Sexual content',
+                        'Child safety concern', 'Threats, violence or self-harm', 'Illegal content',
                         'Spam or scam', 'Impersonation', 'Something else'];
 
 function drawSafety(host, prof, isOwner) {
@@ -26178,6 +26197,7 @@ async function renderAdminStats() {
   var prof = null;
   try { prof = await Cloud.fetchProfile(Cloud.getUser().id); } catch (e) {}
   if (!prof || !prof.is_admin) return;      // silent for everyone else
+  if (window.ModQueue) ModQueue.mount(host);   // the reports queue, above the stats
 
   host.innerHTML = '<h3 class="prof-section-title">Stats</h3><p class="reco-note ld-line">Loading…</p>';
 
@@ -26636,8 +26656,24 @@ window.renderAdminStats = renderAdminStats;
   function isYT(m) { return m && m.source === 'youtube' && m.video_id; }
   function total(m) { return isYT(m) ? (m.duration_ms || CLIP_MS) : CLIP_MS; }
   var _yt = null;
+  /* Nothing from youtube.com loads until somebody agrees to it once: the embed
+     sets YouTube's own cookies and sees the visitor's IP, which PECR treats as
+     needing consent. Declining keeps Deezer previews and "Open on YouTube". */
+  var YT_OK = 'vinall_yt_ok';
+  function ytOk() { try { return localStorage.getItem(YT_OK) === '1'; } catch (e) { return false; } }
+  function ytConsent() {
+    if (ytOk()) return Promise.resolve(true);
+    if (!window.ask) return Promise.resolve(false);
+    return ask({ title: 'Play from YouTube?',
+      body: 'Some picks play in YouTube’s own player. YouTube may set cookies and will see your IP address. See our <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.',
+      confirm: 'Allow YouTube', cancel: 'Not now' }).then(function (yes) {
+      if (yes) try { localStorage.setItem(YT_OK, '1'); } catch (e) {}
+      return !!yes;
+    });
+  }
   function loadYT() {
     if (_yt) return _yt;
+    if (!ytOk()) return ytConsent().then(function (yes) { if (!yes) throw new Error('youtube declined'); return loadYT(); });
     _yt = new Promise(function (res, rej) {
       if (window.YT && YT.Player) { res(YT); return; }
       var prev = window.onYouTubeIframeAPIReady;
@@ -27006,7 +27042,8 @@ window.renderAdminStats = renderAdminStats;
     }
     var on = !!st.liked[m.id], open = on || st.heard[m.id];
     return '<button class="cc-agree' + (on ? ' is-on' : '') + (open ? '' : ' is-locked') + '" type="button" data-cc-agree aria-pressed="' + on + '"' +
-      (open ? '' : ' title="Hear it first"') + '>' + IC_CHECK + '<b>' + n + '</b><span>' + (on ? 'Agreed' : 'Agree') + '</span></button>';
+      (open ? '' : ' title="Hear it first"') + '>' + IC_CHECK + '<b>' + n + '</b><span>' + (on ? 'Agreed' : 'Agree') + '</span></button>' +
+      '<button class="cc-del" type="button" data-report="moment" data-rid="' + esc(m.id) + '" data-ruid="' + esc(m.user_id || '') + '" data-rlabel="this pick" aria-label="Report this pick" title="Report">⚑</button>';
   }
   // A YouTube pick says WHERE in the song it is, because that is now a real
   // place in the song; a preview pick only how long, because 0:12 into
@@ -27247,7 +27284,7 @@ window.renderAdminStats = renderAdminStats;
     // Re-entering keeps the list you were reading, as the Crate does; a pick
     // posted elsewhere arrives with Refresh or a change of tab.
     if (!st.items.length || st.off) load(true);
-    probeYT(false);
+    if (ytOk()) probeYT(false);
   }
 
   /* ---- will YouTube play here? ----------------------------------------
@@ -27286,6 +27323,9 @@ window.renderAdminStats = renderAdminStats;
     yp.status = 'blocked'; yp.closed = false; probeSave(false); paintProbe(false);
   }
   function probeYT(force) {
+    // Without consent there is no probe at all; the picker treats it as blocked
+    // and offers the Deezer preview, with no "blocked on your network" banner.
+    if (!ytOk()) return ytConsent().then(function (yes) { return yes ? probeYT(force) : 'blocked'; });
     if (!force) {
       if (yp.p) return yp.p;
       var c = yp.status || probeCached();
@@ -27480,7 +27520,12 @@ window.renderAdminStats = renderAdminStats;
     // looking a video up only spends search quota on a player that fails.
     var ytAsk = probeYT(false).then(function (status) {
       if (status === 'blocked') return { blocked: true };
-      return fetch(base + '/api/youtube?artist=' + encodeURIComponent(item.artist || '') + '&title=' + encodeURIComponent(item.name || ''))
+      // Signed-in only: each uncached search spends 1% of the day's YouTube quota.
+      return Promise.resolve(window.Cloud && Cloud.client ? Cloud.client().auth.getSession() : null).then(function (s) {
+        var tok = s && s.data && s.data.session && s.data.session.access_token;
+        return fetch(base + '/api/youtube?artist=' + encodeURIComponent(item.artist || '') + '&title=' + encodeURIComponent(item.name || ''),
+          tok ? { headers: { Authorization: 'Bearer ' + tok } } : undefined);
+      })
         .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
     });
     ytAsk.then(function (j) {
@@ -39790,6 +39835,7 @@ window.track = function (name, props) {
         '<button class="rv-like' + (iLike(r.id) ? ' is-on' : '') + '" data-rv="like" data-id="' + esc(r.id) + '"' + (mineRow ? ' disabled' : '') + ' aria-label="Like this review">' +
           '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.6S2 10.1 2 5.9A3 3 0 0 1 8 4.4a3 3 0 0 1 6 1.5c0 4.2-6 7.7-6 7.7Z"/></svg><span>' + (likeCount(r.id) || '') + '</span></button>' +
         '<button class="rv-share" data-rv="share" data-id="' + esc(r.id) + '">Share</button>' +
+        (mineRow ? '' : '<button class="rv-share" data-report="feed" data-rid="' + esc(r.id) + '" data-ruid="' + esc(r.user_id) + '" data-rlabel="' + esc((r.username || 'user') + '’s review') + '">Report</button>') +
       '</footer>' +
     '</article>';
   }
@@ -39927,6 +39973,8 @@ window.track = function (name, props) {
       rows.forEach(function (x) { cap.n[x.user_id] = (cap.n[x.user_id] || 0) + 1; });
       try { localStorage.setItem(KEY, JSON.stringify(cap)); } catch (e) {}
       var p = await myProf();
+      // A private or friends-only crate does not announce its scores either.
+      if (p && p.ratings_visibility && p.ratings_visibility !== 'public') return;
       await c.from('notifications').insert(rows.map(function (x) {
         return { user_id: x.user_id, actor_id: uid, type: 'rated_too',
           data: { username: (p && p.username) || 'someone', avatar_url: (p && p.avatar_url) || '', score: score, yours: x.score,
@@ -41066,4 +41114,5 @@ window.track = function (name, props) {
 <script src="/assets/charades.js?v=1"></script>
 <script src="/assets/passport-core.js?v=1"></script>
 <script src="/assets/passport.js?v=1"></script>
+<script src="/assets/safety.js?v=1"></script>
 </html>
