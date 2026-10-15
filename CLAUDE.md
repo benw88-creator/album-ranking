@@ -6425,14 +6425,14 @@ The DPIA and the Online Safety Act assessments live in `compliance/`, which is
 - **`push_fanout()` broke every notification insert from 3 Oct 2026** (it read
   `new.recipient_id` on `notifications`; PL/pgSQL resolves the field even on the
   untaken branch). That silently killed follow alerts and game turns, and made
-  every `admin_resolve` fail. Fix: `20261016110000_fix_push_fanout.sql`.
+  every `admin_resolve` fail. Fixed by `20261016110000_fix_push_fanout.sql` (applied 15 Oct).
   **A trigger shared by two tables must not name a column only one of them has.**
 - **User-written notifications were a second DM channel:** the insert policy only
   checks `actor_id = auth.uid()`. `20261016120000` adds an INVOKER guard (five
   client types; blocks via `can_message`; real username, avatar and groove name;
   item text capped at 120 and filtered; 60/hour) plus admin report alerts and
   pg_cron retention (`analytics_events` 13 months, `client_errors` 90 days, both
-  stated in privacy v1.5). `api/push.js` already shows the actor's real name.
+  stated in privacy v1.5). Applied 15 Oct. `api/push.js` shows the actor's real name.
 - Terms and privacy are **v1.5**. Report reasons include "Asking to meet up or for
   personal details"; safety reports signpost Childline, Samaritans and 999.
   YouTube search uses `safeSearch: 'strict'`.

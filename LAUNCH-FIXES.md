@@ -6,10 +6,12 @@ Deployed: terms/privacy v1.5, reports queue (priority, overdue, photo, history,
 avatar file deletion), grooming report reason, support signposting, YouTube
 SafeSearch, real sender names on pushes. Applied with approval: DMs closed and
 birth years cleared (`20261016100000`, recorded in history); Ben made admin.
-**Awaiting approval:** `20261016110000` (notifications have failed since 3 Oct,
-which blocks every moderation action) and `20261016120000` (retention, report
-alerts, notification guard). Both were dry-run and behaviour-tested on
-production inside rolled-back transactions. Checks: `npm run check` all
+**Applied with approval and recorded in history:** `20261016110000` (notifications
+had failed since 3 Oct, blocking every moderation action) and `20261016120000`
+(retention jobs, report alerts, notification guard). They were verified live
+inside rolled-back transactions: the guard refuses bad types and abusive text and
+rewrites names; a report reaches the queue and alerts the admin; resolving
+notifies the reporter. Checks: `npm run check` all
 groups; Playwright 39/39.
 
 ## Second pass — safety, UK compliance, moderation, abuse (2026-10-14)
