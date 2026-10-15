@@ -6405,6 +6405,41 @@ arcade cards and game sheets sat on a hardcoded violet-black.
   `crate_feed` and `album:<id>` never fitted it.
 - **YouTube** loads nothing until `vinall_yt_ok` consent; `/api/youtube` needs a session.
 
+### UK compliance pass (2026-10-15)
+
+The DPIA and the Online Safety Act assessments live in `compliance/`, which is
+**gitignored on purpose**: this repo is public. Never force-add it.
+
+- **Admin:** Ben's own account (`ben.e.wild@icloud.com`) is `is_admin`; the two test
+  accounts (`vinall.support@gmail.com`, `spam30491@gmail.com`) are not.
+  `scripts/verify-ratings-privacy.mjs --accounts` prompts for their passwords
+  (masked, paste-safe) and restores both accounts exactly.
+- **The queue** (`ModQueue` in `assets/safety.js`, top of the admin's own profile):
+  safety reasons first (`URGENT` regex: child safety, meet up/personal details,
+  threats, self-harm, illegal, sexual) with a 24h target, everything else 48h,
+  overdue flags, the reported photo shown, and Open/Actioned/Dismissed tabs.
+  Removing a profile **deletes the avatar files**: `admin_resolve` only clears
+  `avatar_url`, so the queue then POSTs `{moderate:'avatar', user}` to
+  `/api/delete-account`, which checks `is_admin()` **as the caller** before using
+  the service role. It is there because Hobby caps routes at twelve (trap 11).
+- **`push_fanout()` broke every notification insert from 3 Oct 2026** (it read
+  `new.recipient_id` on `notifications`; PL/pgSQL resolves the field even on the
+  untaken branch). That silently killed follow alerts and game turns, and made
+  every `admin_resolve` fail. Fix: `20261016110000_fix_push_fanout.sql`.
+  **A trigger shared by two tables must not name a column only one of them has.**
+- **User-written notifications were a second DM channel:** the insert policy only
+  checks `actor_id = auth.uid()`. `20261016120000` adds an INVOKER guard (five
+  client types; blocks via `can_message`; real username, avatar and groove name;
+  item text capped at 120 and filtered; 60/hour) plus admin report alerts and
+  pg_cron retention (`analytics_events` 13 months, `client_errors` 90 days, both
+  stated in privacy v1.5). `api/push.js` already shows the actor's real name.
+- Terms and privacy are **v1.5**. Report reasons include "Asking to meet up or for
+  personal details"; safety reports signpost Childline, Samaritans and 999.
+  YouTube search uses `safeSearch: 'strict'`.
+- Birth year: the question is gone, the values are deleted, and
+  `profiles_birth_year_unused` keeps the column empty. DMs: there is no insert policy
+  on `messages` (`20261016100000`).
+
 ## Performance pass (2026-10-14) — For You's first card, and setMode's forced layouts
 
 Measured with Playwright + Edge at 390×844, CDP CPU throttle 4×, `/api` proxied

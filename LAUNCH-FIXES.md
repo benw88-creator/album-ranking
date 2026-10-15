@@ -1,5 +1,17 @@
 # VINALL launch technical fixes
 
+## Third pass — UK compliance and moderation (2026-10-15)
+
+Deployed: terms/privacy v1.5, reports queue (priority, overdue, photo, history,
+avatar file deletion), grooming report reason, support signposting, YouTube
+SafeSearch, real sender names on pushes. Applied with approval: DMs closed and
+birth years cleared (`20261016100000`, recorded in history); Ben made admin.
+**Awaiting approval:** `20261016110000` (notifications have failed since 3 Oct,
+which blocks every moderation action) and `20261016120000` (retention, report
+alerts, notification guard). Both were dry-run and behaviour-tested on
+production inside rolled-back transactions. Checks: `npm run check` all
+groups; Playwright 39/39.
+
 ## Second pass — safety, UK compliance, moderation, abuse (2026-10-14)
 
 **Released 2026-10-15** with owner approval: both migrations applied to production via
