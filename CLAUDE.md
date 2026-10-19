@@ -1065,6 +1065,15 @@ else.
 Lore keeps its trigger and uses `Wallet.syncAward()`, which re-reads and toasts the difference
 that actually landed, so nothing is promised once the daily cap is hit.
 
+**A daily cap is only a cap if the check and the payout are one atomic step**
+(`..._20261016130000_economy_races.sql`). `award_lore_disc` read the count, then wrote
+`count = v_count + 1` beside a relative `discs + 250`, so fifty parallel inserts all paid.
+It is one conditional UPDATE now (Postgres re-checks the WHERE on the locked row), and
+`limit_comp_claims` takes a per-user advisory lock before counting. Any new
+count-then-act cap needs one or the other. The same file stops a client-created profile
+row arriving with `active_*` cosmetics it does not own. It acts only on a genuinely new
+row, because equipping is an UPSERT and BEFORE INSERT triggers fire for those too.
+
 **A reward that vanishes on refresh is worse than no reward.** Before adding feel to a game,
 check the feel is attached to something real.
 

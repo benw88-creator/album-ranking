@@ -15,7 +15,12 @@
 | Notification-dot poll ran in hidden tabs | Skipped when hidden; refreshed on return |
 | **Moderation:** pressing Remove without typing a reason cancelled silently (the shared `ask()` treats an empty box as cancel) | `ask({ optional: true })`; the reason is labelled optional; unsuspend errors surface |
 
-**Drafted, NOT applied (needs approval):** `20261016130000_economy_races.sql`. Lore's
+**Applied with approval 2026-10-20 and recorded in history:** `20261016130000_economy_races.sql`.
+Drift check first (the live lore body was the old unlocked one; the Completionist cap had
+no lock). Then verified in a rolled-back transaction against production, applied twice:
+a forged profile insert came back `null/classic/null`, an upsert of an owned theme kept
+it, 22 lore answers paid exactly 5,000 (count 20), and a third comp claim was refused.
+Nothing persisted. Lore's
 20-a-day cap and the two-a-day Completionist cap could both be raced with parallel
 requests (estimated ~250k and ~600k Discs a day), and a client-created profile row
 could arrive wearing unowned cosmetics, including the not-for-sale `virji` tag.

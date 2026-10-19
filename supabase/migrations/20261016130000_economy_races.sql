@@ -1,4 +1,5 @@
--- Economy race fixes (2026-10-16). NOT APPLIED until the owner approves.
+-- Economy race fixes (2026-10-16). Applied with owner approval 2026-10-20,
+-- after a rolled-back verification on production; recorded in migration history.
 -- Idempotent: safe to run twice. Touches no stored data.
 --
 -- 1. award_lore_disc read lore_awards_count without a lock and then wrote
