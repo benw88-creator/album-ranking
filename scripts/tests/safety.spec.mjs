@@ -94,3 +94,34 @@ test('the reports queue puts safety reports first, flags overdue ones and shows 
   await expect(cards.nth(1)).toContainText('overdue');          // ordinary, 60h > 48h
   await expect(page.locator('#admin-mod [data-view="actioned"]')).toBeVisible();
 });
+
+// The reports queue, against a stub client: safety reports lead, a removal
+// with no typed reason still goes through (an empty prompt used to cancel it),
+// and the call carries what the server needs.
+test('moderation queue: safety first, Remove works without a reason', async ({ page }) => {
+  await start(page);
+  const calls = await page.evaluate(async () => {
+    const calls = [], old = Date.now() - 30 * 36e5;
+    const rows = [
+      { kind: 'feed', target: 'f1', target_user: 'u1', target_username: 'spammer', reports: 1, first_at: new Date(old).toISOString(), content: 'buy now', items: [{ reason: 'Spam or scam', reporter: 'a' }] },
+      { kind: 'comment', target: 'sc:9', target_user: 'u2', target_username: 'creep', reports: 1, first_at: new Date().toISOString(), content: 'what school are you at', items: [{ reason: 'Asking to meet up or for personal details', reporter: 'b' }] },
+    ];
+    const stub = { auth: { getSession: async () => ({ data: { session: { access_token: 't' } } }) },
+      rpc: async (fn, args) => { calls.push([fn, args]); return fn === 'admin_reports' ? { data: rows } : { data: null }; },
+      from: () => ({ select: () => ({ in: async () => ({ data: [] }) }) }) };
+    Cloud.client = () => stub;
+    const anchor = document.createElement('div'); document.body.appendChild(anchor);
+    await ModQueue.mount(anchor);
+    window.__calls = calls; return calls;
+  });
+  const rows = page.locator('#admin-mod .mod-row');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.first()).toContainText('Safety');
+  await expect(rows.first()).toContainText('creep');
+  await expect(rows.nth(1)).not.toContainText('overdue');   // 30h old, non-safety: 48h target
+  await rows.first().locator('[data-mod="remove"]').click();
+  await page.locator('#ask-yes').click();
+  await expect.poll(() => page.evaluate(() => window.__calls.filter(c => c[0] === 'admin_resolve').length)).toBe(1);
+  const resolve = await page.evaluate(() => window.__calls.find(c => c[0] === 'admin_resolve')[1]);
+  expect(resolve).toEqual({ p_kind: 'comment', p_target: 'sc:9', p_action: 'remove', p_note: null });
+});

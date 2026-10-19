@@ -66,7 +66,7 @@ const DAY  = 'public, s-maxage=86400, stale-while-revalidate=3600';
 const CLIP = 'public, s-maxage=240';
 
 async function dz(path) {
-  const r = await fetch('https://api.deezer.com' + path, { headers: { 'User-Agent': UA } });
+  const r = await fetch('https://api.deezer.com' + path, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': UA } });
   if (!r.ok) throw new Error('deezer ' + r.status);
   const j = await r.json();
   if (j && j.error) throw new Error('deezer ' + (j.error.type || 'error'));

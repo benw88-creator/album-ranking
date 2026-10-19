@@ -59,7 +59,7 @@ function clean(s) {
 function loose(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
 
 async function dz(path) {
-  const r = await fetch('https://api.deezer.com' + path, { headers: { 'User-Agent': UA } });
+  const r = await fetch('https://api.deezer.com' + path, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': UA } });
   if (!r.ok) throw new Error('deezer ' + r.status);
   return r.json();
 }

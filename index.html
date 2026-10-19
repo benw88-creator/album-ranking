@@ -11823,15 +11823,9 @@ async function getAccessToken() {
   return null;
 }
 
-const APP_TOKEN_PATH=Native.api+'/api/app-token';
-let _appToken=null,_appTokenExp=0,_appTokenDead=0;
-async function getAppToken(){
-  if(_appToken&&Date.now()<_appTokenExp-5000)return _appToken;
-  if(_appTokenDead&&Date.now()-_appTokenDead<30000)return null;
-  try{const r=await fetch(APP_TOKEN_PATH);if(!r.ok){_appTokenDead=Date.now();return null;}const j=await r.json();if(j&&validToken(j.access_token)){_appToken=j.access_token;_appTokenExp=Date.now()+((j.expires_in||3600)*1000);_appTokenDead=0;return _appToken;}}catch(e){}
-  _appTokenDead=Date.now();return null;
-}
-async function getAnyToken(){return(await getAccessToken())||(await getAppToken());}
+/* /api/app-token is gone: it handed a working Spotify credential to anybody
+   who asked, and nothing in the browser sends one to Spotify. Stream
+   valuation mints its own token server-side (api/_streams.js). */
 
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 const _spQueue=[];let _spLast=0;const SP_GAP=150,_spotifyGetCache={};
@@ -13465,10 +13459,6 @@ async function _buildRecommendations(grid, emptyEl, status) {
     _recsDirty = false; _recsBuilt = true;
     return;
   }
-  if (!_token && !_appToken && !(await getAnyToken())) {
-    grid.innerHTML = ''; emptyEl.style.display = 'block';
-    status.textContent = 'Couldn\u2019t load suggestions right now.'; return;
-  }
   emptyEl.style.display = 'none';
   status.textContent = 'Finding albums you\u2019ll like\u2026';
   const likedGenres = {};
@@ -14869,10 +14859,8 @@ function renderAuthArea(connected){
   if(connected){
     // personal Spotify token still present (legacy) — just treat same as app token
     searchInput.disabled=false;searchInput.placeholder='Search albums or artists\u2026';showGate(false);
-  }else if(_appToken){
-    searchInput.disabled=false;searchInput.placeholder='Search albums or artists\u2026';showGate(false);
   }else{
-    // neither token available — something is wrong with the backend
+    // the normal case: catalogue calls need no token (Deezer, via /api/catalogue)
     searchInput.disabled=false; // still let them try
     searchInput.placeholder='Search albums or artists\u2026';
   }
@@ -15495,7 +15483,8 @@ function ask(opts) {
       if (opts.input) {
         var f = document.getElementById('ask-input');
         var v = (f && f.value || '').trim();
-        done(v || null);
+        // opts.optional: the text is extra, the button is the answer.
+        done(v || (opts.optional ? '' : null));
         return;
       }
       done(true);
@@ -20191,15 +20180,15 @@ window.handleGrooveLink=handleGrooveLink;
      call (a cold Vercel function, measured 0.5-2s) before the session
      restore could even start — and the splash's GO waits on Cloud.ready,
      and For You's prewarm waits on that. No catalogue call carries the token
-     any more (see _spExec), so it is fetched on demand by the one place that
-     still asks for it (renderRecommendations, via getAnyToken). */
+     any more (see _spExec), and the route itself has since been removed. */
   const token=await getAccessToken();
   renderStats();
   Cloud.init();
   renderAuthArea(!!token);
   setTimeout(function(){if(window.handleGrooveLink)handleGrooveLink();},1500);
   setTimeout(function(){if(window.refreshNotifDot)refreshNotifDot();},2500);
-  setInterval(function(){if(window.refreshNotifDot&&Cloud.isOn())refreshNotifDot();},60000);
+  setInterval(function(){if(!document.hidden&&window.refreshNotifDot&&Cloud.isOn())refreshNotifDot();},60000);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden&&window.refreshNotifDot&&Cloud.isOn())refreshNotifDot();});
   // Registered last and after load, so it can never delay first paint. The
   // worker itself is network-first for the app, so this cannot pin anyone to
   // a stale build — see sw.js.
@@ -20245,7 +20234,7 @@ window.handleGrooveLink=handleGrooveLink;
     if (document.readyState === 'complete') reg();
     else window.addEventListener('load', reg);
   }
-  setInterval(function(){if(_token&&Date.now()>=_tokenExp-5000){_token=null;_tokenExp=0;_tokClear();getAppToken().then(function(){renderAuthArea(false);});}},30000);
+  setInterval(function(){if(_token&&Date.now()>=_tokenExp-5000){_token=null;_tokenExp=0;_tokClear();renderAuthArea(false);}},30000);
 })();
 
 </script>
@@ -40632,7 +40621,9 @@ window.track = function (name, props) {
           var b = batches[next++];
           var res = null;
           try {
-            var r = await fetch(base + '/api/catalogue?path=spotify-match', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            var ses = await Cloud.client().auth.getSession();
+            var at = ses && ses.data && ses.data.session && ses.data.session.access_token;
+            var r = await fetch(base + '/api/catalogue?path=spotify-match', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (at || '') },
               body: JSON.stringify({ kind: b.kind, items: b.items.map(function (x) { return { u: x.u, a: x.a, t: x.t, b: x.b }; }) }) });
             res = r.ok ? await r.json() : null;
           } catch (e) { res = null; }

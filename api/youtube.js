@@ -89,6 +89,6 @@ export default async function handler(req, res) {
     res.status(200).json({ videos: scored.map(({ score, ...r }) => r) });
   } catch (e) {
     res.setHeader('Cache-Control', 'no-store');
-    res.status(502).json({ error: String((e && e.message) || e) });
+    res.status(502).json({ error: 'YouTube search failed' });
   }
 }

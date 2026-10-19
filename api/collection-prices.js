@@ -158,10 +158,13 @@ export default async function handler(req, res) {
 
   const jwt = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   if (!jwt) { res.status(401).json({ error: 'Not signed in' }); return; }
+  // Both branches need a REAL session. The GET used to check only that some
+  // bearer string was present, so "Bearer x" read every cached price,
+  // including the records on the caller's own sealed Bid War board.
+  const userId = await verify(jwt, SERVICE);
+  if (!userId) { res.status(401).json({ error: 'Session expired — log in again' }); return; }
 
   if (req.method === 'POST') {
-    const userId = await verify(jwt, SERVICE);
-    if (!userId) { res.status(401).json({ error: 'Session expired — log in again' }); return; }
 
     let body = req.body;
     if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
@@ -181,6 +184,10 @@ export default async function handler(req, res) {
     res.status(200).json({ prices: r.prices });
     return;
   }
+
+  // Fails closed, as POST does: a record on a live board is never priced here.
+  const sealed = await sealedFor(jwt);
+  if (sealed === null) { res.status(503).json({ error: 'Could not check your live wars' }); return; }
 
   try {
     const poolRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/bid_war_pool', {
@@ -210,7 +217,7 @@ export default async function handler(req, res) {
     res.status(200).json({
       items: pool.map((p) => ({
         album_id: p.album_id, name: p.name, artist: p.artist, art: p.art,
-        price: priced[p.album_id] || null,
+        price: sealed.has(p.album_id) ? null : (priced[p.album_id] || null),
       })),
     });
   } catch (e) {

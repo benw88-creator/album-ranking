@@ -38,7 +38,6 @@ export const test = base.extend({
         if (p === 'album-tracks') data = a.tracks;
         return route.fulfill({ json: data });
       }
-      if (url.pathname === '/api/app-token') return route.fulfill({ json: { access_token: 'local-test-token', expires_in: 3600 } });
       if (url.pathname === '/api/preview') {
         const id = (url.searchParams.get('album') || '').match(/\d+/)?.[0] || '100';
         return route.fulfill({ json: { cover: '/assets/icons/icon-512.png', tracks: Array.from({ length: 16 }, (_, i) => ({ id: `${id}${i}`, title: `Song ${id}-${i}`, artist: 'Test Artist', duration: 180, preview: '/test-preview.wav' })) } });

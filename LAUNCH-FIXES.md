@@ -1,5 +1,37 @@
 # VINALL launch technical fixes
 
+## Fourth pass: API hardening, moderation, economy races (2026-10-16)
+
+**Deployed (app-level):**
+
+| Finding | Fix |
+| --- | --- |
+| `GET /api/collection-prices` accepted any bearer string (`Bearer x`) and priced records on the caller's own sealed Bid War board | Real session required; sealed records are priced `null`, failing closed like POST |
+| `/api/app-token` handed a working Spotify credential to anyone; the client only used it as a gate | Route deleted, gate removed (11 of 12 functions now used) |
+| `spotify-match` was open: one call = up to 30 Deezer searches on the shared IP plus service-role cache writes | Signed-in only; the import UI already required an account |
+| `/api/album-market` (parked debug route) spent the Discogs token for anyone | Signed-in only |
+| Most upstream `fetch` calls had no timeout (a hung kworb/Deezer call held a function until the 300s limit) | `AbortSignal.timeout` on Deezer, Supabase (share), Spotify, kworb, Discogs |
+| `youtube.js` returned Google's raw error text | Generic message |
+| Notification-dot poll ran in hidden tabs | Skipped when hidden; refreshed on return |
+| **Moderation:** pressing Remove without typing a reason cancelled silently (the shared `ask()` treats an empty box as cancel) | `ask({ optional: true })`; the reason is labelled optional; unsuspend errors surface |
+
+**Drafted, NOT applied (needs approval):** `20261016130000_economy_races.sql`. Lore's
+20-a-day cap and the two-a-day Completionist cap could both be raced with parallel
+requests (estimated ~250k and ~600k Discs a day), and a client-created profile row
+could arrive wearing unowned cosmetics, including the not-for-sale `virji` tag.
+
+**Checks:** `npm run check` all groups. The production-schema harness
+(`scripts/audit-artifacts/safety-review.mjs`, gitignored) now also applies
+20261016110000, 20261016120000 and the draft. 16 groups pass: admins alerted on
+report, the reporter notified past the notification guard, the guard refusing
+moderation types, slurs, blocked senders and the 61st notification in an hour,
+plus the draft's rules. Races are reasoned, not reproduced: PGlite has one
+connection. Playwright adds a queue test (empty-reason removal).
+
+**Live moderation test not run:** production reads and writes were blocked by
+this session's permission classifier. Run it with the two test accounts and
+Ben's admin account (see the summary in the session).
+
 ## Third pass — UK compliance and moderation (2026-10-15)
 
 Deployed: terms/privacy v1.5, reports queue (priority, overdue, photo, history,

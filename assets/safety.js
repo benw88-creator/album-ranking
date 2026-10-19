@@ -159,11 +159,15 @@
       if (v) { view = v.getAttribute('data-view'); return mount(anchor); }
       var b = e.target.closest('[data-mod]'); if (!b) return;
       var x = rows[+b.closest('.mod-row').getAttribute('data-i')], act = b.getAttribute('data-mod');
-      if (act === 'unsuspend') { await c.rpc('admin_unsuspend', { p_user: x.target_user }); return mount(anchor); }
+      if (act === 'unsuspend') {
+        var un = await c.rpc('admin_unsuspend', { p_user: x.target_user });
+        if (un.error && window.say) say('Could not unsuspend', escH(un.error.message));
+        return mount(anchor);
+      }
       var note = null;
       if (act !== 'dismiss') {
-        note = window.ask ? await ask({ title: act === 'remove_suspend' ? 'Remove and suspend?' : 'Remove this?', body: 'Reason shown to the author:',
-          input: true, maxlength: 140, confirm: act === 'remove_suspend' ? 'Remove + suspend' : 'Remove', danger: true }) : '';
+        note = window.ask ? await ask({ title: act === 'remove_suspend' ? 'Remove and suspend?' : 'Remove this?', body: 'Reason shown to the author (optional):',
+          input: true, optional: true, maxlength: 140, confirm: act === 'remove_suspend' ? 'Remove + suspend' : 'Remove', danger: true }) : '';
         if (note === null && window.ask) return;   // cancelled
       }
       b.disabled = true;

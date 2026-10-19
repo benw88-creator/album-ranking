@@ -32,13 +32,13 @@ const SITE = 'https://vinall.xyz';
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 async function sb(path) {
-  const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, { headers: { apikey: ANON, Authorization: 'Bearer ' + ANON } });
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, { signal: AbortSignal.timeout(8000), headers: { apikey: ANON, Authorization: 'Bearer ' + ANON } });
   return r.ok ? r.json() : [];
 }
 async function dz(path) {
   // Same User-Agent the catalogue route sends; from a Vercel IP Deezer can
   // refuse a request without one, which read here as "no such record".
-  try { const r = await fetch('https://api.deezer.com' + path, { headers: { 'User-Agent': 'VINALL/1.0 (+https://vinall.xyz)' } }); const j = await r.json(); return j && !j.error ? j : null; } catch (e) { return null; }
+  try { const r = await fetch('https://api.deezer.com' + path, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': 'VINALL/1.0 (+https://vinall.xyz)' } }); const j = await r.json(); return j && !j.error ? j : null; } catch (e) { return null; }
 }
 
 // Same ramp as albumColor() in index.html: red → amber → green.
@@ -160,7 +160,7 @@ ${best ? `<blockquote style="--c:${scoreColor(best.score)}">${esc(words(best.not
       const top = open ? (p.top3 || []).filter(Boolean).slice(0, 3) : [];
       let n = 0;
       if (open) {
-        const r = await fetch(SUPABASE_URL + '/rest/v1/crate_feed?select=id&user_id=eq.' + p.id, { headers: { apikey: ANON, Authorization: 'Bearer ' + ANON, Prefer: 'count=exact', Range: '0-0' } });
+        const r = await fetch(SUPABASE_URL + '/rest/v1/crate_feed?select=id&user_id=eq.' + p.id, { signal: AbortSignal.timeout(8000), headers: { apikey: ANON, Authorization: 'Bearer ' + ANON, Prefer: 'count=exact', Range: '0-0' } });
         n = +(String(r.headers.get('content-range') || '').split('/')[1] || 0);
       }
       const image = top[0] ? bigArt(top[0].art) : (p.avatar_url || '');

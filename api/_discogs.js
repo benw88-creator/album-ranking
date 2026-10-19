@@ -34,7 +34,7 @@ function auth(token) {
 }
 
 async function dg(path, token) {
-  const r = await fetch(API + path, { headers: auth(token) });
+  const r = await fetch(API + path, { signal: AbortSignal.timeout(10000), headers: auth(token) });
   if (r.status === 429) return { rateLimited: true };
   if (!r.ok) return null;
   try { return await r.json(); } catch (e) { return null; }

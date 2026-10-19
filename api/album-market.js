@@ -1,6 +1,6 @@
 // /api/album-market?q=<search>  (or ?name=<album>&artist=<artist>)
 //
-// Public, read-only. Returns exactly what a market-mode Bid War would value an
+// Signed-in, read-only. Returns exactly what a market-mode Bid War would value an
 // album at, plus the Discogs release it matched and the community counts. The
 // twin of /api/album-streams, and it exists for the same reason: the first time
 // these numbers look wrong you need a way to tell a broken match from a broken
@@ -18,6 +18,16 @@ export default async function handler(req, res) {
   // Answers the preflight and stops. Must be first: the method checks below
   // would 405 an OPTIONS, and three of these routes have one.
   if (cors(req, res)) return;
+  // Signed in only. It spends the shared Discogs token (60 requests a minute)
+  // on every call and nothing in the app calls it; it is a debugging aid.
+  const jwt = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!jwt || !svc) { res.status(401).json({ error: 'Not signed in' }); return; }
+  try {
+    const u = await fetch((process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co') + '/auth/v1/user',
+      { headers: { apikey: svc, Authorization: 'Bearer ' + jwt }, signal: AbortSignal.timeout(8000) });
+    if (!u.ok) { res.status(401).json({ error: 'Session expired, log in again' }); return; }
+  } catch (e) { res.status(502).json({ error: 'Could not verify your session' }); return; }
   const token = discogsToken();
   if (!token) { res.status(500).json({ error: 'Server not configured: missing DISCOGS_TOKEN' }); return; }
 

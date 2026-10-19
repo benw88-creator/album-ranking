@@ -27,7 +27,7 @@ export async function spotifyToken() {
   const secret = process.env.SPOTIFY_CLIENT_SECRET;
   if (!id || !secret) return null;
   try {
-    const r = await fetch('https://accounts.spotify.com/api/token', {
+    const r = await fetch('https://accounts.spotify.com/api/token', { signal: AbortSignal.timeout(8000),
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -62,7 +62,7 @@ function looseName(s) {
 }
 
 async function deezerAlbum(albumId) {
-  const r = await fetch('https://api.deezer.com/album/' + encodeURIComponent(albumId), { headers: { 'User-Agent': UA } });
+  const r = await fetch('https://api.deezer.com/album/' + encodeURIComponent(albumId), { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': UA } });
   if (!r.ok) return null;
   const d = await r.json();
   if (!d || d.error) return null;
@@ -76,7 +76,7 @@ async function spotifyArtistId(name, token) {
   const k = looseName(name);
   if (_artistIds[k] !== undefined) return _artistIds[k];
   try {
-    const r = await fetch('https://api.spotify.com/v1/search?type=artist&limit=5&q=' + encodeURIComponent(name), {
+    const r = await fetch('https://api.spotify.com/v1/search?type=artist&limit=5&q=' + encodeURIComponent(name), { signal: AbortSignal.timeout(8000),
       headers: { Authorization: 'Bearer ' + token },
     });
     if (!r.ok) { _artistIds[k] = null; return null; }
@@ -101,7 +101,7 @@ export async function albumInfo(albumId, token) {
       return { artistId: artistId, artist: dz.artist, name: dz.name, tracks: dz.tracks };
     }
     // A legacy Spotify album id, still on every record rated before the switch.
-    const r = await fetch('https://api.spotify.com/v1/albums/' + encodeURIComponent(albumId), {
+    const r = await fetch('https://api.spotify.com/v1/albums/' + encodeURIComponent(albumId), { signal: AbortSignal.timeout(8000),
       headers: { Authorization: 'Bearer ' + token },
     });
     if (!r.ok) return null;
@@ -118,7 +118,7 @@ export async function artistStreamTable(artistId, cache) {
   cache = cache || {};
   if (cache[artistId] !== undefined) return cache[artistId];
   try {
-    const r = await fetch('https://kworb.net/spotify/artist/' + artistId + '_songs.html', {
+    const r = await fetch('https://kworb.net/spotify/artist/' + artistId + '_songs.html', { signal: AbortSignal.timeout(12000),
       headers: { 'User-Agent': 'vinall-bid-wars/1.0 (+https://vinall.xyz)' },
     });
     if (!r.ok) { cache[artistId] = null; return null; }

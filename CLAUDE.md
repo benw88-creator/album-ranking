@@ -51,8 +51,9 @@ Zero-config Vercel deployment — there is no build step and no `package.json`.
 
 - `index.html` — the entire front end, one large file (~540KB). Vanilla JS, no framework.
 - `api/*.js` — Vercel serverless functions, auto-detected from the folder:
-  - `app-token.js` — mints an app-level token (Client Credentials); this is how **every**
-    catalogue request is authorised, for guests and signed-in users alike
+  - ~~`app-token.js`~~: **removed 2026-10-16.** It handed a working Spotify Client
+    Credentials token to any caller, and nothing used it. `_streams.js` mints its own
+    token server-side for stream valuation
   - `bid-war-create.js` — Bid War creation, both modes
   - `album-streams.js`, `_streams.js` — stream valuation (kworb). `?albums=a,b,c`
     batches up to 12, sharing one artist cache across the batch
@@ -894,7 +895,7 @@ Never leave uncommitted work sitting on one machine.
 
 Set in Vercel → Project → Settings → Environment Variables. Not in the repo.
 
-- `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` — used only by `/api/app-token`
+- `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` — used only server-side by `api/_streams.js` (stream valuation)
 - `DISCOGS_TOKEN` — a personal access token from Discogs → Settings → Developers,
   generated instantly with no OAuth flow. Market-mode Bid Wars and
   `/api/album-market` return a 500 saying so until it is set; nothing else is
@@ -904,7 +905,7 @@ Set in Vercel → Project → Settings → Environment Variables. Not in the rep
   layer**. Generate once with `node scripts/vapid-keys.mjs`.
 
 `REDIRECT_URI` is no longer read by anything and can be deleted from Vercel. It only mattered
-to the removed OAuth routes. Preview deploys therefore work fully, since `/api/app-token`
+to the removed OAuth routes. Preview deploys therefore work fully, since Client Credentials
 needs no registered redirect.
 
 The Supabase URL and anon key are inlined in `index.html`. That is normal for Supabase —
@@ -2283,8 +2284,8 @@ thing on the page, so they are how you find your place after scrolling away.
 ## The catalogue is Deezer's
 
 Every album name, artist name, tracklist, cover and search result comes from **Deezer**, via
-`api/catalogue.js`. No catalogue request carries a Spotify token. `/api/app-token` still exists
-and is still used by the stream valuation below, but nothing a user sees goes through it.
+`api/catalogue.js`. No catalogue request carries a Spotify token. The stream valuation below
+still mints a Spotify token server-side, but nothing a user sees goes through it.
 
 ### Why, in one definition
 

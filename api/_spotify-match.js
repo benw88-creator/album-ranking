@@ -76,6 +76,16 @@ async function matchOne(kind, it) {
 export async function spotifyMatch(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
+  // Signed in only: one call is up to 30 Deezer searches on the IP every
+  // VINALL visitor shares, plus cache rows written with the service role.
+  // The import UI already requires an account.
+  const jwt = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!jwt || !key) { res.status(401).json({ error: 'Sign in to import' }); return; }
+  try {
+    const u = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: key, Authorization: 'Bearer ' + jwt }, signal: AbortSignal.timeout(8000) });
+    if (!u.ok) { res.status(401).json({ error: 'Session expired, log in again' }); return; }
+  } catch (e) { res.status(502).json({ error: 'Could not verify your session' }); return; }
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
   const kind = body && body.kind === 'album' ? 'album' : 'track';

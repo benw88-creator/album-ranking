@@ -29,6 +29,7 @@ try {
     const cache=new Map();let dzCalls=0;
     globalThis.fetch=async(url,opts={})=>{
       const u=new URL(url);
+      if(u.pathname==='/auth/v1/user')return opts.headers.Authorization==='Bearer good'?response({id:'u'}):response({},401);
       if(u.hostname==='api.deezer.com'){
         dzCalls++;const first=u.searchParams.get('q').toLowerCase().includes('first');
         return response({data:[{id:first?1:2,title:first?'First':'Second',rank:500000,artist:{name:'Artist'},album:{title:'Album'}}]});
@@ -42,9 +43,10 @@ try {
       return response(keys.flatMap(k=>cache.has(k)?[cache.get(k)]:[]));
     };
     const uri='spotify:track:1111111111111111111111';
-    const run=async(items)=>{const r=res();await spotifyMatch({method:'POST',headers:{},body:{kind:'track',items}},r);assert.equal(r.code,200);assert.equal(r.headers['Cache-Control'],'no-store');return r.body.results;};
+    const run=async(items)=>{const r=res();await spotifyMatch({method:'POST',headers:{authorization:'Bearer good'},body:{kind:'track',items}},r);assert.equal(r.code,200);assert.equal(r.headers['Cache-Control'],'no-store');return r.body.results;};
     assert.equal((await run([{u:uri,a:'Artist',t:'First',b:'Album'}]))[0].m.id,'1');
     assert.equal((await run([{u:uri,a:'Artist',t:'Second',b:'Album'}]))[0].m.id,'2');
+    for(const authorization of [undefined,'Bearer bad']){const r=res();await spotifyMatch({method:'POST',headers:{authorization},body:{kind:'track',items:[{u:uri,a:'Artist',t:'First',b:'Album'}]}},r);assert.equal(r.code,401);}
     const calls=dzCalls;
     const other='spotify:track:2222222222222222222222';
     const rows=await run([{u:other,a:'Artist',t:'Second',b:'Album'},{u:uri,a:'Artist',t:'Second',b:'Album'}]);
