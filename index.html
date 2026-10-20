@@ -4029,11 +4029,13 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
    ============================================================ */
 .crate-layout {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  /* minmax(0, …): a bare 1fr is min-content wide, and one long line in a
+     feed card held the column at 420px on a 375px phone, cards cut off. */
+  grid-template-columns: minmax(0, 1fr) 280px;
   gap: 28px;
   align-items: start;
 }
-@media (max-width: 900px) { .crate-layout { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .crate-layout { grid-template-columns: minmax(0, 1fr); } }
 
 /* Single-column scrolling feed — one post at a time, top to bottom.
    Capped width so cards stay a comfortable size on wide screens instead
@@ -6024,6 +6026,74 @@ html[data-motion="none"] .sp-fan img, html[data-motion="none"] .sp-fan-disc, htm
   html:not([data-motion="full"]) .cc-agree.unlocked { animation: none; }
 }
 html[data-motion="none"] .cc-card, html[data-motion="none"] .cc-agree.unlocked { animation: none; }
+
+/* ---- Community Choice: the stage ---------------------------------------
+   A banner in the five category hues. The equaliser idles low and plays
+   while a moment is playing (#view-choice.cc-live, set by paintPlaying);
+   bars scale on transform only. Agreeing pops the count and lights the
+   card once. Everything holds still under reduced motion. */
+.cc-hero {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 14px 18px;
+  margin: 0 0 18px; padding: 30px 26px 26px; border-radius: 24px;
+  background:
+    radial-gradient(60% 120% at 0% 0%, color-mix(in srgb, var(--c-cyan) 16%, transparent), transparent 62%),
+    radial-gradient(60% 120% at 100% 0%, color-mix(in srgb, var(--c-pink) 16%, transparent), transparent 62%),
+    linear-gradient(180deg, var(--surface), var(--bg));
+  border: 1px solid color-mix(in srgb, var(--c-violet) 22%, var(--border));
+}
+.cc-hero-eq {
+  position: absolute; z-index: -1; right: 200px; top: 20px; bottom: 20px; width: min(34%, 300px);
+  display: flex; align-items: flex-end; gap: 5px; opacity: .6;
+  -webkit-mask: linear-gradient(90deg, transparent, #000 40%); mask: linear-gradient(90deg, transparent, #000 40%);
+}
+.cc-hero-eq i {
+  flex: 1; height: 100%; border-radius: 4px 4px 2px 2px; transform-origin: bottom; transform: scaleY(.22);
+  background: linear-gradient(180deg, var(--h), color-mix(in srgb, var(--h) 30%, transparent));
+  animation: ccEq 2.8s ease-in-out infinite alternate;
+}
+.cc-hero-eq i:nth-child(5n+1) { --h: var(--c-cyan); animation-duration: 2.3s; }
+.cc-hero-eq i:nth-child(5n+2) { --h: var(--c-violet); animation-duration: 3.1s; animation-delay: -1.2s; }
+.cc-hero-eq i:nth-child(5n+3) { --h: var(--c-pink); animation-duration: 2.6s; animation-delay: -.5s; }
+.cc-hero-eq i:nth-child(5n+4) { --h: var(--c-lime); animation-duration: 3.4s; animation-delay: -2s; }
+.cc-hero-eq i:nth-child(5n)   { --h: var(--cc-drop); animation-duration: 2.1s; animation-delay: -.9s; }
+@keyframes ccEq { from { transform: scaleY(.22); } to { transform: scaleY(.62); } }
+#view-choice.cc-live .cc-hero-eq { opacity: .85; }
+#view-choice.cc-live .cc-hero-eq i { animation-name: ccEqLive; animation-duration: .7s; }
+#view-choice.cc-live .cc-hero-eq i:nth-child(3n) { animation-duration: .55s; }
+#view-choice.cc-live .cc-hero-eq i:nth-child(4n+1) { animation-duration: .9s; }
+@keyframes ccEqLive { from { transform: scaleY(.25); } to { transform: scaleY(.95); } }
+.cc-hero-title {
+  margin: 0; font: 800 clamp(30px, 5.4vw, 48px)/.95 var(--font-display); letter-spacing: -.045em;
+  background: linear-gradient(90deg, var(--text) 40%, color-mix(in srgb, var(--c-pink) 70%, var(--text)));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.cc-hero .cc-intro { margin: 10px 0 0; max-width: 40ch; }
+.cc-hero-cta { position: relative; overflow: hidden; }
+.cc-hero-cta::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 35%, rgba(255,255,255,.35) 50%, transparent 65%);
+  transform: translateX(-120%); animation: ccCtaSheen 5.5s ease-in-out 1.2s infinite;
+}
+@keyframes ccCtaSheen { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+.cc-agree.just b { display: inline-block; animation: ccCountPop 520ms cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes ccCountPop { 0% { transform: scale(1); } 35% { transform: scale(1.45); } 100% { transform: scale(1); } }
+.cc-card.cc-agreed::after {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--cc), 0 0 40px -6px var(--cc); opacity: 0; animation: ccAgreed 900ms ease-out;
+}
+@keyframes ccAgreed { 25% { opacity: 1; } 100% { opacity: 0; } }
+@media (max-width: 560px) {
+  .cc-hero { grid-template-columns: 1fr; padding: 66px 18px 18px; border-radius: 20px; }
+  .cc-hero-cta { width: 100%; }
+  .cc-hero-eq { left: 18px; right: 18px; top: 16px; bottom: auto; height: 38px; width: auto; -webkit-mask: none; mask: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) .cc-hero-eq i, html:not([data-motion="full"]) .cc-hero-cta::after,
+  html:not([data-motion="full"]) .cc-agree.just b, html:not([data-motion="full"]) .cc-card.cc-agreed::after { animation: none; }
+}
+html[data-motion="none"] .cc-hero-eq i, html[data-motion="none"] .cc-hero-cta::after,
+html[data-motion="none"] .cc-agree.just b, html[data-motion="none"] .cc-card.cc-agreed::after { animation: none; }
 
 /* ---- the collection ----------------------------------------------------- */
 .col-tabs { margin: 14px 0 18px; }
@@ -9473,14 +9543,14 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/interactions.css?v=3">
 <link rel="stylesheet" href="/assets/replay.css?v=3">
 <link rel="stylesheet" href="/assets/you.css?v=1">
-<link rel="stylesheet" href="/assets/games.css?v=2">
+<link rel="stylesheet" href="/assets/games.css?v=3">
 <link rel="stylesheet" href="/assets/store.css?v=3">
 <link rel="stylesheet" href="/assets/glow.css?v=5">
 <link rel="stylesheet" href="/assets/themes2.css?v=2">
 <link rel="stylesheet" href="/assets/play.css?v=1">
 <link rel="stylesheet" href="/assets/cards.css?v=1">
 <link rel="stylesheet" href="/assets/foryou.css?v=3">
-<link rel="stylesheet" href="/assets/comments.css?v=1">
+<link rel="stylesheet" href="/assets/comments.css?v=2">
 <link rel="stylesheet" href="/assets/boards.css?v=2">
 <link rel="stylesheet" href="/assets/ladder.css?v=3">
 <link rel="stylesheet" href="/assets/profile2.css?v=1">
@@ -10393,11 +10463,17 @@ window.discAmt = function (n) {
        button already stands for, and the bar it would have joined is full.
        Everything here is drawn by the COMMUNITY CHOICE module. -->
   <section id="view-choice" class="view" style="display:none;">
-    <div class="section-head">
-      <div><h2 style="font-size:26px; letter-spacing:-0.025em;">Community Choice</h2></div>
-      <button class="btn-primary" id="cc-new" style="margin-left:auto;">Pick a moment</button>
-    </div>
-    <p class="cc-intro">The best thirty seconds of a song, picked by someone who loves it.</p>
+    <!-- Its own stage, so Choice reads as a place rather than a fourth list
+         under the Crate's tabs: the five category hues as an equaliser that
+         plays while anything in the feed does, and the one action. -->
+    <header class="cc-hero">
+      <div class="cc-hero-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="cc-hero-txt">
+        <h2 class="cc-hero-title">Community Choice</h2>
+        <p class="cc-intro">The best part of a song, picked by someone who loves it. Hear it, then agree.</p>
+      </div>
+      <button class="btn-primary cc-hero-cta" id="cc-new">Pick a moment</button>
+    </header>
     <div class="cc-bar">
       <div class="cc-cats" id="cc-cats" role="tablist" aria-label="Category"></div>
       <div class="cc-sort" id="cc-sort" role="tablist" aria-label="Order">
@@ -10434,9 +10510,12 @@ window.discAmt = function (n) {
          Album Tournament's card was retired with it; the module, its modal
          and its award case are parked, so bringing it back is a card. -->
     <header class="arc-head">
-      <div>
-        <span class="arc-kicker">The arcade</span>
-        <h2 class="arc-title">Arcade</h2>
+      <!-- One marquee, not a kicker saying "The arcade" over a title saying
+           "Arcade". Lit like a cabinet: the letters flicker on as the page
+           arrives, and a row of bulbs chases along the edge. -->
+      <div class="arc-marquee">
+        <h2 class="arc-title" aria-label="Arcade"><span aria-hidden="true"><i>A</i><i>r</i><i>c</i><i>a</i><i>d</i><i>e</i></span></h2>
+        <p class="arc-sub">Name it, bid on it, act it out.</p>
       </div>
       <button class="lb-bar arc-lb" id="leaderboard-card">
         <span class="lb-bar-icon" data-icon="stopwatch"></span>
@@ -10464,10 +10543,10 @@ window.discAmt = function (n) {
 
       <h3 class="arc-label"><span>Party</span><small>one phone, a room full of people</small></h3>
       <div class="game-card" id="charades-card">
-        <div class="cz-art" aria-hidden="true"><span class="cz-art-name">Queen</span><i class="cz-art-ring"></i><b>30</b><span class="cz-art-team"><i></i><i></i><i></i><i></i></span></div>
+        <div class="cz-art" aria-hidden="true"><span class="cz-art-name">Queen</span><i class="cz-art-ring"></i><b>60</b><span class="cz-art-team"><i></i><i></i><i></i><i></i></span></div>
         <span class="cz-kicker">Pass the phone &middot; 4+ players</span>
         <h3><span>Artist</span> Charades</h3>
-        <p>No words. No humming. Thirty seconds to make your mates shout &ldquo;Snoop Dogg&rdquo;.</p>
+        <p>No words. No humming.</p>
         <div class="gc-go" id="charades-card-go">Get the party going &rarr;</div>
       </div>
 
@@ -11131,6 +11210,7 @@ window.discAmt = function (n) {
         <div class="rc-wave" id="recall-wave" aria-hidden="true"></div>
         <div class="rc-steps" id="recall-steps" aria-hidden="true"></div>
       </div>
+      <div class="rc-timer idle" id="recall-timer" role="timer" aria-label="Time left to name it"><b><i></i></b><span>10.0s</span></div>
       <button type="button" class="rc-hear" id="recall-hear" aria-label="Play the clip"><span class="rc-play-ico"></span>1.0s</button>
 
       <div class="rc-answer" id="recall-answer">
@@ -14951,7 +15031,7 @@ function renderAuthArea(connected){
   function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
   function nTitle(s){return String(s||'').toLowerCase().replace(/\(.*?\)|\[.*?\]/g,' ').replace(/\b(deluxe|edition|remaster|remastered|expanded|version|explicit|the|ep|lp|anniversary)\b/g,' ').replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');}
   function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;const d=[];for(let i=0;i<=m;i++)d[i]=[i];for(let j=0;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++){const c=a[i-1]===b[j-1]?0:1;d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+c);}return d[m][n];}
-  function nameMatch(guess,answer){const g=nTitle(guess),a=nTitle(answer);if(!g)return false;if(g===a)return true;const lo=a.length>=g.length?g:a,hi=a.length>=g.length?a:g;if(hi.indexOf(lo)!==-1&&lo.length>=hi.length*0.6)return true;return lev(g,a)<=Math.max(2,Math.floor(a.length*0.2));}
+  function nameMatch(guess,answer){if(window.VinalTitles&&VinalTitles.albumMatch)return VinalTitles.albumMatch(guess,answer);const g=nTitle(guess),a=nTitle(answer);if(!g)return false;if(g===a)return true;const lo=a.length>=g.length?g:a,hi=a.length>=g.length?a:g;if(hi.indexOf(lo)!==-1&&lo.length>=hi.length*0.6)return true;return lev(g,a)<=Math.max(2,Math.floor(a.length*0.2));}
 
   artistInput.addEventListener('input',function(){selectedArtistId=null;artActive=-1;const q=artistInput.value.trim();clearTimeout(artTimer);if(q.length<2){closeArt();artistSpinner.style.display='none';return;}artistSpinner.style.display='block';artTimer=setTimeout(function(){searchArtists(q);},280);});
   const _artCache={};
@@ -23641,10 +23721,14 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       var albums = JSON.parse(localStorage.getItem('crate_albums_v1') || '{}');
       Object.keys(albums).forEach(function (id) {
         var a = albums[id];
-        if (a && a.name && ewPlayable(a.name)) {
-          out.push({ i: -1, title: a.name, artist: a.artist || '', kind: 'album', genre: '',
-                     art: a.art || '', answer: ewLetters(a.name), shape: ewShape(a.name) });
+        // The record, not the pressing: a deluxe tail is not part of a title
+        // anybody would spell (the shared rule in VinalTitles).
+        var nm = a && a.name && window.VinalTitles && VinalTitles.albumBase ? VinalTitles.albumBase(a.name) : a && a.name;
+        if (nm && ewPlayable(nm)) {
+          out.push({ i: -1, title: nm, artist: a.artist || '', kind: 'album', genre: '',
+                     art: a.art || '', answer: ewLetters(nm), shape: ewShape(nm) });
         }
+
       });
       var songs = JSON.parse(localStorage.getItem('crate_songs_v1') || '{}');
       Object.keys(songs).forEach(function (id) {
@@ -25297,8 +25381,75 @@ function playDismissAnimation(gateEl, callback) {
     return genre;
   }
 
+  /* --- album answers: ONE rule for every game that asks you to name a record
+     A sleeve shown from somebody's crate or a live catalogue is often a
+     pressing — "For All the Dogs Scary Hours Edition", "Fearless (Taylor's
+     Version)", "Nevermind Remastered", "Sweet Boy Pt. 1" — and naming the
+     record it is a pressing OF is the right answer. albumBase() peels those
+     tails off, after baseName() has taken the bracketed and dashed ones;
+     albumMatch() accepts the full title or that base, forgivingly, but never
+     across different numbers, so "Views" is not "Views 2" and "Pt. 1" is not
+     "Pt. 2" however close the letters are. */
+  var TAIL_EDITION = /\s*[-–—:,]?\s+(?:(?:super|deluxe|expanded|special|limited|collector'?s|anniversary|platinum|gold|complete|tour|bonus\s+track|\d+(?:st|nd|rd|th)?|[a-z]+['’]s)\s+)+(?:edition|version)\s*$/i;
+  var TAIL_WORD = /\s*[-–—:,]?\s+(?:super\s+)?(?:deluxe|expanded|remastered|remaster|anniversary)(?:\s+\d{4})?\s*$/i;
+  var TAIL_PART = /\s*[-–—:,]?\s+(?:pt|part)\.?\s*(?:\d+|[ivx]+|one|two|three)\s*$/i;
+  function albumBase(s) {
+    var t = baseName(s), before;
+    do {
+      before = t;
+      t = t.replace(/[\s.,;:!]+$/, '').replace(TAIL_EDITION, '').replace(TAIL_WORD, '').replace(TAIL_PART, '').trim();
+    } while (t && t !== before);
+    // A tail rule that ate the whole title (a record genuinely called
+    // "Special Edition") has found a title, not a tail.
+    return fold(t).replace(/\bthe\b/g, '').trim().length >= 2 ? t : baseName(s);
+  }
+  function fold(s) {
+    return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+      .replace(/['’ʼ`]/g, '').replace(/&/g, ' and ')
+      .replace(/\(.*?\)|\[.*?\]/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  // "the" anywhere goes, as it always has in the cover games: nobody should
+  // lose a round over an article.
+  function key(s) { return fold(s).replace(/\bthe\b/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function digits(s) { return (s.match(/\d+/g) || []).join(','); }
+  function lev(a, b, max) {
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    var prev = [], cur, i, j;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+      cur = [i];
+      for (j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  function near(g, a) {
+    if (g === a) return true;
+    if (!g || !a || digits(g) !== digits(a)) return false;
+    var lo = a.length >= g.length ? g : a, hi = lo === g ? a : g;
+    if (lo.length >= 4 && hi.indexOf(lo) !== -1 && lo.length >= hi.length * 0.6) return true;
+    var tol = Math.max(lo.length >= 5 ? 2 : 1, Math.floor(a.length * 0.2));
+    return lev(g, a, tol) <= tol;
+  }
+  function albumMatch(guess, answer) {
+    var g = key(guess), full = key(answer);
+    if (!g) return false;
+    // A number in the guess has to be the answer's number: "Pt 2" never
+    // names "Pt. 1", "21" never names "25".
+    var dg = digits(g);
+    if (dg && dg !== digits(full)) return false;
+    var gb = key(albumBase(guess)), base = key(albumBase(answer));
+    if ([full, base].some(function (a) { return near(g, a) || (gb !== g && near(gb, a)); })) return true;
+    // An edition named after something ("Scary Hours Edition"): the guess is
+    // the answer's opening words and all that is left is up to three words
+    // ending in edition or version.
+    var rest = full.indexOf(g + ' ') === 0 ? full.slice(g.length + 1) : '';
+    return g.length >= 3 && /^(?:\S+ ){0,3}(?:edition|version)$/.test(rest);
+  }
+
+
   window.VinalGenre = artistGenre;
-  window.VinalTitles = { baseName: baseName, collapse: collapseEditions };
+  window.VinalTitles = { baseName: baseName, collapse: collapseEditions, albumBase: albumBase, albumMatch: albumMatch };
 })();
 </script>
 
@@ -26990,6 +27141,8 @@ window.renderAdminStats = renderAdminStats;
         if (m && len) len.textContent = winLabel(m);
       }
     });
+    var vc = $('view-choice');
+    if (vc) vc.classList.toggle('cc-live', pl.owner === 'feed' && pl.state === 'playing');
     var edEl = $('cc-ed');
     if (edEl) edEl.classList.toggle('is-playing', pl.owner === 'editor' && (pl.state === 'playing' || pl.state === 'loading'));
   }
@@ -27217,6 +27370,10 @@ window.renderAdminStats = renderAdminStats;
     if (on) {
       if (window.buzz) buzz('tap');
       var b = cardEl(id) && cardEl(id).querySelector('.cc-agree');
+      if (b) b.classList.add('just');
+      var cd = cardEl(id);
+      if (cd) { cd.classList.remove('cc-agreed'); void cd.offsetWidth; cd.classList.add('cc-agreed'); setTimeout(function () { cd.classList.remove('cc-agreed'); }, 950); }
+
       if (b && window.burst) burst(b, { count: 14, colors: [hue(m.category), '#ffffff'] });
       if (window.track) track('moment_agreed', { category: m.category });
     }
@@ -32678,8 +32835,104 @@ window.renderAdminStats = renderAdminStats;
 
   var STEPS = Recall.STEPS;
   var sess = null, cands = [], candAt = 0, song = null, clip = null;
-  var step = 0, attempts = 0, revealed = false, roundTok = 0, busy = false, heardAt = 0, lastElapsedMs = null;
-  var countdown = null, serverState = null;
+  var step = 0, attempts = 0, revealed = false, roundTok = 0, busy = false, lastElapsedMs = null;
+  var countdown = null, serverState = null, resumeNote = '';
+
+  /* ---------- the ten-second clock ----------
+     A round is TEN SECONDS from the first press of play, whatever the reveal
+     step: the score already slid to its floor at 10s, and past it a guess
+     still paid 250, so a run could sit on a song indefinitely. Now the clock
+     running out IS a miss. It is paused, never reset, when the sheet closes
+     or the app goes to the background — the same remaining time comes back
+     with the round (see LIVE below). */
+  var LIMIT_MS = 10000, clockMs = 0, clockAt = 0, clockT = 0, clockTick = 0;
+  function elapsed() { return clockMs + (clockAt ? Date.now() - clockAt : 0); }
+  function started() { return !!(clockAt || clockMs); }
+  function startClock() {
+    if (revealed || !song || clockAt) return;
+    if (elapsed() >= LIMIT_MS) { timeUp(); return; }
+    clockAt = Date.now();
+    clearTimeout(clockT);
+    clockT = setTimeout(timeUp, LIMIT_MS - clockMs);
+    if (!clockTick) clockTick = setInterval(paintTimer, 100);
+    paintTimer(true);
+  }
+  function pauseClock() {
+    if (clockAt) { clockMs = elapsed(); clockAt = 0; }
+    clearTimeout(clockT); clockT = 0;
+    clearInterval(clockTick); clockTick = 0;
+    paintTimer(true);
+  }
+  function timeUp() {
+    clockT = 0;
+    if (revealed || !song) return;
+    clockMs = LIMIT_MS; clockAt = 0;
+    finishRound(false, true);
+  }
+  // Text ten times a second; the bar is one transition per start or pause,
+  // so it drains smoothly without a frame loop.
+  function paintTimer(rebar) {
+    var host = el('recall-timer'); if (!host) return;
+    var left = Math.max(0, LIMIT_MS - elapsed());
+    var txt = (left / 1000).toFixed(1) + 's';
+    var sp = host.querySelector('span'); if (sp && sp.textContent !== txt) sp.textContent = txt;
+    host.classList.toggle('run', !!clockAt);
+    host.classList.toggle('hurry', !!clockAt && left <= 3000);
+    host.classList.toggle('idle', !started());
+    if (rebar !== true) return;
+    var bar = host.querySelector('i'); if (!bar) return;
+    bar.style.transition = 'none';
+    bar.style.transform = 'scaleX(' + (left / LIMIT_MS).toFixed(4) + ')';
+    if (clockAt && left > 0) {
+      void bar.offsetWidth;
+      bar.style.transition = 'transform ' + left + 'ms linear';
+      bar.style.transform = 'scaleX(0)';
+    }
+  }
+
+  /* ---------- LIVE: closing pauses, opening resumes ----------
+     Under crate_ so an account switch wipes it (claimLocalState), never
+     synced: a half-played round belongs to this device. A daily is only
+     resumed on its own day; anything older than twelve hours is filed as
+     an abandoned run and dropped. */
+  var LIVE_KEY = 'crate_recall_live', LIVE_TTL = 12 * 3600000;
+  function readLive() { try { return JSON.parse(localStorage.getItem(LIVE_KEY)); } catch (e) { return null; } }
+  function clearLive() { try { localStorage.removeItem(LIVE_KEY); } catch (e) {} }
+  function saveLive() {
+    if (!sess || sess.done || sess.over || !song || (revealed && (!sess.m.endless || sess.m.oneRound))) { clearLive(); return; }
+    var s = sess;
+    try {
+      localStorage.setItem(LIVE_KEY, JSON.stringify({
+        v: 1, mode: s.mode, day: Recall.dayNo(), at: Date.now(), song: song.i,
+        step: step, attempts: attempts, clockMs: elapsed(), between: revealed,
+        sess: { score: s.score, streak: s.streak, bestStreak: s.bestStreak, correct: s.correct,
+                played: s.played, used: s.used, rounds: s.rounds, startedAt: s.startedAt, bestAtStart: s.bestAtStart }
+      }));
+    } catch (e) {}
+  }
+  // A run nobody came back to still counts, as closing the sheet always did.
+  function fileAbandoned(s) {
+    if (!s || !s.played || !Recall.MODES[s.mode] || !Recall.MODES[s.mode].endless) return;
+    var st = Recall.stats(s);
+    Recall.setBest(s.mode, st.score);
+    if (on()) { try { Cloud.recallSession(st.score, st.songs, st.bestStreak, Math.round(st.avgReveal)); } catch (e) {} }
+    if (window.notePlay) notePlay('recall');
+  }
+  function resume(live) {
+    var m = live && Recall.MODES[live.mode], t = live && Recall.pool()[live.song];
+    if (!m || !t || live.v !== 1) { clearLive(); return false; }
+    if (live.mode === 'daily' && (live.day !== Recall.dayNo() || Recall.dailyDone())) { clearLive(); return false; }
+    if (Date.now() - (live.at || 0) > LIVE_TTL) { fileAbandoned(Object.assign({ mode: live.mode }, live.sess || {})); clearLive(); return false; }
+    sess = Recall.session(live.mode);
+    Object.keys(live.sess || {}).forEach(function (k) { sess[k] = live.sess[k]; });
+    if (window.Boards) {
+      if (!Boards.live('recall')) Boards.start('recall', live.mode, { day: Recall.dayNo(), local: live.mode !== 'daily' && live.mode !== 'endless' });
+      Boards.clock(el('recall-clock'), 'recall');
+    }
+    if (live.between) { nextRound(); return true; }
+    nextRound(t, live);
+    return true;
+  }
 
   function el(id) { return document.getElementById(id); }
   function n(v) { return (Number(v) || 0).toLocaleString('en-GB'); }
@@ -32688,7 +32941,26 @@ window.renderAdminStats = renderAdminStats;
     ['recall-lobby', 'recall-play', 'recall-over'].forEach(function (x) {
       var e = el(x); if (e) e.style.display = x === v ? 'block' : 'none';
     });
+    placeRings();
   }
+  /* The rings come off whatever is the focus of the screen — the sleeve in
+     a round, the record in the lobby, the score at the end — measured, since
+     its position moves with the window height. Only the centre of the lobby's
+     spinning record is read, which survives rotation (trap 3). */
+  function placeRings() {
+    requestAnimationFrame(function () {
+      var panel = modal.querySelector('.modal-panel'); if (!panel) return;
+      var t = [el('recall-art'), modal.querySelector('.rc-lobby-art .rc-disc'), el('recall-final')]
+        .filter(function (n) { return n && n.offsetParent; })[0];
+      if (!t) return;
+      var p = panel.getBoundingClientRect(), r = t.getBoundingClientRect();
+      panel.style.setProperty('--rx', Math.round(r.left + r.width / 2 - p.left) + 'px');
+      panel.style.setProperty('--ry', Math.round(r.top + r.height / 2 - p.top + panel.scrollTop) + 'px');
+      panel.style.setProperty('--rs', Math.round(Math.max(160, t.offsetWidth * 1.12)) + 'px');
+    });
+  }
+  window.addEventListener('resize', function () { if (modal.classList.contains('open')) placeRings(); });
+
 
   /* ---------- the sleeve, the waveform ---------- */
   /* Bars are drawn from a hash of the song rather than at random, so the same
@@ -32796,9 +33068,14 @@ window.renderAdminStats = renderAdminStats;
     if (msg !== undefined) say(msg || '');
   }
 
-  function nextRound() {
+  function nextRound(only, at) {
     if (!sess) return;
-    revealed = false; step = 0; attempts = 0; clip = null; heardAt = 0;
+    pauseClock();
+    revealed = false; step = at ? Math.max(0, Math.min(STEPS.length - 1, at.step | 0)) : 0;
+    attempts = at ? (at.attempts | 0) : 0; clip = null; song = null;
+    clockMs = at ? Math.max(0, Math.min(LIMIT_MS - 250, at.clockMs || 0)) : 0;
+    resumeNote = at && clockMs ? 'Paused with ' + ((LIMIT_MS - clockMs) / 1000).toFixed(1) + 's left. Play to carry on.' : '';
+    paintTimer(true);
     var r = el('recall-reveal'); if (r) { r.innerHTML = ''; r.classList.remove('on'); }
     var a = el('recall-art'); if (a) a.classList.remove('open');
     var pane = el('recall-play'); if (pane) pane.classList.remove('revealed');
@@ -32806,6 +33083,7 @@ window.renderAdminStats = renderAdminStats;
     closeSuggest();
     picked = null; el('recall-answer').classList.remove('picked');
     cands = sess.m.candidates(sess) || [];
+    if (only) cands = [only].concat(cands.filter(function (c) { return c.i !== only.i; }));
     candAt = 0;
     show('recall-play');
     paintHud();
@@ -32829,8 +33107,10 @@ window.renderAdminStats = renderAdminStats;
       song = t; clip = res;
       var img = el('recall-art-img');
       if (img) img.src = song.art || clip.cover || '';
-      setLoading(false, '');
+      setLoading(false, resumeNote);
+      resumeNote = '';
       paintSteps(); paintHud();
+      saveLive();
       // One round ahead, never more: these urls are signed and expire in about
       // ten minutes, so cueing up a queue would be cueing up dead links.
       if (cands[candAt + 1]) VinalAudio.prefetch(cands[candAt + 1]);
@@ -32855,7 +33135,8 @@ window.renderAdminStats = renderAdminStats;
   /* ---------- playing ---------- */
   function hear() {
     if (!song || revealed) return;
-    if (step === 0 && !heardAt) heardAt = Date.now();
+    startClock();
+    if (revealed) return;
     VinalAudio.prime();
     var b = el('recall-hear');
     if (b) b.classList.add('on');
@@ -32887,6 +33168,7 @@ window.renderAdminStats = renderAdminStats;
     if (revealed || !song || busy) return;
     var i = el('recall-input'), v = (i && i.value || '').trim();
     if (!v) { shake(); return; }
+    if (started() && elapsed() >= LIMIT_MS) { timeUp(); return; }
     /* Naming the artist is not naming the song, and it is the single most
        common near-miss — so it says so and costs nothing, rather than being
        scored as a wrong guess and quietly eating a reveal. */
@@ -32906,23 +33188,28 @@ window.renderAdminStats = renderAdminStats;
     hear();
   }
 
-  function finishRound(correct) {
+  function finishRound(correct, timedOut) {
+    var elapsedMs = started() ? Math.min(LIMIT_MS, elapsed()) : null;
+    pauseClock();
     revealed = true;
     VinalAudio.stop();
     movePlayhead(0);
-    var elapsedMs = heardAt ? (Date.now() - heardAt) : null;
     lastElapsedMs = elapsedMs;
     var got = Recall.settle(sess, song, step, attempts, correct, elapsedMs);
     Recall.setBest(sess.mode, sess.score);
+    // Sudden death: in a run, one miss (wrong to the end, given up, or out of
+    // time) ends it. The score is filed now, not when somebody taps through.
+    if (!correct && sess.m.endless && !sess.m.oneRound) { sess.over = true; fileRun(); }
+    saveLive();
     closeSuggest();
     paintHud();
-    reveal(correct, got);
+    reveal(correct, got, timedOut);
     track2('recall_round', { mode: sess.mode, correct: !!correct, step: step });
     if (sess.mode === 'daily') finishDaily(correct, got);
   }
   function track2(nm, props) { try { if (window.track) window.track(nm, props); } catch (e) {} }
 
-  function reveal(correct, got) {
+  function reveal(correct, got, timedOut) {
     var art = el('recall-art');
     if (art) art.classList.add('open');
     modal.classList.remove('rc-playing');
@@ -32935,12 +33222,13 @@ window.renderAdminStats = renderAdminStats;
     var host = el('recall-reveal');
     if (!host) return;
 
-    var head = correct ? 'Correct' : 'Missed';
+    var head = correct ? 'Correct' : sess.over ? (timedOut ? 'Time’s up · run over' : 'Run over') : timedOut ? 'Time’s up' : 'Missed';
     var pts = correct ? ('+' + n(got.points)) : '';
     var bonus = (correct && got.bonus) ? ('<span class="rc-bonus">+' + n(got.bonus) + ' streak</span>') : '';
     var line = correct
-      ? ('Got it at ' + STEPS[step] + '.0s')
-      : ('It ran the full ' + STEPS[STEPS.length - 1] + ' seconds');
+      ? (lastElapsedMs != null ? 'Named in ' + (lastElapsedMs / 1000).toFixed(1) + 's' : 'Named before it played')
+      : timedOut ? 'Ten seconds to name it, and the clock ran out.'
+      : step >= STEPS.length - 1 ? ('It ran the full ' + STEPS[STEPS.length - 1] + ' seconds') : 'Given up.';
     var src = VinalAudio.current() === 'deezer'
       ? ('<a class="rc-src dz-credit" href="' + esc(clip && clip.link ? clip.link : (VinalAudio.link(song) || '#')) +
          '" target="_blank" rel="noopener"><img src="/assets/deezer-mark.png" alt="" width="12" height="12">Preview from Deezer</a>')
@@ -32962,6 +33250,10 @@ window.renderAdminStats = renderAdminStats;
       acts.innerHTML = '<button class="btn-primary" id="recall-stop">Done</button>';
       el('recall-stop').addEventListener('click', function () { finishSession(); });
       setTimeout(function () { var b = el('recall-stop'); if (b) b.focus(); }, 40);
+    } else if (sess.over) {
+      acts.innerHTML = '<button class="btn-primary" id="recall-stop">See your score</button>';
+      el('recall-stop').addEventListener('click', function () { finishSession(); });
+      setTimeout(function () { var b = el('recall-stop'); if (b) b.focus(); }, 40);
     } else if (sess.m.endless) {
       acts.innerHTML = '<button class="btn-primary" id="recall-next">Next song</button>' +
         '<button class="rc-skip" id="recall-stop">Finish</button>';
@@ -32981,6 +33273,7 @@ window.renderAdminStats = renderAdminStats;
 
   /* ---------- the daily ---------- */
   async function finishDaily(correct, got) {
+    clearLive();
     var rec = Recall.saveDaily({ mode: 'daily', score: sess.score, step: step,
                                  correct: !!correct, attempts: attempts });
     if (window.notePlay) notePlay('recall');
@@ -33059,9 +33352,28 @@ window.renderAdminStats = renderAdminStats;
   function stopCountdown() { if (countdown) { clearInterval(countdown); countdown = null; } }
 
   /* ---------- the session summary ---------- */
+  /* Filing a run, once: the best, the game log, the payout, the board and
+     the server row. Called the moment a run ends (a sudden-death miss) and
+     again harmlessly from the summary, which only paints. */
+  var _boardRes = null;
+  function fileRun() {
+    if (!sess || sess.filed) return;
+    sess.filed = true;
+    clearLive();
+    var st = Recall.stats(sess);
+    // The session's own mode, not a hardcoded 'endless' — otherwise the
+    // tutorial's single round files itself as an Endless personal best.
+    Recall.setBest(sess.mode, st.score);
+    if (window.notePlay) notePlay('recall');
+    if (window.Wallet && Wallet.awardGame && st.songs > 0) Wallet.awardGame('recall', { reason: 'Recall' });
+    track2('recall_session', { songs: st.songs, score: st.score, streak: st.bestStreak });
+    _boardRes = window.Boards ? Boards.finish('recall', { score: st.score, played: st.played, songs: st.songs }) : null;
+    if (on()) { try { Cloud.recallSession(st.score, st.songs, st.bestStreak, Math.round(st.avgReveal)); } catch (e) {} }
+  }
   async function finishSession(note) {
     VinalAudio.stop();
     stopCountdown();
+    pauseClock();
     var st = Recall.stats(sess);
     var isBest = st.score > (sess.bestAtStart || 0);
     /* Marked finished before anything is filed. close() records an abandoned
@@ -33069,16 +33381,11 @@ window.renderAdminStats = renderAdminStats;
        properly and THEN closing the sheet files the same run twice, once as a
        session row on the server and once as a play in the game log. */
     sess.done = true;
-    // The session's own mode, not a hardcoded 'endless' — otherwise the
-    // tutorial's single round files itself as an Endless personal best.
-    Recall.setBest(sess.mode, st.score);
+    fileRun();
     show('recall-over');
     // The big number IS the score; the chip beside the wordmark would be the
     // same number twice.
     var sc = el('recall-score'); if (sc) sc.style.display = 'none';
-    if (window.notePlay) notePlay('recall');
-    if (window.Wallet && Wallet.awardGame && st.songs > 0) Wallet.awardGame('recall', { reason: 'Recall' });
-    track2('recall_session', { songs: st.songs, score: st.score, streak: st.bestStreak });
 
     el('recall-final').textContent = n(st.score);
     el('recall-summary').innerHTML =
@@ -33101,13 +33408,11 @@ window.renderAdminStats = renderAdminStats;
       sh.onclick = function () { handOff(sh, { text: Recall.shareText(shareRec), copied: 'Copied' }); };
     }
     paintCard();
-    if (window.Boards) {
+    if (window.Boards && _boardRes) {
       var gbe = Boards.slot(el('recall-summary'), 'recall-gb-end');
       gbe.innerHTML = '';
-      Boards.finish('recall', { score: st.score, played: st.played, songs: st.songs }).then(function (res) { Boards.result(gbe, res); });
+      _boardRes.then(function (res) { Boards.result(gbe, res); });
     }
-    if (!on()) return;
-    try { await Cloud.recallSession(st.score, st.songs, st.bestStreak, Math.round(st.avgReveal)); } catch (e) {}
   }
   function row(k, v) { return '<div class="rc-sum-row"><span>' + esc(k) + '</span><b>' + esc(v) + '</b></div>'; }
 
@@ -33194,7 +33499,10 @@ window.renderAdminStats = renderAdminStats;
   function openLobby() {
     VinalAudio.stop();
     stopCountdown();
-    sess = null;
+    pauseClock();
+    if (sess && !sess.done && !sess.filed) fileAbandoned(sess);
+    clearLive();
+    sess = null; song = null;
     show('recall-lobby');
     paintHud();
     paintLobby();
@@ -33248,7 +33556,9 @@ window.renderAdminStats = renderAdminStats;
 
   function startMode(key) {
     if (key === 'daily' && Recall.dailyDone()) { paintLobby(); return; }
+    if (sess && !sess.done && !sess.filed) fileAbandoned(sess);
     sess = Recall.session(key);
+    _boardRes = null;
     if (window.Boards) {
       Boards.start('recall', key, { day: Recall.dayNo(), local: key !== 'daily' && key !== 'endless' });
       Boards.clock(el('recall-clock'), 'recall');
@@ -33261,6 +33571,8 @@ window.renderAdminStats = renderAdminStats;
   function open(mode) {
     modal.classList.add('open');
     serverState = serverState || null;
+    // A round left open comes back exactly where it was, clock included.
+    if (!sess) { var live = readLive(); if (live && resume(live)) return; }
     openLobby();
     if (mode && Recall.MODES[mode]) startMode(mode);
   }
@@ -33275,16 +33587,13 @@ window.renderAdminStats = renderAdminStats;
   function teardown() {
     VinalAudio.stop();
     stopCountdown();
-    // A run abandoned mid-way is still a run played, and the summary is where
-    // the score lives — so it is recorded silently rather than reopening the
-    // sheet to tell somebody what they just walked away from.
-    if (sess && sess.played && sess.m.endless && !sess.done) {
-      var st = Recall.stats(sess);
-      Recall.setBest('endless', st.score);
-      if (on()) { try { Cloud.recallSession(st.score, st.songs, st.bestStreak, Math.round(st.avgReveal)); } catch (e) {} }
-      if (window.notePlay) notePlay('recall');
-    }
-    sess = null;
+    if (!sess) { paintCard(); return; }
+    // Closing PAUSES a run: the round, the reveal step and the time left are
+    // kept and come back on the next open. Only a run already over is filed.
+    pauseClock();
+    if (!sess.done && !sess.over && song) saveLive();
+    else if (!sess.done && !sess.filed) fileAbandoned(sess);
+    sess = null; song = null;
     paintCard();
   }
   function close() { modal.classList.remove('open'); teardown(); }
@@ -33296,7 +33605,13 @@ window.renderAdminStats = renderAdminStats;
 
   /* ---------- wiring ---------- */
   el('recall-close').addEventListener('click', close);
-  modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+  // The app going to the background pauses the round the same way closing does.
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden || !sess || revealed || !clockAt) return;
+    pauseClock(); VinalAudio.stop(); saveLive();
+    say('Paused with ' + ((LIMIT_MS - clockMs) / 1000).toFixed(1) + 's left. Play to carry on.');
+  });
+  window.addEventListener('pagehide', function () { if (sess && !sess.done && !sess.over && song) { pauseClock(); saveLive(); } });
   el('recall-daily-btn').addEventListener('click', function () { startMode('daily'); });
   el('recall-endless-btn').addEventListener('click', function () { startMode('endless'); });
   el('recall-hear').addEventListener('click', hear);
@@ -33310,7 +33625,8 @@ window.renderAdminStats = renderAdminStats;
   input.setAttribute('aria-autocomplete', 'list');
   input.setAttribute('aria-controls', 'recall-sugg');
   input.setAttribute('aria-expanded', 'false');
-  input.addEventListener('input', paintSuggest);
+  input.addEventListener('input', function () { if (clockMs && !revealed) startClock(); paintSuggest(); });
+
   input.addEventListener('blur', function () { setTimeout(closeSuggest, 120); });
   input.addEventListener('keydown', function (e) {
     if (e.isComposing || e.keyCode === 229) return;          // an IME is still composing
@@ -37937,7 +38253,7 @@ window.track = function (name, props) {
           (art ? '<img class="fy-main" src="' + art + '" alt="" decoding="async"' + (i === 0 ? ' fetchpriority="high"' : i > 2 ? ' loading="lazy"' : '') + '>' : '') +
           '<span class="fy-cue"></span>' +
         '</button>' +
-        '<div class="fy-tl" aria-hidden="true"></div>' +
+        '<button class="fy-peek" data-cmt="' + i + '" type="button" hidden></button>' +
         '<button class="fy-cmt" data-cmt="' + i + '" aria-label="Comments"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.6 3.8c-.5.4-1.2 0-1.2-.6V16A2.5 2.5 0 0 1 4 13.5Z"/></svg><span class="fy-cmt-n"></span></button>' +
         '<button class="fy-like' + (window.likedSongHas && likedSongHas(c.key) ? ' liked' : '') + '" data-like="' + i + '" aria-label="Like"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 20.6s-7.6-4.5-10.2-9C.3 8.6 1 5.4 3.7 4.1c2-.9 4.3-.3 5.7 1.4l2.6 3.1 2.6-3.1c1.4-1.7 3.7-2.3 5.7-1.4 2.7 1.3 3.4 4.5 1.9 7.5-2.6 4.5-10.2 9-10.2 9Z"/></svg></button>' +
       '</div>' +
@@ -41101,14 +41417,14 @@ window.track = function (name, props) {
 </div>
 
 </body>
-<script src="/assets/interactions.js?v=2"></script>
+<script src="/assets/interactions.js?v=3"></script>
 <script src="/assets/replay.js?v=2"></script>
 <script src="/assets/you.js?v=2"></script>
 <script src="/assets/glow.js?v=3"></script>
-<script src="/assets/comments.js?v=1" defer></script>
+<script src="/assets/comments.js?v=2" defer></script>
 <script src="/assets/boards.js?v=2"></script>
 <script src="/assets/play.js?v=2"></script>
-<script src="/assets/charades.js?v=1"></script>
+<script src="/assets/charades.js?v=2"></script>
 <script src="/assets/passport-core.js?v=1"></script>
 <script src="/assets/passport.js?v=1"></script>
 <script src="/assets/safety.js?v=1"></script>

@@ -6042,7 +6042,68 @@ suggestion, an exact folded match, and otherwise highlights the first rather tha
 guessing. Tapping a suggestion **picks** it (it used to submit). IME composition
 and key repeat are ignored. `scripts/tests/recall.spec.mjs` covers it.
 
+### Recall: the ten-second limit, sudden death, and resuming (2026-10-20)
+
+- **A round is ten seconds from the first press of play**, whatever the reveal
+  step. A visible clock (`#recall-timer`) drains; running out is a miss
+  (`timeUp`). Past 10s a guess used to still pay 250, so a run could sit on a
+  song for ever. `..._20261020140000_recall_ten_second_limit.sql` (**apply by
+  hand**) makes the server agree: `recall_points` is 0 and `recall_submit`
+  judges a miss past 10,500ms (500ms grace for the gap between the timer and
+  the request). Covered by `launch-db.selfcheck.mjs`.
+- **Endless is sudden death.** Any miss — wrong at 10s, Give up, out of time —
+  ends the run; it is filed at that moment (`fileRun`: best, game log, payout,
+  board, `recall_session`), and the reveal offers only *See your score*. The
+  tutorial (`oneRound`) and the daily are unchanged.
+- **Closing pauses, opening resumes.** `crate_recall_live` (crate_ prefix, so an
+  account switch wipes it; not synced) holds the mode, the song (pool index),
+  the step, attempts, the elapsed clock and the run. `open()` resumes it before
+  the lobby; the clock restarts on the next play or keystroke. Going to the
+  background pauses it the same way. A daily only resumes on its own day; a
+  run left over twelve hours is filed as abandoned and dropped.
+- **Game sheets close only from their X** (or Escape / system back). One
+  capture-phase guard in `assets/interactions.js` swallows backdrop clicks for
+  `#game`, the Drop, Cover Fire, Higher or Lower, Recall, Earworm, Bid Wars and
+  the Tournament. Higher or Lower's "tap beside the panel to skip the wait"
+  went with it; tapping inside the panel still skips.
+- **Layout.** The panel scrolls (`overflow-y: auto`, x hidden) instead of
+  clipping, so a 720px desktop window no longer cut off Submit. The sleeve is
+  sized by height too (`--rc-w`). The rings were at a fixed `top: 210px`; they
+  are now centred on the measured sleeve (`placeRings()` sets `--rx/--ry/--rs`
+  on show and resize — only the centre of the spinning lobby record is read,
+  trap 3). `scripts/tests/recall.spec.mjs` covers the limit and the resume.
+
+### One rule for naming an album
+
+`VinalTitles.albumBase()` / `albumMatch()` (next to `baseName`). Every game
+that types an album name — the five-round `#game` (cover, Cover EXTREME,
+tracklist) through `nameMatch`, and Earworm's library picks through
+`albumBase` — uses it. The record names its pressings: "For All the Dogs" is
+right for "For All the Dogs Scary Hours Edition", likewise Deluxe, Expanded,
+Remastered, "25th Anniversary Edition", "(Taylor's Version)", "Pt. 1". It never
+crosses numbers ("Views" ≠ "Views 2", "Pt 2" ≠ "Pt. 1", "21" ≠ "25") and an
+unbracketed "X Edition" tail only matches from the front ("Scary Hours" is not
+the record). Recall matches songs and keeps its own `Recall.matches`. The
+Daily Drop picks from a list and does not match text. Cases are asserted in
+`recall.spec.mjs`.
+
+### Arcade marquee, Community Choice stage
+
+The Arcade head was a kicker "The arcade" over a title "Arcade"; it is one
+marquee (`.arc-marquee`): the letters flicker on as the view arrives (a CSS
+animation restarts on display:none → block) and bulbs chase along both edges
+as a 14px pixel tile (trap 6). Community Choice has its own stage
+(`.cc-hero`): the five category hues as an equaliser that plays while a moment
+in the feed plays (`#view-choice.cc-live`, set in `paintPlaying`), the CTA with
+a slow sheen, and agreeing pops the count and lights the card once. All of it
+stops under reduced motion.
+
+`.crate-layout` was `1fr`, which is min-content wide: one long line in a Crate
+feed card held the column at 420px on a 375px phone and cut every card off.
+`minmax(0, 1fr)` now.
+
 ## Smaller things in the same pass
+
 
 - **For You's top was cut off** because the window itself could scroll by the
   body's nav padding (102px) and scroll restoration put it there. On For You the
@@ -6275,10 +6336,14 @@ circle, which also sits under the photo so a broken image leaves the letter.
 says "Not switched on yet" and the card shows no count.
 
 - **One thread per song, keyed by the feed's `skey`** (artist|title), not by an
-  id — trap 4. A comment may be pinned to a millisecond of the 30-second clip
-  (`at_ms`): pinned ones show as faces along the foot of the sleeve and rise as
-  a bubble when the playhead passes them. The composer pins to wherever the
-  clip was when the sheet opened; the chip toggles to "Whole song".
+  id — trap 4. **Comments belong to the song, never to a second of it**
+  (2026-10-20): the audio is a 30-second preview, so a pin at 0:14 pointed at a
+  moment most people never hear. The playhead bubbles, the faces along the
+  sleeve, the Timeline sort and the composer's pin chip are gone; the client
+  always sends `p_at_ms: null` and no longer selects `at_ms`. The column and
+  old rows are untouched (no migration). The card shows the thread's best
+  comment (most liked, not hidden) as one line under the sleeve, `.fy-peek`,
+  absolutely placed so its arrival moves nothing; tapping it opens the sheet.
 - **The server is the safeguard.** No insert/update policy (guarded); only
   `song_comment_add()` writes: 2–280 chars, whitespace collapsed, control chars
   stripped, slurs/targeted abuse refused (folded and squashed, so `f@gg0t`
@@ -6335,9 +6400,13 @@ the Rewards module (`rewardFor`, `LADDER`), `Wallet.dailyLogin`.
 
 **Artist Charades** — `assets/charades.js` / `charades.css`, `#charades-card` under
 a Party label in the Arcade, `charades` in `GAME_LABELS`. Pass-the-phone, two equal
-teams, 30-second turns, +1 / Skip / −1, rounds or first-to, sudden death on a tie,
-a round ends only when both teams have had a turn. The pool's level is how hard a
-NAME is to act (1 picture / 2 sounds-like / 3 needs a plan), never obscurity.
+teams, **60-second turns** (`TURN_MS`), +1 / Skip / −1, rounds or first-to, sudden
+death on a tie, a round ends only when both teams have had a turn. The pool's
+level is how hard a NAME is to act (1 picture / 2 sounds-like / 3 needs a plan),
+never obscurity. **The pool is curated for a room, not for completeness**
+(2026-10-20, ~200 names): chart regulars and household names a mixed UK group
+would shout; specialist picks (Kraftwerk, Sleaford Mods, Peggy Gou…) were cut.
+A new name has to pass "would most of the room get it once acted?".
 Live game mirrored to sessionStorage (`vinall_charades_live`) so Back, a lock
 screen or a reload resumes it; players and settings in `vinall_charades_v1`.
 `.cz` is a `.modal` at z 199 so `ask()` sits above it. Pays no Discs, on purpose.

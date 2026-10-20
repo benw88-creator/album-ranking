@@ -2,10 +2,11 @@
    SONG COMMENTS — For You's comment layer (window.SongComments).
 
    One thread per SONG, keyed by the feed's `skey` (artist|title), so a
-   legacy id and a Deezer id land on the same conversation. A comment can be
-   pinned to the second of the 30-second clip it was written at: those show
-   as marks along the foot of the sleeve and surface as a bubble when the
-   playhead passes them.
+   legacy id and a Deezer id land on the same conversation. Comments belong
+   to the SONG, never to a second of it: the audio is a 30-second preview, so
+   "at 0:14" pointed at a moment most people will never hear. Older rows that
+   carry at_ms keep it in the table; nothing here reads it. The card shows
+   the thread's best comment as one quiet line under the sleeve.
 
    The server (song_comment_add, ..._20261014140000_song_comments.sql) is the
    safeguard; the checks here only give instant, friendly answers. Every
@@ -14,18 +15,16 @@
    ================================================================ */
 (function () {
   'use strict';
-  var MAX = 280, CLIP_MS = 30000;
+  var MAX = 280;
   var _cache = {};            // skey -> { at, rows, profs, liked }
   var _active = null;         // { card, item }
-  var _tick = 0, _shown = {}; // timeline bubbles
-  var _sheet = null, _sort = 'top', _pinOn = true, _pinMs = null, _sending = false;
+  var _sheet = null, _sort = 'top', _sending = false;
   var _off = false;           // migration missing → stay quiet
 
   function $(s, r) { return (r || document).querySelector(s); }
   function e(s) { return window.esc ? esc(s) : String(s || '').replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
   function sb() { return window.Cloud && Cloud.client ? Cloud.client() : null; }
   function me() { return window.Cloud && Cloud.getUser ? Cloud.getUser() : null; }
-  function mmss(ms) { var s = Math.max(0, Math.round((ms || 0) / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
   function ago(iso) { return window.timeAgo ? timeAgo(new Date(iso).getTime()) : ''; }
   function reduced() { return window.motionReduced ? motionReduced() : matchMedia('(prefers-reduced-motion: reduce)').matches; }
 
@@ -63,7 +62,7 @@
     if (c && !force && Date.now() - c.at < 60000) return c;
     var client = sb();
     if (!client || _off) return { at: Date.now(), rows: [], profs: {}, liked: {} };
-    var res = await client.from('song_comments').select('id,user_id,body,at_ms,likes,created_at,hidden')
+    var res = await client.from('song_comments').select('id,user_id,body,likes,created_at,hidden')
       .eq('song_key', key).order('created_at', { ascending: false }).limit(200);
     if (res.error) {
       if (/does not exist|schema cache|relation/i.test(res.error.message || '')) _off = true;
@@ -86,58 +85,36 @@
     return c;
   }
 
-  /* ---- the card: count + marks along the sleeve --------------------- */
+  /* ---- the card: count + the thread's best line ------------------- */
+  // Most-liked visible comment, newest breaking ties (rows arrive newest first).
+  function best(rows) {
+    var top = null;
+    rows.forEach(function (r) { if (!r.hidden && (!top || (r.likes || 0) > (top.likes || 0))) top = r; });
+    return top;
+  }
   function paintCard(card, data) {
     if (!card) return;
     var n = data.rows.length, cnt = card.querySelector('.fy-cmt-n');
     if (cnt) cnt.textContent = n ? (n > 999 ? Math.round(n / 100) / 10 + 'k' : String(n)) : '';
-    var tl = card.querySelector('.fy-tl');
-    if (!tl) return;
-    var pinned = data.rows.filter(function (r) { return r.at_ms != null; }).slice(0, 40);
-    tl.innerHTML = pinned.map(function (r) {
-      var pr = data.profs[r.user_id], av = pr && pr.avatar_url;
-      return '<span class="fy-tl-dot" style="left:' + (r.at_ms / CLIP_MS * 100).toFixed(2) + '%">' +
-        (av ? '<img src="' + e(av) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</span>';
-    }).join('');
+    var peek = card.querySelector('.fy-peek');
+    if (!peek) return;
+    var r = best(data.rows);
+    if (!r) { peek.classList.remove('on'); peek.hidden = true; return; }
+    var pr = data.profs[r.user_id], name = pr ? pr.username : 'someone';
+    peek.innerHTML = (pr && pr.avatar_url ? '<img src="' + e(pr.avatar_url) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
+      '<b></b><span></span>' + (n > 1 ? '<em>+' + (n - 1) + '</em>' : '');
+    peek.querySelector('b').textContent = name;
+    peek.querySelector('span').textContent = soften(r.body);
+    peek.setAttribute('aria-label', n + (n === 1 ? ' comment' : ' comments') + '. Open comments');
+    if (peek.hidden) { peek.hidden = false; requestAnimationFrame(function () { peek.classList.add('on'); }); }
   }
 
   // Called by For You when a card becomes the one in view.
   function focus(card, item) {
-    stopTick();
     if (!card || !item || !item.skey) { _active = null; return; }
     _active = { card: card, item: item };
     var mine = _active;
-    load(item.skey).then(function (d) { if (_active === mine) { paintCard(card, d); startTick(); } }).catch(function () {});
-  }
-
-  /* As the playhead crosses a pinned comment, it rises out of the timeline.
-     Four times a second is plenty for a 30-second clip; one at a time. */
-  function startTick() {
-    stopTick(); _shown = {};
-    if (!_active) return;
-    _tick = setInterval(function () {
-      var a = _active; if (!a || !a.card.classList.contains('is-playing') || (_sheet && _sheet.classList.contains('open'))) return;
-      var d = _cache[a.item.skey]; if (!d) return;
-      var pos = 0; try { pos = (window.VinalAudio ? VinalAudio.position() : 0) * 1000; } catch (x) {}
-      for (var i = 0; i < d.rows.length; i++) {
-        var r = d.rows[i];
-        if (r.at_ms == null || _shown[r.id] || r.at_ms > pos || pos - r.at_ms > 900) continue;
-        _shown[r.id] = 1; bubble(a.card, r, d.profs[r.user_id]); break;
-      }
-    }, 250);
-  }
-  function stopTick() { if (_tick) clearInterval(_tick); _tick = 0; }
-  function bubble(card, r, pr) {
-    var wrap = card.querySelector('.fy-art-wrap'); if (!wrap) return;
-    var old = wrap.querySelector('.fy-bub'); if (old) old.remove();
-    var b = document.createElement('div');
-    b.className = 'fy-bub';
-    b.style.setProperty('--x', Math.min(82, Math.max(18, r.at_ms / CLIP_MS * 100)) + '%');
-    b.innerHTML = '<b></b><span></span>';
-    b.firstChild.textContent = pr ? '@' + pr.username : 'someone';
-    b.lastChild.textContent = soften(r.body.length > 90 ? r.body.slice(0, 88) + '…' : r.body);
-    wrap.appendChild(b);
-    setTimeout(function () { b.classList.add('out'); setTimeout(function () { b.remove(); }, 400); }, 3200);
+    load(item.skey).then(function (d) { if (_active === mine) paintCard(card, d); }).catch(function () {});
   }
 
   /* ---- the sheet ----------------------------------------------------- */
@@ -155,11 +132,10 @@
           '<button class="modal-close sc-x" type="button" aria-label="Close comments">&times;</button>' +
         '</div>' +
         '<div class="sc-sort" role="tablist">' +
-          '<button data-sort="top" role="tab">Top</button><button data-sort="new" role="tab">Newest</button><button data-sort="time" role="tab">Timeline</button>' +
+          '<button data-sort="top" role="tab">Top</button><button data-sort="new" role="tab">Newest</button>' +
         '</div>' +
         '<div class="sc-list" aria-live="polite"></div>' +
         '<form class="sc-form" autocomplete="off">' +
-          '<button type="button" class="sc-pin" aria-pressed="true" title="Pin to this moment in the clip"></button>' +
           '<div class="sc-field"><textarea rows="1" maxlength="' + MAX + '" placeholder="Add a comment…" aria-label="Write a comment"></textarea><span class="sc-left"></span></div>' +
           '<button type="submit" class="sc-send" aria-label="Post comment"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z" fill="currentColor"/></svg></button>' +
         '</form>' +
@@ -172,7 +148,6 @@
       var s = ev.target.closest('[data-sort]'); if (s) { _sort = s.dataset.sort; renderList(); return; }
       var lk = ev.target.closest('[data-clike]'); if (lk) return like(lk);
       var more = ev.target.closest('[data-cmore]'); if (more) return menu(more.dataset.cmore);
-      var seek = ev.target.closest('[data-seekat]'); if (seek) { _pinMs = +seek.dataset.seekat; _pinOn = true; paintPin(); return; }
       var u = ev.target.closest('[data-cuser]'); if (u && u.dataset.cuser && window.viewUserProfile) { close(); viewUserProfile(u.dataset.cuser); }
     });
     var ta = m.querySelector('textarea');
@@ -188,7 +163,6 @@
       if (!me() && window.Cloud) { ta.blur(); close(); Cloud.openAuth(); }
     });
     m.querySelector('.sc-form').addEventListener('submit', function (ev) { ev.preventDefault(); send(); });
-    m.querySelector('.sc-pin').addEventListener('click', function () { _pinOn = !_pinOn; paintPin(); });
     // Swipe the grab handle down to dismiss.
     var grab = m.querySelector('.sc-grab'), panel = m.querySelector('.sc-panel'), y0 = null;
     grab.addEventListener('pointerdown', function (ev) { y0 = ev.clientY; grab.setPointerCapture(ev.pointerId); panel.style.transition = 'none'; });
@@ -200,22 +174,11 @@
     return m;
   }
 
-  function paintPin() {
-    var b = _sheet && _sheet.querySelector('.sc-pin'); if (!b) return;
-    var has = _pinMs != null;
-    b.hidden = !has;
-    b.setAttribute('aria-pressed', String(has && _pinOn));
-    b.textContent = has ? (_pinOn ? '@ ' + mmss(_pinMs) : 'Whole song') : '';
-  }
-
   var _openItem = null, _openCard = null;
   async function open(item, card) {
     if (!item) return;
     var m = build();
     _openItem = item; _openCard = card || null;
-    _pinMs = null;
-    try { if (card && card.classList.contains('is-playing') && window.VinalAudio) _pinMs = Math.min(CLIP_MS, Math.round(VinalAudio.position() * 1000)); } catch (x) {}
-    _pinOn = true; paintPin();
     var art = m.querySelector('.sc-art'); if (item.art) { art.src = item.art; art.hidden = false; } else art.hidden = true;
     m.querySelector('.sc-song').textContent = (item.title || '') + (item.artist ? ' · ' + item.artist : '');
     m.querySelector('.sc-err').textContent = '';
@@ -241,7 +204,6 @@
   function sorted(d) {
     var r = d.rows.slice();
     if (_sort === 'top') r.sort(function (a, b) { return (b.likes - a.likes) || (a.created_at < b.created_at ? 1 : -1); });
-    else if (_sort === 'time') r.sort(function (a, b) { return (a.at_ms == null) - (b.at_ms == null) || (a.at_ms - b.at_ms); });
     return r;
   }
   function renderList() {
@@ -254,7 +216,7 @@
     if (_off) { list.innerHTML = '<div class="sc-empty"><b>Not switched on yet</b><span>Comments are coming soon.</span></div>'; return; }
     if (!d.rows.length) {
       list.innerHTML = '<div class="sc-empty"><span class="sc-empty-mark" aria-hidden="true"></span><b>No comments yet</b><span>' +
-        (_pinMs != null ? 'Start the conversation — it’ll be pinned at ' + mmss(_pinMs) + '.' : 'Be the first to say something about this one.') + '</span></div>';
+        'Be the first to say something about this one.</span></div>';
       return;
     }
     list.innerHTML = sorted(d).map(function (r, k) {
@@ -264,7 +226,6 @@
         '<button class="sc-av" data-cuser="' + (pr ? e(r.user_id) : '') + '" aria-label="' + e(name) + '">' + av + '</button>' +
         '<div class="sc-body">' +
           '<div class="sc-meta"><b>' + e(name) + '</b>' +
-            (r.at_ms != null ? '<button class="sc-at" data-seekat="' + r.at_ms + '" title="Reply at this moment">' + mmss(r.at_ms) + '</button>' : '') +
             '<span>' + e(ago(r.created_at)) + '</span>' + (r.hidden ? '<em>Hidden after reports</em>' : '') + '</div>' +
           '<p>' + e(soften(r.body)) + '</p>' +
         '</div>' +
@@ -288,7 +249,7 @@
     try {
       var it = _openItem;
       var res = await sb().rpc('song_comment_add', { p_key: it.skey, p_body: body,
-        p_at_ms: _pinOn && _pinMs != null ? _pinMs : null, p_title: it.title || null, p_artist: it.artist || null });
+        p_at_ms: null, p_title: it.title || null, p_artist: it.artist || null });
       if (res.error) throw res.error;
       var row = Array.isArray(res.data) ? res.data[0] : res.data;
       var d = _cache[it.skey] || (_cache[it.skey] = { at: Date.now(), rows: [], profs: {}, liked: {} });
@@ -298,7 +259,7 @@
       _sort = 'new'; renderList();
       var first = _sheet.querySelector('.sc-row'); if (first) first.classList.add('fresh');
       if (window.buzz) buzz('good');
-      if (window.track) track('song_comment', { pinned: row && row.at_ms != null });
+      if (window.track) track('song_comment', {});
     } catch (x) {
       err.textContent = reasonOf(x); if (window.buzz) buzz('bad');
     } finally { _sending = false; btn.disabled = false; }
@@ -340,5 +301,5 @@
     openReport('comment', 'sc:' + id, row.user_id, pr ? '@' + pr.username + '’s comment' : 'a comment');
   }
 
-  window.SongComments = { focus: focus, open: open, close: close, blur: function () { stopTick(); _active = null; }, _soften: soften, _precheck: precheck };
+  window.SongComments = { focus: focus, open: open, close: close, blur: function () { _active = null; }, _soften: soften, _precheck: precheck };
 })();

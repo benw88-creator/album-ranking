@@ -1,7 +1,7 @@
 /* ================================================================
    ARTIST CHARADES — a pass-the-phone party game.
 
-   One phone, two teams, thirty seconds each. The actor sees an artist and
+   One phone, two teams, sixty seconds each. The actor sees an artist and
    acts it out — no words, no humming — while their team shouts. +1 when they
    get it, Skip to move on, −1 to take back a point tapped by mistake.
 
@@ -17,103 +17,74 @@
    the sheet and the card offers to carry on. Player names persist in
    localStorage, because the same friends play next weekend.
 
-   It pays no Discs on purpose. Thirty seconds of shouting cannot be scored
+   It pays no Discs on purpose. A minute of shouting cannot be scored
    by a server, and a party game that pays is a party game somebody plays
    alone at 3am tapping +1.
    ================================================================ */
 (function () {
   'use strict';
 
-  /* name, level (1 easy to act / 2 / 3 hard to act), what they are */
+  /* name, level (1 easy to act / 2 / 3 hard to act), what they are.
+     Curated for the room, not for completeness: every name is one most of a
+     mixed UK group would shout once they got it — chart regulars, household
+     names, the bands everyone's parents know. Specialist picks nobody at a
+     party would reach were cut; a deck that keeps landing beats a long one
+     that stalls a turn. */
   var POOL = [
     ['Queen',1,'Band'],['The Beatles',1,'Band'],['Arctic Monkeys',1,'Band'],['Red Hot Chili Peppers',1,'Band'],
     ['One Direction',1,'Band'],['Snoop Dogg',1,'Rapper'],['50 Cent',1,'Rapper'],['Pitbull',1,'Rapper'],
-    ['Ice Spice',1,'Rapper'],['Gorillaz',1,'Band'],['Daft Punk',1,'Duo'],['Coldplay',1,'Band'],
-    ['Green Day',1,'Band'],['Pink Floyd',1,'Band'],['Iron Maiden',1,'Band'],["Guns N' Roses",1,'Band'],
-    ['Foo Fighters',1,'Band'],['The Rolling Stones',1,'Band'],['Black Eyed Peas',1,'Group'],['Spice Girls',1,'Group'],
-    ['Kings of Leon',1,'Band'],['Imagine Dragons',1,'Band'],['Fall Out Boy',1,'Band'],['Radiohead',1,'Band'],
-    ['Ice Cube',1,'Rapper'],['Vanilla Ice',1,'Rapper'],['Bruno Mars',1,'Singer'],['Lady Gaga',1,'Singer'],
-    ['Post Malone',1,'Singer'],['Cardi B',1,'Rapper'],['Future',1,'Rapper'],['21 Savage',1,'Rapper'],
-    ['The Weeknd',1,'Singer'],['Prince',1,'Singer'],['Train',1,'Band'],['Muse',1,'Band'],
-    ['Kiss',1,'Band'],['The Killers',1,'Band'],['The Police',1,'Band'],['The Cure',1,'Band'],
-    ['Beach Boys',1,'Band'],['Backstreet Boys',1,'Group'],['Take That',1,'Group'],['McFly',1,'Band'],
-    ['Snow Patrol',1,'Band'],['Lil Baby',1,'Rapper'],['Megan Thee Stallion',1,'Rapper'],['Pop Smoke',1,'Rapper'],
-    ['Juice WRLD',1,'Rapper'],['T-Pain',1,'Singer'],['Flo Rida',1,'Rapper'],['Stormzy',1,'Rapper'],
-    ['Central Cee',1,'Rapper'],['Slowthai',1,'Rapper'],['Professor Green',1,'Rapper'],['Harry Styles',1,'Singer'],
-    ['Sam Smith',1,'Singer'],['Sabrina Carpenter',1,'Singer'],['Taylor Swift',1,'Singer'],['Stevie Wonder',1,'Singer'],
-    ['Bad Bunny',1,'Rapper'],['Ski Mask the Slump God',1,'Rapper'],['Kodak Black',1,'Rapper'],['Glass Animals',1,'Band'],
-    ['Two Door Cinema Club',1,'Band'],['Vampire Weekend',1,'Band'],['The White Stripes',1,'Duo'],['The Black Keys',1,'Duo'],
-    ["Rag'n'Bone Man",1,'Singer'],['Arcade Fire',1,'Band'],['Pearl Jam',1,'Band'],['Smashing Pumpkins',1,'Band'],
-    ['Rage Against the Machine',1,'Band'],['Slipknot',1,'Band'],['Def Leppard',1,'Band'],['Deep Purple',1,'Band'],
-    ['Bee Gees',1,'Group'],['Earth, Wind & Fire',1,'Band'],['Tears for Fears',1,'Duo'],['Madness',1,'Band'],
-    ['Wham!',1,'Duo'],['Pet Shop Boys',1,'Duo'],['Talking Heads',1,'Band'],['Bananarama',1,'Group'],
-    ['Village People',1,'Group'],['Chemical Brothers',1,'Duo'],['Fatboy Slim',1,'DJ'],['Clean Bandit',1,'Band'],
-    ['Major Lazer',1,'Group'],['Marshmello',1,'DJ'],['DJ Snake',1,'DJ'],['Deadmau5',1,'DJ'],
-    ['Jungle',1,'Band'],['Wet Leg',1,'Band'],['Wolf Alice',1,'Band'],['Royal Blood',1,'Duo'],
-    ['Catfish and the Bottlemen',1,'Band'],['My Chemical Romance',1,'Band'],['Panic! at the Disco',1,'Band'],['Twenty One Pilots',1,'Duo'],
-    ['Blink-182',1,'Band'],['Pixies',1,'Band'],['Massive Attack',1,'Group'],['Frank Ocean',1,'Singer'],
-    ['Dr. Dre',1,'Rapper'],['Usher',1,'Singer'],['Daddy Yankee',1,'Rapper'],['Pink',1,'Singer'],
-    ['Amy Winehouse',1,'Singer'],['Johnny Cash',1,'Singer'],['Dolly Parton',1,'Singer'],['Luke Combs',1,'Singer'],
-    ['Neil Young',1,'Singer'],['Chuck Berry',1,'Singer'],['Little Richard',1,'Singer'],['Muddy Waters',1,'Singer'],
-    ['B.B. King',1,'Singer'],['The Who',1,'Band'],['The Monkees',1,'Band'],['The Animals',1,'Band'],
-    ['Yes',1,'Band'],['Rush',1,'Band'],['Heart',1,'Band'],['Europe',1,'Band'],
-    ['Poison',1,'Band'],['Whitesnake',1,'Band'],['Twisted Sister',1,'Band'],['The Byrds',1,'Band'],
-    ['Hall & Oates',1,'Duo'],['Kool & the Gang',1,'Band'],['Beastie Boys',1,'Group'],['Cypress Hill',1,'Group'],
-    ['Lil Wayne',1,'Rapper'],['Headie One',1,'Rapper'],['Royal Blood',1,'Duo'],['Nothing But Thieves',1,'Band'],
+    ['Ice Cube',1,'Rapper'],['Vanilla Ice',1,'Rapper'],['Ice Spice',1,'Rapper'],['Gorillaz',1,'Band'],
+    ['Daft Punk',1,'Duo'],['Coldplay',1,'Band'],['Green Day',1,'Band'],['Pink Floyd',1,'Band'],
+    ['Iron Maiden',1,'Band'],["Guns N' Roses",1,'Band'],['Foo Fighters',1,'Band'],['The Rolling Stones',1,'Band'],
+    ['Black Eyed Peas',1,'Group'],['Spice Girls',1,'Group'],['Kings of Leon',1,'Band'],['Imagine Dragons',1,'Band'],
+    ['Fall Out Boy',1,'Band'],['Bruno Mars',1,'Singer'],['Lady Gaga',1,'Singer'],['Post Malone',1,'Singer'],
+    ['Cardi B',1,'Rapper'],['The Weeknd',1,'Singer'],['Prince',1,'Singer'],['Train',1,'Band'],
+    ['Kiss',1,'Band'],['The Killers',1,'Band'],['The Police',1,'Band'],['Beach Boys',1,'Band'],
+    ['Backstreet Boys',1,'Group'],['Take That',1,'Group'],['Snow Patrol',1,'Band'],['Megan Thee Stallion',1,'Rapper'],
+    ['T-Pain',1,'Singer'],['Flo Rida',1,'Rapper'],['Stormzy',1,'Rapper'],['Central Cee',1,'Rapper'],
+    ['Harry Styles',1,'Singer'],['Taylor Swift',1,'Singer'],['Stevie Wonder',1,'Singer'],['Bad Bunny',1,'Rapper'],
+    ['Sabrina Carpenter',1,'Singer'],['Frank Ocean',1,'Singer'],["Rag'n'Bone Man",1,'Singer'],['Panic! at the Disco',1,'Band'],
+    ['Twenty One Pilots',1,'Duo'],['Blink-182',1,'Band'],['My Chemical Romance',1,'Band'],['Slipknot',1,'Band'],
+    ['Def Leppard',1,'Band'],['Deep Purple',1,'Band'],['Rage Against the Machine',1,'Band'],['Bee Gees',1,'Group'],
+    ['Earth, Wind & Fire',1,'Band'],['Tears for Fears',1,'Duo'],['Madness',1,'Band'],['Pet Shop Boys',1,'Duo'],
+    ['Village People',1,'Group'],['Fatboy Slim',1,'DJ'],['Marshmello',1,'DJ'],['Dr. Dre',1,'Rapper'],
+    ['Pink',1,'Singer'],['Johnny Cash',1,'Singer'],['Dolly Parton',1,'Singer'],['Amy Winehouse',1,'Singer'],
+    ['The Who',1,'Band'],['Heart',1,'Band'],['Lil Wayne',1,'Rapper'],['Future',1,'Rapper'],
+    ['21 Savage',1,'Rapper'],['Usher',1,'Singer'],['Beastie Boys',1,'Group'],['The White Stripes',1,'Duo'],
+    ['Smashing Pumpkins',1,'Band'],['Pearl Jam',1,'Band'],
 
     ['Eminem',2,'Rapper'],['Oasis',2,'Band'],['Blur',2,'Band'],['Sting',2,'Singer'],
     ['Seal',2,'Singer'],['Shaggy',2,'Singer'],['Madonna',2,'Singer'],['Journey',2,'Band'],
-    ['Toto',2,'Band'],['Scorpions',2,'Band'],['Eagles',2,'Band'],['The Doors',2,'Band'],
-    ['The Clash',2,'Band'],['Girls Aloud',2,'Group'],["Destiny's Child",2,'Group'],['Little Mix',2,'Group'],
-    ['Linkin Park',2,'Band'],['Maroon 5',2,'Band'],['Busted',2,'Band'],['The Darkness',2,'Band'],
-    ['Swedish House Mafia',2,'DJs'],['Calvin Harris',2,'DJ'],['Billie Eilish',2,'Singer'],['Ice-T',2,'Rapper'],
-    ['Lil Nas X',2,'Rapper'],['Gunna',2,'Rapper'],['Young Thug',2,'Rapper'],['Polo G',2,'Rapper'],
-    ['Rod Wave',2,'Rapper'],['Meek Mill',2,'Rapper'],['Doja Cat',2,'Rapper'],['Tyler, the Creator',2,'Rapper'],
-    ['A$AP Rocky',2,'Rapper'],['Lil Peep',2,'Rapper'],['J. Cole',2,'Rapper'],['Busta Rhymes',2,'Rapper'],
-    ['Wu-Tang Clan',2,'Group'],['Run-DMC',2,'Group'],['Public Enemy',2,'Group'],['OutKast',2,'Duo'],
-    ['Little Simz',2,'Rapper'],['Aitch',2,'Rapper'],['Dizzee Rascal',2,'Rapper'],['Tinie Tempah',2,'Rapper'],
-    ['Elvis Presley',2,'Singer'],['Michael Jackson',2,'Singer'],['Ed Sheeran',2,'Singer'],['Dua Lipa',2,'Singer'],
-    ['Katy Perry',2,'Singer'],['Ariana Grande',2,'Singer'],['Elton John',2,'Singer'],['Rick Astley',2,'Singer'],
-    ['Lana Del Rey',2,'Singer'],['Charli XCX',2,'Singer'],['Jack Harlow',2,'Rapper'],['Mac Miller',2,'Rapper'],
-    ['Kid Cudi',2,'Rapper'],['Lil Uzi Vert',2,'Rapper'],['Metro Boomin',2,'Producer'],['The Strokes',2,'Band'],
-    ['Foals',2,'Band'],['Florence + the Machine',2,'Band'],['Manic Street Preachers',2,'Band'],['The Kooks',2,'Band'],
-    ['Soundgarden',2,'Band'],['System of a Down',2,'Band'],['Motörhead',2,'Band'],['Black Sabbath',2,'Band'],
-    ['Led Zeppelin',2,'Band'],['The Jackson 5',2,'Group'],['Fleetwood Mac',2,'Band'],['Simply Red',2,'Band'],
-    ['Soft Cell',2,'Duo'],['Culture Club',2,'Band'],['Spandau Ballet',2,'Band'],['Blondie',2,'Band'],
-    ['The Prodigy',2,'Band'],['Chase & Status',2,'Duo'],['Fred again..',2,'Producer'],['The 1975',2,'Band'],
-    ['Weezer',2,'Band'],['Portishead',2,'Band'],['Childish Gambino',2,'Rapper'],['Gnarls Barkley',2,'Duo'],
-    ['Eazy-E',2,'Rapper'],['The Notorious B.I.G.',2,'Rapper'],['2Pac',2,'Rapper'],['Jay-Z',2,'Rapper'],
-    ['Timbaland',2,'Producer'],['Sean Kingston',2,'Singer'],['Ricky Martin',2,'Singer'],['Nicky Jam',2,'Rapper'],
-    ['Cher',2,'Singer'],['Sia',2,'Singer'],['Paloma Faith',2,'Singer'],['Lily Allen',2,'Singer'],
+    ['Eagles',2,'Band'],['The Doors',2,'Band'],['The Clash',2,'Band'],['Girls Aloud',2,'Group'],
+    ["Destiny's Child",2,'Group'],['Little Mix',2,'Group'],['Linkin Park',2,'Band'],['Maroon 5',2,'Band'],
+    ['Busted',2,'Band'],['Calvin Harris',2,'DJ'],['Billie Eilish',2,'Singer'],['Lil Nas X',2,'Rapper'],
+    ['Doja Cat',2,'Rapper'],['Tyler, the Creator',2,'Rapper'],['A$AP Rocky',2,'Rapper'],['J. Cole',2,'Rapper'],
+    ['Busta Rhymes',2,'Rapper'],['Wu-Tang Clan',2,'Group'],['OutKast',2,'Duo'],['Dizzee Rascal',2,'Rapper'],
+    ['Tinie Tempah',2,'Rapper'],['Elvis Presley',2,'Singer'],['Michael Jackson',2,'Singer'],['Ed Sheeran',2,'Singer'],
+    ['Dua Lipa',2,'Singer'],['Katy Perry',2,'Singer'],['Ariana Grande',2,'Singer'],['Elton John',2,'Singer'],
+    ['Rick Astley',2,'Singer'],['Lana Del Rey',2,'Singer'],['Charli XCX',2,'Singer'],['Metro Boomin',2,'Producer'],
+    ['The Strokes',2,'Band'],['Florence + the Machine',2,'Band'],['Black Sabbath',2,'Band'],['Led Zeppelin',2,'Band'],
+    ['The Jackson 5',2,'Group'],['Fleetwood Mac',2,'Band'],['Simply Red',2,'Band'],['Culture Club',2,'Band'],
+    ['Blondie',2,'Band'],['The Prodigy',2,'Band'],['The 1975',2,'Band'],['Weezer',2,'Band'],
+    ['Childish Gambino',2,'Rapper'],['The Notorious B.I.G.',2,'Rapper'],['2Pac',2,'Rapper'],['Jay-Z',2,'Rapper'],
+    ['Ricky Martin',2,'Singer'],['Cher',2,'Singer'],['Sia',2,'Singer'],['Lily Allen',2,'Singer'],
     ['Robbie Williams',2,'Singer'],['Boy George',2,'Singer'],['David Bowie',2,'Singer'],['Freddie Mercury',2,'Singer'],
-    ['Garth Brooks',2,'Singer'],['Shania Twain',2,'Singer'],['Billy Idol',2,'Singer'],['Bruce Springsteen',2,'Singer'],
-    ['Bob Marley',2,'Singer'],['The Kinks',2,'Band'],['The Hollies',2,'Band'],['Genesis',2,'Band'],
-    ['Van Halen',2,'Band'],['ZZ Top',2,'Band'],['Steely Dan',2,'Band'],['Chic',2,'Band'],
-    ['KC and the Sunshine Band',2,'Band'],['will.i.am',2,'Rapper'],['Lil Jon',2,'Rapper'],['Three 6 Mafia',2,'Group'],
-    ['Stone Roses',2,'Band'],['Duran Duran',2,'Band'],['Sugababes',2,'Group'],['Frankie Goes to Hollywood',2,'Band'],
+    ['Shania Twain',2,'Singer'],['Billy Idol',2,'Singer'],['Bruce Springsteen',2,'Singer'],['Bob Marley',2,'Singer'],
+    ['ZZ Top',2,'Band'],['will.i.am',2,'Rapper'],['Duran Duran',2,'Band'],['Sugababes',2,'Group'],
+    ['Stone Roses',2,'Band'],['Van Halen',2,'Band'],
 
     ['Kendrick Lamar',3,'Rapper'],['Travis Scott',3,'Rapper'],['Nicki Minaj',3,'Rapper'],['Missy Elliott',3,'Rapper'],
-    ['Ludacris',3,'Rapper'],['Nelly',3,'Rapper'],['Akon',3,'Singer'],['Sean Paul',3,'Singer'],
-    ['Dave',3,'Rapper'],['Skepta',3,'Rapper'],['Tion Wayne',3,'Rapper'],['Kano',3,'Rapper'],
-    ['Whitney Houston',3,'Singer'],['Beyoncé',3,'Singer'],['Rihanna',3,'Singer'],['Adele',3,'Singer'],
-    ['Lewis Capaldi',3,'Singer'],['Olivia Rodrigo',3,'Singer'],['Bon Jovi',3,'Band'],['Ray Charles',3,'Singer'],
+    ['Nelly',3,'Rapper'],['Akon',3,'Singer'],['Sean Paul',3,'Singer'],['Dave',3,'Rapper'],
+    ['Skepta',3,'Rapper'],['Whitney Houston',3,'Singer'],['Beyoncé',3,'Singer'],['Rihanna',3,'Singer'],
+    ['Adele',3,'Singer'],['Lewis Capaldi',3,'Singer'],['Olivia Rodrigo',3,'Singer'],['Bon Jovi',3,'Band'],
     ['Kylie Minogue',3,'Singer'],['Lizzo',3,'Singer'],['Chappell Roan',3,'Singer'],['Shakira',3,'Singer'],
-    ['Rae Sremmurd',3,'Duo'],['Migos',3,'Group'],['Mac DeMarco',3,'Singer'],['Bastille',3,'Band'],
-    ['Stereophonics',3,'Band'],['Biffy Clyro',3,'Band'],['Nirvana',3,'Band'],['Metallica',3,'Band'],
-    ['Megadeth',3,'Band'],['AC/DC',3,'Band'],['The Supremes',3,'Group'],['UB40',3,'Band'],
-    ['Depeche Mode',3,'Band'],['ABBA',3,'Group'],['Kraftwerk',3,'Band'],['Disclosure',3,'Duo'],
-    ['Rudimental',3,'Group'],['Avicii',3,'DJ'],['David Guetta',3,'DJ'],['Skrillex',3,'DJ'],
-    ['Kygo',3,'DJ'],['Sigala',3,'DJ'],['Paramore',3,'Band'],['Sum 41',3,'Band'],
-    ['SZA',3,'Singer'],['Steve Lacy',3,'Singer'],['Kali Uchis',3,'Singer'],['N.W.A',3,'Group'],
-    ['Nas',3,'Rapper'],['Pharrell Williams',3,'Singer'],['Ne-Yo',3,'Singer'],['Chris Brown',3,'Singer'],
-    ['Jason Derulo',3,'Singer'],['Enrique Iglesias',3,'Singer'],['Luis Fonsi',3,'Singer'],['Ozuna',3,'Singer'],
-    ['Rauw Alejandro',3,'Singer'],['Karol G',3,'Singer'],['J Balvin',3,'Singer'],['Anitta',3,'Singer'],
-    ['Gloria Estefan',3,'Singer'],['Rita Ora',3,'Singer'],['Jessie J',3,'Singer'],['Ellie Goulding',3,'Singer'],
-    ['Duffy',3,'Singer'],['George Michael',3,'Singer'],['Willie Nelson',3,'Singer'],['Kenny Rogers',3,'Singer'],
-    ['Morgan Wallen',3,'Singer'],['Zach Bryan',3,'Singer'],['Kacey Musgraves',3,'Singer'],['Billy Joel',3,'Singer'],
-    ['Bob Dylan',3,'Singer'],['Jimi Hendrix',3,'Guitarist'],['Mötley Crüe',3,'Band'],['Lynyrd Skynyrd',3,'Band'],
-    ['Creedence Clearwater Revival',3,'Band'],['Simon & Garfunkel',3,'Duo'],['Boney M.',3,'Group'],['Fergie',3,'Singer'],
-    ['Peggy Gou',3,'DJ'],['Idles',3,'Band'],['Sleaford Mods',3,'Duo'],['Krept & Konan',3,'Duo']
+    ['Nirvana',3,'Band'],['Metallica',3,'Band'],['AC/DC',3,'Band'],['ABBA',3,'Group'],
+    ['Depeche Mode',3,'Band'],['UB40',3,'Band'],['Bastille',3,'Band'],['Avicii',3,'DJ'],
+    ['David Guetta',3,'DJ'],['Paramore',3,'Band'],['SZA',3,'Singer'],['Pharrell Williams',3,'Singer'],
+    ['Ne-Yo',3,'Singer'],['Chris Brown',3,'Singer'],['Jason Derulo',3,'Singer'],['Enrique Iglesias',3,'Singer'],
+    ['Luis Fonsi',3,'Singer'],['Rita Ora',3,'Singer'],['Jessie J',3,'Singer'],['Ellie Goulding',3,'Singer'],
+    ['George Michael',3,'Singer'],['Billy Joel',3,'Singer'],['Bob Dylan',3,'Singer'],['Jimi Hendrix',3,'Guitarist'],
+    ['Simon & Garfunkel',3,'Duo'],['Fergie',3,'Singer']
   ];
   // dedupe by name (a hand-written list repeats itself sooner or later)
   (function () { var seen = {}; POOL = POOL.filter(function (r) { var k = r[0].toLowerCase(); if (seen[k]) return false; seen[k] = 1; return true; }); })();
@@ -121,11 +92,11 @@
   var DIFFS = {
     easy:  { label: 'Easy',  line: 'Queen. Snoop Dogg. Pink. Point at things.', w: { 1: 1 } },
     mixed: { label: 'Mixed', line: 'Mostly fair, with the odd Fleetwood Mac.', w: { 1: 5, 2: 4, 3: 1 } },
-    hard:  { label: 'Hard',  line: 'Good luck acting out Kraftwerk.', w: { 2: 2, 3: 3 } }
+    hard:  { label: 'Hard',  line: 'Good luck acting out Metallica.', w: { 2: 2, 3: 3 } }
   };
   var TEAM_NAMES = [['A-Side', 'B-Side'], ['Headliners', 'Support Act'], ['Treble', 'Bass'], ['Encore', 'Soundcheck'], ['Mosh Pit', 'Front Row']];
   var STORE = 'vinall_charades_v1', LIVE = 'vinall_charades_live';
-  var TURN_MS = 30000;
+  var TURN_MS = 60000;
 
   function $(s, r) { return (r || document).querySelector(s); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -302,14 +273,14 @@
       return '<div class="cz-team"' + teamVars(t) + '><input class="cz-tname" data-team="' + t + '" value="' + esc(setup.teams[t]) + '" maxlength="18" aria-label="Team ' + (t + 1) + ' name"><ul>' + (list || '<li class="cz-empty">Nobody yet</li>') + '</ul><span class="cz-count">' + teamOf(t).length + '</span></div>';
     }).join('<div class="cz-vs">vs</div>');
     var a = teamOf(0).length, b = teamOf(1).length, n = setup.players.length;
-    var hint = n < 4 ? 'Four players at least — two a side.' : a !== b ? 'Teams need the same number of players (' + a + ' v ' + b + '). Tap a name to swap sides.' : 'Each turn is 30 seconds. No talking, no humming, no pointing at the speaker.';
+    var hint = n < 4 ? 'Four players at least — two a side.' : a !== b ? 'Teams need the same number of players (' + a + ' v ' + b + '). Tap a name to swap sides.' : 'Each turn is 60 seconds. No talking, no humming, no pointing at the speaker.';
     setScreen('cz-setup',
       topBar() +
       '<div class="cz-scroll"><div class="cz-hero"><span class="cz-kick">Pass the phone · 4+ players</span><h1 class="cz-h1"><b>Artist</b> Charades</h1></div>' +
       '<form class="cz-add" data-cz-form><input id="cz-name" placeholder="Add a player" maxlength="20" autocomplete="off" enterkeyhint="done" aria-label="Player name"><button class="cz-addbtn" type="submit">Add</button></form>' +
       '<div class="cz-teams">' + cols + '</div>' +
       '<div class="cz-row"><button class="cz-ghost" data-cz="shuffle"' + (n < 2 ? ' disabled' : '') + '>Shuffle teams</button><button class="cz-ghost" data-cz="names">New team names</button></div>' +
-      '<h3 class="cz-lbl">Difficulty <small>how hard the names are to act, not how obscure</small></h3>' +
+      '<h3 class="cz-lbl">Difficulty</h3>' +
       '<div class="cz-seg">' + Object.keys(DIFFS).map(function (k) { return '<button data-cz="diff" data-v="' + k + '" class="' + (setup.diff === k ? 'on' : '') + '"><b>' + DIFFS[k].label + '</b><small>' + DIFFS[k].line + '</small></button>'; }).join('') + '</div>' +
       '<h3 class="cz-lbl">Play to</h3>' +
       '<div class="cz-seg cz-seg-mode"><button data-cz="mode" data-v="rounds" class="' + (setup.mode === 'rounds' ? 'on' : '') + '"><b>Rounds</b></button><button data-cz="mode" data-v="target" class="' + (setup.mode === 'target' ? 'on' : '') + '"><b>Target score</b></button></div>' +
@@ -363,13 +334,13 @@
     var t = S.team;
     setScreen('cz-play',
       '<div class="cz-play-body"' + teamVars(t) + '>' +
-      '<div class="cz-hud"><span class="cz-hud-team">' + esc(S.teams[t].name) + '</span><span class="cz-time" id="cz-time">30</span><span class="cz-hud-pts" id="cz-pts">0</span></div>' +
+      '<div class="cz-hud"><span class="cz-hud-team">' + esc(S.teams[t].name) + '</span><span class="cz-time" id="cz-time">60</span><span class="cz-hud-pts" id="cz-pts">0</span></div>' +
       '<div class="cz-bar"><i id="cz-bar"></i></div>' +
       '<div class="cz-card" id="cz-card">' + cardHtml(S.cur) + '</div>' +
       '<div class="cz-btns"><button class="cz-skip" data-cz="skip">Skip</button><button class="cz-got" data-cz="got"><b>+1</b><small>Got it</small></button><button class="cz-minus" data-cz="minus" disabled aria-label="Take a point back">−1</button></div>' +
       '</div>', t);
     fitName();
-    timer.end = performance.now() + TURN_MS; timer.last = 31;
+    timer.end = performance.now() + TURN_MS; timer.last = 61;
     tick();
     timer.to = setTimeout(timeUp, TURN_MS + 60);   // rAF stops in a hidden tab; this does not
     saveLive();
@@ -510,7 +481,7 @@
       '<div class="cz-final-score">' + [0, 1].map(function (t) { return '<span' + teamVars(t) + ' class="' + (t === w ? 'win' : '') + '"><small>' + esc(S.teams[t].name) + '</small><b data-to="' + S.teams[t].score + '">0</b></span>'; }).join('<em>–</em>') + '</div>' +
       '<div class="cz-awards">' +
       (mvp && mvp.pts ? '<div><small>MVP</small><b>' + esc(mvp.name) + '</b><span>' + mvp.pts + ' got</span></div>' : '') +
-      (best && best.pts ? '<div><small>Best turn</small><b>' + esc(best.name) + '</b><span>' + best.pts + ' in 30s</span></div>' : '') +
+      (best && best.pts ? '<div><small>Best turn</small><b>' + esc(best.name) + '</b><span>' + best.pts + ' in 60s</span></div>' : '') +
       '<div><small>Artists acted</small><b>' + S.di + '</b><span>' + DIFFS[S.diff].label + '</span></div>' +
       '</div>' +
       '<div class="cz-final-btns"><button class="cz-go" data-cz="rematch">Rematch</button><button class="cz-ghost" data-cz="newgame">Change players</button></div>' +

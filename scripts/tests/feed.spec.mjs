@@ -102,3 +102,21 @@ test('unreached cards are stashed without clip urls and paint first on reload, o
   await expect(page.locator('#fy-feed .fy-card').first()).toBeVisible();
   await expect(page.locator('#fy-feed')).not.toContainText('Not yours');
 });
+
+test('a song thread shows its best comment on the card, with no timestamps', async ({ page }) => {
+  await page.route(/supabase\.co\/rest\/v1\/song_comments/, route => route.fulfill({ json: [
+    { id: 'c1', user_id: 'u1', body: 'That drum fill', likes: 1, created_at: new Date().toISOString(), hidden: false, at_ms: 14000 },
+    { id: 'c2', user_id: 'u2', body: 'Best song on the record', likes: 9, created_at: new Date().toISOString(), hidden: false, at_ms: null }
+  ] }));
+  await page.route(/supabase\.co\/rest\/v1\/profiles/, route => route.fulfill({ json: [{ id: 'u2', username: 'charlie', avatar_url: null }] }));
+  await enterFeed(page);
+  const peek = page.locator('#fy-feed .fy-card .fy-peek:not([hidden])').first();
+  await expect(peek).toBeVisible();
+  await expect(peek).toContainText('Best song on the record');
+  await expect(peek).toContainText('charlie');
+  await expect(page.locator('.fy-tl, .fy-bub')).toHaveCount(0);
+  await peek.click();
+  await expect(page.locator('#sc-modal')).toHaveClass(/open/);
+  await expect(page.locator('#sc-modal [data-sort="time"], #sc-modal .sc-at, #sc-modal .sc-pin')).toHaveCount(0);
+  await expect(page.locator('#sc-modal .sc-row')).toHaveCount(2);
+});

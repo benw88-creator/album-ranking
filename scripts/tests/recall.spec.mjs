@@ -82,3 +82,63 @@ test('game cards own their stacking context, so hover cannot re-layer them', asy
   await page.mouse.move(2, 2);
   await expect.poll(() => cards.first().evaluate(c => getComputedStyle(c).transform)).toMatch(/none|matrix\(1, 0, 0, 1, 0, 0\)/);
 });
+
+test('the ten-second clock: running out ends an Endless run and files it', async ({ page }) => {
+  test.setTimeout(45000);
+  await openRecall(page);
+  await page.locator('#recall-hear').click();
+  await expect(page.locator('#recall-timer')).toHaveClass(/\brun\b/);
+  await expect(page.locator('#recall-play')).toHaveClass(/revealed/, { timeout: 13000 });
+  await expect(page.locator('#recall-reveal .rc-rev-head')).toContainText(/time.s up/i);
+  await expect(page.locator('#recall-reveal .rc-rev-head')).toContainText(/run over/i);
+  // No way on to another song after a miss.
+  await expect(page.locator('#recall-next')).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('crate_recall_live'))).toBeNull();
+  await page.locator('#recall-stop').click();
+  await expect(page.locator('#recall-over')).toBeVisible();
+  await page.locator('#recall-again').click();
+  await expect(page.locator('#recall-timer span')).toHaveText('10.0s');
+});
+
+test('closing pauses the round; reopening resumes it with the time that was left', async ({ page }) => {
+  test.setTimeout(45000);
+  await openRecall(page);
+  await page.locator('#recall-hear').click();
+  await page.waitForTimeout(2000);
+  // The backdrop no longer closes a game sheet.
+  await page.mouse.click(4, 4);
+  await expect(page.locator('#recall-modal')).toHaveClass(/open/);
+  await page.locator('#recall-close').click();
+  const live = await page.evaluate(() => JSON.parse(localStorage.getItem('crate_recall_live')));
+  expect(live.mode).toBe('endless');
+  expect(live.clockMs).toBeGreaterThan(1500);
+  expect(live.clockMs).toBeLessThan(4000);
+  await page.waitForTimeout(2500);   // closed time does not count
+  await page.evaluate(() => openRecall());
+  await expect(page.locator('#recall-play')).toBeVisible();
+  await expect(page.locator('#recall-verdict')).toContainText(/paused/i);
+  const left = parseFloat(await page.locator('#recall-timer span').textContent());
+  expect(Math.abs(left - (10 - live.clockMs / 1000))).toBeLessThan(0.25);
+  const again = await page.evaluate(() => JSON.parse(localStorage.getItem('crate_recall_live')));
+  expect(again.song).toBe(live.song);
+  // Playing again carries the clock on from where it stopped.
+  await page.locator('#recall-hear').click();
+  await expect(page.locator('#recall-timer')).toHaveClass(/\brun\b/);
+});
+
+test('album answers: the record names its pressings, never a different record', async ({ page }) => {
+  await start(page);
+  const r = await page.evaluate(() => [
+    ['For All the Dogs', 'For All the Dogs Scary Hours Edition'],
+    ['Fearless', "Fearless (Taylor's Version)"],
+    ['Nevermind', 'Nevermind Remastered'],
+    ['Thriller', 'Thriller 25th Anniversary Edition'],
+    ['Sweet Boy', 'Sweet Boy Pt. 1'],
+    ['Abbey Road', 'Abbey Road (Remastered 2009)'],
+    ['Views', 'Views 2'],
+    ['Sweet Boy Pt 2', 'Sweet Boy Pt. 1'],
+    ['Scary Hours', 'For All the Dogs Scary Hours Edition'],
+    ['Lover', 'Folklore']
+  ].map(([g, a]) => VinalTitles.albumMatch(g, a)));
+  expect(r).toEqual([true, true, true, true, true, true, false, false, false, false]);
+});

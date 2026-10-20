@@ -11,6 +11,15 @@
     var node = e.target.closest && e.target.closest('button, a, input, textarea, select, [tabindex]');
     if (node) lastTrigger = { node: node, at: performance.now() };
   }
+  /* Game sheets close only from their X (or Escape / system back). A tap
+     beside the panel mid-round used to throw the run away, so the backdrop
+     click is swallowed here, in capture, before any sheet's own handler —
+     one guard rather than one per game. */
+  var GAME_SHEETS = /^(game|drop-modal|blitz-modal|hl-modal|recall-modal|ew-modal|war-modal|tourney-modal)$/;
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (t && t.classList && t.classList.contains('modal') && GAME_SHEETS.test(t.id)) e.stopImmediatePropagation();
+  }, true);
   document.addEventListener('pointerdown', remember, true);
   document.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') remember(e); }, true);
   function previousFocus(layer) {

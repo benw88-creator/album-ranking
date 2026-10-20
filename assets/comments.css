@@ -17,30 +17,27 @@
 .fy-cmt:has(.fy-cmt-n:not(:empty)) { padding: 6px 0 5px; }
 .fy-cmt:active { transform: scale(.88); }
 
-/* Pinned comments, as faces along the clip. */
-.fy-tl { position: absolute; left: 8px; right: 8px; bottom: 8px; height: 0; z-index: 3; pointer-events: none; }
-.fy-tl-dot {
-  position: absolute; bottom: 0; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%;
-  background: color-mix(in srgb, var(--fy-tint, #fff) 70%, #fff); overflow: hidden;
-  box-shadow: 0 0 0 1.5px rgba(10,9,8,.7), 0 2px 8px rgba(0,0,0,.5);
-  opacity: .9;
+/* The thread's best line, laid over the foot of the sleeve. It belongs to the
+   song, not a moment of it, so it simply arrives once the thread has loaded
+   and stays put. Absolutely placed, so arriving never moves anything. */
+.fy-peek {
+  position: absolute; left: 10px; bottom: 10px; z-index: 3;
+  max-width: calc(100% - 66px); min-height: 32px; box-sizing: border-box;
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 11px 5px 5px; border: 0; border-radius: 16px; cursor: pointer;
+  background: rgba(10,9,8,.6); backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fy-tint, #fff) 28%, transparent);
+  color: #fff; font: 13px/1.25 var(--font-body); text-align: left;
+  opacity: 0; translate: 0 6px; transition: opacity .38s ease, translate .38s var(--ease);
 }
-.fy-tl-dot img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-/* The bubble that rises as the playhead passes a pinned comment. */
-.fy-bub {
-  position: absolute; left: var(--x, 50%); bottom: 32px; z-index: 4; pointer-events: none;
-  translate: -50% 0; max-width: min(260px, 82%); width: max-content;
-  padding: 8px 12px; border-radius: 14px 14px 14px 4px;
-  background: rgba(14,12,11,.82); backdrop-filter: blur(10px);
-  border: 1px solid color-mix(in srgb, var(--fy-tint, #fff) 40%, transparent);
-  box-shadow: 0 10px 30px rgba(0,0,0,.45), 0 0 18px color-mix(in srgb, var(--fy-tint, #fff) 22%, transparent);
-  text-align: left; font-size: 13px; line-height: 1.3; color: #fff;
-  animation: scBubIn 420ms cubic-bezier(.2,1.4,.4,1) backwards;
-}
-.fy-bub b { display: block; font-size: 11px; color: color-mix(in srgb, var(--fy-tint, #fff) 70%, #fff); margin-bottom: 2px; }
-.fy-bub.out { opacity: 0; translate: -50% -8px; transition: opacity 360ms ease, translate 360ms ease; }
-@keyframes scBubIn { from { opacity: 0; translate: -50% 12px; scale: .9; } }
+.fy-peek.on { opacity: 1; translate: 0 0; }
+.fy-peek[hidden] { display: none; }
+.fy-peek img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.fy-peek b { flex: 0 0 auto; font-weight: 700; font-size: 12px; color: color-mix(in srgb, var(--fy-tint, #fff) 65%, #fff); }
+.fy-peek b:first-child { margin-left: 6px; }
+.fy-peek span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(255,245,235,.9); }
+.fy-peek em { flex: 0 0 auto; font-style: normal; font-size: 11px; font-weight: 700; color: rgba(255,245,235,.55); }
+.fy-peek:active { scale: .97; }
 
 /* ---- the sheet ----
    Lighter than other modals on purpose: the record stays visible above it
@@ -92,11 +89,6 @@
 .sc-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 12px; color: var(--text-faint); }
 .sc-meta b { color: var(--text); font-size: 13px; }
 .sc-meta em { font-style: normal; color: var(--red); }
-.sc-at {
-  border: 0; cursor: pointer; padding: 2px 7px; border-radius: 99px;
-  background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--gold);
-  font: 700 11px/1.3 var(--font-mono, monospace);
-}
 .sc-body p { margin: 3px 0 0; font-size: 14px; line-height: 1.42; color: var(--text); overflow-wrap: anywhere; white-space: pre-wrap; }
 .sc-acts { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .sc-like, .sc-more { border: 0; background: none; color: var(--text-faint); cursor: pointer; padding: 6px; min-width: 32px; min-height: 32px;
@@ -118,14 +110,6 @@
 .sc-loading i:nth-child(3) { animation-delay: .3s; }
 @keyframes scDot { 50% { opacity: .25; translate: 0 -4px; } }
 .sc-form { display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px 4px; border-top: 1px solid var(--border); }
-.sc-pin {
-  flex: 0 0 auto; height: 38px; padding: 0 11px; border-radius: 19px; cursor: pointer;
-  border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
-  background: color-mix(in srgb, var(--gold) 14%, transparent); color: var(--gold);
-  font: 700 12px/1 var(--font-mono, monospace); white-space: nowrap;
-}
-.sc-pin[aria-pressed="false"] { background: transparent; color: var(--text-dim); border-color: var(--border); font-family: var(--font-body); }
-.sc-pin[hidden] { display: none; }
 .sc-field { position: relative; flex: 1; min-width: 0; }
 .sc-field textarea {
   display: block; width: 100%; box-sizing: border-box; resize: none; min-height: 38px; max-height: 120px;
@@ -147,7 +131,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   html:not([data-motion="full"]) .sc-panel, html:not([data-motion="full"]) .modal.sc-modal { transition: none; }
-  html:not([data-motion="full"]) .sc-row, html:not([data-motion="full"]) .fy-bub { animation: none; }
+  html:not([data-motion="full"]) .sc-row { animation: none; }
+  html:not([data-motion="full"]) .fy-peek { transition: opacity .2s ease; translate: none; }
 }
 html[data-motion="none"] .sc-panel, html[data-motion="none"] .modal.sc-modal { transition: none; }
-html[data-motion="none"] .sc-row, html[data-motion="none"] .fy-bub { animation: none; }
+html[data-motion="none"] .sc-row { animation: none; }
+html[data-motion="none"] .fy-peek { transition: none; translate: none; }
