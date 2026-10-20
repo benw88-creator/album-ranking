@@ -1,7 +1,24 @@
 {
   "rewrites": [
-    { "source": "/u/:name", "destination": "/api/share?t=u&k=:name" },
-    { "source": "/r/:id", "destination": "/api/share?t=r&k=:id" },
-    { "source": "/a/:id", "destination": "/api/share?t=a&k=:id" }
+    {
+      "source": "/favicon.ico",
+      "destination": "/assets/icons/favicon-48.png"
+    },
+    {
+      "source": "/assets/icons/favicon.ico",
+      "destination": "/assets/icons/favicon-48.png"
+    },
+    {
+      "source": "/u/:name",
+      "destination": "/api/share?t=u&k=:name"
+    },
+    {
+      "source": "/r/:id",
+      "destination": "/api/share?t=r&k=:id"
+    },
+    {
+      "source": "/a/:id",
+      "destination": "/api/share?t=a&k=:id"
+    }
   ]
 }

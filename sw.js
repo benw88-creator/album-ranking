@@ -15,7 +15,7 @@
  * never more than one load behind, and when you are, the app says so out loud.
  */
 
-const VERSION = 'vinall-v5';
+const VERSION = 'vinall-v6';
 const SHELL = VERSION + '-shell';
 const MEDIA = VERSION + '-media';
 
