@@ -90,9 +90,9 @@
   (function () { var seen = {}; POOL = POOL.filter(function (r) { var k = r[0].toLowerCase(); if (seen[k]) return false; seen[k] = 1; return true; }); })();
 
   var DIFFS = {
-    easy:  { label: 'Easy',  line: 'Queen. Snoop Dogg. Pink. Point at things.', w: { 1: 1 } },
-    mixed: { label: 'Mixed', line: 'Mostly fair, with the odd Fleetwood Mac.', w: { 1: 5, 2: 4, 3: 1 } },
-    hard:  { label: 'Hard',  line: 'Good luck acting out Metallica.', w: { 2: 2, 3: 3 } }
+    easy:  { label: 'Easy',  w: { 1: 1 } },
+    mixed: { label: 'Mixed', w: { 1: 5, 2: 4, 3: 1 } },
+    hard:  { label: 'Hard',  w: { 2: 2, 3: 3 } }
   };
   var TEAM_NAMES = [['A-Side', 'B-Side'], ['Headliners', 'Support Act'], ['Treble', 'Bass'], ['Encore', 'Soundcheck'], ['Mosh Pit', 'Front Row']];
   var STORE = 'vinall_charades_v1', LIVE = 'vinall_charades_live';
@@ -101,7 +101,8 @@
   function $(s, r) { return (r || document).querySelector(s); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function calm() { return !!(window.motionReduced && motionReduced()); }
-  function buzzIt(k) { if (window.buzz) try { buzz(k); } catch (e) {} }
+  // Haptics only: this game has its own game-show sounds below.
+  function buzzIt(k) { if (window.buzz) try { buzz(k, true); } catch (e) {} }
   function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function lsGet(k, s) { try { return JSON.parse((s || localStorage).getItem(k)); } catch (e) { return null; } }
   function lsSet(k, v, s) { try { (s || localStorage).setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -123,7 +124,7 @@
 
   /* ---- sound ------------------------------------------------------------ */
   var ac = null;
-  function soundOn() { var s = lsGet(STORE) || {}; return s.sound !== false; }
+  function soundOn() { var s = lsGet(STORE) || {}; return s.sound !== false && !(window.Sfx && !Sfx.enabled()); }
   function tone(freq, ms, type, vol, slide) {
     if (!soundOn()) return;
     try {
@@ -273,7 +274,7 @@
       return '<div class="cz-team"' + teamVars(t) + '><input class="cz-tname" data-team="' + t + '" value="' + esc(setup.teams[t]) + '" maxlength="18" aria-label="Team ' + (t + 1) + ' name"><ul>' + (list || '<li class="cz-empty">Nobody yet</li>') + '</ul><span class="cz-count">' + teamOf(t).length + '</span></div>';
     }).join('<div class="cz-vs">vs</div>');
     var a = teamOf(0).length, b = teamOf(1).length, n = setup.players.length;
-    var hint = n < 4 ? 'Four players at least — two a side.' : a !== b ? 'Teams need the same number of players (' + a + ' v ' + b + '). Tap a name to swap sides.' : 'Each turn is 60 seconds. No talking, no humming, no pointing at the speaker.';
+    var hint = n < 4 ? 'Four players at least, two a side.' : a !== b ? 'Even teams needed (' + a + ' v ' + b + '). Tap a name to swap sides.' : '60 seconds a turn. No talking, no humming.';
     setScreen('cz-setup',
       topBar() +
       '<div class="cz-scroll"><div class="cz-hero"><span class="cz-kick">Pass the phone · 4+ players</span><h1 class="cz-h1"><b>Artist</b> Charades</h1></div>' +
@@ -281,7 +282,7 @@
       '<div class="cz-teams">' + cols + '</div>' +
       '<div class="cz-row"><button class="cz-ghost" data-cz="shuffle"' + (n < 2 ? ' disabled' : '') + '>Shuffle teams</button><button class="cz-ghost" data-cz="names">New team names</button></div>' +
       '<h3 class="cz-lbl">Difficulty</h3>' +
-      '<div class="cz-seg">' + Object.keys(DIFFS).map(function (k) { return '<button data-cz="diff" data-v="' + k + '" class="' + (setup.diff === k ? 'on' : '') + '"><b>' + DIFFS[k].label + '</b><small>' + DIFFS[k].line + '</small></button>'; }).join('') + '</div>' +
+      '<div class="cz-seg">' + Object.keys(DIFFS).map(function (k) { return '<button data-cz="diff" data-v="' + k + '" class="' + (setup.diff === k ? 'on' : '') + '"><b>' + DIFFS[k].label + '</b></button>'; }).join('') + '</div>' +
       '<h3 class="cz-lbl">Play to</h3>' +
       '<div class="cz-seg cz-seg-mode"><button data-cz="mode" data-v="rounds" class="' + (setup.mode === 'rounds' ? 'on' : '') + '"><b>Rounds</b></button><button data-cz="mode" data-v="target" class="' + (setup.mode === 'target' ? 'on' : '') + '"><b>Target score</b></button></div>' +
       '<div class="cz-pills">' + (setup.mode === 'rounds' ? [3, 5, 8].map(function (v) { return '<button data-cz="rounds" data-v="' + v + '" class="' + (setup.rounds === v ? 'on' : '') + '">' + v + ' rounds</button>'; }) : [10, 15, 25].map(function (v) { return '<button data-cz="target" data-v="' + v + '" class="' + (setup.target === v ? 'on' : '') + '">First to ' + v + '</button>'; })).join('') + '</div>' +
@@ -310,7 +311,7 @@
       '<p class="cz-passto">Pass the phone to</p><h1 class="cz-who">' + esc(actor.name) + '</h1>' +
       '<p class="cz-guess">' + (guessers.length ? guessers.join(', ') + ' guess' + (guessers.length === 1 ? 'es' : '') : 'Your team guesses') + '. Everyone else: stay quiet.</p></div>' +
       '<button class="cz-go cz-ready" data-cz="ready">I’m ready</button>' +
-      '<p class="cz-rules"><b>+1</b> got it · <b>Skip</b> move on · <b>−1</b> take one back</p></div>', t);
+      '<p class="cz-rules"><b>+1</b> got it · <b>Skip</b> · <b>−1</b> take one back</p></div>', t);
   }
 
   /* COUNTDOWN then PLAY */
@@ -337,16 +338,16 @@
       '<div class="cz-hud"><span class="cz-hud-team">' + esc(S.teams[t].name) + '</span><span class="cz-time" id="cz-time">60</span><span class="cz-hud-pts" id="cz-pts">0</span></div>' +
       '<div class="cz-bar"><i id="cz-bar"></i></div>' +
       '<div class="cz-card" id="cz-card">' + cardHtml(S.cur) + '</div>' +
-      '<div class="cz-btns"><button class="cz-skip" data-cz="skip">Skip</button><button class="cz-got" data-cz="got"><b>+1</b><small>Got it</small></button><button class="cz-minus" data-cz="minus" disabled aria-label="Take a point back">−1</button></div>' +
+      '<div class="cz-btns"><button class="cz-minus" data-cz="minus" aria-label="Take a point back">−1</button><button class="cz-got" data-cz="got"><b>+1</b><small>Got it</small></button><button class="cz-skip" data-cz="skip">Skip</button></div>' +
       '</div>', t);
-    fitName();
+    fitName(); paintPts(true);
     timer.end = performance.now() + TURN_MS; timer.last = 61;
     tick();
     timer.to = setTimeout(timeUp, TURN_MS + 60);   // rAF stops in a hidden tab; this does not
     saveLive();
   }
   function cardHtml(c) {
-    return '<span class="cz-tag">' + esc(c.t) + ' · ' + ['', 'easy to act', 'needs a plan', 'good luck'][c.lv] + '</span><h2 class="cz-name" id="cz-name-txt">' + esc(c.a) + '</h2>';
+    return '<span class="cz-tag">' + esc(c.t) + '</span><h2 class="cz-name" id="cz-name-txt">' + esc(c.a) + '</h2>';
   }
   // The name fills the screen: shrink from huge until it fits, breaking only
   // between words. Measured, not guessed — "Creedence Clearwater Revival" and
@@ -375,9 +376,18 @@
 
   function act(kind) {
     if (!S || S.phase !== 'play') return;
+    /* −1 is never dead. It first undoes the last +1 of this turn (the usual
+       slip); with none to undo it takes a point off the team's total, which
+       is the fix for a point banked by mistake in an earlier turn. Never
+       below zero. */
     if (kind === 'minus') {
-      for (var i = S.log.length - 1; i >= 0; i--) if (S.log[i].r === 'got') { S.log[i].r = 'skip'; break; }
-      SFX.minus(); buzzIt('bad'); flash('−1', 'minus'); paintPts(); return;
+      var undone = false;
+      for (var i = S.log.length - 1; i >= 0; i--) if (S.log[i].r === 'got') { S.log[i].r = 'skip'; undone = true; break; }
+      if (!undone) {
+        if (S.teams[S.team].score + turnPts() <= 0) { buzzIt('bad'); return; }
+        S.log.push({ a: 'Point taken back', r: 'minus' });
+      }
+      SFX.minus(); buzzIt('bad'); flash('−1', 'minus'); paintPts(); saveLive(); return;
     }
     S.log.push({ a: S.cur.a, r: kind });
     if (kind === 'got') { SFX.got(); buzzIt('good'); flash('+1', 'got'); }
@@ -394,10 +404,13 @@
     }, 170);
     paintPts();
   }
-  function turnPts(log) { return (log || S.log).filter(function (x) { return x.r === 'got'; }).length; }
-  function paintPts() {
-    var p = $('#cz-pts', root); if (p) { p.textContent = turnPts(); if (!calm()) { p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop'); } }
-    var m = $('[data-cz="minus"]', root); if (m) m.disabled = !turnPts();
+  function turnPts(log) {
+    return (log || S.log).reduce(function (n, x) { return n + (x.r === 'got' ? 1 : x.r === 'minus' ? -1 : 0); }, 0);
+  }
+  function paintPts(quiet) {
+    var n = turnPts();
+    var p = $('#cz-pts', root); if (p) { p.textContent = n < 0 ? '−' + -n : n; if (!calm() && !quiet) { p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop'); } }
+    var m = $('[data-cz="minus"]', root); if (m) m.disabled = S.teams[S.team].score + n <= 0;
   }
   function flash(txt, kind) {
     if (calm()) return;
@@ -426,19 +439,19 @@
   function renderTally() {
     var t = S.team, pts = turnPts();
     var rows = S.log.map(function (x, i) {
-      return '<li><button data-cz="flip" data-i="' + i + '" class="' + x.r + '"><span>' + esc(x.a) + '</span><i>' + (x.r === 'got' ? '✓' : 'skip') + '</i></button></li>';
+      return '<li><button data-cz="flip" data-i="' + i + '" class="' + x.r + '"><span>' + esc(x.a) + '</span><i>' + (x.r === 'got' ? '✓' : x.r === 'minus' ? '−1' : 'skip') + '</i></button></li>';
     }).join('');
     setScreen('cz-tally', topBar('<span class="cz-brand">' + roundLabel() + '</span>') +
       '<div class="cz-tally-body"' + teamVars(t) + '>' +
       '<span class="cz-kick">' + esc(actorOf(t).name) + ' for ' + esc(S.teams[t].name) + '</span>' +
-      '<div class="cz-big"><b id="cz-turn-pts">' + pts + '</b><span>' + (pts === 1 ? 'point' : 'points') + '</span></div>' +
-      (rows ? '<p class="cz-hint">Tap one to fix it.</p><ul class="cz-log">' + rows + '</ul>' : '<p class="cz-hint">Not a single one. It happens to the best of us.</p>') +
-      '<button class="cz-go" data-cz="bank">' + (pts ? 'Bank ' + pts + ' for ' + esc(S.teams[t].name) : 'Next turn') + '</button></div>', t);
+      '<div class="cz-big"><b id="cz-turn-pts">' + (pts < 0 ? '−' + -pts : pts) + '</b><span>' + (Math.abs(pts) === 1 ? 'point' : 'points') + '</span></div>' +
+      (rows ? '<p class="cz-hint">Tap one to fix it.</p><ul class="cz-log">' + rows + '</ul>' : '<p class="cz-hint">None this time.</p>') +
+      '<button class="cz-go" data-cz="bank">' + (pts > 0 ? 'Bank ' + pts + ' for ' + esc(S.teams[t].name) : pts < 0 ? 'Take ' + -pts + ' off ' + esc(S.teams[t].name) : 'Next turn') + '</button></div>', t);
   }
   function bank() {
     var t = S.team, pts = turnPts(), actor = actorOf(t);
     actor.pts += pts;
-    S.teams[t].score += pts;
+    S.teams[t].score = Math.max(0, S.teams[t].score + pts);
     S.turns.push({ team: t, name: actor.name, pts: pts, round: S.round });
     S.teams[t].actor++;
     S.log = [];
@@ -518,7 +531,7 @@
     if (k === 'start') { if (!balanced()) return; tone(1, 1, 'sine', 0.0001); newGame(Math.random() < .5 ? 0 : 1); return renderPass(); }
     if (k === 'ready') { tone(1, 1, 'sine', 0.0001); S.phase = 'count'; return countdown(); }
     if (k === 'got' || k === 'skip' || k === 'minus') return act(k);
-    if (k === 'flip') { var x = S.log[i]; x.r = x.r === 'got' ? 'skip' : 'got'; saveLive(); buzzIt('tap'); return renderTally(); }
+    if (k === 'flip') { var x = S.log[i]; if (x.r === 'minus') S.log.splice(i, 1); else x.r = x.r === 'got' ? 'skip' : 'got'; saveLive(); buzzIt('tap'); return renderTally(); }
     if (k === 'bank') return bank();
     if (k === 'rematch') { var first = 1 - (S.first || 0); newGame(first); return renderPass(); }
     if (k === 'newgame') { S = null; saveLive(); return renderSetup(); }
@@ -563,7 +576,7 @@
   function paintCard() {
     var st = document.getElementById('charades-card-go'); if (!st) return;
     var live = S || lsGet(LIVE, sessionStorage);
-    st.textContent = live && live.phase && live.phase !== 'final' ? 'Carry on: ' + live.teams[0].score + '–' + live.teams[1].score + ' →' : 'Get the party going →';
+    st.textContent = live && live.phase && live.phase !== 'final' ? 'Carry on: ' + live.teams[0].score + '–' + live.teams[1].score + ' →' : 'Play →';
   }
   function wireCard() {
     var c = document.getElementById('charades-card'); if (!c) return;

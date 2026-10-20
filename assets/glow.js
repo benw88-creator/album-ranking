@@ -57,7 +57,10 @@
       if (fire !== false) input.dispatchEvent(new Event('input', { bubbles: true }));
       // A tick every tenth of the range: felt, not buzzing.
       var bucket = Math.floor(frac(v) * 10);
-      if (lastTick !== null && bucket !== lastTick && window.buzz) buzz('tap');
+      if (lastTick !== null && bucket !== lastTick) {
+        if (window.buzz) buzz('tap', true);
+        if (window.Sfx) Sfx.play('tick', { v: frac(v) });
+      }
       lastTick = bucket;
       return v;
     }
@@ -87,9 +90,35 @@
     wrap.addEventListener('pointermove', function (e) {
       if (!pend || pend.id !== e.pointerId) return;
       var dx = Math.abs(e.clientX - pend.x), dy = Math.abs(e.clientY - pend.y);
-      if (dx > 6 && dx > dy) begin(e);
+      if (pend.claimed || (dx > 6 && dx > dy)) begin(e);
       else if (dy > 10) pend = null;          // a scroll: let the feed have it
     });
+    /* THE AXIS IS DECIDED ON THE FIRST REAL TOUCHMOVE, and it is decided by
+       cancelling it. With touch-action: pan-y the browser starts scrolling the
+       feed off any vertical drift, and a pointer-only lock found that out a
+       few pixels too late: the feed moved, the browser sent pointercancel and
+       the score snapped back. A touch that began on the slider and moves
+       sideways at least as much as it falls (a bias toward rating — you put
+       your thumb on the slider) is claimed, and every touchmove after it is
+       cancelled until it lifts, so the feed cannot steal the drag halfway. A
+       clearly vertical start is left alone and scrolls as before. */
+    if (opts.axis) {
+      var tx = 0, ty = 0, claim = 0;   // 0 undecided, 1 slider, -1 feed
+      wrap.addEventListener('touchstart', function (e) {
+        var t = e.touches[0]; tx = t.clientX; ty = t.clientY; claim = 0;
+      }, { passive: true });
+      wrap.addEventListener('touchmove', function (e) {
+        if (claim < 0) return;
+        if (!claim) {
+          var t = e.touches[0], dx = Math.abs(t.clientX - tx), dy = Math.abs(t.clientY - ty);
+          if (dx + dy < 3) return;           // too small to read; cancelling it would kill a scroll
+          claim = dx * 1.4 >= dy ? 1 : -1;
+          if (claim < 0) { pend = null; return; }
+          if (pend) pend.claimed = true;
+        }
+        if (e.cancelable) e.preventDefault();
+      }, { passive: false });
+    }
     function move(e) {
       if (!drag || e.pointerId !== drag.id) return;
       var x = e.clientX - drag.r.left - IN - TW / 2, span = drag.r.width - TW - 2 * IN;
@@ -114,7 +143,8 @@
         wrap.classList.remove('gs-bloom'); void wrap.offsetWidth; wrap.classList.add('gs-bloom');
       }
       setTimeout(function () { wrap.classList.remove('gs-release'); }, 520);
-      if (!cancelled && window.buzz) buzz('good');
+      if (!cancelled && window.buzz) buzz('good', true);
+      if (!cancelled && window.Sfx) Sfx.play('release', { v: frac(+input.value) });
       if (opts.onRelease && !cancelled) opts.onRelease(+input.value);
     }
     wrap.addEventListener('pointerup', function (e) {
@@ -166,10 +196,39 @@
     });
   }
 
-  /* ---- the album rating sheet: arrows only ------------------------------ */
+  /* ---- the album rating sheet ---------------------------------------------
+     The same drag as For You over 1–100, which gets you to the right
+     neighbourhood in one move. Exactness is the steppers' job: one tap is one
+     point, and holding runs, slowly at first and then faster, so 73 → 88 is a
+     single press. Every step ticks; the score readout pops. */
   var rs = document.getElementById('rate-slider');
   if (rs) {
     var rv = document.getElementById('rate-view');
+    enhance(rs, { className: 'gs-alb' });
+    var hold = 0, holdN = 0;
+    function nudge(d) {
+      var v = Math.max(+rs.min || 1, Math.min(+rs.max || 100, +rs.value + d));
+      if (v === +rs.value) { if (window.buzz) buzz('bad', true); stopHold(); return; }
+      rs.value = v;
+      rs.dispatchEvent(new Event('input', { bubbles: true }));
+      if (window.buzz) buzz('tap', true);
+      if (window.Sfx) Sfx.play('tick', { v: (v - 1) / 99 });
+      var sc = document.getElementById('rate-score');
+      if (sc) { sc.classList.remove('pop'); void sc.offsetWidth; sc.classList.add('pop'); }
+    }
+    function stopHold() { clearTimeout(hold); hold = 0; }
+    rv.querySelectorAll('.rate-step').forEach(function (b) {
+      var d = +b.getAttribute('data-step');
+      b.addEventListener('pointerdown', function (e) {
+        if (e.button > 0) return;
+        e.preventDefault();
+        stopHold(); holdN = 0; nudge(d);
+        (function run() { hold = setTimeout(function () { holdN++; nudge(d); run(); }, holdN ? Math.max(45, 140 - holdN * 8) : 420); })();
+      });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { b.addEventListener(ev, stopHold); });
+      // Keyboard and assistive tech press it as a click, with no pointerdown.
+      b.addEventListener('click', function (e) { if (e.detail === 0) nudge(d); });
+    });
     // Desktop: arrows rate without having to find the slider first.
     document.addEventListener('keydown', function (e) {
       if (!rv || !rv.classList.contains('open') || e.defaultPrevented) return;
@@ -178,7 +237,7 @@
       if (t === rs) return;   // the focused range already handles its own arrows
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         e.preventDefault();
-        rs.value = Math.max(0, Math.min(100, +rs.value + (e.key === 'ArrowRight' ? 1 : -1) * (e.shiftKey ? 10 : 1)));
+        rs.value = Math.max(1, Math.min(100, +rs.value + (e.key === 'ArrowRight' ? 1 : -1) * (e.shiftKey ? 10 : 1)));
         rs.dispatchEvent(new Event('input', { bubbles: true }));
       }
     });

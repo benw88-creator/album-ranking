@@ -158,7 +158,7 @@ html.cz-lock, html.cz-lock body { overflow: hidden; }
 @keyframes czOutSkip { to { transform: translateX(-60px) rotate(-4deg); opacity: 0; } }
 @keyframes czInCard { from { transform: translateY(30px) scale(.9); opacity: 0; } }
 
-#charades .cz-btns { display: grid; grid-template-columns: 1fr 1.6fr .7fr; gap: 10px; padding-top: 8px; }
+#charades .cz-btns { display: grid; grid-template-columns: .8fr 1.6fr 1fr; gap: 10px; padding-top: 8px; }
 #charades .cz-btns button { min-height: 96px; border-radius: 26px; border: 0; cursor: pointer; color: #fff; font: 800 20px/1 var(--font-display); transition: transform 120ms var(--cz-ease), opacity 200ms; touch-action: manipulation; }
 #charades .cz-btns button:active { transform: scale(.94); }
 #charades .cz-skip { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14) !important; }

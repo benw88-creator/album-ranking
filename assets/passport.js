@@ -335,7 +335,7 @@
   function paint(w) {
     var total = Object.keys(w.artists).length;
     if (!total) {
-      return '<div class="pp-empty"><span class="pp-kick">Music Passport</span><h1 class="pp-title">An empty passport.</h1><p>Every artist you rate — or play, once you import your Spotify history — pins a country to your map. Rate a few records and watch the world light up.</p><div class="pp-empty-btns"><button class="btn-primary" data-go="albums">Rate albums</button><button class="btn-secondary" data-pp="import">Import Spotify history</button></div></div>';
+      return '<div class="pp-empty"><span class="pp-kick">Music Passport</span><h1 class="pp-title">An empty passport.</h1><p>Rate records to fill your map.</p><div class="pp-empty-btns"><button class="btn-primary" data-go="albums">Rate albums</button><button class="btn-secondary" data-pp="import">Import Spotify history</button></div></div>';
     }
     var nC = w.list.length, nCt = Object.keys(w.continents).length;
     var fav = P.favourites(w), genres = P.genreSpread(w).slice(0, 4), rareL = P.rare(w).slice(0, 8), tl = P.timeline(w);
@@ -385,7 +385,7 @@
     if (rareL.length) {
       cards.push('<article class="pp-card pp-rare"><span class="pp-kick">Rare finds</span><h3>' + (rareL[0].artists.length === 1 ? 'One artist is your whole ' + esc(rareL[0].n) : esc(rareL[0].n) + ' is a ' + P.TIERS[rareL[0].rarity].toLowerCase() + ' stamp') + '</h3>' +
         '<div class="pp-rare-list">' + rareL.map(function (c) { var a = c.artists[0]; return '<button data-cc="' + c.cc + '"><span class="pp-rare-art' + (a.art ? '' : ' noart') + '" style="--ink:' + (INK[c.ct] || '#fff') + '">' + (a.art ? '<img src="' + esc(th(a.art, 160)) + '" alt="" loading="lazy">' : '') + '<i>' + flag(c.cc) + '</i></span><b>' + esc(c.n) + '</b><small>' + (c.artists.length === 1 ? 'only ' + esc(a.name) : P.TIERS[c.rarity]) + '</small></button>'; }).join('') + '</div>' +
-        '<p class="pp-note">Stamp rarity is how often a country turns up in the world’s charts, not a judgement on you.</p></article>');
+        '</article>');
     }
     if (tl.length >= 2) {
       var maxT = Math.max.apply(null, tl.map(function (r) { return r.total; })) || 1;
@@ -398,7 +398,7 @@
     if (recs.length) {
       cards.push('<article class="pp-card pp-next"><span class="pp-kick">Where next</span><h3>' + recs.length + ' countries waiting for a stamp</h3><div class="pp-next-list">' +
         recs.map(function (r) { return '<div class="pp-next-c" style="--ink:' + (INK[r.ct] || '#fff') + '"><span class="pp-next-flag">' + flag(r.cc) + '</span><b>' + esc(r.n) + '</b><small>' + esc(r.ct) + (r.near ? ' · near your map' : ' · a new continent') + '</small><div>' + r.artists.slice(0, 3).map(function (a) { return '<button data-pp-artist="' + esc(a) + '">' + esc(a) + '</button>'; }).join('') + '</div></div>'; }).join('') +
-        '</div><p class="pp-note">Every suggestion is placed in that country by MusicBrainz, not by us.</p></article>');
+        '</div></article>');
     }
 
     var foot = '<footer class="pp-foot"><button class="pp-share" data-pp="share"><span>↗</span> Share your passport</button>' +

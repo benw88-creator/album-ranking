@@ -78,46 +78,59 @@
 .onb-door span { font-size: 13px; color: var(--text-dim); }
 .onb-door:active { scale: .98; }
 
-/* ---- "check it out" prompts ----------------------------------------------- */
+/* ---- discovery prompts: docked right, tucking into an edge tab ----------- */
 .vx-tip {
-  position: fixed; z-index: 155; left: 50%; translate: -50% 0;
-  bottom: calc(var(--nav-h, 64px) + 22px + env(safe-area-inset-bottom, 0px));
-  width: min(420px, calc(100vw - 24px));
-  display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px;
+  position: fixed; z-index: 155; right: 0;
+  bottom: calc(var(--nav-h, 64px) + 26px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; pointer-events: none;
+  animation: vxIn .55s cubic-bezier(.25,1.35,.45,1) both;
+}
+body:has(#player-bar.up) .vx-tip { bottom: calc(var(--nav-h, 64px) + 96px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 700px) { .vx-tip { bottom: 28px; } body:has(#player-bar.up) .vx-tip { bottom: 100px; } }
+.vx-tip.out { animation: vxOut .3s var(--ease) both; }
+@keyframes vxIn { from { opacity: 0; translate: 110% 0; } to { opacity: 1; translate: 0 0; } }
+@keyframes vxOut { to { opacity: 0; translate: 110% 0; } }
+.vx-card {
+  pointer-events: auto; margin-right: 12px; width: min(340px, calc(100vw - 24px));
+  display: flex; align-items: center; gap: 10px; padding: 10px 8px 10px 10px;
   border-radius: 20px; color: var(--text);
-  background: linear-gradient(110deg, color-mix(in srgb, var(--vx) 22%, var(--surface)), var(--surface) 65%);
-  border: 1px solid color-mix(in srgb, var(--vx) 45%, transparent);
-  box-shadow: 0 18px 50px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.03) inset;
-  animation: vxIn .5s cubic-bezier(.25,1.35,.45,1) both;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--vx) 24%, var(--surface)), var(--surface) 70%);
+  border: 1px solid color-mix(in srgb, var(--vx) 50%, transparent);
+  box-shadow: 0 18px 50px rgba(0,0,0,.55), 0 0 30px -8px color-mix(in srgb, var(--vx) 60%, transparent);
+  transition: transform .45s cubic-bezier(.3,1.3,.5,1), opacity .25s;
+  transform-origin: right center;
 }
-@media (min-width: 700px) { .vx-tip { bottom: 24px; } }
-.vx-tip.out { animation: vxOut .28s var(--ease) both; }
-@keyframes vxIn { from { opacity: 0; translate: -50% 40px; scale: .96; } to { opacity: 1; translate: -50% 0; scale: 1; } }
-@keyframes vxOut { to { opacity: 0; translate: -50% 24px; } }
+.vx-tab {
+  display: none; pointer-events: auto; border: 0; cursor: pointer; padding: 6px 8px 6px 6px;
+  border-radius: 16px 0 0 16px; background: color-mix(in srgb, var(--vx) 28%, var(--surface));
+  box-shadow: 0 8px 26px rgba(0,0,0,.5), 0 0 22px -4px var(--vx);
+  animation: vxGlow 2.4s var(--ease) infinite;
+}
+.vx-tip.tucked .vx-card { display: none; }
+.vx-tip.tucked .vx-tab { display: block; animation: vxTabIn .4s cubic-bezier(.3,1.4,.5,1) both, vxGlow 2.4s var(--ease) .4s infinite; }
+@keyframes vxTabIn { from { translate: 100% 0; } to { translate: 0 0; } }
+@keyframes vxGlow { 0%, 100% { box-shadow: 0 8px 26px rgba(0,0,0,.5), 0 0 14px -6px var(--vx); } 50% { box-shadow: 0 8px 26px rgba(0,0,0,.5), 0 0 26px 0 var(--vx); } }
 .vx-ico {
-  flex: 0 0 auto; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center;
-  background: color-mix(in srgb, var(--vx) 22%, transparent); color: var(--vx);
-  position: relative; overflow: hidden;
+  flex: 0 0 auto; width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--vx) 24%, transparent); color: var(--vx); position: relative; overflow: hidden;
 }
-.vx-ico svg { width: 22px; height: 22px; }
-.vx-ico::after {
-  content: ''; position: absolute; inset: 0;
+.vx-tab .vx-ico { width: 34px; height: 34px; border-radius: 11px; }
+.vx-ico svg { width: 20px; height: 20px; }
+.vx-card .vx-ico::after {
+  content: ""; position: absolute; inset: 0;
   background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%);
   translate: -120% 0; animation: vxSheen 2.6s var(--ease) .6s infinite;
 }
 @keyframes vxSheen { 0% { translate: -120% 0; } 40%, 100% { translate: 120% 0; } }
 .vx-t { flex: 1 1 auto; min-width: 0; }
 .vx-k { font: 700 10.5px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--vx); }
-.vx-t b { display: block; margin-top: 4px; font-size: 15px; line-height: 1.2; }
-.vx-t small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--text-dim); line-height: 1.3; }
+.vx-t b { display: block; margin-top: 4px; font-size: 14.5px; line-height: 1.2; }
 .vx-go {
-  flex: 0 0 auto; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 0; cursor: pointer;
+  flex: 0 0 auto; min-height: 38px; padding: 0 14px; border-radius: 999px; border: 0; cursor: pointer;
   background: var(--vx); color: #0b0810; font: 700 13px/1 var(--font-body);
 }
-.vx-x {
-  flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer;
-  background: transparent; color: var(--text-faint); font-size: 18px; line-height: 1;
-}
+.vx-go:active { scale: .95; }
+.vx-x { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer; background: transparent; color: var(--text-faint); font-size: 18px; line-height: 1; }
 body.layer-open .vx-tip { display: none; }
 
 /* ---- achievement claim ----------------------------------------------------- */

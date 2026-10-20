@@ -6845,10 +6845,25 @@ html[data-motion="none"] .games-grid > .game-card .gc-emoji { animation: none; }
 
 /* A level-up is the one moment worth stopping the page for. */
 .lvl-pop {
-  position: fixed; left: 50%; top: 38%; transform: translate(-50%,-50%) scale(.7);
-  z-index: 9999; pointer-events: none; text-align: center; opacity: 0;
-  animation: lvlPop 2.2s var(--ease) forwards;
+  position: fixed; left: 50%; top: 40%; transform: translate(-50%,-50%) scale(.7);
+  z-index: 9999; text-align: center; opacity: 0; cursor: pointer;
+  padding: 44px 64px; border-radius: 40px;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--gold) 26%, rgba(10,9,8,.86)), rgba(10,9,8,.0));
+  animation: lvlIn 520ms var(--ease) forwards;
 }
+.lvl-pop.out { animation: lvlOut 420ms var(--ease) forwards; }
+.lvl-pop .lp-ring {
+  position: absolute; left: 50%; top: 54%; width: 150px; height: 150px; margin: -75px 0 0 -75px;
+  border-radius: 50%; border: 2px solid color-mix(in srgb, var(--gold) 70%, transparent);
+  opacity: 0; animation: lvlRing 1.6s var(--ease) .3s infinite; pointer-events: none;
+}
+.lvl-pop .lp-ring2 { animation-delay: .9s; border-color: color-mix(in srgb, var(--accent-2) 60%, transparent); }
+.lvl-pop .lp-n.hit { animation: drawShimmer 2.2s linear infinite, lvlHit 300ms var(--ease); }
+.lvl-pop .lp-s { margin-top: 8px; min-height: 14px; font: 700 12px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim); }
+@keyframes lvlIn { from { opacity: 0; transform: translate(-50%,-50%) scale(.7); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
+@keyframes lvlOut { from { opacity: 1; transform: translate(-50%,-50%) scale(1); } to { opacity: 0; transform: translate(-50%,-60%) scale(.96); } }
+@keyframes lvlHit { 0% { scale: 1.28; } 100% { scale: 1; } }
+@keyframes lvlRing { 0% { opacity: .8; transform: scale(.6); } 100% { opacity: 0; transform: scale(1.9); } }
 .lvl-pop .lp-k { font: 700 11px/1 var(--font-mono); letter-spacing: .24em; text-transform: uppercase; color: var(--gold); }
 .lvl-pop .lp-n {
   font: 700 84px/1 var(--font-display); margin-top: 6px;
@@ -6867,6 +6882,7 @@ html[data-motion="none"] .games-grid > .game-card .gc-emoji { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .lvl-bar i { transition: none; }
   .lvl-pop, .lvl-pop .lp-n { animation: none !important; opacity: 1; }
+  .lvl-pop .lp-ring { display: none; }
 }
 
 .today-auto {
@@ -9543,9 +9559,9 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/interactions.css?v=5">
 <link rel="stylesheet" href="/assets/replay.css?v=4">
 <link rel="stylesheet" href="/assets/you.css?v=3">
-<link rel="stylesheet" href="/assets/games.css?v=3">
+<link rel="stylesheet" href="/assets/games.css?v=4">
 <link rel="stylesheet" href="/assets/store.css?v=3">
-<link rel="stylesheet" href="/assets/glow.css?v=6">
+<link rel="stylesheet" href="/assets/glow.css?v=7">
 <link rel="stylesheet" href="/assets/themes2.css?v=2">
 <link rel="stylesheet" href="/assets/play.css?v=1">
 <link rel="stylesheet" href="/assets/cards.css?v=1">
@@ -9556,10 +9572,11 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/profile2.css?v=1">
 <link rel="stylesheet" href="/assets/today.css?v=1">
 <link rel="stylesheet" href="/assets/home2.css?v=1">
-<link rel="stylesheet" href="/assets/charades.css?v=1">
+<link rel="stylesheet" href="/assets/charades.css?v=2">
 <link rel="stylesheet" href="/assets/passport.css?v=1">
 <link rel="stylesheet" href="/assets/artist.css?v=1">
-<link rel="stylesheet" href="/assets/discover.css?v=1">
+<link rel="stylesheet" href="/assets/discover.css?v=2">
+<link rel="stylesheet" href="/assets/polish.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -10201,7 +10218,7 @@ window.discAmt = function (n) {
   <!-- connect gate -->
   <div class="gate" id="gate" style="margin-top:24px;">
     <h3>Can&rsquo;t reach the music catalogue</h3>
-    <p>The music catalogue couldn&rsquo;t load. Try refreshing the page.</p>
+    <p>Try refreshing.</p>
     <button class="btn-mini" id="gate-connect" onclick="location.reload()">&#8635; Refresh</button>
   </div>
 
@@ -10360,7 +10377,7 @@ window.discAmt = function (n) {
   <section id="view-crate" class="view" style="display:none;">
     <div class="section-head">
       <div>
-        <h2 style="font-size:26px; letter-spacing:-0.025em;">The Crate <span style="font-size:14px; color:var(--text-faint); font-weight:500; letter-spacing:0;">everyone's ratings, live</span></h2>
+        <h2 style="font-size:26px; letter-spacing:-0.025em;">The Crate</h2>
       </div>
       <button class="btn-mini" id="crate-refresh" style="margin-left:auto;">&#8635; Refresh</button>
     </div>
@@ -10425,7 +10442,7 @@ window.discAmt = function (n) {
     <div class="empty" id="albums-empty">
       <span class="emoji" data-icon="disc"></span>
       <h3>No albums ranked yet</h3>
-      <p>Search for an album, open it, and give it a score.</p>
+      <p>Search for an album to rate.</p>
     </div>
   </section>
 
@@ -10456,7 +10473,7 @@ window.discAmt = function (n) {
     <div class="empty" id="songs-empty">
       <span class="emoji" data-icon="note"></span>
       <h3>No songs ranked yet</h3>
-      <p>Open an album and rate individual tracks with the 0&ndash;10 sliders.</p>
+      <p>Rate tracks from any album.</p>
     </div>
   </section>
 
@@ -10474,7 +10491,7 @@ window.discAmt = function (n) {
       <div class="cc-hero-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="cc-hero-txt">
         <h2 class="cc-hero-title">Community Choice</h2>
-        <p class="cc-intro">The best part of a song, picked by someone who loves it. Hear it, then agree.</p>
+        <p class="cc-intro">Best moments in songs.</p>
       </div>
       <button class="btn-primary cc-hero-cta" id="cc-new">Pick a moment</button>
     </header>
@@ -10519,11 +10536,11 @@ window.discAmt = function (n) {
            arrives, and a row of bulbs chases along the edge. -->
       <div class="arc-marquee">
         <h2 class="arc-title" aria-label="Arcade"><span aria-hidden="true"><i>A</i><i>r</i><i>c</i><i>a</i><i>d</i><i>e</i></span></h2>
-        <p class="arc-sub">Name it, bid on it, act it out.</p>
+
       </div>
       <button class="lb-bar arc-lb" id="leaderboard-card">
         <span class="lb-bar-icon" data-icon="stopwatch"></span>
-        <span class="lb-bar-text"><b>Leaderboards</b><small>Every game, every artist, your friends</small></span>
+        <span class="lb-bar-text"><b>Leaderboards</b></span>
         <span class="lb-bar-go">&rarr;</span>
       </button>
     </header>
@@ -10533,7 +10550,7 @@ window.discAmt = function (n) {
         <div class="gc-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="gc-emoji" data-icon="wave"></div>
         <h3>Recall</h3>
-        <p>One second of a record. Name it before it gets easier.</p>
+        <p>Name the song from one second.</p>
         <div class="gc-go">Play today&rsquo;s song &rarr;</div>
         <div class="gc-best" id="recall-card-status"></div>
       </div>
@@ -10541,17 +10558,17 @@ window.discAmt = function (n) {
         <div class="gc-art" aria-hidden="true"><span class="bw-sleeves"><i></i><i></i><i></i><i></i><i></i></span><span class="bw-bids"><i></i><i></i><i></i><i></i><i></i></span><span class="bw-bids them"><i></i><i></i><i></i><i></i><i></i></span></div>
         <div class="gc-emoji" data-icon="trophy"></div>
         <h3>Bid Wars</h3>
-        <p>Five records, dealt one at a time. Bid blind against a mate; the most streams wins.</p>
+        <p>Bid blind on five records. Most streams wins.</p>
         <div class="gc-go">Challenge someone &rarr;</div>
       </div>
 
-      <h3 class="arc-label"><span>Party</span><small>one phone, a room full of people</small></h3>
+      <h3 class="arc-label"><span>Party</span></h3>
       <div class="game-card" id="charades-card">
         <div class="cz-art" aria-hidden="true"><span class="cz-art-name">Queen</span><i class="cz-art-ring"></i><b>60</b><span class="cz-art-team"><i></i><i></i><i></i><i></i></span></div>
         <span class="cz-kicker">Pass the phone &middot; 4+ players</span>
         <h3><span>Artist</span> Charades</h3>
         <p>No words. No humming.</p>
-        <div class="gc-go" id="charades-card-go">Get the party going &rarr;</div>
+        <div class="gc-go" id="charades-card-go">Play &rarr;</div>
       </div>
 
       <h3 class="arc-label"><span>Daily</span></h3>
@@ -10593,7 +10610,7 @@ window.discAmt = function (n) {
         <div class="gc-art" aria-hidden="true"></div>
         <div class="gc-emoji" data-icon="fire"></div>
         <h3>Cover EXTREME</h3>
-        <p>The middle square only. Brutal.</p>
+        <p>Just the middle square.</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="coverx"></div>
       </div>
@@ -10767,7 +10784,7 @@ window.discAmt = function (n) {
          travels — and because a screen called Invite Friends is one everybody
          has learned to close. -->
     <h3 class="prof-section-title" style="margin-top:30px;">Reach</h3>
-    <p class="reco-note" style="margin-top:-6px;">Bring somebody in. You both get paid.</p>
+    <p class="reco-note" style="margin-top:-6px;">Invite a friend. You both earn Discs.</p>
     <div id="reach-body"></div>
   </section>
 
@@ -10810,10 +10827,12 @@ window.discAmt = function (n) {
         <div id="detail-note"></div>
       </div>
     </div>
+    <!-- A single opens here instead: the song is the subject, so it gets the
+         For You treatment (preview, 1–10 drag) and the album furniture hides.
+         See paintSingle(). -->
+    <div id="detail-single"></div>
     <div id="detail-completion"></div>
-    <!-- The play hint is printed rather than discovered. A number that is
-         secretly a button is not a thing anybody finds by playing. -->
-    <div class="tracks-head">Tracks &mdash; rate each 0&ndash;10 &middot; tap a number to play it</div>
+    <div class="tracks-head">Tracks &middot; tap a number to play</div>
     <div id="detail-tracks"></div>
     <!-- Reviews: every crate_feed row for this record, laid out the way AOTY
          does it — the room's score, its spread, then what people wrote. See
@@ -10829,8 +10848,6 @@ window.discAmt = function (n) {
     <a href="/privacy.html">Privacy</a>
     <span>&middot;</span>
     <a href="/terms.html">Terms</a>
-    <span>&middot;</span>
-    <span class="foot-note">VINALL &mdash; the place for music.</span>
     <!-- Spotify's Developer Policy requires attribution wherever their content
          is displayed, and every piece of artwork in this app is theirs. Apple
          will not raise this; Spotify can.
@@ -10927,7 +10944,7 @@ window.discAmt = function (n) {
   <div class="modal-panel">
     <button class="modal-close" id="drop-close" aria-label="Close">&times;</button>
     <div class="modal-head"><span class="mh-emoji" data-icon="disc"></span>
-      <div><h2>Daily Drop</h2><p>Guess today&rsquo;s record in six. Everyone gets the same one.</p></div></div>
+      <div><h2>Daily Drop</h2><p>Guess today&rsquo;s record in six.</p></div></div>
 
     <div class="drop-head-row">
       <div class="drop-mode" id="drop-mode">
@@ -11079,7 +11096,7 @@ window.discAmt = function (n) {
   <div class="modal-panel">
     <button class="modal-close" id="blitz-close" aria-label="Close">&times;</button>
     <div class="modal-head"><span class="mh-emoji" data-icon="trophy"></span>
-      <div><h2>Cover Fire</h2><p>Ten sleeves. Speed, streaks, and one risk.</p></div></div>
+      <div><h2>Cover Fire</h2><p>Ten sleeves, one minute.</p></div></div>
 
     <div id="blitz-lobby">
       <div class="bl-lobby-top">
@@ -11198,9 +11215,9 @@ window.discAmt = function (n) {
 
     <div id="recall-lobby">
       <div class="rc-lobby-art" aria-hidden="true"><div class="rc-disc"></div><div class="rc-ladder"><i>1s</i><i>3s</i><i>5s</i><i>10s</i></div></div>
-      <p class="rc-pitch" id="recall-lobby-note">One second of a record. Name it before it gets easier.</p>
+      <p class="rc-pitch" id="recall-lobby-note">The less you hear, the more it&rsquo;s worth.</p>
       <button class="btn-primary rc-big" id="recall-daily-btn">Play today&rsquo;s song</button>
-      <button class="rc-second" id="recall-endless-btn">Endless &mdash; keep going until you stop</button>
+      <button class="rc-second" id="recall-endless-btn">Endless &mdash; one miss ends it</button>
       <div class="rc-stats-line" id="recall-stats-line"></div>
       <div id="recall-lobby-done"></div>
     </div>
@@ -11214,7 +11231,7 @@ window.discAmt = function (n) {
         <div class="rc-wave" id="recall-wave" aria-hidden="true"></div>
         <div class="rc-steps" id="recall-steps" aria-hidden="true"></div>
       </div>
-      <div class="rc-timer idle" id="recall-timer" role="timer" aria-label="Time left to name it"><b><i></i></b><span>10.0s</span></div>
+      <div class="rc-timer idle" id="recall-timer" role="timer" aria-label="Points for naming it now"><b><i></i></b><span>1,000</span></div>
       <button type="button" class="rc-hear" id="recall-hear" aria-label="Play the clip"><span class="rc-play-ico"></span>1.0s</button>
 
       <div class="rc-answer" id="recall-answer">
@@ -11301,11 +11318,18 @@ window.discAmt = function (n) {
       </div>
     </div>
 
+    <div class="set-group">
+      <div class="shop-section-title">Sound</div>
+      <div class="set-row">
+        <div class="set-copy"><div class="set-name">Sound effects</div></div>
+        <input type="checkbox" id="set-sfx-on" checked>
+      </div>
+    </div>
+
     <div class="set-group" id="set-reminders-group" style="display:none;">
       <div class="shop-section-title">Reminders</div>
       <div class="set-row">
-        <div class="set-copy"><div class="set-name">Streak &amp; Recall nudges</div>
-          <div class="set-note">Streak and Recall reminders.</div></div>
+        <div class="set-copy"><div class="set-name">Streak &amp; Recall nudges</div></div>
         <input type="checkbox" id="set-reminders-on">
       </div>
     </div>
@@ -11395,7 +11419,7 @@ window.discAmt = function (n) {
     <!-- Login / Signup view -->
     <div id="auth-view-main">
       <div class="modal-head"><span class="mh-emoji" data-icon="person"></span>
-        <div><h2 id="auth-title">Log in to VINALL</h2><p id="auth-sub">Save your rankings &amp; sync across devices.</p></div></div>
+        <div><h2 id="auth-title">Log in to VINALL</h2><p id="auth-sub"></p></div></div>
       <!-- Web only — see the comment beside wireSocialAuth() for why these
            are hidden inside the app. Apple sits first per Apple's own
            guidance for an iOS-adjacent product, Google beside it. -->
@@ -11441,7 +11465,7 @@ window.discAmt = function (n) {
     <!-- shown when user lands back from the reset email link -->
     <div id="auth-view-recovery" style="display:none;">
       <div class="modal-head"><span class="mh-emoji" data-icon="key"></span>
-        <div><h2>Choose a new password</h2><p>You&rsquo;re almost in.</p></div></div>
+        <div><h2>Choose a new password</h2></div></div>
       <label class="g-label" style="text-align:left;" for="auth-newpass">New password</label>
       <input id="auth-newpass" class="g-input" type="password" placeholder="At least 6 characters" autocomplete="new-password">
       <!-- Typed twice, because this is the one field in the app nobody can see
@@ -11518,7 +11542,7 @@ window.discAmt = function (n) {
 <div class="modal" id="list-modal">
   <div class="modal-panel">
     <button class="modal-close" id="list-close" aria-label="Close">&times;</button>
-    <div class="modal-head"><span class="mh-emoji" data-icon="list"></span><div><h2>Your list</h2><p>Build a list to show on your profile.</p></div></div>
+    <div class="modal-head"><span class="mh-emoji" data-icon="list"></span><div><h2>Your list</h2></div></div>
     <label class="g-label" for="list-title-input">Title</label>
     <input id="list-title-input" class="g-input" type="text" maxlength="60" placeholder="e.g. Best Drake albums" autocomplete="off" style="margin-bottom:14px;">
     <label class="g-label">Type</label>
@@ -11660,7 +11684,7 @@ window.discAmt = function (n) {
   <div class="modal-panel">
     <button class="modal-close" id="report-close" aria-label="Close">&times;</button>
     <div class="modal-head"><span class="mh-emoji" data-icon="bell"></span><div><h2>Report</h2><p id="report-sub"></p></div></div>
-    <p class="reco-note">Pick what&rsquo;s wrong. We look at every report.</p>
+    <p class="reco-note">What&rsquo;s wrong?</p>
     <div id="report-reasons" class="td-opts" style="margin-bottom:12px;"></div>
     <textarea id="report-note" class="td-note" rows="3" placeholder="Anything else we should know? Optional."></textarea>
     <div class="war-err" id="report-error"></div>
@@ -11718,7 +11742,7 @@ window.discAmt = function (n) {
       <div id="war-board"></div>
       <div class="war-err" id="war-error"></div>
       <button class="btn-primary war-submit" id="war-submit">Lock in your bids</button>
-      <p class="war-foot">They can&rsquo;t see your bids and you can&rsquo;t see theirs. One go each, so spend it properly.</p>
+      <p class="war-foot">Bids are blind. One go each.</p>
     </div>
 
     <div id="war-waiting" style="display:none;">
@@ -11763,7 +11787,7 @@ window.discAmt = function (n) {
   <div class="modal-panel" style="max-width:560px;">
     <button class="modal-close" id="tourney-close" aria-label="Close">&times;</button>
     <div id="tourney-setup">
-      <div class="modal-head"><span class="mh-emoji" data-icon="trophy"></span><div><h2>Album Tournament</h2><p>Pick your favourite each round until one album wins.</p></div></div>
+      <div class="modal-head"><span class="mh-emoji" data-icon="trophy"></span><div><h2>Album Tournament</h2><p>Pick a winner each round.</p></div></div>
       <label class="g-label">Bracket size</label>
       <div class="seg" id="tourney-size" style="width:100%; display:flex; margin-bottom:14px;">
         <button data-size="8" class="active" style="flex:1;">8 albums</button>
@@ -11821,10 +11845,15 @@ window.discAmt = function (n) {
     <img id="rate-cover" alt="" style="width:160px; height:160px; border-radius:16px; object-fit:cover; background:var(--surface-3); margin:6px auto 18px; box-shadow:0 12px 40px rgba(0,0,0,0.6); display:block;">
     <h2 id="rate-title" style="font-family:var(--font-display); font-size:24px; font-weight:800; line-height:1.15; letter-spacing:-0.02em;"></h2>
     <div id="rate-artist" style="color:var(--text-dim); font-size:15px; margin-bottom:24px;"></div>
-    <div style="display:flex; align-items:center; gap:16px; margin-bottom:8px;">
-      <input type="range" id="rate-slider" min="0" max="100" value="50" step="1"
-        style="-webkit-appearance:none; appearance:none; flex:1; height:4px; border-radius:2px; background:var(--surface-4); outline:none;">
-      <div id="rate-score" style="font-family:var(--font-display); font-size:38px; font-weight:800; min-width:80px; text-align:right; letter-spacing:-0.04em;">50<span style="font-size:14px; color:var(--text-faint);">/100</span></div>
+    <!-- Drag for the neighbourhood, then − / + for the exact number (hold to
+         run). The range stays the source of truth; see assets/glow.js. -->
+    <div class="rate-fine">
+      <button type="button" class="rate-step" data-step="-1" aria-label="One lower">&minus;</button>
+      <div id="rate-score">50<span>/100</span></div>
+      <button type="button" class="rate-step" data-step="1" aria-label="One higher">+</button>
+    </div>
+    <div class="rate-drag">
+      <input type="range" id="rate-slider" min="1" max="100" value="50" step="1" aria-label="Your score out of 100">
     </div>
     
     <label class="g-label" style="text-align:left;" for="rate-note">Notes (optional)</label>
@@ -12221,6 +12250,7 @@ async function openAlbum(meta, fromHistory) {
   }
 
   currentAlbum = { id: meta.id, name: meta.name, artist: meta.artist, artistId: meta.artistId, art: meta.art, year: meta.year, genre: meta.genre || '' };
+  paintSingle(null);   // until the tracklist says otherwise, it is an album
 
   // The link back to the record on DEEZER, which is where this record and its
   // sleeve actually came from. The real album url arrives with the tracklist
@@ -12255,6 +12285,7 @@ async function openAlbum(meta, fromHistory) {
     const tracks = (data.tracks && data.tracks.items) || [];
     if (data.genres && data.genres.length) currentAlbum.genre = data.genres[0];
     renderTracks(tracks, meta);
+    if (isSingle(data, tracks)) { paintSingle(tracks, meta); return; }
     compUnratedOnly = true;      // every album page opens showing what is left
     primeCompletion(currentAlbum);
   } catch (e) {
@@ -12264,6 +12295,59 @@ async function openAlbum(meta, fromHistory) {
   }
 }
 
+/* A SINGLE IS A SONG, NOT AN ALBUM. Official Charts rule, the same one
+   api/_artists.js classifies discographies by: three tracks or fewer and no
+   more than 25 minutes. Deezer's record_type is only a hint (it calls a
+   one-track release an album), so the tracklist decides. */
+function isSingle(data, tracks) {
+  if (!tracks || !tracks.length || tracks.length > 3) return false;
+  var ms = tracks.reduce(function (a, t) { return a + (t.duration_ms || 0); }, 0);
+  return ms > 0 ? ms <= 25 * 60000 : (data && data.album_type === 'single');
+}
+/* The song-focused page: the sleeve and title above stay, the album's rate
+   button, completion, reviews and certification hide (CSS, .is-single), and
+   the lead track gets a play button and the For You drag. Any B-sides stay
+   as ordinary rows under it. null puts the page back to an album. */
+function paintSingle(tracks, meta) {
+  var view = document.getElementById('view-album-detail');
+  var host = document.getElementById('detail-single');
+  if (!view || !host) return;
+  view.classList.toggle('is-single', !!tracks);
+  view.classList.toggle('single-solo', !!(tracks && tracks.length === 1));
+  if (!tracks) { host.innerHTML = ''; return; }
+  var t = tracks[0], rec = findSongRec(loadSongs(), t, meta), had = rec ? rec.score : 0;
+  var start = had || 7;
+  host.innerHTML =
+    '<div class="sg">' +
+      '<div class="sg-top"><span class="sg-chip">Single</span>' +
+        '<button type="button" class="idx sg-play" data-pv="0" aria-label="Play ' + esc(t.name) + '">' +
+          '<span class="pn"></span><span class="pi">&#9654;</span><span class="px"></span><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>' +
+          '<em>30s preview</em></button></div>' +
+      '<div class="sg-rate"><input type="range" min="1" max="10" step="1" value="' + start + '" aria-label="Your score out of 10" id="sg-r"></div>' +
+      '<button class="btn-primary g-btn-full sg-save" id="sg-save"></button>' +
+    '</div>';
+  var input = document.getElementById('sg-r'), btn = document.getElementById('sg-save');
+  function label() {
+    var v = +input.value, now = (findSongRec(loadSongs(), t, meta) || {}).score || 0;
+    btn.textContent = !now ? 'Rate ' + v : now === v ? 'Rated ' + v : 'Change to ' + v;
+    btn.disabled = now === v;
+    host.style.setProperty('--sg-c', songColor(v));
+  }
+  input.addEventListener('input', label);
+  if (window.GlowSlider) GlowSlider.enhance(input, { className: 'gs-fy gs-sg', axis: true });
+  btn.addEventListener('click', function () {
+    var v = +input.value;
+    saveSong(t, v, meta);
+    try { logActivity(ICONS.star, 'Rated', t.name, v); } catch (e) {}
+    host.querySelector('.sg').classList.remove('sg-done'); void host.offsetWidth;
+    host.querySelector('.sg').classList.add('sg-done');
+    // The lead row in the list (if any B-sides show it) follows.
+    var row = document.querySelector('#detail-tracks .song-slider[data-track="' + t.id + '"]');
+    if (row) { row.value = v; var sc = row.closest('.song-row'); if (sc) { sc.style.setProperty('--score', songColor(v)); sc.querySelector('.song-score').textContent = v; } }
+    label();
+  });
+  label();
+}
 function renderTracks(tracks, meta) {
   const songs = loadSongs();
   const host = document.getElementById('detail-tracks');
@@ -12338,7 +12422,7 @@ function updateDetailScore(v) {
 }
 function updateRatePreview() {
   const v = parseInt(rateSlider.value, 10);
-  rateScoreEl.innerHTML = v + '<span style="font-size:14px; color:var(--text-faint);">/100</span>';
+  rateScoreEl.innerHTML = v + '<span>/100</span>';
   rateScoreEl.style.color = albumColor(v);
   if (rateSlider._gs) rateSlider._gs.sync();
 }
@@ -12662,6 +12746,8 @@ function saveAlbum(meta, score) {
     date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   };
   persist(ALBUMS_KEY, albums);
+  if (window.Sfx) Sfx.play('rate', { v: score / 100 });
+  try { window.dispatchEvent(new CustomEvent('vinall:rated', { detail: { kind: 'album', count: Object.keys(albums).length } })); } catch (e) {}
   // You have heard it now, so it stops being something to hear.
   if (shortlistHas(meta.id)) shortlistRemove(meta.id);
   if (window.Cloud) Cloud.syncRating('album', albKey, albums[albKey]);
@@ -12714,6 +12800,7 @@ function saveSong(track, score, albumMeta) {
        and not the rule; the rule is that the reward is for having an opinion
        about a record, and you only have a first one once. */
     if (window.Wallet && !found) Wallet.recordRating();
+    if (window.Sfx) Sfx.play('rate', { v: score / 10 });
   }
   persist(SONGS_KEY, songs);
   _recsDirty = true;
@@ -12763,7 +12850,7 @@ window.removeSong = removeSong;
   'use strict';
   var DAY = 86400000;
   var TIERS = [
-    { n: 0,   name: 'Listener',     blurb: 'Rate something. That is all it takes to start.' },
+    { n: 0,   name: 'Listener',     blurb: 'Rate anything.' },
     { n: 3,   name: 'Crate Digger', blurb: 'A few records you have done more than score.' },
     { n: 10,  name: 'Selector',     blurb: 'You are starting to have positions, not just opinions.' },
     { n: 25,  name: 'Collector',    blurb: 'A shelf with reasons behind it.' },
@@ -12930,15 +13017,15 @@ window.removeSong = removeSong;
      and you must change the other. */
   var FINISHES = [
     { key: 'silverleaf', name: 'Silver leaf', needs: 'silver',   cost: 8000,
-      desc: 'A thin metal edge. The first thing that says this one is different.' },
+      desc: 'Thin metal edge.' },
     { key: 'goldplate',  name: 'Gold plate',  needs: 'gold',     cost: 25000,
       desc: 'The real thing, and it moves.' },
     { key: 'platinum',   name: 'Platinum',    needs: 'platinum', cost: 60000,
-      desc: 'Cooler and brighter than gold, which is the whole difference.' },
+      desc: 'Brighter than gold.' },
     { key: 'holo',       name: 'Holographic', needs: 'platinum', cost: 75000,
-      desc: 'The finish goes across the artwork, not around it.' },
+      desc: 'Across the artwork.' },
     { key: 'prism',      name: 'Prism',       needs: 'diamond',  cost: 150000,
-      desc: 'Diamond only. Nothing else in the app looks like it.' }
+      desc: 'Diamond only.' }
   ];
   var SWATCH = {
     silverleaf: 'linear-gradient(135deg,#5c636d,#f4f7fa 50%,#a7b0bb)',
@@ -13540,7 +13627,7 @@ async function _buildRecommendations(grid, emptyEl, status) {
   if (!seeds.length) {
     grid.innerHTML = ''; emptyEl.style.display = 'block'; status.textContent = '';
     emptyEl.querySelector('h3').textContent = 'No recommendations yet';
-    emptyEl.querySelector('p').textContent = 'Rate even one album and suggestions will appear here.';
+    emptyEl.querySelector('p').textContent = 'Rate an album to get suggestions.';
     _recsDirty = false; _recsBuilt = true;
     return;
   }
@@ -13615,7 +13702,7 @@ async function _buildRecommendations(grid, emptyEl, status) {
   if (!top.length) {
     grid.innerHTML = ''; emptyEl.style.display = 'block';
     emptyEl.querySelector('h3').textContent = 'Nothing new to suggest yet';
-    emptyEl.querySelector('p').textContent = 'Rate albums by more artists to widen suggestions.';
+    emptyEl.querySelector('p').textContent = 'Rate more artists.';
     status.textContent = '';
     return;
   }
@@ -14960,7 +15047,7 @@ function renderAuthArea(connected){
   const ROUNDS=5;
   const META={
     cover:{emoji:'\u{1F4F7}',title:'Guess the Cover',sub:'Name the album from its cover.'},
-    coverx:{emoji:'\u{1F525}',title:'Cover EXTREME',sub:'Only the middle square of the cover. Good luck.'},
+    coverx:{emoji:'\u{1F525}',title:'Cover EXTREME',sub:'Just the middle square.'},
     tracklist:{emoji:'\u{1F3B5}',title:'Guess from Tracklist',sub:'Which album are these songs from?'},
     year:{emoji:'\u{1F4C5}',title:'Guess the Year',sub:'Guess the release year (within 1).'}
   };
@@ -15489,7 +15576,11 @@ var HAPTIC = {
          ['impact', { style: 'HEAVY' }, 70],
          ['impact', { style: 'MEDIUM' }, 140]]
 };
-function buzz(kind) {
+/* Every buzz also SOUNDS (assets/sound.js), which is how ninety call sites got
+   a voice without being touched. `silent` is for a caller that plays its own,
+   more specific sound and wants only the haptic. */
+function buzz(kind, silent) {
+  if (!silent && window.Sfx) Sfx.fromBuzz(kind);
   if (window.Native && Native.on && Native.has('Haptics')) {
     (HAPTIC[kind] || HAPTIC.tap).forEach(function (step) {
       if (!step[2]) Native.call('Haptics', step[0], step[1]);
@@ -15659,6 +15750,7 @@ window.handOff = handOff;
    to exactly what this did before. */
 function celebrate(title,sub,opts){
   const ov=document.getElementById('celebrate');
+  if(window.Sfx)Sfx.play('celebrate');
   const eb=document.getElementById('celebrate-eyebrow');
   if(eb){
     eb.textContent=(opts&&opts.eyebrow)||'Achievement Unlocked';
@@ -16083,7 +16175,7 @@ function drawCompletion(){
       '<span class="comp-tick">'+(done?'\u2713':'\u25CB')+'</span>'+
       '<span class="comp-nm">'+esc(s.name)+'</span>'+
       '<span class="comp-yr">'+esc(s.year||'')+'</span></div>';
-  }).join(''):'<div class="comp-missing">All studio albums rated \u2014 nice work.</div>';
+  }).join(''):'<div class="comp-missing">All studio albums rated.</div>';
   host.innerHTML='<div class="comp '+(complete?'done':'')+'">'+
     '<div class="comp-head"><div class="comp-title">'+esc(meta.artist)+' \u00b7 '+X+' / '+Y+' albums rated</div>'+
       (complete?'<span class="comp-badge">\u{1F3C6} '+esc(meta.artist)+' Completionist</span>':'<div class="comp-pct" style="color:'+albumColor(pct)+'">'+pct+'%</div>')+' </div>'+
@@ -17810,7 +17902,7 @@ function tasteMatchHtml(tm,uname){
   if(tm.agreed.length)
     h+='<div class="tm-sub">Dead on</div>'+tm.agreed.map(pair).join('');
   if(tm.unheard.length)
-    h+='<div class="tm-sub">They rate these highly — you haven’t heard them</div>'+
+    h+='<div class="tm-sub">Their favourites you haven’t rated</div>'+
       tm.unheard.map(function(r){
         return row(r,'<div class="tm-score" style="color:'+albumColor(r.them)+'">'+r.them+'</div>'+
           '<button class="btn-mini tm-add" data-tmadd="'+esc(r.id)+'">'+
@@ -18043,7 +18135,7 @@ async function drawProfile(host,prof,isOwner,profileTok){
     '<span class="song-mini-rank">'+(i+1)+'</span><img src="'+thumb(esc(s.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'"><div style="min-width:0;"><div class="song-mini-name">'+esc(s.name)+'</div><div class="song-mini-artist">'+esc(s.artist||'')+'</div></div></div>';}).join('');}
   function songRows(arr,emptyMsg,id,own){if(!arr.length)return'<div class="reco-note">'+emptyMsg+'</div>';
     return'<div class="song-mini-list"'+(id?' id="'+id+'"':'')+'>'+songItems(arr,own)+'</div>'+
-      (own&&arr.length>1?'<div class="reco-note reorder-hint">Drag the handle, or press and hold a row, to reorder.</div>':'');}
+      (own&&arr.length>1?'<div class="reco-note reorder-hint">Drag to reorder.</div>':'');}
   /* Everything this person has actually done, in one block.
 
      The header used to carry four numbers — followers, following, albums,
@@ -18112,7 +18204,7 @@ async function drawProfile(host,prof,isOwner,profileTok){
          Depth block prints its rule — a ladder whose steps you cannot see
          is one people climb by accident. */
       {v:prof.level||1,           k:'Level',          hot:(prof.level||1)>=50,
-       tip:'Albums and songs ranked, games finished, days active, and every Disc earned.'}
+       tip:'From ratings, games and Discs.'}
     ];
     if(isOwner){
       let nLore=0,log={};
@@ -18220,7 +18312,7 @@ async function drawProfile(host,prof,isOwner,profileTok){
     listsHtml='<div class="pl-block'+(hid.has('*')?' all-hidden':'')+'" id="prof-lists-block">'+
       '<div class="prof-section-row"><div class="prof-section-title" style="margin:0;">Lists</div>'+
       (isOwner?'<div class="pl-acts"><button type="button" class="btn-mini pl-all" data-hide="*" aria-pressed="'+hid.has('*')+'">'+(hid.has('*')?'Show all':'Hide all')+'</button><button class="btn-mini" id="prof-add-list">+ New list</button></div>':'')+'</div>'+
-      (isOwner?'<div class="reco-note pl-all-note">Hidden from your profile. Only you can see these.</div>':'')+
+      (isOwner?'<div class="reco-note pl-all-note">Only you can see these.</div>':'')+
       (shelves.length?'<div class="pl-shelves">'+shelves.map(shelfHtml).join('')+'</div>':'')+
       (!shownLists.length
         ?(isOwner?'<div class="reco-note">Create a list like \u201CBest Drake albums\u201D.</div>':'')
@@ -21358,18 +21450,18 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   'use strict';
 
   const THEMES = {
-    classic:  { name: 'Crate',    cost: 0,    desc: 'The original — near-black, gold and ember.' },
+    classic:  { name: 'Crate',    cost: 0,    desc: 'Black, gold, ember.' },
     sundown:  { name: 'Sundown',  cost: 15000, desc: 'Plum dusk, hot orange, pink neon edge.' },
     cassette: { name: 'Cassette', cost: 15000, desc: 'Deep graphite, turquoise and tape-label coral.' },
     citrus:   { name: 'Citrus',   cost: 25000, desc: 'Espresso dark, lime and blood orange.' },
     vhs:      { name: 'VHS Tracking', cost: 30000, desc: 'Bottle-green black with phosphor green and hot pink.' },
-    bone:     { name: 'Bone China',   cost: 30000, desc: 'Warm off-white on soot. Quiet, and the only pale one.' },
-    neon:     { name: 'Neon Vault', cost: 35000, desc: 'Indigo black, magenta and cyan. Loud.' },
+    bone:     { name: 'Bone China',   cost: 30000, desc: 'Off-white on soot.' },
+    neon:     { name: 'Neon Vault', cost: 35000, desc: 'Indigo, magenta, cyan.' },
     /* The bottom rung, and the only theme with no colour in it. Cheap because
        it is the plain pressing, not because it is the lesser one — see the
        starter_theme migration. The cost here is the fallback; loadPrices()
        overwrites it from shop_items, which is what wallet_buy charges. */
-    press:    { name: 'Test Pressing', cost: 2000, desc: 'White label. Silver on black, no colour anywhere.' },
+    press:    { name: 'Test Pressing', cost: 2000, desc: 'Silver on black.' },
     /* ..._20261014150000_more_themes.sql; tokens in assets/themes2.css. */
     /* RETIRED from sale 2026-10-14: it was Soul Train with sharper corners.
        `retired` hides the Buy card unless you own it; an owner keeps it, can
@@ -21378,7 +21470,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     reel:     { name: 'Reel to Reel',   cost: 12000, desc: 'Warm tape brown, amber and oxide red.', retired: true },
     canopy:   { name: 'Deep Canopy',    cost: 18000, desc: 'Forest-floor green with brass light.' },
     frost:    { name: 'Chrome Frost',   cost: 20000, desc: 'Blue steel, ice and polished chrome.' },
-    soul:     { name: 'Soul Train',     cost: 22000, desc: 'Chocolate, mustard and rust. Everything rounded.' },
+    soul:     { name: 'Soul Train',     cost: 22000, desc: 'Chocolate, mustard, rust.' },
     bop:      { name: 'Hard Bop',       cost: 25000, desc: 'Midnight navy, electric blue, square corners.' },
     velvet:   { name: 'Midnight Velvet', cost: 28000, desc: 'Deep plum, amethyst and champagne.' },
     vapor:    { name: 'Vapor Sunset',   cost: 32000, desc: 'Sun yellow and hot pink over a violet grid.' },
@@ -21403,10 +21495,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     strobe:   'linear-gradient(135deg,#000 35%,#e8ff2e 35% 62%,#ff3df2 62%)',
   };
   const BANNERS = {
-    none:   { name: 'None',      cost: 0,   desc: 'No banner — the plain profile header.', gradient: 'transparent' },
+    none:   { name: 'None',      cost: 0,   desc: 'No banner.', gradient: 'transparent' },
     aurora: { name: 'Aurora',    cost: 10000, desc: 'A cool blue-to-gold wash behind your header.', gradient: 'linear-gradient(120deg, rgba(94,184,255,0.28), rgba(245,200,66,0.16))' },
     ember:  { name: 'Ember',     cost: 10000, desc: 'Warm orange-red, low and moody.', gradient: 'linear-gradient(120deg, rgba(232,118,63,0.30), rgba(226,75,74,0.16))' },
-    mono:   { name: 'Mono Fade', cost: 8000,  desc: 'A quiet fade to nothing — subtle depth.', gradient: 'linear-gradient(120deg, rgba(255,255,255,0.10), transparent)' },
+    mono:   { name: 'Mono Fade', cost: 8000,  desc: 'Soft fade.', gradient: 'linear-gradient(120deg, rgba(255,255,255,0.10), transparent)' },
     tape:   { name: 'Tape Loop', cost: 14000, desc: 'Phosphor green bleeding into black.', gradient: 'linear-gradient(120deg, rgba(61,255,171,0.24), rgba(255,79,163,0.12))' },
     dusk:   { name: 'Dusk',      cost: 14000, desc: 'The last twenty minutes of light.', gradient: 'linear-gradient(120deg, rgba(120,90,190,0.28), rgba(255,150,90,0.14))' },
     static: { name: 'Static',    cost: 18000, desc: 'Snow on a dead channel.', gradient: 'repeating-linear-gradient(115deg, rgba(255,255,255,0.09) 0 2px, transparent 2px 5px)' },
@@ -21648,25 +21740,60 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      progress bar costs no round trip — but it is display only, and **if the
      SQL changes this must change with it**, same arrangement as payFor() on
      the Rewards page. The server is what decides your level. */
-  function xpStep(level) { return Math.max(1, Math.round(80 * Math.pow(Math.max(level, 1), 1.35))); }
+  // 20261021110000_level_curve.sql. Was 80 * L^1.35, which made a new account
+  // level 12 after three albums.
+  function xpStep(level) { return Math.max(1, Math.round(1500 * Math.pow(Math.max(level, 1), 1.6))); }
   function xpFloor(level) {
     var total = 0;
     for (var i = 1; i < Math.max(level, 1); i++) total += xpStep(i);
     return total;
   }
   /* Hand-built rather than reusing celebrate(): a level-up should not look
-     like every other toast. Big numeral, shimmer, confetti, a heavier buzz —
-     and it leaves by itself rather than needing dismissal, because it is news
-     and not a decision. */
-  function levelUp(level) {
+     like every other toast. It leaves by itself (tap to leave sooner),
+     because it is news and not a decision.
+
+     NO LEVEL PASSES SILENTLY. A big award can jump several at once, so the
+     numeral counts up through every one of them with a tick each, and two
+     level-ups landing while one is still on screen MERGE into it rather than
+     stacking a second overlay on top. */
+  var _lvlPop = null;
+  function levelUp(level, from) {
     try {
+      from = Math.max(1, Math.min(from || level - 1, level - 1));
+      if (_lvlPop && _lvlPop.parentNode && !_lvlPop.classList.contains('out')) { _lvlPop._to(level); return; }
       var pop = document.createElement('div');
       pop.className = 'lvl-pop';
-      pop.innerHTML = '<div class="lp-k">Level up</div><div class="lp-n">' + level + '</div>';
+      pop.setAttribute('role', 'status');
+      pop.innerHTML = '<div class="lp-ring"></div><div class="lp-ring lp-ring2"></div>' +
+        '<div class="lp-k">Level up</div><div class="lp-n">' + from + '</div><div class="lp-s"></div>';
       document.body.appendChild(pop);
-      if (window.burst) burst(document.body, { count: 46, spread: 260 });
-      if (window.buzz) buzz('big');
-      setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 2400);
+      _lvlPop = pop;
+      var num = pop.querySelector('.lp-n'), sub = pop.querySelector('.lp-s'), cur = from, target = level, t = 0, gone = 0;
+      function leave() {
+        if (gone) return; gone = 1;
+        pop.classList.add('out');
+        setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); if (_lvlPop === pop) _lvlPop = null; }, 420);
+      }
+      function stepUp() {
+        cur++;
+        num.textContent = cur;
+        num.classList.remove('hit'); void num.offsetWidth; num.classList.add('hit');
+        if (window.Sfx) Sfx.play(cur < target ? 'levelTick' : 'levelUp', { n: cur - from });
+        if (cur < target) { if (window.buzz) buzz('tap', true); t = setTimeout(stepUp, 260); return; }
+        var jumped = target - from;
+        sub.textContent = jumped > 1 ? jumped + ' levels' : '';
+        if (window.burst) burst(num, { count: 40 + Math.min(40, jumped * 8), spread: 240 });
+        if (window.buzz) buzz('big', true);
+        clearTimeout(pop._leave); pop._leave = setTimeout(leave, 2600);
+      }
+      pop._to = function (lv) {
+        if (lv <= target || gone) return;
+        var idle = cur >= target;   // finished counting: start again; else the chain picks it up
+        target = lv;
+        if (idle) { clearTimeout(pop._leave); stepUp(); }
+      };
+      pop.addEventListener('click', leave);
+      t = setTimeout(stepUp, 380);
     } catch (e) {}
   }
 
@@ -22087,6 +22214,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 
   function applyWallet(w) {
     if (!w) return;
+    // Discs landing is the one sound every earning path shares.
+    if (w.discs != null && loaded && w.discs > state.discs && window.Sfx) Sfx.play('discs');
     if (w.discs != null) state.discs = w.discs;
     if (w.streak_current != null) state.streak_current = w.streak_current;
     if (w.streak_best != null) state.streak_best = w.streak_best;
@@ -22115,7 +22244,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (w.level != null) {
       var wasLevel = state.level;
       state.level = w.level;
-      if (wasLevel && w.level > wasLevel) levelUp(w.level);
+      if (wasLevel && w.level > wasLevel) levelUp(w.level, wasLevel);
     }
     updateShopButton();
     if (typeof window.renderStats === 'function') window.renderStats();
@@ -22157,7 +22286,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     var landedR = (w.discs != null && w.discs - before > w.earned) ? w.discs - before : w.earned;
     if (w.earned > 0) { discEarned(landedR, landedR > w.earned ? 'rating · 2×' : 'rating'); spawnDiscParticle(landedR); }
     if (w.milestone && typeof window.celebrate === 'function') {
-      window.celebrate('🔥 ' + w.milestone + '-day streak!', 'Keep it going — rate something tomorrow.');
+      window.celebrate('🔥 ' + w.milestone + '-day streak!');
     }
     if (window.track) track('rating_saved', { earned: w.earned || 0 });
   }
@@ -22253,7 +22382,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     var g = w.granted || {};
     if (typeof window.celebrate === 'function') {
       if (g.kind === 'wrapped') {
-        window.celebrate('VINALL Wrapped', 'Replay is unlocked — your weeks, months and year in records.', { eyebrow: 'Day 5 unlocked', accent: 'var(--c-violet)' });
+        window.celebrate('VINALL Wrapped', 'Replay unlocked.', { eyebrow: 'Day 5 unlocked', accent: 'var(--c-violet)' });
         if (window.buzz) buzz('big');
       } else if (g.kind === 'grand') {
         window.celebrate('Seven days straight', 'A record of your choice' + (g.tag ? ' and IT’S VIRJI ISN’T IT — a tag you can’t buy.' : ', free.'), { eyebrow: 'Week complete', accent: 'var(--gold)' });
@@ -22490,7 +22619,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       return state;
     },
     load: load, get: get, recordRating: recordRating,
-    awardGame: awardGame, syncAward: syncAward, awardDiscs: awardDiscs,
+    awardGame: awardGame, syncAward: syncAward, levelUp: levelUp, awardDiscs: awardDiscs,
     abbrevDiscs: abbrevDiscs,
     dailyLogin: dailyLogin, spin: spin,
     loadClaims: loadClaims, claimedMilestone: claimedMilestone, claimMilestone: claimMilestone,
@@ -25180,7 +25309,7 @@ function playDismissAnimation(gateEl, callback) {
         '<div class="drop-share">' + esc(shareGrid()) + '</div>' +
         '<div class="gb-slot" id="drop-gb"></div>' +
         '<div><button class="btn-primary" id="drop-share-btn" type="button" style="margin-top:14px;">' + Native.hand + ' result</button></div>' +
-        '<div class="drop-note">' + (otherLeft() || 'A new album and a new song every day at midnight.') + '</div>' +
+        '<div class="drop-note">' + (otherLeft() || 'New at midnight.') + '</div>' +
       '</div>';
     var btn = document.getElementById('drop-share-btn');
     if (btn) btn.addEventListener('click', function () {
@@ -25847,7 +25976,7 @@ function playDismissAnimation(gateEl, callback) {
       w.chips + ' chips, five records, one at a time.';
     var foot = document.querySelector('#war-bidding .war-foot');
     if (foot) foot.textContent =
-      'You cannot go back, and you cannot see what is still to come.';
+      'No going back.';
     paintStep(w);
   }
 
@@ -26504,7 +26633,7 @@ async function renderAdminStats() {
           '<div class="errmeta">' + esc(timeAgo(new Date(e.created_at).getTime())) +
           (e.url ? ' · ' + esc(e.url) : '') + '</div></div>';
       }).join('') + '</div>'
-    : '<div class="reco-note">Nothing has crashed. That is either good news or nobody has visited.</div>';
+    : '<div class="reco-note">No errors.</div>';
 
   /* kworb health. The Bid War valuation reads per-track totals out of scraped
      HTML, which is the most brittle thing in the app: if kworb changes its
@@ -27933,7 +28062,7 @@ window.renderAdminStats = renderAdminStats;
     if (!ed || ed.cat !== 'drop') return '';
     return '<p class="cc-note cc-drop-note">' + IC_DROP + '<span>' + (st.dropOff
       ? 'Beat drops aren\u2019t switched on yet. Your window is kept \u2014 post it as a beat switch, or come back soon.'
-      : 'Start a second or two before the drop, so the build and the hit both land in the window.') + '</span></p>';
+      : 'Start just before the drop.') + '</span></p>';
   }
   function featValue() { return ed.cat === 'feature' ? String(ed.feat || '').trim() : ''; }
   function paintPost() {
@@ -28328,6 +28457,7 @@ window.renderAdminStats = renderAdminStats;
     'blitz-card':       { need: 5,  label: 'Cover Fire' }
   };
   var SEEN_KEY = 'crate_unlocks_seen';
+  window.UnlockGates = GATES;   // read by assets/discover.js; display only
 
   function ratedCount() {
     try {
@@ -29260,7 +29390,7 @@ window.renderAdminStats = renderAdminStats;
       if (stale()) return;
     }
     if (!rows.length) {
-      body.innerHTML = '<div class="reco-note">Nobody owns anything yet. Be first.</div>';
+      body.innerHTML = '<div class="reco-note">Nobody owns anything yet.</div>';
       return;
     }
     paintBoard(rows);
@@ -30441,7 +30571,7 @@ window.renderAdminStats = renderAdminStats;
         '<div class="rw-track" aria-hidden="true"><i style="width:' + pct + '%"></i></div>' +
         '<div class="rw-week-foot">' + (cycle === 0
           ? 'Finish the week to open <b>mystery box</b> weeks. Miss a day and the run starts again.'
-          : 'Every seventh day is a mystery box. Miss a day and the run starts again.') + '</div>' +
+          : 'Day 7 is a mystery box.') + '</div>' +
       '</div>';
 
     /* Deliberately almost no copy.
@@ -31075,7 +31205,7 @@ window.renderAdminStats = renderAdminStats;
       score++;
       var nextMult = multFor(score);
       side.classList.add('right-correct');
-      verdict.innerHTML = (right.v === left.v ? 'Dead level — we’ll allow it' : 'Right') +
+      verdict.innerHTML = (right.v === left.v ? 'Tie' : 'Right') +
         ' <span class="hl-gain">+' + Math.round(10 * mult) + '</span>';
       verdict.className = 'hl-verdict good';
       // A multiplier stepping up is the moment worth marking, not every
@@ -31993,7 +32123,7 @@ window.renderAdminStats = renderAdminStats;
                     ' — server ceiling is behind Blitz.MAX_SCORE (' + Blitz.MAX_SCORE + ')');
       }
       if (theirs == null) {
-        el('blitz-vs').innerHTML = '<div class="bl-vs wait">Sent. They have not played yet — you will be told when they do.</div>';
+        el('blitz-vs').innerHTML = '<div class="bl-vs wait">Sent. Waiting for them.</div>';
         return;
       }
       var won = score > theirs, drew = score === theirs;
@@ -32725,16 +32855,17 @@ window.renderAdminStats = renderAdminStats;
   }
 
   /* ---- scoring ------------------------------------------------------- */
-  // Continuous, deterministic: the whole window is STEPS[last] seconds, and
-  // score slides from SCORES[0] at 0s down to SCORES[last] at the window's
-  // end — so two guesses in the same reveal step are not worth the same
-  // amount, and the sooner one always outscores the later one.
-  var WINDOW_MS = STEPS[STEPS.length - 1] * 1000;
+  // Two things, multiplied: how much you needed to hear sets the ceiling
+  // (SCORES[step]), and how fast you named it decides how much of that you
+  // keep — all of it straight away, sliding to half of it at SPEED_MS and
+  // never lower. There is NO time limit: running the clock only costs points.
+  // Mirrors recall_points() in 20261021100000_recall_heard_and_speed.sql.
+  var SPEED_MS = 30000;
   function points(step, elapsedMs) {
-    if (elapsedMs == null) return SCORES[step] || 0;   // back-compat, e.g. no-audio path
-    var t = Math.max(0, Math.min(WINDOW_MS, elapsedMs));
-    var hi = SCORES[0], lo = SCORES[SCORES.length - 1];
-    return Math.round(lo + (hi - lo) * (1 - t / WINDOW_MS));
+    var base = SCORES[step] || 0;
+    if (elapsedMs == null) return base;   // back-compat, e.g. no-audio path
+    var t = Math.max(0, Math.min(SPEED_MS, elapsedMs));
+    return Math.round(base * (0.5 + 0.5 * (1 - t / SPEED_MS)));
   }
   // Kept to one line on purpose. A scoring system people cannot do in their
   // head is a scoring system nobody feels.
@@ -32908,56 +33039,35 @@ window.renderAdminStats = renderAdminStats;
   var step = 0, attempts = 0, revealed = false, roundTok = 0, busy = false, lastElapsedMs = null;
   var countdown = null, serverState = null, resumeNote = '';
 
-  /* ---------- the ten-second clock ----------
-     A round is TEN SECONDS from the first press of play, whatever the reveal
-     step: the score already slid to its floor at 10s, and past it a guess
-     still paid 250, so a run could sit on a song indefinitely. Now the clock
-     running out IS a miss. It is paused, never reset, when the sheet closes
-     or the app goes to the background — the same remaining time comes back
-     with the round (see LIVE below). */
-  var LIMIT_MS = 10000, clockMs = 0, clockAt = 0, clockT = 0, clockTick = 0;
+  /* ---------- the clock ----------
+     NOT a limit. It runs from the first press of play and only ever costs
+     points (Recall.points: the step sets the ceiling, the clock how much of it
+     you keep). The meter shows what naming it right now would score, so the
+     two halves of the rule are on screen. Paused, never reset, when the sheet
+     closes or the app goes to the background (see LIVE below). */
+  var clockMs = 0, clockAt = 0, clockTick = 0;
   function elapsed() { return clockMs + (clockAt ? Date.now() - clockAt : 0); }
   function started() { return !!(clockAt || clockMs); }
   function startClock() {
     if (revealed || !song || clockAt) return;
-    if (elapsed() >= LIMIT_MS) { timeUp(); return; }
     clockAt = Date.now();
-    clearTimeout(clockT);
-    clockT = setTimeout(timeUp, LIMIT_MS - clockMs);
     if (!clockTick) clockTick = setInterval(paintTimer, 100);
-    paintTimer(true);
+    paintTimer();
   }
   function pauseClock() {
     if (clockAt) { clockMs = elapsed(); clockAt = 0; }
-    clearTimeout(clockT); clockT = 0;
     clearInterval(clockTick); clockTick = 0;
-    paintTimer(true);
+    paintTimer();
   }
-  function timeUp() {
-    clockT = 0;
-    if (revealed || !song) return;
-    clockMs = LIMIT_MS; clockAt = 0;
-    finishRound(false, true);
-  }
-  // Text ten times a second; the bar is one transition per start or pause,
-  // so it drains smoothly without a frame loop.
-  function paintTimer(rebar) {
+  function paintTimer() {
     var host = el('recall-timer'); if (!host) return;
-    var left = Math.max(0, LIMIT_MS - elapsed());
-    var txt = (left / 1000).toFixed(1) + 's';
+    var pts = Recall.points(step, started() ? elapsed() : 0);
+    var txt = n(pts);
     var sp = host.querySelector('span'); if (sp && sp.textContent !== txt) sp.textContent = txt;
     host.classList.toggle('run', !!clockAt);
-    host.classList.toggle('hurry', !!clockAt && left <= 3000);
     host.classList.toggle('idle', !started());
-    if (rebar !== true) return;
-    var bar = host.querySelector('i'); if (!bar) return;
-    bar.style.transition = 'none';
-    bar.style.transform = 'scaleX(' + (left / LIMIT_MS).toFixed(4) + ')';
-    if (clockAt && left > 0) {
-      void bar.offsetWidth;
-      bar.style.transition = 'transform ' + left + 'ms linear';
-      bar.style.transform = 'scaleX(0)';
-    }
+    var bar = host.querySelector('i');
+    if (bar) bar.style.transform = 'scaleX(' + (pts / Recall.SCORES[0]).toFixed(4) + ')';
   }
 
   /* ---------- LIVE: closing pauses, opening resumes ----------
@@ -33143,9 +33253,9 @@ window.renderAdminStats = renderAdminStats;
     pauseClock();
     revealed = false; step = at ? Math.max(0, Math.min(STEPS.length - 1, at.step | 0)) : 0;
     attempts = at ? (at.attempts | 0) : 0; clip = null; song = null;
-    clockMs = at ? Math.max(0, Math.min(LIMIT_MS - 250, at.clockMs || 0)) : 0;
-    resumeNote = at && clockMs ? 'Paused with ' + ((LIMIT_MS - clockMs) / 1000).toFixed(1) + 's left. Play to carry on.' : '';
-    paintTimer(true);
+    clockMs = at ? Math.max(0, at.clockMs || 0) : 0;
+    resumeNote = at && clockMs ? 'Paused. Play to carry on.' : '';
+    paintTimer();
     var r = el('recall-reveal'); if (r) { r.innerHTML = ''; r.classList.remove('on'); }
     var a = el('recall-art'); if (a) a.classList.remove('open');
     var pane = el('recall-play'); if (pane) pane.classList.remove('revealed');
@@ -33238,7 +33348,6 @@ window.renderAdminStats = renderAdminStats;
     if (revealed || !song || busy) return;
     var i = el('recall-input'), v = (i && i.value || '').trim();
     if (!v) { shake(); return; }
-    if (started() && elapsed() >= LIMIT_MS) { timeUp(); return; }
     /* Naming the artist is not naming the song, and it is the single most
        common near-miss — so it says so and costs nothing, rather than being
        scored as a wrong guess and quietly eating a reveal. */
@@ -33258,8 +33367,8 @@ window.renderAdminStats = renderAdminStats;
     hear();
   }
 
-  function finishRound(correct, timedOut) {
-    var elapsedMs = started() ? Math.min(LIMIT_MS, elapsed()) : null;
+  function finishRound(correct) {
+    var elapsedMs = started() ? elapsed() : null;
     pauseClock();
     revealed = true;
     VinalAudio.stop();
@@ -33267,23 +33376,24 @@ window.renderAdminStats = renderAdminStats;
     lastElapsedMs = elapsedMs;
     var got = Recall.settle(sess, song, step, attempts, correct, elapsedMs);
     Recall.setBest(sess.mode, sess.score);
-    // Sudden death: in a run, one miss (wrong to the end, given up, or out of
-    // time) ends it. The score is filed now, not when somebody taps through.
+    // Sudden death: in a run, one miss (wrong at the full ten seconds, or
+    // given up) ends it. The score is filed now, not when somebody taps through.
     if (!correct && sess.m.endless && !sess.m.oneRound) { sess.over = true; fileRun(); }
     saveLive();
     closeSuggest();
     paintHud();
-    reveal(correct, got, timedOut);
+    reveal(correct, got);
     track2('recall_round', { mode: sess.mode, correct: !!correct, step: step });
     if (sess.mode === 'daily') finishDaily(correct, got);
   }
   function track2(nm, props) { try { if (window.track) window.track(nm, props); } catch (e) {} }
 
-  function reveal(correct, got, timedOut) {
+  function reveal(correct, got) {
     var art = el('recall-art');
     if (art) art.classList.add('open');
     modal.classList.remove('rc-playing');
     flash(correct ? 'rc-win' : 'rc-lose', 1600);
+    if (window.Sfx) Sfx.play(correct ? 'correct' : 'fail');
     if (correct && window.burst && art) try { burst(art, { count: 22, colors: ['#ff4f9a', '#35e0ff', '#ffffff'] }); } catch (e) {}
     var pane = el('recall-play');
     if (pane) pane.classList.add('revealed');
@@ -33292,12 +33402,11 @@ window.renderAdminStats = renderAdminStats;
     var host = el('recall-reveal');
     if (!host) return;
 
-    var head = correct ? 'Correct' : sess.over ? (timedOut ? 'Time’s up · run over' : 'Run over') : timedOut ? 'Time’s up' : 'Missed';
+    var head = correct ? 'Correct' : sess.over ? 'Run over' : 'Missed';
     var pts = correct ? ('+' + n(got.points)) : '';
     var bonus = (correct && got.bonus) ? ('<span class="rc-bonus">+' + n(got.bonus) + ' streak</span>') : '';
     var line = correct
-      ? (lastElapsedMs != null ? 'Named in ' + (lastElapsedMs / 1000).toFixed(1) + 's' : 'Named before it played')
-      : timedOut ? 'Ten seconds to name it, and the clock ran out.'
+      ? ('Heard ' + STEPS[step] + 's' + (lastElapsedMs != null ? ' · named in ' + (lastElapsedMs / 1000).toFixed(1) + 's' : ''))
       : step >= STEPS.length - 1 ? ('It ran the full ' + STEPS[STEPS.length - 1] + ' seconds') : 'Given up.';
     var src = VinalAudio.current() === 'deezer'
       ? ('<a class="rc-src dz-credit" href="' + esc(clip && clip.link ? clip.link : (VinalAudio.link(song) || '#')) +
@@ -33439,7 +33548,7 @@ window.renderAdminStats = renderAdminStats;
     track2('recall_session', { songs: st.songs, score: st.score, streak: st.bestStreak });
     _boardRes = window.Boards ? Boards.finish('recall', { score: st.score, played: st.played, songs: st.songs }) : null;
     // Read by onboarding, which follows the first round with its own payoff.
-    window.RecallLast = { mode: sess.mode, score: st.score, songs: st.songs, played: st.played, avgReveal: st.avgReveal, board: _boardRes };
+    window.RecallLast = { mode: sess.mode, score: st.score, songs: st.songs, played: st.played, avgReveal: st.avgReveal, ms: lastElapsedMs, board: _boardRes };
     if (on()) { try { Cloud.recallSession(st.score, st.songs, st.bestStreak, Math.round(st.avgReveal)); } catch (e) {} }
   }
   async function finishSession(note) {
@@ -33591,8 +33700,8 @@ window.renderAdminStats = renderAdminStats;
     var note = el('recall-lobby-note');
     if (note) {
       note.textContent = done
-        ? 'One go a day. Everybody gets the same song.'
-        : 'One second of a record. Name it before it gets easier.';
+        ? 'Same song for everyone. Back tomorrow.'
+        : 'The less you hear, the more it’s worth.';
     }
     var line = el('recall-stats-line');
     if (line) {
@@ -33684,7 +33793,7 @@ window.renderAdminStats = renderAdminStats;
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden || !sess || revealed || !clockAt) return;
     pauseClock(); VinalAudio.stop(); saveLive();
-    say('Paused with ' + ((LIMIT_MS - clockMs) / 1000).toFixed(1) + 's left. Play to carry on.');
+    say('Paused. Play to carry on.');
   });
   window.addEventListener('pagehide', function () { if (sess && !sess.done && !sess.over && song) { pauseClock(); saveLive(); } });
   el('recall-daily-btn').addEventListener('click', function () { startMode('daily'); });
@@ -36408,7 +36517,13 @@ window.track = function (name, props) {
   var SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
   var CACHE_PREFIX = 'ap:';          // ap:<spotify track id> -> preview url or ''
   var el = null, unlocked = false;
-  var album = null;                  // { tracks:[], meta:{} }
+  /* TWO ALBUMS, NEVER ONE. `shown` is the record whose page is open (its rows,
+     their availability marks); `album` is the record the PLAYING track came
+     from (the bar's art, next/prev, the lock screen). They were one variable,
+     so opening another album while a song played put that album's sleeve
+     under the old song's title and pointed next/prev at the wrong tracklist.
+     A row press is the only thing that moves `shown` into `album`. */
+  var album = null, shown = null;    // { tracks:[], meta:{} }
   var qi = -1, cur = null, loadTok = 0, dragging = false, noPrev = false;
 
   /* ---- matching ---------------------------------------------------- */
@@ -36624,27 +36739,31 @@ window.track = function (name, props) {
      The name sweep survives only as a fallback for tracks that arrive with no
      clip of their own, and it is not even requested unless there are some. */
   function setAlbum(tracks, meta) {
-    album = { tracks: (tracks || []).map(function (t, i) {
+    var mine = shown = { tracks: (tracks || []).map(function (t, i) {
       return { id: t.id, name: t.name, i: i,
                artist: ((t.artists || []).map(function (a) { return a.name; })[0]) || (meta && meta.artist) || '',
                durMs: t.duration_ms || 0,
                preview: t.preview_url || null };
-    }), meta: meta || {}, map: null };
-    var mine = album;
-    var gaps = album.tracks.filter(function (t) { return !t.preview; }).length;
+    }), meta: Object.assign({}, meta || {}), map: null };
+    if (!cur) album = shown;                             // nothing playing: nothing to protect
+    var gaps = mine.tracks.filter(function (t) { return !t.preview; }).length;
     paintAvailability();                                 // what we know already
-    if (!gaps) { album.map = {}; return; }               // nothing left to look up
-    sweep(album.meta).then(function (m) {
-      if (album !== mine) return;                        // another record opened
-      album.map = m || {};
+    if (cur) markRows(el && !el.paused ? 'playing' : 'paused');   // relight only if it is this record
+    if (!gaps) { mine.map = {}; return; }                // nothing left to look up
+    sweep(mine.meta).then(function (m) {
+      if (shown !== mine) return;                        // another record opened
+      mine.map = m || {};
       paintAvailability();
     });
   }
+  // A row on the open page starts THAT record: it becomes the queue.
+  function playShown(i) { if (shown) album = shown; playIndex(i); }
   // The track's own clip first, the name-matched sweep only as a fallback.
-  function previewFor(t) {
+  function previewFor(t, from) {
     if (!t) return null;
     if (t.preview) return t.preview;
-    var entry = (album && album.map) ? album.map[norm(t.name)] : null;
+    from = from || album;
+    var entry = (from && from.map) ? from.map[norm(t.name)] : null;
     return entry && typeof entry === 'object' ? entry.url : (entry || null);
   }
 
@@ -36654,15 +36773,15 @@ window.track = function (name, props) {
   // record. Nothing is marked until the sweep lands, because "no preview"
   // and "not looked yet" are different claims.
   function paintAvailability() {
-    if (!album) return;
+    if (!shown) return;
     document.querySelectorAll('button.idx[data-pv]').forEach(function (b) {
-      var t = album.tracks[parseInt(b.getAttribute('data-pv'), 10)];
+      var t = shown.tracks[parseInt(b.getAttribute('data-pv'), 10)];
       if (!t) return;
-      var has = !!previewFor(t);
+      var has = !!previewFor(t, shown);
       // A track with no clip of its own is not yet a track with no clip, until
       // the sweep has answered. Saying so early is the "no preview" lie the
       // first version told on most of an album.
-      if (!has && !album.map) return;
+      if (!has && !shown.map) return;
       b.classList.toggle('nopv', !has);
       b.title = has ? 'Play preview' : 'No preview for this track';
     });
@@ -36877,9 +36996,9 @@ window.track = function (name, props) {
   // Row state. Cheap enough to sweep every row: an album is twenty of them.
   function markRows(state) {
     document.querySelectorAll('button.idx').forEach(function (b) { b.classList.remove('playing', 'loading', 'paused'); });
-    if (!state || !cur) return;
-    var b = document.querySelector('button.idx[data-pv="' + qi + '"]');
-    if (b) b.classList.add(state);
+    if (!state || !cur || album !== shown) return;   // the playing record's rows are not on screen
+    // All of them: a single's big play button and its row share an index.
+    document.querySelectorAll('button.idx[data-pv="' + qi + '"]').forEach(function (b) { b.classList.add(state); });
   }
 
   /* ---- OS media controls ------------------------------------------- */
@@ -36910,8 +37029,8 @@ window.track = function (name, props) {
     if (window.ripple) ripple(b, ev);
     if (window.buzz) buzz('tap');
     var i = parseInt(b.getAttribute('data-pv'), 10);
-    if (cur && qi === i) { toggle(); return; }    // pressing the live row pauses it
-    playIndex(i);
+    if (cur && qi === i && album === shown) { toggle(); return; }    // pressing the live row pauses it
+    playShown(i);
   });
   // Space is the universal play/pause, but not while somebody is typing
   // or while a slider has focus — the rating sliders live on these rows.
@@ -36922,7 +37041,7 @@ window.track = function (name, props) {
     ev.preventDefault(); toggle();
   });
 
-  window.VinalPlayer = { setAlbum: setAlbum, play: playIndex, toggle: toggle, stop: stop,
+  window.VinalPlayer = { setAlbum: setAlbum, play: playShown, toggle: toggle, stop: stop,
                          next: next, prev: prev, playing: function () { return !!cur && !!el && !el.paused; } };
 })();
 
@@ -39308,7 +39427,19 @@ window.track = function (name, props) {
   function discs() { try { return (window.Wallet && Wallet.get && Wallet.get().discs) || 0; } catch (e) { return 0; } }
 
   /* ---- chrome --------------------------------------------------------- */
-  var STEPS = ['welcome', 'username', 'first', 'artists', 'albums', 'game', 'shop', 'finale'];
+  /* Six beats and only two asks: one album, one song. Everything else is
+     something happening — the needle, the badge, a real Recall round. */
+  var STEPS = ['welcome', 'username', 'first', 'song', 'game', 'finale'];
+  // Somebody mid-tutorial when this shipped resumes at the same beat or the next.
+  var OLD_STEPS = ['welcome', 'username', 'first', 'artists', 'albums', 'game', 'shop', 'finale'];
+  function migrate(s) {
+    if (!s || s.v === 2) return s;
+    var name = OLD_STEPS[s.step] || 'welcome';
+    s.step = STEPS.indexOf({ artists: 'song', albums: 'song', shop: 'finale' }[name] || name);
+    if (s.step < 0) s.step = 0;
+    s.v = 2;
+    return s;
+  }
   /* NO "SKIP THE REST". The way out of a record you cannot score is "Don't
      know it." on the card itself, which is a smaller, more honest offer: it
      costs one album rather than the whole flow, and it means nobody is ever
@@ -39406,8 +39537,8 @@ window.track = function (name, props) {
       '<div class="onb-alb"><h3>' + esc(meta.name) + '</h3>' +
         '<p>' + esc(meta.artist) + (meta.year ? ' · ' + esc(meta.year) : '') + '</p></div>' +
       '<div class="onb-slider">' +
-        '<input type="range" id="onb-r" min="0" max="100" step="1" value="72" aria-label="Your score out of 100">' +
         '<div class="onb-score" id="onb-rs">72<span>/100</span></div>' +
+        '<input type="range" id="onb-r" min="1" max="100" step="1" value="72" aria-label="Your score out of 100">' +
       '</div>',
       cta('Save it') +
       (alt ? '<button class="onb-alt" id="onb-alt">' + esc(alt.label) + '</button>' : '')
@@ -39420,6 +39551,7 @@ window.track = function (name, props) {
       step.style.setProperty('--onb-tint', (window.albumColor ? albumColor(v) : 'var(--gold)'));
     }
     sl.addEventListener('input', paint);
+    if (window.GlowSlider) GlowSlider.enhance(sl, { className: 'gs-alb' });
     paint();
     onCta(function () {
       var v = parseInt(sl.value, 10);
@@ -39456,7 +39588,7 @@ window.track = function (name, props) {
       dropped = true;
       var h = host.querySelector('.onb-hero2'); if (h) h.classList.add('playing');
       if (window.buzz) buzz('good');
-      var t = el('onb-tag'); if (t) t.innerHTML = 'Rate records. Play games.<br>Find out what your taste says about you.';
+      var t = el('onb-tag'); if (t) t.innerHTML = 'Rate records. Play games.';
       var b = el('onb-go'); if (b) b.textContent = 'Let\u2019s go';
       var d = el('onb-deck'); if (d && window.burst) try { burst(d, { count: 18, spread: 110 }); } catch (e) {}
     }
@@ -39568,189 +39700,63 @@ window.track = function (name, props) {
     await card();
   }
 
-  /* ---- 3. the artists they actually listen to --------------------------
-     A grid of faces off Deezer's own chart, not a search box: recognising is
-     faster than typing, and three to ten taps is the whole ask. The chart is
-     the same one the minigame's Popular tab uses, so there is no second
-     source of "who is popular" to keep in step. */
-  async function artists() {
-    var MIN = 3, MAX = 10;
-    show('<h2 class="onb-h">Who do you listen to?</h2><div class="onb-grid onb-grid-wait"></div>');
-
-    var list = [];
-    try {
-      var r = await fetch(((window.Native && Native.api) || '') + '/api/catalogue?path=chart-artists&limit=50');
-      if (r.ok) list = ((await r.json()).items) || [];
-    } catch (e) {}
-    list = list.filter(function (a) { return a && a.id && a.name; });
-    /* A dead chart must not be a dead tutorial. Skipping straight past is
-       better than a blank grid with a disabled button under it — the albums
-       beat falls back to the famous pool when there is nothing selected. */
-    if (list.length < MIN) { S.artists = []; next(); return; }
-
-    var picked = [];
-    function key(a) { return String(a.id); }
-    function paint() {
-      var b = el('onb-go');
-      if (b) {
-        b.disabled = picked.length < MIN;
-        b.textContent = picked.length < MIN ? ('Pick ' + (MIN - picked.length) + ' more') : 'Continue';
-      }
-      host.querySelectorAll('[data-ar]').forEach(function (n) {
-        n.classList.toggle('on', picked.indexOf(n.dataset.ar) !== -1);
-      });
-      var c = el('onb-count');
-      if (c) c.textContent = picked.length ? (picked.length + ' of ' + MAX) : '';
-    }
-
+  /* ---- 3. one song ------------------------------------------------------
+     The For You move in miniature: tap the sleeve, hear thirty seconds, drag
+     a score. ONE song, because the brief is "less explaining, more
+     experiencing" — the second rating would only be the first one again.
+     The song comes off the front of the shared pool (records nearly anybody
+     can score in a breath), resolved against the catalogue so the rating
+     is keyed like every other song rating. */
+  async function song() {
+    var rows = [];
+    try { rows = ((window.VinalPool && VinalPool.songs) || []).slice(0, 14); } catch (e) {}
+    var row = rows[Math.floor(Math.random() * rows.length)];
+    if (!row) { next(); return; }
+    var t = { title: row[0], artist: row[1], album: row[6], art: row[7] };
     show(
-      '<h2 class="onb-h">Who do you listen to?</h2>' +
-      '<div class="onb-grid">' + list.map(function (a) {
-        var img = (a.images && a.images[0] && a.images[0].url) || '';
-        return '<button class="onb-ar" data-ar="' + esc(key(a)) + '">' +
-          '<span class="onb-ar-img">' + (img ? '<img src="' + thumb(esc(img),320) + '" alt="" decoding="async" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '') + '</span>' +
-          '<span class="onb-ar-n">' + esc(a.name) + '</span></button>';
-      }).join('') + '</div>' +
-      '<div class="onb-count" id="onb-count"></div>',
-      cta('Pick 3 more')
+      '<button class="onb-spin" id="onb-spin" aria-label="Play a preview">' +
+        '<img src="' + esc(t.art) + '" alt="" onerror="this.style.visibility=\'hidden\'"><span class="onb-spin-ico" aria-hidden="true">&#9654;</span></button>' +
+      '<div class="onb-alb"><h3>' + esc(t.title) + '</h3><p>' + esc(t.artist) + '</p></div>' +
+      '<div class="onb-slider onb-slider-song"><input type="range" id="onb-r" min="1" max="10" step="1" value="7" aria-label="Your score out of 10"></div>',
+      cta('Rate 7') + '<button class="onb-alt" id="onb-alt">Don\u2019t know it.</button>'
     );
-
-    host.querySelectorAll('[data-ar]').forEach(function (n, idx) {
-      n.addEventListener('click', function () {
-        var id = n.dataset.ar, at = picked.indexOf(id);
-        if (at !== -1) { picked.splice(at, 1); }
-        else if (picked.length < MAX) {
-          picked.push(id);
-          if (window.buzz) buzz('tap');
-          n.classList.remove('just'); void n.offsetWidth; n.classList.add('just');
-        } else {
-          // Ten is the cap, and a shake says so without a line of copy.
-          n.classList.remove('nope'); void n.offsetWidth; n.classList.add('nope');
-          if (window.buzz) buzz('bad');
-        }
-        paint();
-      });
+    var sl = el('onb-r'), btn = el('onb-go'), spin = el('onb-spin'), playing = false;
+    if (window.GlowSlider) GlowSlider.enhance(sl, { className: 'gs-fy' });
+    function paint() {
+      btn.textContent = 'Rate ' + sl.value;
+      host.querySelector('.onb-step').style.setProperty('--onb-tint', window.songColor ? songColor(+sl.value) : 'var(--gold)');
+    }
+    sl.addEventListener('input', paint); paint();
+    function stopIt() { playing = false; spin.classList.remove('on'); try { VinalAudio.stop(); } catch (e) {} }
+    spin.addEventListener('click', function () {
+      if (!window.VinalAudio) return;
+      if (playing) { stopIt(); return; }
+      VinalAudio.prime();
+      playing = true; spin.classList.add('on');
+      VinalAudio.play(t, 30).then(function (ok) { if (ok !== true) stopIt(); });
     });
-    paint();
-
+    try { VinalAudio.on('end', function () { if (playing) stopIt(); }); } catch (e) {}
+    var alt = el('onb-alt'); if (alt) alt.addEventListener('click', function () { stopIt(); next(); });
     onCta(async function () {
-      var b = el('onb-go'); if (b) { b.disabled = true; b.textContent = 'Saving…'; }
-      var chosen = picked.map(function (id) {
-        var a = list.filter(function (x) { return String(x.id) === id; })[0] || {};
-        return { id: String(a.id), name: a.name, art: (a.images && a.images[0] && a.images[0].url) || '' };
-      });
-      S.artists = chosen;
-      /* The first pick leads the profile. The old flow asked for a favourite
-         artist outright and this replaces that screen, so the field still gets
-         filled rather than quietly becoming dead — it is the same
-         Cloud.saveProfile call the profile's own picker makes. */
-      if (chosen[0]) {
-        try { await Cloud.saveProfile({ fav_artist: { id: chosen[0].id, name: chosen[0].name, image: chosen[0].art } }); } catch (e) {}
-      }
-      if (window.buzz) buzz('good');
-      next();
-    });
-  }
-
-  /* ---- 4. three records, off three of their own artists ------------------
-     One album each from three DIFFERENT artists they just picked, so the
-     round is already personal and does not read as the same artist three
-     times. Anything already in the crate is skipped — being asked to rate
-     the record you rated ninety seconds ago is the tutorial admitting it has
-     not been paying attention. */
-  async function albums() {
-    var WANT = 3, DRAWN = 6;
-    var mine = {};
-    try {
-      var all = loadAlbums() || {};
-      Object.keys(all).forEach(function (k) { mine[_norm(all[k].name + all[k].artist)] = 1; });
-    } catch (e) {}
-
-    show('<div class="onb-cover onb-cover-wait"></div>');
-
-    var chosen = (S.artists || []).slice();
-    // Shuffle so the same three are not always the first three picked.
-    for (var i = chosen.length - 1; i > 0; i--) {
-      var j2 = Math.floor(Math.random() * (i + 1)); var t = chosen[i]; chosen[i] = chosen[j2]; chosen[j2] = t;
-    }
-
-    /* THE CURATED POOL FIRST, the discography second. A random draw across a
-       whole discography is what the brief asked for and it is not what the
-       brief wanted: it returned DONDA 2 and a Black Panther soundtrack, which
-       are records to rate on your fourth visit, not your first. The static
-       pool the games already use is the canon — Graduation, good kid, Take
-       Care — which is exactly the shape of the example given (Rodeo, Late
-       Registration, Die Lit). Still random, just random among records somebody
-       can have an opinion about. The discography is the fallback for an artist
-       the pool does not carry, so nobody's pick is ever refused. */
-    var poolRows = [];
-    try { poolRows = (window.VinalPool && VinalPool.albums) || []; } catch (e) {}
-
-    function famousBy(name) {
-      var want = _norm(name), out = [];
-      poolRows.forEach(function (r) {
-        if (_norm(r[1]) === want && !mine[_norm(r[0] + name)]) {
-          out.push({ name: r[0], artist: name, year: String(r[2] || ''), art: r[6] || '' });
-        }
-      });
-      return out;
-    }
-
-    var list = [];
-    for (var a = 0; a < chosen.length && list.length < DRAWN; a++) {
-      var art = chosen[a];
-      var known = famousBy(art.name);
-      if (known.length) {
-        var k = known[Math.floor(Math.random() * known.length)];
-        mine[_norm(k.name + art.name)] = 1;
-        var meta = await resolve(k);
-        meta.artistId = meta.artistId || art.id;
-        list.push(meta);
-        continue;
-      }
-      var d = null;
-      try { d = await fetchStudioAlbums(art.id, true, art.name); } catch (e) { d = null; }
-      var pool = (d || []).filter(function (al) {
-        return al && al.name && !mine[_norm(al.name + art.name)];
-      });
-      if (!pool.length) continue;
-      // Nearest the top of the discography rather than anywhere in it: the
-      // deep end of a back catalogue is not a first-session question.
-      var pick = pool[Math.floor(Math.random() * Math.min(pool.length, 12))];
-      mine[_norm(pick.name + art.name)] = 1;
-      list.push({ id: pick.id, name: pick.name, artist: art.name,
-                  art: pick.art || art.art || '', year: pick.year || '', artistId: art.id });
-    }
-    // A chart that answered but discographies that did not still has to leave
-    // three records to rate, or the shop beat cannot be a purchase.
-    while (list.length < WANT) {
-      var f = famous(6).filter(function (x) { return !mine[_norm(x.name + x.artist)]; });
-      if (!f.length) break;
-      for (var q = 0; q < f.length && list.length < WANT; q++) {
-        mine[_norm(f[q].name + f[q].artist)] = 1;
-        list.push(await resolve(f[q]));
-      }
-    }
-    if (!list.length) { next(); return; }
-
-    /* MORE CANDIDATES THAN RECORDS WANTED, because "Don't know it." has to be
-       able to cost an album without costing the round. Three is still the
-       number rated; the extras are only there so a skip has somewhere to go. */
-    var at = 0, done = 0;
-    function one() {
-      if (done >= WANT || at >= list.length) { next(); return; }
-      var meta = list[at];
+      var v = +sl.value;
+      btn.disabled = true;
+      var hit = null;
+      try {
+        var hits = await searchItems(t.title + ' ' + t.artist, 'song');
+        hit = (hits || []).filter(function (h) { return _norm(h.name) === _norm(t.title); })[0] || null;
+      } catch (e) {}
+      var track = { id: hit ? hit.id : 'x' + _norm(t.artist + t.title), name: hit ? hit.name : t.title, artists: [{ name: t.artist }] };
       var before = discs();
-      rateCard(meta, '', '', function () {
-        // The real delta, read after the save has landed. Nothing invented:
-        // a rating past the daily cap pays nothing and says nothing.
-        var got = Math.max(0, discs() - before);
-        if (got) discPop(got);
-        at++; done++;
-        setTimeout(one, got ? 900 : 0);
-      }, { label: 'Don\u2019t know it.', fn: function () { at++; one(); } });
-    }
-    one();
+      try { saveSong(track, v, { id: 'x' + _norm(t.artist + t.album), name: t.album, art: t.art }); } catch (e) {}
+      try { logActivity(ICONS.star, 'Rated', t.title, v); } catch (e) {}
+      host.querySelector('.onb-step').classList.add('onb-rated');
+      if (window.burst) try { burst(spin, { count: 18 + v * 3, spread: 120, colors: [window.songColor ? songColor(v) : '#f5c842', '#ffffff'] }); } catch (e) {}
+      setTimeout(function () {
+        var got = Math.max(0, discs() - before); if (got) discPop(got);
+        stopIt();
+        setTimeout(next, got ? 700 : 300);
+      }, 900);
+    });
   }
 
   /* A small pill that rises off the middle of the card and goes. Deliberately
@@ -39780,11 +39786,11 @@ window.track = function (name, props) {
   function game() {
     var before = discs();
     show(
-      '<div class="onb-kicker">Arcade · Recall</div>' +
-      '<h2 class="onb-h">Name it in one second.</h2>' +
+      '<div class="onb-kicker">Recall</div>' +
+      '<h2 class="onb-h">Name this song.</h2>' +
       '<div class="onb-ladder" aria-hidden="true"><i>1s<b>1,000</b></i><i>3s<b>750</b></i><i>5s<b>500</b></i><i>10s<b>250</b></i></div>' +
-      '<p class="onb-sub">One song. The sooner you name it, the more it\u2019s worth \u2014 and it goes straight on the leaderboard.</p>',
-      cta('I\u2019m ready'));
+      '<p class="onb-sub">Hear less, name it faster, score more.</p>',
+      cta('Play'));
     window.RecallLast = null;
     onCta(function () {
       if (!window.openRecall) { afterGame(before); return; }
@@ -39808,11 +39814,13 @@ window.track = function (name, props) {
      place is the Endless board's answer from game_finish (the tutorial round
      is an Endless run of one song, see boardMode), and the Discs are the
      balance read back after the award. Nothing here is computed for show. */
-  var VERDICT = { 1000: ['One second.', 'That is a real ear.'], 750: ['Three seconds.', 'Sharp.'],
-                  500: ['Five seconds.', 'Solid start.'], 250: ['Ten seconds.', 'Got there.'] };
+  // Keyed by how much they needed to hear; the time is printed as the evidence.
+  var VERDICT = { 1: 'One second. Big ears.', 3: 'Three seconds. Sharp.', 5: 'Five seconds. Nice.', 10: 'Got there.' };
   async function afterGame(before) {
     var last = window.RecallLast || null, sc = (last && last.score) || 0, got = !!(last && last.songs);
-    var v = VERDICT[sc] || (got ? ['Nailed it.', ''] : ['Not this time.', 'It comes round again \u2014 the daily is waiting in the Arcade.']);
+    var heard = last && last.avgReveal ? Math.round(last.avgReveal) : 0;
+    var v = got ? [VERDICT[heard] || 'Nailed it.', last.ms ? 'Named in ' + (last.ms / 1000).toFixed(1) + 's' : '']
+                : ['Not this time.', 'Today\u2019s Recall is waiting in the Arcade.'];
     show(
       '<div class="onb-result' + (got ? ' won' : '') + '">' +
         '<div class="onb-kicker">Your first Recall</div>' +
@@ -39821,7 +39829,7 @@ window.track = function (name, props) {
         '<div class="onb-rank" id="onb-rank"><span class="onb-rank-t ld-line">Finding your place on the board\u2026</span></div>' +
         '<div class="onb-wallet onb-wallet-sm"><b id="onb-tick">' + discs().toLocaleString('en-GB') + '</b><span>' + ICONS.coin + ' Discs</span></div>' +
       '</div>',
-      cta('Spend them'));
+      cta('Continue'));
     var scEl = el('onb-sc');
     if (window.Play && Play.count) Play.count(scEl, 0, sc, 900); else if (scEl) scEl.textContent = sc.toLocaleString('en-GB');
     if (window.buzz) buzz(got ? 'big' : 'tap');
@@ -39864,85 +39872,6 @@ window.track = function (name, props) {
     })(performance.now());
   }
 
-  /* ---- 6. the shop ------------------------------------------------------
-     REAL ITEMS AT REAL PRICES, bought with `wallet_buy` like any other
-     purchase — the same rule as every other reward here. What it cannot do is
-     promise a purchase: the cheapest thing in the shop is 8,000 and the
-     honest ceiling on a first session is a little under that, so the button
-     is live when they can afford it and the gap is printed when they cannot.
-     Inventing a cheap tutorial-only item, or handing over the difference,
-     would be exactly the separate reward path this file exists without. */
-  async function shop() {
-    show('<h2 class="onb-h">Opening the shop…</h2>');
-    try { if (window.Wallet && Wallet.load) await Wallet.load(); } catch (e) {}
-    var bal = discs();
-    var W = window.Wallet || {};
-    /* Themes AND banners, cheapest first — which puts Test Pressing at the top,
-       and a theme is the better first purchase besides: equipping one repaints
-       the whole app in front of them, where a banner is a strip on a page they
-       have not visited yet. */
-    var have = { theme: [], banner: [] };
-    try { have.theme = W.get().owned_themes || []; have.banner = W.get().owned_banners || []; } catch (e) {}
-    var pool = [];
-    [['theme', W.THEMES || {}, W.SWATCH || {}], ['banner', W.BANNERS || {}, W.BANNER_SWATCH || {}]]
-      .forEach(function (g) {
-        Object.keys(g[1]).forEach(function (k) {
-          var it = g[1][k];
-          if (!it || !it.cost || it.retired || k === 'none' || (have[g[0]] || []).indexOf(k) !== -1) return;
-          pool.push({ kind: g[0], key: k, name: it.name, desc: it.desc || '', cost: it.cost, sw: g[2][k] });
-        });
-      });
-    pool.sort(function (a, b) { return a.cost - b.cost; });
-    var offers = pool.slice(0, 2);
-
-    var afford = offers.filter(function (o) { return bal >= o.cost; }).length > 0;
-    var cheapest = offers[0] && offers[0].cost;
-
-    show(
-      '<h2 class="onb-h">' + (afford ? 'Go on then.' : 'Nearly.') + '</h2>' +
-      '<div class="onb-wallet"><b>' + bal.toLocaleString('en-GB') + '</b><span>' + ICONS.coin + ' to spend</span></div>' +
-      offers.map(function (o, i) {
-        var can = bal >= o.cost;
-        return '<button class="onb-buy" data-i="' + i + '"' + (can ? '' : ' disabled') + '>' +
-          '<span class="sw" style="background:' + (o.sw || 'var(--surface-3)') + '"></span>' +
-          '<span><b>' + esc(o.name) + '</b><i>' + esc(o.desc) + '</i></span>' +
-          '<span class="px">' + o.cost.toLocaleString('en-GB') + '</span></button>';
-      }).join('') +
-      (afford ? '' : '<p class="onb-note">' + Math.max(0, (cheapest || 0) - bal).toLocaleString('en-GB') +
-                ' short. Tomorrow’s login covers it.</p>'),
-      cta(afford ? 'Maybe later' : 'Got it', 'onb-go')
-    );
-
-    host.querySelectorAll('[data-i]').forEach(function (b) {
-      b.addEventListener('click', async function () {
-        if (b.disabled) return;
-        b.disabled = true;
-        var o = offers[+b.dataset.i];
-        // wallet_buy, exactly as the Shop calls it. The server reads the price
-        // out of shop_items; nothing here ever names one.
-        var res = await (o.kind === 'theme' ? Wallet.buyTheme(o.key) : Wallet.buyBanner(o.key));
-        if (res && res.error) {
-          b.disabled = false;
-          var e = el('onb-err'); if (e) e.textContent = res.error;
-          return;
-        }
-        // Equipping a theme repaints the app underneath the overlay, which is
-        // the whole reason a theme leads this list.
-        try { await (o.kind === 'theme' ? Wallet.equipTheme(o.key) : Wallet.equipBanner(o.key)); } catch (e) {}
-        S.bought = o.name;
-        b.classList.add('bought');
-        b.querySelector('.px').textContent = 'Yours ✓';
-        host.querySelectorAll('[data-i]').forEach(function (n) { if (n !== b) n.disabled = true; });
-        if (window.burst) try { burst(b, { count: 22, spread: 120 }); } catch (e) {}
-        if (window.buzz) buzz('good');
-        var g = el('onb-go'); if (g) g.textContent = 'Done';
-        save();
-      });
-    });
-    if (!el('onb-err')) foot.insertAdjacentHTML('afterbegin', '<div class="onb-err" id="onb-err"></div>');
-    onCta(next);
-  }
-
   /* ---- the driver ------------------------------------------------------ */
   /* ---- 7. you are in ----------------------------------------------------
      A recap of what they actually did in the last few minutes — every figure
@@ -39958,14 +39887,14 @@ window.track = function (name, props) {
     show(
       '<div class="onb-fin">' +
         '<div class="onb-kicker">You\u2019re in' + (S.username ? ', ' + esc(S.username) : '') + '</div>' +
-        '<h2 class="onb-h">That\u2019s the loop.</h2>' +
+        '<h2 class="onb-h">Your turn.</h2>' +
         '<div class="onb-fin-stats">' + stats.map(function (x, i) {
           return '<div style="--i:' + i + '"><b data-to="' + x[0] + '">0</b><span>' + esc(x[1]) + '</span></div>';
         }).join('') + '</div>' +
         '<div class="onb-doors">' +
-          '<button class="onb-door" data-door="foryou" style="--d:var(--c-pink)"><b>For You</b><span>Thirty seconds, then a score.</span></button>' +
-          '<button class="onb-door" data-door="games" style="--d:var(--c-violet)"><b>Arcade</b><span>Today\u2019s daily games.</span></button>' +
-          '<button class="onb-door" data-door="home" style="--d:var(--c-cyan)"><b>Today</b><span>A few small questions.</span></button>' +
+          '<button class="onb-door" data-door="foryou" style="--d:var(--c-pink)"><b>For You</b><span>Listen and rate</span></button>' +
+          '<button class="onb-door" data-door="games" style="--d:var(--c-violet)"><b>Arcade</b><span>Eleven games</span></button>' +
+          '<button class="onb-door" data-door="rewards" style="--d:var(--gold)"><b>Shop</b><span>Spend your Discs</span></button>' +
         '</div>' +
       '</div>', cta('Start using VINALL'));
     host.querySelectorAll('[data-to]').forEach(function (b, i) { setTimeout(function () { tick(b, 0, +b.dataset.to || 0, 800); }, 200 + i * 160); });
@@ -39977,7 +39906,7 @@ window.track = function (name, props) {
   }
 
   var DRAW = { welcome: welcome, username: username, first: first,
-               artists: artists, albums: albums, game: game, shop: shop, finale: finale };
+               song: song, game: game, finale: finale };
   function draw() {
     var name = STEPS[S.step];
     if (!name) { finish(false); return; }
@@ -40031,7 +39960,7 @@ window.track = function (name, props) {
      a tutorial the first time this ships. It writes the flag rather than
      merely returning, so the check happens once. */
   function maybeStart() {
-    S = read() || { step: 0, done: false };
+    S = migrate(read()) || { step: 0, done: false, v: 2 };
     if (S.done) return;
     /* An account with a crate has been used, whatever the flag says — that is
        what stops every existing user being handed a tutorial the first time
@@ -40048,7 +39977,7 @@ window.track = function (name, props) {
   window.Onboard = {
     maybeStart: maybeStart,
     // For a second look without signing up again.
-    restart: function () { S = { step: 0, done: false }; save(); open(); },
+    restart: function () { S = { step: 0, done: false, v: 2 }; save(); open(); },
     state: function () { return read(); }
   };
 })();
@@ -41273,7 +41202,7 @@ window.track = function (name, props) {
     if (s === 'intro') {
       html = heroCovers() +
         '<h2 class="sp-h">Bring your Spotify in.</h2>' +
-        '<p class="sp-lede">Everything you\'ve saved, ready to rate.</p>' +
+        '' +
         '<ul class="sp-gets">' +
           '<li><span class="sp-ic">♥</span><b>Liked Songs</b><i>become your likes</i></li>' +
           '<li><span class="sp-ic">◎</span><b>Saved albums</b><i>lined up to rate</i></li>' +
@@ -41288,7 +41217,7 @@ window.track = function (name, props) {
     } else if (s === 'guide') {
       html = '<button class="sp-back" data-sp="intro">← Back</button>' +
         '<h2 class="sp-h">Get your Spotify file</h2>' +
-        '<p class="sp-lede">Spotify will email it to you. Ask once, then carry on — we\'ll remind you.</p>' +
+        '<p class="sp-lede">Spotify emails it to you.</p>' +
         '<ol class="sp-steps">' +
           '<li><span class="sp-n">1</span><div><b>Open Spotify\'s privacy page</b><a class="btn-primary sp-go" href="' + PRIVACY_URL + '" target="_blank" rel="noopener" data-sp="opened">Open it ↗</a><small>Log in if it asks.</small></div></li>' +
           '<li><span class="sp-n">2</span><div><b>Tick <u>Account data</u>, then Request data</b><small>Near the bottom, under Download your data. Leave the other boxes — they take a month.</small></div></li>' +
@@ -41325,7 +41254,7 @@ window.track = function (name, props) {
       html = '<div class="sp-run"><div class="sp-ring" id="sp-ring"><svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="54"/><circle class="fg" id="sp-ring-fg" cx="60" cy="60" r="54"/></svg><div class="sp-ring-n" id="sp-ring-n">0%</div></div>' +
         '<h2 class="sp-h" id="sp-run-h">Matching your music…</h2><div class="sp-run-s" id="sp-run-s"></div></div>' +
         '<div class="sp-wall" id="sp-wall"></div>' +
-        '<p class="sp-foot">You can close this — it keeps going.</p>';
+        '<p class="sp-foot">Runs in the background.</p>';
     } else if (s === 'review') {
       html = reviewHtml();
     } else if (s === 'resume') {
@@ -41602,15 +41531,16 @@ window.track = function (name, props) {
 
 </body>
 <script src="/assets/interactions.js?v=3"></script>
-<script src="/assets/replay.js?v=3"></script>
-<script src="/assets/you.js?v=6"></script>
-<script src="/assets/glow.js?v=3"></script>
-<script src="/assets/comments.js?v=2" defer></script>
+<script src="/assets/replay.js?v=4"></script>
+<script src="/assets/you.js?v=7"></script>
+<script src="/assets/glow.js?v=4"></script>
+<script src="/assets/comments.js?v=3" defer></script>
 <script src="/assets/boards.js?v=2"></script>
 <script src="/assets/play.js?v=2"></script>
-<script src="/assets/charades.js?v=2"></script>
+<script src="/assets/charades.js?v=3"></script>
 <script src="/assets/passport-core.js?v=1"></script>
-<script src="/assets/passport.js?v=1"></script>
-<script src="/assets/safety.js?v=1"></script>
-<script src="/assets/discover.js?v=1"></script>
+<script src="/assets/passport.js?v=2"></script>
+<script src="/assets/safety.js?v=2"></script>
+<script src="/assets/discover.js?v=2"></script>
+<script src="/assets/sound.js?v=1"></script>
 </html>

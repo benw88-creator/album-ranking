@@ -468,7 +468,7 @@
           '<button class="rp-play" data-rp-act="share"><i>↗</i>' + ((navigator.share || (window.Native && Native.on)) ? 'Share' : 'Save image') + '</button>' +
           (navigator.share ? '<button class="rp-ghost" data-rp-act="save">Save image</button>' : '') +
           '<button class="rp-ghost" data-rp-act="restart">Play again</button></div>', 500) +
-        fade('<p class="rp-share-note">' + (m.demo ? 'Demo card — made-up data, watermarked.' : 'Shows your top artists, music DNA and numbers. Never your notes, diary or answers.') + '</p>', 700);
+        fade('<p class="rp-share-note">' + (m.demo ? 'Demo card — made-up data, watermarked.' : 'Notes stay private.') + '</p>', 700);
     }
   };
 
@@ -1084,8 +1084,8 @@
   }
   function emptyHome() {
     return '<div class="rp-hero" style="min-height:300px"><div class="rp-hero-record" aria-hidden="true"></div><span class="rp-kicker">VINALL Replay</span><h2 class="rp-hero-word">Replay</h2>' +
-      '<p class="rp-hero-sub">Your weeks, months and year in music — built from what you rate here and, if you add it, what you played on Spotify.</p></div>' + teaserHtml() +
-      '<div class="rp-empty"><h3>Nothing to replay yet</h3><p>Replay needs at least a few ratings, or your Spotify listening history. Nothing here is ever made up — so it waits until there is something real to show.</p>' +
+      '<p class="rp-hero-sub">Your weeks, months and year in music.</p></div>' + teaserHtml() +
+      '<div class="rp-empty"><h3>Nothing to replay yet</h3><p>Rate a few records or import Spotify.</p>' +
       '<div class="rp-hero-row"><button class="btn-primary" data-rp-act="rate">Rate a record</button>' + (on() ? '<button class="btn-ghost" data-rp-act="import">Add Spotify data</button>' : '') +
       '<button class="btn-ghost" data-rp-act="demo">See a demo</button></div></div>';
   }

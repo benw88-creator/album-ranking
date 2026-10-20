@@ -6605,3 +6605,32 @@ self-time on load is well under a second at 4×). That is a CSS job.
   each once ever, retired by use. The native reminder opt-in is one of them.
 - Reminders now schedule tomorrow's Recall/streak when today is done, plus a 3-day
   return nudge (`RETURN_ID 8803`).
+
+## Feel-good polish (2026-10-21)
+
+- **Recall has no time limit.** The ten seconds are the most AUDIO you can hear (1/3/5/10s);
+  a wrong guess at 10s, or giving up, is the miss. Score = `SCORES[step] × (0.5 + 0.5 ×
+  (1 − min(elapsed, 30s)/30s))`, so hearing less and naming faster both pay. The meter under
+  the deck shows what naming it now would score. `Recall.points` ↔ `recall_points()` in
+  `..._20261021100000_recall_heard_and_speed.sql` (**apply by hand**; until then the server
+  still refuses answers past 10.5s of real time and the client reports the mismatch).
+- **Levels**: step is `1,500 × L^1.6` (`..._20261021110000_level_curve.sql`, **apply by hand**;
+  mirrors `xpStep` in the Wallet). First session ≈ 3, a week ≈ 8, a month ≈ 14. Existing
+  accounts keep their level via `profiles.level_floor` and the `zz_level_floor_trg` trigger.
+  `levelUp(level, from)` counts through every level gained and merges overlapping pops.
+- **Sound** is `assets/sound.js` (`window.Sfx`): synthesised Web Audio, one bell/tick voice,
+  per-sound cooldowns and a voice ceiling, ducked under any playing `<audio>`, off via
+  Settings → Sound (`vinall_sfx`). `buzz(kind)` plays the matching sound; pass
+  `buzz(kind, true)` when the caller plays its own.
+- **The player keeps two albums**: `shown` (the open page) and `album` (what is playing).
+  Opening a record while a song plays used to swap the bar's sleeve and next/prev.
+- **Singles** (≤3 tracks, ≤25 min — `isSingle`) open the album route as a song page
+  (`paintSingle`, `.is-single`): preview, 1–10 drag, album furniture hidden.
+- **Album score**: GlowSlider over 1–100 plus −/+ steppers (hold to run) in `assets/glow.js`.
+- **For You slider**: the axis is claimed on the first touchmove by cancelling it, so a
+  sideways drag can no longer be stolen by the feed. Vertical swipes from the slider still scroll.
+- **Tutorial** is six beats: welcome, username, one album, one song (with preview), a real
+  Recall round, finale. Old saved step indexes are migrated (`migrate()` in Onboard).
+- **Discovery** (`assets/discover.js`): contextual prompts (reward waiting, game unlocked,
+  milestone ≤3 away, today's Recall) before introductions; side-docked, tucks into an edge tab.
+  New accounts get up to three a session. `window.UnlockGates` exposes the gate table.

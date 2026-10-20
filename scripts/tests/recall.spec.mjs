@@ -83,13 +83,24 @@ test('game cards own their stacking context, so hover cannot re-layer them', asy
   await expect.poll(() => cards.first().evaluate(c => getComputedStyle(c).transform)).toMatch(/none|matrix\(1, 0, 0, 1, 0, 0\)/);
 });
 
-test('the ten-second clock: running out ends an Endless run and files it', async ({ page }) => {
+test('scoring: hearing less and naming faster both pay more, with no time limit', async ({ page }) => {
+  await start(page);
+  const p = await page.evaluate(() => [Recall.points(0, 0), Recall.points(0, 1200), Recall.points(3, 60000),
+    Recall.points(1, 2000), Recall.points(1, 20000), Recall.points(0, 12000), Recall.points(3, 12000)]);
+  expect(p[0]).toBe(1000); expect(p[1]).toBe(980); expect(p[2]).toBe(125);
+  expect(p[3]).toBeGreaterThan(p[4]); expect(p[5]).toBeGreaterThan(p[6]);
+});
+
+test('the clock never fails a round; wrong at the full ten seconds ends an Endless run', async ({ page }) => {
   test.setTimeout(45000);
   await openRecall(page);
   await page.locator('#recall-hear').click();
   await expect(page.locator('#recall-timer')).toHaveClass(/\brun\b/);
-  await expect(page.locator('#recall-play')).toHaveClass(/revealed/, { timeout: 13000 });
-  await expect(page.locator('#recall-reveal .rc-rev-head')).toContainText(/time.s up/i);
+  await page.waitForTimeout(1500);
+  await expect(page.locator('#recall-play')).not.toHaveClass(/revealed/);
+  expect(Number((await page.locator('#recall-timer span').textContent()).replace(/,/g, ''))).toBeLessThan(1000);
+  for (let i = 0; i < 4; i++) await page.locator('#recall-skip').click();
+  await expect(page.locator('#recall-play')).toHaveClass(/revealed/);
   await expect(page.locator('#recall-reveal .rc-rev-head')).toContainText(/run over/i);
   // No way on to another song after a miss.
   await expect(page.locator('#recall-next')).toHaveCount(0);
@@ -97,10 +108,10 @@ test('the ten-second clock: running out ends an Endless run and files it', async
   await page.locator('#recall-stop').click();
   await expect(page.locator('#recall-over')).toBeVisible();
   await page.locator('#recall-again').click();
-  await expect(page.locator('#recall-timer span')).toHaveText('10.0s');
+  await expect(page.locator('#recall-timer span')).toHaveText('1,000');
 });
 
-test('closing pauses the round; reopening resumes it with the time that was left', async ({ page }) => {
+test('closing pauses the round; reopening resumes it with the clock where it was', async ({ page }) => {
   test.setTimeout(45000);
   await openRecall(page);
   await page.locator('#recall-hear').click();
@@ -117,8 +128,8 @@ test('closing pauses the round; reopening resumes it with the time that was left
   await page.evaluate(() => openRecall());
   await expect(page.locator('#recall-play')).toBeVisible();
   await expect(page.locator('#recall-verdict')).toContainText(/paused/i);
-  const left = parseFloat(await page.locator('#recall-timer span').textContent());
-  expect(Math.abs(left - (10 - live.clockMs / 1000))).toBeLessThan(0.25);
+  const shown = Number((await page.locator('#recall-timer span').textContent()).replace(/,/g, ''));
+  expect(shown).toBe(await page.evaluate(ms => Recall.points(0, ms), live.clockMs));
   const again = await page.evaluate(() => JSON.parse(localStorage.getItem('crate_recall_live')));
   expect(again.song).toBe(live.song);
   // Playing again carries the clock on from where it stopped.

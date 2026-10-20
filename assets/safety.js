@@ -22,7 +22,7 @@
     el.style.cssText = 'position:fixed;inset:0;z-index:230;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(5,4,3,.92);backdrop-filter:blur(12px)';
     el.innerHTML = '<div class="modal-panel" style="max-width:380px;text-align:center">' +
       '<h2 id="age-gate-h" style="margin:0 0 8px">How old are you?</h2>' +
-      '<p style="color:var(--text-dim);margin:0 0 18px;font-size:14px">VINALL is for people aged 13 and over. We only keep which group you are in, not your birthday.</p>' +
+      '<p style="color:var(--text-dim);margin:0 0 18px;font-size:14px">VINALL is for ages 13 and up.</p>' +
       '<button class="btn-primary g-btn-full" data-band="adult" style="margin-bottom:10px">18 or over</button>' +
       '<button class="btn-primary g-btn-full" data-band="13-17" style="margin-bottom:10px">13 to 17</button>' +
       '<button class="btn-primary g-btn-full" data-band="under13" style="background:var(--surface-2);color:var(--text)">Under 13</button>' +

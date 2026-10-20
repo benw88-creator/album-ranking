@@ -12,7 +12,7 @@ const economy = read('20260921140000_xp_from_everything.sql');
 const freeze = read('20261013180000_freeze_and_double_discs.sql');
 const migration = read('20261015000000_launch_security_and_integrity.sql');
 const boards = read('20261014100000_game_leaderboards.sql');
-const recall = read('20261020140000_recall_ten_second_limit.sql');
+const recall = read('20261021100000_recall_heard_and_speed.sql');
 const db = new PGlite();
 const a = '11111111-1111-4111-8111-111111111111', b = '22222222-2222-4222-8222-222222222222';
 const pin = functionSQL(economy, 'pin_profile_economy');
@@ -127,13 +127,13 @@ try {
     await assert.rejects(sql("select game_score('recall','daily','{}',10000,$1,1)",[a]),/no daily result/);
     assert.equal((await sql("select game_score('recall','daily','{}',10000,$1,2) as s",[a]))[0].s,1000);
   });
-  await check('Recall: an answer after the ten-second limit is a miss worth nothing',async()=>{
+  await check('Recall: no time limit; less heard and faster both pay more',async()=>{
     await db.exec("insert into recall_daily values(3,'known'),(4,'known')");
     await asUser(b,async()=>{
-      const late=(await sql("select recall_submit(3,'daily','known',3,1,'known',true,10600) as r"))[0].r;
-      assert.equal(late.correct,false); assert.equal(late.score,0);
-      const inTime=(await sql("select recall_submit(4,'daily','known',3,1,'known',true,10000) as r"))[0].r;
-      assert.equal(inTime.correct,true); assert.equal(inTime.score,250);
+      const slow=(await sql("select recall_submit(3,'daily','known',3,1,'known',true,60000) as r"))[0].r;
+      assert.equal(slow.correct,true); assert.equal(slow.score,125);
+      const quick=(await sql("select recall_submit(4,'daily','known',0,1,'known',true,1200) as r"))[0].r;
+      assert.equal(quick.correct,true); assert.equal(quick.score,980);
     });
   });
   await check('deletion survives stale rating and app_state writes; deliberate re-rating succeeds',async()=>{

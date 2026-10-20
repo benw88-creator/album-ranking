@@ -84,7 +84,7 @@
     if (tm.splits && tm.splits.length) html += '<div class="tm2-sub">Furthest apart</div>' + pairRows(tm.splits, 'you-them');
     if (tm.unheard && tm.unheard.length) html += '<div class="tm2-sub">From ' + who + ' to you</div>' + pairRows(tm.unheard.slice(0, 4), 'intro-in');
     if (tm.introduce && tm.introduce.length) html += '<div class="tm2-sub">From you to ' + who + '</div>' + pairRows(tm.introduce.slice(0, 3), 'intro-out');
-    html += '<p class="tm2-foot">Compares how each of you scores records relative to your own average, so a generous marker and a tough one can still match.</p></div>';
+    html += '</div>';
     return html;
   }
   // Rare shared favourites need everybody's ratings, so they arrive after the block.

@@ -1,144 +1,239 @@
 /* ============================================================================
-   Discover — "check it out" prompts that introduce a feature at the moment it
-   is worth knowing about (2026-10-20).
+   Discover — the prompts that show somebody what VINALL can do, at the moment
+   it is worth knowing (2026-10-20, reworked 2026-10-21).
 
-   The rules are what keep this from being an advert:
-   - Nothing before onboarding is finished, and nothing for a signed-out visitor.
-   - ONE prompt a session, and none within 18 hours of the last one.
-   - Each prompt is shown once, ever. Acting on it or dismissing it retires it.
-   - A prompt for a feature somebody already uses is never shown: playing
-     Recall retires the Recall prompt, visiting a view retires that view's.
-   - It waits for a calm moment: on a page for a few seconds, no sheet open,
-     not mid-scroll in For You. It leaves by itself after 12 seconds.
+   TWO KINDS OF PROMPT.
+   - CONTEXTUAL: about something true right now — a reward waiting to be
+     claimed, a game that just unlocked, a milestone two albums away, today's
+     Recall. Each is keyed by its instance ("milestone:25"), so the same
+     milestone is never mentioned twice but the next one can be.
+   - INTRODUCTIONS: a feature somebody has not found yet (Passport, About you,
+     Community Choice). Shown once, ever, and never for a feature already used.
 
-   State is crate_tips_v1 (crate_ prefix, so an account switch wipes it with
-   the rest of the account's local state). Not synced: a prompt seen on a phone
-   being offered again on a laptop is harmless; the cap keeps it quiet.
+   HOW OFTEN. A new account (under 15 albums, or under a week since the
+   tutorial) is still learning, so it gets up to three a session, at least 70s
+   apart, and a fresh batch two hours later. After that: one a session, 18
+   hours apart. Rating something can surface a contextual one straight away
+   (that is when "2 albums from 25" is true), still inside those caps.
+
+   WHERE. Docked to the right edge, above the nav and the player bar, never
+   over For You's rating tray or an open sheet. It arrives, stays nine
+   seconds, then tucks into a small glowing tab on the edge that stays for as
+   long as you are on that page — tap it to bring the card back. The × retires
+   it for good. Leaving the page takes it away.
+
+   State is crate_tips_v1 (crate_ prefix, so an account switch wipes it).
    ========================================================================== */
 (function () {
   'use strict';
-  var KEY = 'crate_tips_v1', GAP = 18 * 3600 * 1000, DWELL = 4500, LIFE = 12000;
+  var KEY = 'crate_tips_v1', DWELL = 3500, OPEN_MS = 9000;
   function read() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
   function write(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function lsJSON(k) { try { return JSON.parse(localStorage.getItem(k)) || null; } catch (e) { return null; } }
   function rated() { try { return Object.keys((window.loadAlbums && loadAlbums()) || {}).length; } catch (e) { return 0; } }
   function plays(g) { var l = lsJSON('crate_gamelog_v1') || {}; return (l.plays && l.plays[g]) || 0; }
+  function totalPlays() { var l = lsJSON('crate_gamelog_v1') || {}, t = 0; Object.keys(l.plays || {}).forEach(function (k) { t += l.plays[k]; }); return t; }
   function visited(v) { return !!(read().v || {})[v]; }
   function go(v) { if (window.goToView) goToView(v); }
   function icon(name) { return (window.ICONS && ICONS[name]) || ''; }
+  function n(x) { return Number(x || 0).toLocaleString('en-GB'); }
+  function milestones() { try { return typeof MILESTONES !== 'undefined' ? MILESTONES : []; } catch (e) { return []; } }
+  function pay(m) { try { return typeof MILESTONE_PAY !== 'undefined' ? MILESTONE_PAY[m] : 0; } catch (e) { return 0; } }
+  function rateSomething() {
+    var i = document.getElementById('search-input');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (i) setTimeout(function () { try { i.focus(); } catch (e) {} }, 320);
+  }
+  function newbie() {
+    var o = lsJSON('crate_onboard_v1') || {};
+    return rated() < 15 || (o.at && Date.now() - o.at < 7 * 864e5);
+  }
 
-  /* In priority order: the first eligible one wins. `where` limits a prompt to
-     the views it makes sense on (null = anywhere but For You). */
-  var TIPS = [
-    /* The notification ask lives here, not on launch: it is offered once,
-       native only, after somebody has played Recall — the moment a nudge for
-       tomorrow's song means something. Permission asked cold is permission
-       denied for good. */
-    { id: 'reminders', hue: 'var(--gold)', ico: 'bell', where: ['games', 'home'],
-      kicker: 'Reminders', title: 'A nudge when tomorrow’s song drops?', sub: 'Recall at noon and your streak at 8pm. Change it in Settings.',
-      cta: 'Turn on', when: function () { return window.Native && Native.on && window.Reminders && !Reminders.isOn() && plays('recall') >= 1; },
-      act: function () {
-        Reminders.requestPermission().then(function (ok) {
-          if (ok) Reminders.setOn(true);
-          if (window.toast) toast(ok ? 'Reminders on' : 'Notifications are off for VINALL in Settings');
-        });
-      } },
-    { id: 'recall-daily', hue: 'var(--c-blue)', ico: 'disc', where: ['home', 'crate', 'albums', 'songs'],
-      kicker: 'Today’s Recall', title: 'One second of a song. Name it.', sub: 'Same song for everybody, one go a day.',
-      cta: 'Play', when: function () { return window.Recall && Recall.dailyDone && !Recall.dailyDone() && plays('recall') < 2; },
-      act: function () { go('games'); setTimeout(function () { if (window.openRecall) openRecall(); }, 250); } },
-    { id: 'foryou', hue: 'var(--c-pink)', ico: 'sparkle', where: ['home', 'crate', 'albums'],
-      kicker: 'For You', title: 'Songs picked from your ratings.', sub: 'Thirty seconds each. Scroll, listen, score.',
-      cta: 'Open', when: function () { return rated() >= 3 && !visited('foryou'); }, act: function () { go('foryou'); } },
-    { id: 'arcade', hue: 'var(--c-violet)', ico: 'trophy', where: ['home', 'crate', 'albums', 'songs', ],
-      kicker: 'Arcade', title: 'Eleven games built on your records.', sub: 'Daily puzzles, quick rounds and head to heads.',
-      cta: 'Play', when: function () { var l = lsJSON('crate_gamelog_v1') || {}, t = 0; Object.keys(l.plays || {}).forEach(function (k) { t += l.plays[k]; }); return t < 3 && !visited('games'); },
-      act: function () { go('games'); } },
-    { id: 'missions', hue: 'var(--gold)', ico: 'check', where: ['home'],
-      kicker: 'Daily missions', title: 'Three small goals, every day.', sub: 'Each one pays Discs.',
-      cta: 'Show me', when: function () { return !!document.getElementById('dm-toggle') && rated() >= 1; },
-      act: function () { var t = document.getElementById('dm-toggle'); if (t) { window.scrollTo({ top: 0, behavior: 'smooth' }); setTimeout(function () { t.click(); }, 300); } } },
-    { id: 'choice', hue: 'var(--c-cyan)', ico: 'mic', where: ['crate', 'albums', 'songs'],
-      kicker: 'Community Choice', title: 'The best verse, hook and beat drop.', sub: 'Pick a moment in a song; everybody hears exactly that bit.',
-      cta: 'Listen', when: function () { return rated() >= 5 && !visited('choice'); }, act: function () { go('choice'); } },
-    { id: 'yourmusic', hue: '#1ed760', ico: 'note', where: ['home', 'profile'],
-      kicker: 'Your music', title: 'Rate what you play on Spotify.', sub: 'Your imported songs, thirty seconds at a time.',
-      cta: 'Start', when: function () { var s = lsJSON('crate_spotify_v1') || {}; return !!(s.imported && Object.keys(s.imported).length) && !visited('yourmusic'); },
-      act: function () { go('yourmusic'); } },
-    { id: 'passport', hue: 'var(--c-lime)', ico: 'wave', where: ['home', 'profile', 'albums'],
-      kicker: 'Music Passport', title: 'Where in the world your music is from.', sub: 'A stamp for every country your artists come from.',
-      cta: 'Open', when: function () { return rated() >= 10 && !visited('passport'); }, act: function () { go('passport'); } },
-    { id: 'about', hue: 'var(--c-violet)', ico: 'person', where: ['home', 'profile', 'albums'],
-      kicker: 'About you', title: 'What your ratings say about you.', sub: 'Your taste, scored on six dimensions.',
-      cta: 'Read it', when: function () { return rated() >= 10 && !visited('about'); }, act: function () { go('about'); } }
+  /* Each source returns zero or more prompts; the first eligible one wins, so
+     the order is the priority. `id` is the instance; `where` limits views. */
+  var SOURCES = [
+    // A reward is sitting there. Claims only load once Wallet has them.
+    function claim() {
+      var W = window.Wallet;
+      if (!W || !W.claimedMilestone || !W._claimsLoaded) return [];
+      var c = rated(), out = [];
+      milestones().forEach(function (m) {
+        if (c >= m && !W.claimedMilestone('albums:' + m)) out.push({
+          id: 'claim:' + m, ctx: 1, hue: 'var(--gold)', ico: 'medal',
+          kicker: 'Reward waiting', title: (m === 1 ? 'First album' : m + ' albums') + ' · ' + n(pay(m)) + ' Discs',
+          cta: 'Claim', act: function () { go('achievements'); } });
+      });
+      return out.slice(-1);
+    },
+    // A game opened because of what you rated.
+    function unlocked() {
+      var G = window.UnlockGates || {}, c = rated(), out = [];
+      Object.keys(G).forEach(function (k) {
+        var g = G[k];
+        if (g.need > 0 && c >= g.need && c - g.need <= 6) out.push({
+          id: 'unlock:' + k, ctx: 1, hue: 'var(--c-violet)', ico: 'trophy',
+          kicker: 'Unlocked', title: g.label + ' is open',
+          cta: 'Play', act: function () { go('games'); } });
+      });
+      return out;
+    },
+    // Close enough to taste.
+    function near() {
+      var c = rated(), m = milestones().filter(function (x) { return x > c; })[0];
+      if (!m || m - c > 3 || m > 100) return [];
+      var left = m - c;
+      return [{ id: 'near:' + m, ctx: 1, hue: 'var(--c-cyan)', ico: 'disc', where: ['home', 'crate', 'albums', 'songs', 'profile'],
+        kicker: left + (left === 1 ? ' album to go' : ' albums to go'), title: m + ' albums pays ' + n(pay(m)) + ' Discs',
+        cta: 'Rate one', act: rateSomething }];
+    },
+    function recall() {
+      if (!window.Recall || !Recall.dailyDone || Recall.dailyDone()) return [];
+      return [{ id: 'recall:' + (Recall.dayNo ? Recall.dayNo() : 0), ctx: 1, hue: 'var(--c-blue)', ico: 'wave',
+        where: ['home', 'crate', 'albums', 'songs', 'profile', 'rewards', 'collection'],
+        kicker: 'Today’s Recall', title: 'One second. Name the song.', cta: 'Play',
+        act: function () { go('games'); setTimeout(function () { if (window.openRecall) openRecall(); }, 250); } }];
+    },
+    function intros() {
+      var c = rated(), out = [];
+      if (window.Native && Native.on && window.Reminders && !Reminders.isOn() && plays('recall') >= 1) out.push({
+        id: 'reminders', hue: 'var(--gold)', ico: 'bell', where: ['games', 'home'],
+        kicker: 'Reminders', title: 'A nudge when the new song drops?', cta: 'Turn on',
+        act: function () {
+          Reminders.requestPermission().then(function (ok) {
+            if (ok) Reminders.setOn(true);
+            if (window.toast) toast(ok ? 'Reminders on' : 'Notifications are off for VINALL in Settings');
+          });
+        } });
+      if (c >= 3 && !visited('foryou')) out.push({ id: 'foryou', hue: 'var(--c-pink)', ico: 'sparkle',
+        kicker: 'For You', title: 'Songs picked from your ratings', cta: 'Listen', act: function () { go('foryou'); } });
+      if (totalPlays() < 2 && !visited('games')) out.push({ id: 'arcade', hue: 'var(--c-violet)', ico: 'trophy',
+        kicker: 'Arcade', title: 'Eleven music games', cta: 'Play', act: function () { go('games'); } });
+      if (c >= 25 && !plays('bidwar')) out.push({ id: 'bidwar', hue: 'var(--c-pink)', ico: 'trophy',
+        kicker: 'Bid Wars', title: 'Challenge a friend', cta: 'Start one', act: function () { go('wars'); } });
+      if (c >= 1 && document.getElementById('dm-toggle')) out.push({ id: 'missions', hue: 'var(--gold)', ico: 'check', where: ['home'],
+        kicker: 'Daily missions', title: 'Three goals, every day', cta: 'Show me',
+        act: function () { var t = document.getElementById('dm-toggle'); if (t) { window.scrollTo({ top: 0, behavior: 'smooth' }); setTimeout(function () { t.click(); }, 300); } } });
+      if (c >= 8 && !visited('passport')) out.push({ id: 'passport', hue: 'var(--c-lime)', ico: 'wave',
+        kicker: 'Music Passport', title: 'See where your music is from', cta: 'Open', act: function () { go('passport'); } });
+      if (c >= 10 && !visited('about')) out.push({ id: 'about', hue: 'var(--c-violet)', ico: 'person',
+        kicker: 'About you', title: 'What your ratings say', cta: 'Read it', act: function () { go('about'); } });
+      if (c >= 5 && !visited('choice')) out.push({ id: 'choice', hue: 'var(--c-cyan)', ico: 'mic',
+        kicker: 'Community Choice', title: 'The best moments in songs', cta: 'Listen', act: function () { go('choice'); } });
+      var sp = lsJSON('crate_spotify_v1') || {};
+      if (sp.imported && Object.keys(sp.imported).length && !visited('yourmusic')) out.push({ id: 'yourmusic', hue: '#1ed760', ico: 'note',
+        kicker: 'Your music', title: 'Rate what you play on Spotify', cta: 'Start', act: function () { go('yourmusic'); } });
+      return out;
+    }
   ];
+  var NEVER = { foryou: 1, 'album-detail': 1 };   // a rating tray or a record is the page
 
-  var shown = false, timer = 0, lifeT = 0, node = null;
-  function eligible(mode) {
+  var count = 0, lastAt = 0, timer = 0, openT = 0, node = null, cur = null;
+  function caps() { return newbie() ? { per: 3, gap: 2 * 3600e3, between: 70e3 } : { per: 1, gap: 18 * 3600e3, between: 0 }; }
+  function pick(mode, ctxOnly) {
     if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return null;
     var onb = lsJSON('crate_onboard_v1');
     if (onb && !onb.done) return null;
-    if (document.getElementById('onb') && document.getElementById('onb').classList.contains('open')) return null;
-    var s = read();
-    if (s.last && Date.now() - s.last < GAP) return null;
+    if (NEVER[mode]) return null;
+    var c = caps(), s = read();
+    if (count >= c.per) return null;
+    if (!count && s.last && Date.now() - s.last < c.gap) return null;
+    if (count && Date.now() - lastAt < c.between) return null;
     var done = s.d || {};
-    for (var i = 0; i < TIPS.length; i++) {
-      var t = TIPS[i];
-      if (done[t.id]) continue;
-      if (t.where && t.where.indexOf(mode) === -1) continue;
-      try { if (!t.when()) continue; } catch (e) { continue; }
-      return t;
+    for (var i = 0; i < SOURCES.length; i++) {
+      var list = [];
+      try { list = SOURCES[i]() || []; } catch (e) {}
+      for (var j = 0; j < list.length; j++) {
+        var t = list[j];
+        if (done[t.id] || (ctxOnly && !t.ctx)) continue;
+        if (t.where && t.where.indexOf(mode) === -1) continue;
+        return t;
+      }
     }
     return null;
   }
-  function retire(id, how) {
-    var s = read(); s.d = s.d || {}; s.d[id] = how || 1; write(s);
-  }
-  function hide() {
-    clearTimeout(lifeT);
+  function retire(id, how) { var s = read(); s.d = s.d || {}; s.d[id] = how || 1; write(s); }
+  function busy() { return !!document.querySelector('.modal.open, .activity.open, .onb.open, .celebrate.show, .lvl-pop'); }
+
+  function remove() {
+    clearTimeout(openT);
     if (!node) return;
-    var n = node; node = null;
-    n.classList.add('out');
-    setTimeout(function () { if (n.parentNode) n.parentNode.removeChild(n); }, 300);
+    var nd = node; node = null; cur = null;
+    nd.classList.add('out');
+    setTimeout(function () { if (nd.parentNode) nd.parentNode.removeChild(nd); }, 320);
+  }
+  function tuck() { if (node) node.classList.add('tucked'); }
+  function expand() {
+    if (!node) return;
+    node.classList.remove('tucked');
+    clearTimeout(openT); openT = setTimeout(tuck, OPEN_MS);
   }
   function show(t) {
-    if (shown || node) return;
-    if (document.querySelector('.modal.open, .activity.open, .onb.open, .celebrate.show, .celebrate.open')) return;
-    shown = true;
-    var s = read(); s.last = Date.now(); write(s);
+    if (node || busy()) return;
+    count++; lastAt = Date.now();
+    var s = read(); s.last = lastAt; write(s);
     retire(t.id, 'shown');
-    node = document.createElement('div');
+    cur = t;
+    node = document.createElement('aside');
     node.className = 'vx-tip';
     node.setAttribute('role', 'status');
     node.style.setProperty('--vx', t.hue);
-    node.innerHTML = '<span class="vx-ico" aria-hidden="true">' + icon(t.ico) + '</span>' +
-      '<span class="vx-t"><span class="vx-k">' + esc(t.kicker) + '</span><b>' + esc(t.title) + '</b><small>' + esc(t.sub) + '</small></span>' +
-      '<button class="vx-go">' + esc(t.cta) + '</button><button class="vx-x" aria-label="Dismiss">×</button>';
-    node.querySelector('.vx-go').addEventListener('click', function () { retire(t.id, 'acted'); hide(); if (window.buzz) buzz('tap'); try { t.act(); } catch (e) {} if (window.track) track('tip_acted', { id: t.id }); });
-    node.querySelector('.vx-x').addEventListener('click', function () { retire(t.id, 'dismissed'); hide(); if (window.track) track('tip_dismissed', { id: t.id }); });
+    node.innerHTML =
+      '<button class="vx-tab" aria-label="' + esc(t.kicker) + '"><span class="vx-ico" aria-hidden="true">' + icon(t.ico) + '</span></button>' +
+      '<div class="vx-card"><span class="vx-ico" aria-hidden="true">' + icon(t.ico) + '</span>' +
+        '<span class="vx-t"><span class="vx-k">' + esc(t.kicker) + '</span><b>' + esc(t.title) + '</b></span>' +
+        '<button class="vx-go">' + esc(t.cta) + '</button><button class="vx-x" aria-label="Dismiss">×</button></div>';
+    node.querySelector('.vx-tab').addEventListener('click', function () { expand(); if (window.buzz) buzz('tap'); });
+    node.querySelector('.vx-go').addEventListener('click', function () {
+      retire(t.id, 'acted'); remove(); if (window.buzz) buzz('tap');
+      try { t.act(); } catch (e) {}
+      if (window.track) track('tip_acted', { id: t.id });
+    });
+    node.querySelector('.vx-x').addEventListener('click', function () {
+      retire(t.id, 'dismissed'); remove();
+      if (window.track) track('tip_dismissed', { id: t.id });
+    });
     document.body.appendChild(node);
-    if (window.buzz) buzz('tap');
+    if (window.Sfx) Sfx.play('discover');
+    if (window.buzz) buzz('tap', true);
     if (window.track) track('tip_shown', { id: t.id });
-    lifeT = setTimeout(hide, LIFE);
+    openT = setTimeout(tuck, OPEN_MS);
+  }
+  function consider(mode, ctxOnly, delay) {
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      if (document.hidden || document.body.dataset.section !== mode || node) return;
+      var t = pick(mode, ctxOnly);
+      if (t) show(t);
+    }, delay);
   }
   function onView(mode) {
     if (mode) { var s = read(); s.v = s.v || {}; if (!s.v[mode]) { s.v[mode] = 1; write(s); } }
     // Leaving the page takes the prompt with it: it was about where you were.
-    if (node) hide();
-    clearTimeout(timer);
-    if (shown) return;
-    timer = setTimeout(function () {
-      if (document.hidden || document.body.dataset.section !== mode) return;
-      var t = eligible(mode);
-      if (t) show(t);
-    }, DWELL);
+    if (node) remove();
+    consider(mode, false, DWELL);
   }
   new MutationObserver(function () { onView(document.body.dataset.section); })
     .observe(document.body, { attributes: true, attributeFilter: ['data-section'] });
-  window.addEventListener('vinall:onboarded', function () { shown = true; });   // not straight after the tutorial
-  // The first view of a launch is counted once the session has settled.
-  setTimeout(function () { onView(document.body.dataset.section); }, 6000);
+  // Rating is the moment "2 albums from 25" and "Earworm is open" become true.
+  window.addEventListener('vinall:rated', function () { if (!node) consider(document.body.dataset.section, true, 2600); });
+  // Not straight on top of the tutorial's own ending.
+  window.addEventListener('vinall:onboarded', function () { lastAt = Date.now(); count = Math.max(count, 0); });
+  // Claims are a server read; load them once so "reward waiting" is honest.
+  function loadClaims() {
+    if (window.Wallet && Wallet.loadClaims && window.Cloud && Cloud.isOn && Cloud.isOn())
+      Wallet.loadClaims().then(function () { Wallet._claimsLoaded = true; }).catch(function () {});
+  }
+  if (window.Cloud && Cloud.ready) Cloud.ready.then(loadClaims); else setTimeout(loadClaims, 4000);
+  setTimeout(function () { onView(document.body.dataset.section); }, 5000);
 
-  window.Discover = { _tips: TIPS, eligible: eligible, show: function (id) { var t = TIPS.filter(function (x) { return x.id === id; })[0]; if (t) { shown = false; show(t); } }, reset: function () { write({}); shown = false; } };
+  window.Discover = {
+    sources: SOURCES, pick: pick,
+    show: function (id) {
+      var all = []; SOURCES.forEach(function (f) { try { all = all.concat(f() || []); } catch (e) {} });
+      var t = all.filter(function (x) { return x.id === id || x.id.split(':')[0] === id; })[0];
+      if (t) { remove(); count = 0; show(t); }
+    },
+    reset: function () { write({}); count = 0; lastAt = 0; }
+  };
 })();

@@ -1,0 +1,87 @@
+/* ================================================================
+   POLISH (2026-10-21): singles, the album score's fine control, and the
+   things around them. Loaded last; transform and opacity only.
+   ================================================================ */
+
+/* ---- a single is a song page ------------------------------------------ */
+#view-album-detail.is-single #rate-album-btn,
+#view-album-detail.is-single #suggest-album-btn,
+#view-album-detail.is-single #detail-current-score,
+#view-album-detail.is-single #detail-completion,
+#view-album-detail.is-single #detail-reviews,
+#view-album-detail.is-single #detail-cert { display: none !important; }
+#view-album-detail.single-solo .tracks-head,
+#view-album-detail.single-solo #detail-tracks { display: none; }
+#view-album-detail.is-single:not(.single-solo) .tracks-head { font-size: 0; }
+#view-album-detail.is-single:not(.single-solo) .tracks-head::before { content: 'Also on the single'; font-size: 13px; }
+
+#detail-single:empty { display: none; }
+.sg {
+  --sg-c: var(--gold);
+  margin: var(--s5) 0 var(--s4); padding: 18px; border-radius: 24px;
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--sg-c) 16%, transparent), transparent 70%), var(--surface-2);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.07);
+  transition: background 400ms ease;
+}
+.sg-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.sg-chip { font: 700 11px/1 var(--font-mono); letter-spacing: .18em; text-transform: uppercase; color: var(--text-dim); }
+#detail-single button.idx.sg-play {
+  width: auto; height: 44px; padding: 0 18px 0 14px; border-radius: 999px; gap: 10px;
+  display: inline-flex; align-items: center; background: #fff; color: #111; border: 0;
+}
+#detail-single button.idx.sg-play .pi { display: block; font-size: 14px; }
+#detail-single button.idx.sg-play em { font: 600 13px/1 var(--font-body, inherit); font-style: normal; }
+#detail-single button.idx.sg-play.playing, #detail-single button.idx.sg-play.paused { background: var(--c-cyan); color: #04141a; }
+#detail-single button.idx.sg-play.nopv { opacity: .45; }
+.sg-rate { margin: 4px 0 12px; }
+.sg-save { transition: transform 160ms var(--gs-spring), opacity 200ms; }
+.sg-save:disabled { opacity: .55; }
+.sg.sg-done .sg-save { animation: sgPress 520ms var(--gs-spring); }
+@keyframes sgPress { 0% { transform: scale(.94); } 100% { transform: scale(1); } }
+
+/* ---- the album score: drag, then − / + ----------------------------------- */
+#rate-view .rate-fine { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 2px 0 10px; }
+#rate-view #rate-score {
+  min-width: 3.2ch; text-align: center; font: 800 52px/1 var(--font-display); letter-spacing: -.04em;
+  font-variant-numeric: tabular-nums; transition: color 200ms ease;
+}
+#rate-view #rate-score span { font-size: 15px; color: var(--text-faint); letter-spacing: 0; margin-left: 2px; }
+#rate-view #rate-score.pop { animation: rsPop 220ms var(--gs-spring); }
+@keyframes rsPop { from { transform: scale(1.12); } to { transform: scale(1); } }
+.rate-step {
+  width: 52px; height: 52px; border-radius: 50%; border: 0; cursor: pointer;
+  background: rgba(255,255,255,.07); color: var(--text); font: 600 26px/1 var(--font-display);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);
+  touch-action: manipulation; -webkit-user-select: none; user-select: none;
+  transition: transform 140ms var(--gs-spring), background 200ms;
+}
+.rate-step:active { transform: scale(.9); background: rgba(255,255,255,.14); }
+#rate-view .rate-drag { margin-bottom: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) #rate-view #rate-score.pop,
+  html:not([data-motion="full"]) .sg.sg-done .sg-save { animation: none; }
+}
+
+/* ---- tutorial: the song beat and the drag ---------------------------- */
+.onb-slider { flex-direction: column; align-items: stretch; gap: 10px; }
+.onb-slider .onb-score { text-align: center; }
+.onb-spin {
+  position: relative; display: block; margin: 4px auto 18px; padding: 0; border: 0; cursor: pointer;
+  width: min(220px, 58vw); aspect-ratio: 1; border-radius: 50%; overflow: hidden; background: #111;
+  box-shadow: 0 18px 50px rgba(0,0,0,.6), 0 0 0 6px rgba(255,255,255,.04), 0 0 40px -6px var(--onb-tint, var(--gold));
+  -webkit-tap-highlight-color: transparent; transition: box-shadow .4s ease, scale .2s;
+}
+.onb-spin img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.onb-spin::after { content: ''; position: absolute; left: 50%; top: 50%; width: 16%; height: 16%; translate: -50% -50%; border-radius: 50%; background: #0a0908; box-shadow: 0 0 0 3px rgba(255,255,255,.12); }
+.onb-spin-ico {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 1;
+  width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255,255,255,.92); color: #111; font-size: 22px; transition: opacity .25s, scale .25s;
+}
+.onb-spin.on { animation: onbSpin 3.2s linear infinite; }
+.onb-spin.on .onb-spin-ico { opacity: 0; scale: .6; }
+.onb-spin:active { scale: .97; }
+@keyframes onbSpin { to { rotate: 360deg; } }
+.onb-rated .onb-spin { box-shadow: 0 18px 50px rgba(0,0,0,.6), 0 0 0 6px var(--onb-tint), 0 0 70px 6px var(--onb-tint); }
+@media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) .onb-spin.on { animation: none; } }

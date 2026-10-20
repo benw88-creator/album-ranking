@@ -216,7 +216,7 @@
     if (_off) { list.innerHTML = '<div class="sc-empty"><b>Not switched on yet</b><span>Comments are coming soon.</span></div>'; return; }
     if (!d.rows.length) {
       list.innerHTML = '<div class="sc-empty"><span class="sc-empty-mark" aria-hidden="true"></span><b>No comments yet</b><span>' +
-        'Be the first to say something about this one.</span></div>';
+        'No comments yet.</span></div>';
       return;
     }
     list.innerHTML = sorted(d).map(function (r, k) {
