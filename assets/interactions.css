@@ -105,3 +105,43 @@ html[data-motion="none"] *, html[data-motion="none"] *::before, html[data-motion
   animation-duration: .01ms !important; animation-iteration-count: 1 !important;
   transition-duration: .01ms !important; scroll-behavior: auto !important;
 }
+
+/* Login is a screen, not a sheet over the app (2026-10-20). On iPhone the
+   keyboard rule below pinned the overlay to the VISIBLE viewport, so once iOS
+   scrolled the layout viewport the overlay ended part-way down the screen and
+   the live Home page showed (and scrolled) underneath it. Two halves:
+   - every sheet's overlay keeps covering the whole layout viewport while a
+     keyboard is up; the sheet is lifted by padding instead. layout height - kb
+     is exactly the visible bottom, so the sheet lands where it did before.
+   - while login is open the app behind it is not painted at all, so there is
+     nothing to reveal even if iOS rubber-bands past the overlay. */
+@media (max-width: 699px) {
+  body.kb-up .modal { top: 0; bottom: 0; height: auto; padding-bottom: var(--kb, 0px); }
+}
+#auth-modal { background: var(--bg); backdrop-filter: none; }
+html:has(#auth-modal.open), body:has(#auth-modal.open) { overscroll-behavior: none; background: var(--bg); }
+body:has(#auth-modal.open) > :is(.wrap, #artist-hero, #player-bar, .activity, .activity-backdrop, .today-info-pop) { visibility: hidden; }
+
+/* Crate grid on a phone: a fast flick showed whole cards blank (2026-10-20).
+   Two causes stacked. content-visibility lets iOS skip painting a card until it
+   is near, and on a fling it is late; and every card past the first screen ran
+   its cardIn fade from opacity 0 the moment it was painted, so a card that did
+   arrive arrived invisible. The grids that are scrolled fast on a touch screen
+   paint everything (a crate of a few hundred lays out in well under a frame
+   budget per scroll), the entrance is kept for the first screenful only, and
+   the sleeve slot is tinted so a cover still decoding is a square, not a hole. */
+@media (hover: none) {
+  #albums-grid > *, #prof-rankings > * { content-visibility: visible; }
+}
+.grid .card:nth-child(n+13) { animation: none; }
+.card .art-wrap { background: var(--surface-2); }
+
+/* The status bar is a band of the app's own ground, so content scrolling up
+   passes behind the clock rather than through it. Zero tall wherever there is
+   no top inset; under the nav (150) and every sheet. */
+body::before {
+  content: ''; position: fixed; top: 0; left: 0; right: 0; z-index: 140;
+  height: env(safe-area-inset-top, 0px); pointer-events: none;
+  background: linear-gradient(var(--bg) 70%, color-mix(in srgb, var(--bg) 0%, transparent));
+}
+body[data-section="foryou"]::before { display: none; }

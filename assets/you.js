@@ -212,7 +212,7 @@
      YOUR MUSIC — rate what you brought in from Spotify, fast
      ================================================================ */
   var YM_KEY = 'crate_yourmusic_v1', SKIP_DAYS = 7;
-  var ym = { tab: 'albums', queue: [], i: 0, session: [], undo: [], goal: 20, listen: null, typed: '', typedAt: 0 };
+  var ym = { tab: 'songs', queue: [], i: 0, session: [], undo: [], goal: 20, listen: null, typed: '', typedAt: 0 };
   function skips() { return lsJSON(YM_KEY) || {}; }
   function setSkip(key) { var s = skips(); s[key] = Date.now(); try { localStorage.setItem(YM_KEY, JSON.stringify(s)); } catch (e) {} if (window.Cloud) Cloud.push(YM_KEY); }
   function ratedAlbumKeys() { var o = {}; var A = albums(); Object.keys(A).forEach(function (id) { o[id] = 1; o[T.recKey(A[id].name, A[id].artist)] = 1; }); return o; }
@@ -284,6 +284,8 @@
     var head = '<div class="ym-head"><div><span class="ym-kicker">Your music</span><h1 class="ym-title">Rate what you play.</h1></div>' +
       '<div class="ym-ring" style="--p:' + pct + '"><b>' + done + '</b><small>of ' + ym.goal + '</small></div></div>' +
       '<div class="ym-tabs" role="tablist">' + ['albums', 'songs'].map(function (t) { return '<button role="tab" data-ym-tab="' + t + '" aria-selected="' + (ym.tab === t) + '">' + (t === 'albums' ? 'Albums' : 'Songs') + '<em>' + n(ym.counts[t]) + '</em></button>'; }).join('') + '</div>';
+    if (x && ym.tab === 'songs') { paintFeed(host, head); return; }
+    feedStop();
     if (!x) {
       var rated = ym.session.filter(function (s) { return s.kind === (ym.tab === 'albums' ? 'album' : 'song'); });
       host.innerHTML = head + '<div class="ym-done"><h2>' + (rated.length ? 'That is everything here.' : 'Nothing left to rate here.') + '</h2>' +
@@ -343,6 +345,7 @@
       }
       ym.undo.push(x); ym.session.push({ kind: x.kind, art: x.art, score: score });
       if (window.buzz) buzz('tap');
+      if (x.kind === 'song' && feedOn()) { ym.busy = false; feedRated(x, score); return; }
       var c = $('ym-card'); if (c) c.classList.add('out');
       if (ym.session.length % 10 === 0 && window.toast) toast(ym.session.length + ' rated');
       setTimeout(function () { ym.i++; ym.busy = false; paintYm(); }, window.motionReduced && motionReduced() ? 0 : 200);
@@ -361,7 +364,172 @@
   function skip() {
     var x = cur(); if (!x) return;
     setSkip((x.kind === 'album' ? 'a:' : 's:') + x.key);
+    if (x.kind === 'song' && feedOn()) { feedGo(ym.i + 1); return; }
     ym.i++; paintYm();
+  }
+
+  /* ================================================================
+     THE SONG FEED — your imported library, thirty seconds at a time
+     ================================================================
+     For You's shape (a snap-scrolled column, one song a screen, the clip
+     starting as the card settles) with a different job: everything here is
+     already YOURS, saved or played on Spotify, so the card leads with how you
+     know it and the rating is one tap on 1–10 rather than a slider. Rating a
+     song moves the feed on by itself; Skip hides it for a week as before.
+
+     The clip is VinalAudio's, resolved fresh by name every time — never a
+     stored url (Deezer signs them for ~10 minutes). One observer, one playing
+     card; leaving the view or the tab stops it, because display:none does not
+     stop an <audio> element. The first card waits for a tap on iOS, where a
+     clip can only start inside a gesture; after that the feed autoplays. */
+  var FEED_BATCH = 8, _io = null, _feedPlaying = -1, _playTok = 0, _unlocked = false;
+  function feedOn() { return !!$('ymf'); }
+  function feedCard(x, q) {
+    var chips = [];
+    if (x.plays) chips.push('Played ' + n(x.plays) + '×');
+    if (x.liked) chips.push('Liked');
+    if (x.album) chips.push(x.album);
+    return '<article class="ymf-card" data-q="' + q + '">' +
+      '<div class="ymf-bed" aria-hidden="true">' + (x.art ? '<img src="' + esc(th(x.art, 120)) + '" alt="" decoding="async">' : '') + '</div>' +
+      '<button class="ymf-art" data-ymf-play aria-label="Play or pause the preview">' +
+        (x.art ? '<img src="' + esc(th(x.art, 500)) + '" alt="" decoding="async"' + (q > ym.i + 1 ? ' loading="lazy"' : '') + '>' : '<span class="ymf-noart"></span>') +
+        '<span class="ymf-cue" aria-hidden="true">▶</span><i class="ymf-line" aria-hidden="true"></i></button>' +
+      '<div class="ymf-meta"><span class="ymf-src">From your Spotify</span><h2>' + esc(x.name) + '</h2><p>' + esc(x.artist) + '</p>' +
+        (chips.length ? '<p class="ymf-chips">' + chips.map(esc).join(' · ') + '</p>' : '') + '</div>' +
+      '<div class="ymf-rate" role="group" aria-label="Rate out of 10">' +
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(function (v) { return '<button data-ymf-r="' + v + '" style="--c:' + col(v * 10) + '">' + v + '</button>'; }).join('') + '</div>' +
+      '<div class="ymf-foot"><button class="ymf-skip" data-ymf-skip>Skip for now</button><span class="ymf-stamp" aria-live="polite"></span></div>' +
+    '</article>';
+  }
+  function feedAppend(upto) {
+    var f = $('ymf'); if (!f) return;
+    var have = +f.dataset.to || 0, to = Math.min(ym.queue.length, upto);
+    if (to <= have) return;
+    var html = '';
+    for (var q = have; q < to; q++) html += feedCard(ym.queue[q], q);
+    f.insertAdjacentHTML('beforeend', html);
+    f.dataset.to = to;
+    f.querySelectorAll('.ymf-card:not([data-io])').forEach(function (c) { c.dataset.io = 1; if (_io) _io.observe(c); });
+  }
+  function paintFeed(host, head) {
+    feedStop();
+    host.innerHTML = head + '<div class="ymf" id="ymf" data-from="' + ym.i + '" data-to="' + ym.i + '" tabindex="-1"></div>' +
+      '<p class="ym-keys">1–9, 0 for 10 · S to skip · U to undo · ↑ ↓ to move</p>';
+    fitFeed();
+    _io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (!e.isIntersecting || e.intersectionRatio < 0.6) return;
+        var q = +e.target.dataset.q;
+        ym.i = q;
+        feedAppend(q + FEED_BATCH);
+        feedPlay(q);
+      });
+    }, { root: $('ymf'), threshold: [0.6] });
+    feedAppend(ym.i + FEED_BATCH);
+    setTimeout(function () {
+      var f = $('ymf'); if (!f || window.currentMode !== 'yourmusic') return;
+      // setMode's scroll restore retries for a second; this takes over from it.
+      if (typeof window._scrollTok === 'number') window._scrollTok++;
+      if (scrollY > 40) return;
+      window.scrollTo({ top: Math.max(0, f.getBoundingClientRect().top + scrollY - safeTop() - 6), behavior: window.motionReduced && motionReduced() ? 'auto' : 'smooth' });
+    }, 350);
+  }
+  /* The feed is a screen, not a box under the page header: it is as tall as
+     the space between the status bar and the nav, and entering it brings it
+     up to the top — the tabs and the ring are one swipe above it. */
+  var _sat = null;
+  function safeTop() {
+    if (_sat == null) { var p = document.createElement('div'); p.style.cssText = 'position:fixed;top:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden'; document.body.appendChild(p); _sat = p.offsetHeight; p.remove(); }
+    return _sat;
+  }
+  function fitFeed() {
+    var f = $('ymf'); if (!f) return;
+    var nav = document.getElementById('modes');
+    var navTop = nav && innerWidth < 700 ? nav.getBoundingClientRect().top : innerHeight;
+    f.style.height = Math.max(420, Math.round(navTop - safeTop() - 14)) + 'px';
+  }
+  function cardEl(q) { var f = $('ymf'); return f && f.querySelector('.ymf-card[data-q="' + q + '"]'); }
+  async function feedPlay(q, gesture) {
+    var x = ym.queue[q], c = cardEl(q);
+    if (!x || !c || document.hidden || window.currentMode !== 'yourmusic' || !window.VinalAudio) return;
+    if (_feedPlaying === q && !gesture) return;
+    var mine = ++_playTok;
+    try { VinalAudio.stop(); } catch (e) {}
+    document.querySelectorAll('.ymf-card.is-playing, .ymf-card.is-blocked').forEach(function (n) { n.classList.remove('is-playing', 'is-blocked', 'is-loading'); });
+    _feedPlaying = q;
+    if (gesture) { try { VinalAudio.prime(); } catch (e) {} _unlocked = true; }
+    c.classList.add('is-loading');
+    var ok = false;
+    try { ok = await VinalAudio.play({ artist: x.artist, title: x.name, album: x.album || '' }, 30); } catch (e) { ok = false; }
+    if (mine !== _playTok) return;
+    c.classList.remove('is-loading');
+    if (ok === true) { c.classList.add('is-playing'); _unlocked = true; }
+    else if (ok === 'blocked' || !_unlocked) c.classList.add('is-blocked');
+    else c.classList.add('no-clip');
+  }
+  function feedStop() {
+    _playTok++; _feedPlaying = -1;
+    if (_io) { _io.disconnect(); _io = null; }
+    try { if (window.VinalAudio) VinalAudio.stop(); } catch (e) {}
+  }
+  function feedGo(q) {
+    var c = cardEl(q);
+    if (!c) { feedAppend(q + FEED_BATCH); c = cardEl(q); }
+    if (!c) { ym.i = q; feedStop(); paintYm(); return; }
+    var f = $('ymf');
+    f.scrollTo({ top: c.offsetTop, behavior: window.motionReduced && motionReduced() ? 'auto' : 'smooth' });
+  }
+  function feedRated(x, score) {
+    var q = ym.queue.indexOf(x), c = cardEl(q);
+    if (c) {
+      c.classList.add('rated');
+      c.style.setProperty('--rc', col(score * 10));
+      c.querySelectorAll('[data-ymf-r]').forEach(function (b) { b.classList.toggle('on', +b.dataset.ymfR === score); });
+      var st = c.querySelector('.ymf-stamp'); if (st) st.textContent = 'Rated ' + score;
+      if (window.burst && score >= 8) { var b = c.querySelector('[data-ymf-r="' + score + '"]'); if (b) try { burst(b, { count: 14, spread: 70 }); } catch (e) {} }
+    }
+    paintRing();
+    if (ym.session.length % 10 === 0 && window.toast) toast(ym.session.length + ' rated');
+    setTimeout(function () { if (feedOn() && ym.queue[ym.i] === x) feedGo(q + 1); }, 520);
+  }
+  function paintRing() {
+    var r = document.querySelector('#ym-body .ym-ring'); if (!r) return;
+    var done = ym.session.length;
+    r.style.setProperty('--p', Math.min(100, done / ym.goal * 100));
+    var b = r.querySelector('b'); if (b) b.textContent = done;
+  }
+  function wireFeed() {
+    var host = $('view-yourmusic'); if (!host || host._feedWired) return; host._feedWired = true;
+    host.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b || !b.closest('.ymf-card')) return;
+      var q = +b.closest('.ymf-card').dataset.q;
+      if (b.hasAttribute('data-ymf-play')) {
+        e.stopPropagation();
+        if (_feedPlaying === q && b.closest('.ymf-card').classList.contains('is-playing')) { feedStop(); b.closest('.ymf-card').classList.remove('is-playing'); return; }
+        if (!_io && feedOn()) { paintFeedObserverOnly(); }
+        feedPlay(q, true); return;
+      }
+      if (b.dataset.ymfR) { e.stopPropagation(); ym.i = q; _unlocked = true; rateCur(+b.dataset.ymfR); return; }
+      if (b.hasAttribute('data-ymf-skip')) { e.stopPropagation(); ym.i = q; skip(); }
+    }, true);
+    window.addEventListener('resize', function () { if (feedOn()) fitFeed(); });
+    document.addEventListener('visibilitychange', function () { if (document.hidden && feedOn()) { _playTok++; _feedPlaying = -1; try { VinalAudio.stop(); } catch (e) {} } });
+    // Leaving the view stops the clip; setMode only changes display.
+    new MutationObserver(function () {
+      if (document.body.dataset.section !== 'yourmusic' && _feedPlaying !== -1) { _playTok++; _feedPlaying = -1; try { VinalAudio.stop(); } catch (e) {} }
+    }).observe(document.body, { attributes: true, attributeFilter: ['data-section'] });
+    document.addEventListener('keydown', function (e) {
+      if (window.currentMode !== 'yourmusic' || !feedOn() || document.querySelector('.modal.open')) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); feedGo(ym.i + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); feedGo(Math.max(0, ym.i - 1)); }
+    });
+  }
+  // A tap after the observer was dropped (tab change and back) re-attaches it.
+  function paintFeedObserverOnly() {
+    _io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting && e.intersectionRatio >= 0.6) { ym.i = +e.target.dataset.q; feedAppend(ym.i + FEED_BATCH); feedPlay(ym.i); } });
+    }, { root: $('ymf'), threshold: [0.6] });
+    document.querySelectorAll('#ymf .ymf-card').forEach(function (c) { _io.observe(c); });
   }
   function setVal(v) {
     ym.val = Math.max(1, Math.min(100, Math.round(v)));
@@ -415,6 +583,7 @@
     if (t && window.goToView) goToView('about');
   });
   wireYm();
+  wireFeed();
   window.YouUI = { tasteHtml: tasteHtml, enhanceTaste: enhanceTaste, depthHtml: depthHtml, depthTile: depthTile, aboutTeaser: aboutTeaser,
                    renderAbout: renderAbout, renderYourMusic: renderYourMusic, depth: depthNow };
 })();

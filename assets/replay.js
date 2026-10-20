@@ -990,6 +990,11 @@
   /* Locked. Says the rule exactly, shows how far along you are, and points at
      the one thing worth doing while you wait: bringing your listening in,
      because Replay is built from it. The demo stays open as a taste. */
+  // Synced (crate_spotify_v1 rides app_state), so it holds across devices.
+  function spotifyImported() {
+    var st = lsJSON('crate_spotify_v1') || lsJSON('vinall_spotify_v1') || {};
+    return !!(st.imported && Object.keys(st.imported).length) || !!localStorage.getItem(LDAYS_AT);
+  }
   function lockedHtml(g, compact) {
     var pr = g.progress, need = pr ? Math.max(1, Math.round(+pr.need || 5)) : 5;
     var st = pr ? Math.max(0, Math.min(need, Math.floor(+pr.streak || 0))) : 0, covers = topCovers(6), pips = '';
@@ -1004,7 +1009,9 @@
       '<h2 class="rp-lock-title">Unlock on 5 day login streak</h2>' + meter +
       (compact ? '' : '<p class="rp-hero-sub">Your weeks, months and year in music, told as a story. Open VINALL five days running and it is yours.</p>') +
       '<ul class="rp-lock-needs">' +
-        '<li><span class="rp-need-ico sp" aria-hidden="true">♫</span><span class="rp-need-t"><b>Built from your Spotify data</b><small>Import your Spotify listening so it is ready when Replay opens.</small></span><button class="rp-need-btn" data-rp-act="import">Import</button></li>' +
+        (spotifyImported()
+          ? '<li class="done"><span class="rp-need-ico sp" aria-hidden="true">✓</span><span class="rp-need-t"><b>Spotify data imported</b><small>It is ready for Replay. Import a newer export any time.</small></span><button class="rp-need-btn ghost" data-rp-act="import">Update</button></li>'
+          : '<li><span class="rp-need-ico sp" aria-hidden="true">♫</span><span class="rp-need-t"><b>Built from your Spotify data</b><small>Import your Spotify listening so it is ready when Replay opens.</small></span><button class="rp-need-btn" data-rp-act="import">Import</button></li>') +
         '<li><span class="rp-need-ico" aria-hidden="true">+</span><span class="rp-need-t"><b>Other music services</b><small>Coming soon.</small></span><em class="rp-soon">Soon</em></li>' +
       '</ul>' +
       '<div class="rp-hero-row"><button class="rp-ghost rp-demo-btn" data-rp-act="demo"><i aria-hidden="true">▶</i>Preview a demo Replay</button></div></div>';
@@ -1135,13 +1142,15 @@
   // repaint both entries. Crossing from locked to open is the unlock moment.
   window.addEventListener('vinall:replay-gate', function () {
     var now = gate().open;
-    if (_gateWas === false && now) _fresh = true;
-    _gateWas = now;
+    // Only a change between two KNOWN answers is an unlock; the wallet
+    // arriving after first paint is not news.
+    if (gateKnown()) { if (_gateWas === false && now) _fresh = true; _gateWas = now; }
     var hc = $('rp-home-card'); if (hc) hc._sig = null;
     renderHomeCard();
     if (window.currentMode === 'replay') renderHome();
   });
-  _gateWas = gate().open;
+  function gateKnown() { var G = window.ReplayGate; try { return !G || typeof G.known !== 'function' || !!G.known(); } catch (e) { return true; } }
+  _gateWas = gateKnown() ? gate().open : null;
 
   function invalidate() { _L = {}; _idx = null; _lifetime = null; }
 

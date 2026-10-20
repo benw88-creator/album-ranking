@@ -6579,3 +6579,29 @@ to production. Logged out, For You's first card went from **~13.4s to ~0.5s**
 Not changed, and why: startup is dominated by style recalc/layout/text shaping
 of a 286KB stylesheet (4,450 rules) and the splash animations, not by JS (JS
 self-time on load is well under a second at 4×). That is a CSS job.
+
+## Final polish pass (2026-10-20)
+
+- **Login is a screen.** `body:has(#auth-modal.open)` hides `.wrap` and friends, the
+  overlay is opaque, and with a keyboard up every sheet's overlay keeps `inset: 0`
+  and is lifted by `padding-bottom: var(--kb)` (was pinned to the visual viewport,
+  which let iOS show the live app under the login). `assets/interactions.css`.
+- **For You remembers spent records** (`crate_fy_spent_v1`, 30 days): a record whose
+  songs are all rated/served is skipped without a `/api/preview` fetch, and the next
+  four in a pool are fetched alongside. Heavy-account first card: 8.06s → 0.83s
+  (measured, 30-record crate, 25 spent). A fetch failure never marks a record spent.
+  Away-rebuild threshold is 15 minutes, not 10s.
+- **Profile paints from a session cache** (`_profCache`), revalidates behind and
+  redraws only on a change; `saveProfile/follow/unfollow/saveList/deleteList` bust it.
+- **Replay gate remembers per account** (`crate_replay_gate_v1`); `ReplayGate.known()`
+  stops the wallet's arrival reading as a fresh unlock on every launch.
+- The Draw's needle never moves. Crate grid: no `content-visibility` and no `cardIn`
+  past card 12 on touch (both blanked cards on a fling). Status-bar scrim on `body::before`.
+- Onboarding: needle-drop welcome, Recall hype, a payoff with the real score and the
+  Endless-board rank (the tutorial round files on `endless` via `boardMode`), and a
+  `finale` step. `window.RecallLast` carries the last filed run.
+- Your music's Songs tab is a snap feed (`#ymf`) with 30s previews and 1–10 taps.
+- `assets/discover.js` + `discover.css`: one "check it out" prompt a session, 18h apart,
+  each once ever, retired by use. The native reminder opt-in is one of them.
+- Reminders now schedule tomorrow's Recall/streak when today is done, plus a 3-day
+  return nudge (`RETURN_ID 8803`).

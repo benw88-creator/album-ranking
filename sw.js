@@ -29,7 +29,7 @@ const PRECACHE = [
   '/assets/icons/browser-512.png?v=2',
   '/assets/icons/apple-touch-icon.png?v=2',
   '/assets/icons/favicon-32.png?v=2',
-  '/assets/interactions.css?v=3',
+  '/assets/interactions.css?v=5',
   '/assets/interactions.js?v=2'
 ];
 

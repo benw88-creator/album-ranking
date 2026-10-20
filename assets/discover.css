@@ -1,0 +1,134 @@
+/* ============================================================================
+   discover.css — onboarding v2, the "check it out" prompts, and the
+   achievement claim. Loaded last. Motion is transform/opacity only and stops
+   under reduced motion (the global rule in interactions.css).
+   ========================================================================== */
+
+/* ---- onboarding: the deck ------------------------------------------------- */
+.onb-rail i:nth-child(8) { --onb-c: var(--c-cyan); }
+.onb-deck {
+  position: relative; display: block; margin: 0 auto 22px; padding: 0;
+  width: min(210px, 52vw); aspect-ratio: 1; border: 0; background: none; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.onb-deck .onb-disc { width: 100%; margin: 0; }
+.onb-hero2:not(.playing) .onb-disc { animation-play-state: paused; }
+.onb-hero2:not(.playing) .onb-deck { animation: onbBreathe 2.4s var(--ease) infinite; }
+@keyframes onbBreathe { 0%, 100% { scale: 1; } 50% { scale: 1.035; } }
+.onb-arm {
+  position: absolute; top: -6%; right: -4%; width: 10px; height: 62%;
+  border-radius: 6px; transform-origin: 50% 8%; rotate: -28deg;
+  background: linear-gradient(180deg, #d9d4cc, #8a847b);
+  box-shadow: 0 6px 18px rgba(0,0,0,.5);
+  transition: rotate .7s cubic-bezier(.3,1.4,.5,1);
+}
+.onb-arm::after { content: ''; position: absolute; bottom: -6px; left: -4px; width: 18px; height: 14px; border-radius: 4px; background: var(--gold); }
+.onb-hero2.playing .onb-arm { rotate: -6deg; }
+.onb-hero2.playing .onb-deck { filter: drop-shadow(0 0 32px color-mix(in srgb, var(--gold) 35%, transparent)); transition: filter .8s var(--ease); }
+.onb-tag { color: var(--text-dim); font-size: 15px; line-height: 1.45; margin-top: 12px; min-height: 44px; }
+.onb-hero2.playing .onb-tag { animation: onbIn .5s var(--ease) both; color: var(--text); }
+.onb-sub { color: var(--text-dim); font-size: 14.5px; line-height: 1.45; margin-top: 8px; text-align: center; }
+
+/* ---- onboarding: Recall ---------------------------------------------------- */
+.onb-ladder { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 22px 0 6px; }
+.onb-ladder i {
+  font-style: normal; text-align: center; padding: 14px 4px; border-radius: 14px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  font: 800 18px/1 var(--font-display); color: var(--text);
+  animation: onbIn .4s var(--ease) both;
+}
+.onb-ladder i:nth-child(1) { color: var(--c-lime); border-color: color-mix(in srgb, var(--c-lime) 45%, transparent); animation-delay: .05s; }
+.onb-ladder i:nth-child(2) { animation-delay: .12s; } .onb-ladder i:nth-child(3) { animation-delay: .19s; } .onb-ladder i:nth-child(4) { animation-delay: .26s; }
+.onb-ladder b { display: block; margin-top: 6px; font: 600 11px/1 var(--font-mono); color: var(--text-faint); }
+.onb-result { text-align: center; }
+.onb-big { margin: 10px 0 4px; }
+.onb-big b { display: block; font: 800 clamp(56px, 19vw, 88px)/1 var(--font-display); letter-spacing: -.04em; }
+.onb-result.won .onb-big b { color: var(--c-lime); text-shadow: 0 0 40px color-mix(in srgb, var(--c-lime) 40%, transparent); }
+.onb-big small { font: 600 12px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--text-faint); }
+.onb-rank {
+  display: flex; align-items: baseline; justify-content: center; gap: 10px; flex-wrap: wrap;
+  margin: 18px auto 0; padding: 14px 18px; max-width: 360px; border-radius: 16px;
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.onb-rank.in { border-color: color-mix(in srgb, var(--gold) 50%, transparent); animation: onbRankIn .6s cubic-bezier(.3,1.5,.5,1) both; }
+@keyframes onbRankIn { from { opacity: 0; scale: .85; } to { opacity: 1; scale: 1; } }
+.onb-rank-n { font: 800 30px/1 var(--font-display); color: var(--gold); }
+.onb-rank-t { color: var(--text-dim); font-size: 13.5px; }
+.onb-wallet-sm { margin-top: 16px; }
+.onb-wallet-sm b { font-size: 26px; }
+
+/* ---- onboarding: the finale ---------------------------------------------- */
+.onb-fin { text-align: center; }
+.onb-fin-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0 20px; }
+.onb-fin-stats > div {
+  padding: 16px 6px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--border);
+  animation: onbRankIn .55s cubic-bezier(.3,1.4,.5,1) both; animation-delay: calc(var(--i) * .12s + .1s);
+}
+.onb-fin-stats b { display: block; font: 800 26px/1 var(--font-display); }
+.onb-fin-stats span { display: block; margin-top: 6px; font-size: 11.5px; color: var(--text-dim); }
+.onb-doors { display: grid; gap: 8px; text-align: left; }
+.onb-door {
+  display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: 16px; cursor: pointer;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--d) 16%, var(--surface-2)), var(--surface-2) 70%);
+  border: 1px solid color-mix(in srgb, var(--d) 35%, transparent); color: var(--text); font: inherit;
+  animation: onbIn .45s var(--ease) both;
+}
+.onb-door:nth-child(2) { animation-delay: .08s; } .onb-door:nth-child(3) { animation-delay: .16s; }
+.onb-door b { font-size: 16px; color: var(--d); }
+.onb-door span { font-size: 13px; color: var(--text-dim); }
+.onb-door:active { scale: .98; }
+
+/* ---- "check it out" prompts ----------------------------------------------- */
+.vx-tip {
+  position: fixed; z-index: 155; left: 50%; translate: -50% 0;
+  bottom: calc(var(--nav-h, 64px) + 22px + env(safe-area-inset-bottom, 0px));
+  width: min(420px, calc(100vw - 24px));
+  display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px;
+  border-radius: 20px; color: var(--text);
+  background: linear-gradient(110deg, color-mix(in srgb, var(--vx) 22%, var(--surface)), var(--surface) 65%);
+  border: 1px solid color-mix(in srgb, var(--vx) 45%, transparent);
+  box-shadow: 0 18px 50px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.03) inset;
+  animation: vxIn .5s cubic-bezier(.25,1.35,.45,1) both;
+}
+@media (min-width: 700px) { .vx-tip { bottom: 24px; } }
+.vx-tip.out { animation: vxOut .28s var(--ease) both; }
+@keyframes vxIn { from { opacity: 0; translate: -50% 40px; scale: .96; } to { opacity: 1; translate: -50% 0; scale: 1; } }
+@keyframes vxOut { to { opacity: 0; translate: -50% 24px; } }
+.vx-ico {
+  flex: 0 0 auto; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--vx) 22%, transparent); color: var(--vx);
+  position: relative; overflow: hidden;
+}
+.vx-ico svg { width: 22px; height: 22px; }
+.vx-ico::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%);
+  translate: -120% 0; animation: vxSheen 2.6s var(--ease) .6s infinite;
+}
+@keyframes vxSheen { 0% { translate: -120% 0; } 40%, 100% { translate: 120% 0; } }
+.vx-t { flex: 1 1 auto; min-width: 0; }
+.vx-k { font: 700 10.5px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--vx); }
+.vx-t b { display: block; margin-top: 4px; font-size: 15px; line-height: 1.2; }
+.vx-t small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--text-dim); line-height: 1.3; }
+.vx-go {
+  flex: 0 0 auto; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 0; cursor: pointer;
+  background: var(--vx); color: #0b0810; font: 700 13px/1 var(--font-body);
+}
+.vx-x {
+  flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer;
+  background: transparent; color: var(--text-faint); font-size: 18px; line-height: 1;
+}
+body.layer-open .vx-tip { display: none; }
+
+/* ---- achievement claim ----------------------------------------------------- */
+.ach.claiming { animation: achPress .5s cubic-bezier(.3,1.5,.5,1) both; }
+@keyframes achPress { 0% { scale: 1; } 30% { scale: .95; } 100% { scale: 1; } }
+.ach.just-claimed { position: relative; overflow: hidden; }
+.ach.just-claimed::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--gold) 45%, transparent), transparent 65%);
+  animation: achFlare 1.1s var(--ease) both;
+}
+@keyframes achFlare { from { opacity: 1; scale: .4; } to { opacity: 0; scale: 1.6; } }
+.ach.claimable { animation: achReady 2.2s var(--ease) infinite; }
+@keyframes achReady { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 0%, transparent); } 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 30%, transparent), 0 0 26px color-mix(in srgb, var(--gold) 25%, transparent); } }

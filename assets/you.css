@@ -219,3 +219,58 @@ body[data-section="yourmusic"] { --section: var(--c-lime); --section-dim: var(--
 @media (prefers-reduced-motion: reduce) {
   .tm2-bar b, .dp-dim i em, .rd-shape, .ab-card, .ab-hist i, .ab-bars b, .ab-eras i, .ym-card, .ym-card.out { animation: none; }
 }
+
+/* ---- Your music: the song feed ------------------------------------------ */
+.ymf {
+  --ymf: #1ed760;
+  position: relative; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior-x: contain;
+  border-radius: 24px; margin-top: 12px; scrollbar-width: none;
+}
+.ymf::-webkit-scrollbar { display: none; }
+.ymf-card {
+  position: relative; height: 100%; scroll-snap-align: start; scroll-snap-stop: always;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  padding: 22px 18px; overflow: hidden; isolation: isolate;
+  background: var(--surface);
+}
+.ymf-card + .ymf-card { margin-top: 10px; }
+.ymf-bed { position: absolute; inset: -20%; z-index: -1; opacity: .5; }
+.ymf-bed img { width: 100%; height: 100%; object-fit: cover; filter: blur(40px) saturate(1.5); }
+.ymf-card::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent 30%, color-mix(in srgb, var(--bg) 85%, transparent)); }
+.ymf-art {
+  position: relative; flex: 0 0 auto; width: min(66vw, 300px, 38vh); aspect-ratio: 1; padding: 0; border: 0; border-radius: 18px; overflow: hidden;
+  cursor: pointer; background: var(--surface-2); box-shadow: 0 24px 60px rgba(0,0,0,.55);
+  transition: scale .3s var(--ease);
+}
+.ymf-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ymf-card.is-playing .ymf-art { scale: 1.02; }
+.ymf-cue {
+  position: absolute; inset: 0; display: grid; place-items: center; font-size: 34px; color: #fff;
+  background: rgba(0,0,0,.35); opacity: 0; transition: opacity .2s;
+}
+.ymf-card.is-blocked .ymf-cue, .ymf-card:not(.is-playing):not(.is-loading):not(.no-clip) .ymf-art:hover .ymf-cue { opacity: 1; }
+.ymf-line { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--ymf, #1ed760); transform-origin: left; scale: 0 1; }
+.ymf-card.is-playing .ymf-line { animation: ymfLine 30s linear forwards; }
+@keyframes ymfLine { to { scale: 1 1; } }
+.ymf-card.is-loading .ymf-art { animation: ymfLoad 1.2s ease-in-out infinite; }
+@keyframes ymfLoad { 50% { opacity: .7; } }
+.ymf-meta { text-align: center; max-width: 92%; }
+.ymf-src { font: 700 10.5px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: #1ed760; }
+.ymf-meta h2 { font: 800 clamp(20px, 6vw, 26px)/1.15 var(--font-display); letter-spacing: -.02em; margin-top: 8px; overflow-wrap: anywhere; }
+.ymf-meta p { color: var(--text-dim); font-size: 14.5px; margin-top: 3px; }
+.ymf-meta .ymf-chips { font-size: 12px; color: var(--text-faint); }
+.ymf-rate { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; width: min(100%, 440px); }
+.ymf-rate button {
+  min-height: 44px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+  background: color-mix(in srgb, var(--c) 14%, var(--surface-2)); color: var(--text);
+  font: 800 15px/1 var(--font-display); cursor: pointer; padding: 0;
+  transition: scale .15s var(--ease), background .2s;
+}
+.ymf-rate button:active { scale: .9; }
+.ymf-rate button.on { background: var(--c); color: #0b0810; scale: 1.08; box-shadow: 0 0 18px color-mix(in srgb, var(--c) 60%, transparent); }
+.ymf-card.rated .ymf-art { box-shadow: 0 0 0 3px var(--rc), 0 24px 60px rgba(0,0,0,.55); }
+.ymf-foot { display: flex; align-items: center; justify-content: space-between; width: min(100%, 440px); min-height: 32px; }
+.ymf-skip { background: none; border: 0; color: var(--text-faint); font: 600 13px/1 var(--font-body); padding: 8px 0; cursor: pointer; }
+.ymf-stamp { font: 700 13px/1 var(--font-mono); color: var(--rc, var(--text)); }
+.ymf-card.rated .ymf-stamp { animation: onbRankIn .45s cubic-bezier(.3,1.5,.5,1) both; }
+@media (max-width: 380px) { .ymf-rate { gap: 3px; } .ymf-rate button { font-size: 13px; border-radius: 9px; } }

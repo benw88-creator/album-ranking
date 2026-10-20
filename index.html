@@ -9540,12 +9540,12 @@ input, textarea, select, [contenteditable="true"],
   .modal-panel { margin-bottom: env(safe-area-inset-bottom); }
 }
 </style>
-<link rel="stylesheet" href="/assets/interactions.css?v=3">
-<link rel="stylesheet" href="/assets/replay.css?v=3">
-<link rel="stylesheet" href="/assets/you.css?v=1">
+<link rel="stylesheet" href="/assets/interactions.css?v=5">
+<link rel="stylesheet" href="/assets/replay.css?v=4">
+<link rel="stylesheet" href="/assets/you.css?v=3">
 <link rel="stylesheet" href="/assets/games.css?v=3">
 <link rel="stylesheet" href="/assets/store.css?v=3">
-<link rel="stylesheet" href="/assets/glow.css?v=5">
+<link rel="stylesheet" href="/assets/glow.css?v=6">
 <link rel="stylesheet" href="/assets/themes2.css?v=2">
 <link rel="stylesheet" href="/assets/play.css?v=1">
 <link rel="stylesheet" href="/assets/cards.css?v=1">
@@ -9559,6 +9559,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/charades.css?v=1">
 <link rel="stylesheet" href="/assets/passport.css?v=1">
 <link rel="stylesheet" href="/assets/artist.css?v=1">
+<link rel="stylesheet" href="/assets/discover.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -9800,16 +9801,17 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
 <script>
 (function () {
   var KEY = 'crate_reminders_on';
-  var STREAK_ID = 8801, RECALL_ID = 8802;
+  var STREAK_ID = 8801, RECALL_ID = 8802, RETURN_ID = 8803;
 
   function on() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
   function setOn(v) { try { localStorage.setItem(KEY, v ? '1' : '0'); } catch (e) {} }
 
   // A fixed local time today, or tomorrow if that time has already passed —
   // there is no point scheduling a nudge for a moment already behind us.
-  function atLocal(hour, minute) {
+  function atLocal(hour, minute, plusDays) {
     var d = new Date();
     d.setHours(hour, minute, 0, 0);
+    if (plusDays) d.setDate(d.getDate() + plusDays);
     if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
     return d;
   }
@@ -9824,30 +9826,32 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
 
   async function sync() {
     if (!window.Native || !Native.on) return;
-    await Native.call('LocalNotifications', 'cancel', { notifications: [{ id: STREAK_ID }, { id: RECALL_ID }] });
+    await Native.call('LocalNotifications', 'cancel', { notifications: [{ id: STREAK_ID }, { id: RECALL_ID }, { id: RETURN_ID }] });
     if (!on()) return;
     var st = (window.Wallet && Wallet.get) ? Wallet.get() : null;
     var notifs = [];
     if (st) {
       var todayUtc = new Date().toISOString().slice(0, 10);
       var claimedToday = st.login_last_date && String(st.login_last_date).slice(0, 10) === todayUtc;
-      if (!claimedToday) {
-        notifs.push({
-          id: STREAK_ID, title: 'Your streak is waiting',
-          body: (st.login_streak > 0 ? 'Day ' + (st.login_streak + 1) + ' is still there.' : 'Come back and claim today.'),
-          schedule: { at: atLocal(20, 0) }
-        });
-      }
+      /* Claimed today means the next one worth a nudge is TOMORROW's. It used
+         to schedule nothing, and the person who played today and did not open
+         the app tomorrow was exactly the one the reminder was for. */
+      notifs.push(claimedToday
+        ? { id: STREAK_ID, title: 'Day ' + ((st.login_streak || 0) + 1) + ' is ready', body: 'Claim it to keep your streak going.', schedule: { at: atLocal(20, 0, 1) } }
+        : { id: STREAK_ID, title: 'Your streak is waiting',
+            body: (st.login_streak > 0 ? 'Day ' + (st.login_streak + 1) + ' is still there.' : 'Come back and claim today.'),
+            schedule: { at: atLocal(20, 0) } });
     }
     try {
       var doneToday = window.Recall && Recall.dailyDone && Recall.dailyDone();
-      if (!doneToday) {
-        notifs.push({
-          id: RECALL_ID, title: 'Recall', body: 'Today’s record is ready to name.',
-          schedule: { at: atLocal(12, 0) }
-        });
-      }
+      notifs.push({
+        id: RECALL_ID, title: 'Recall', body: doneToday ? 'A new song is ready to name.' : 'Today’s record is ready to name.',
+        schedule: { at: atLocal(12, 0, doneToday ? 1 : 0) }
+      });
     } catch (e) {}
+    /* One quiet invitation back, three days out. Re-laid every session, so it
+       only ever fires for somebody who has genuinely not opened the app. */
+    notifs.push({ id: RETURN_ID, title: 'New songs in For You', body: 'Thirty-second previews picked from your ratings.', schedule: { at: atLocal(19, 0, 3) } });
     if (notifs.length) await Native.call('LocalNotifications', 'schedule', { notifications: notifs });
   }
 
@@ -15733,6 +15737,9 @@ async function claimAch(btn){
   const was=btn.textContent;
   btn.textContent='\u2026';
   if(window.ripple)ripple(btn);
+  const achCard=btn.closest('.ach');
+  if(achCard){achCard.classList.remove('claiming');void achCard.offsetWidth;achCard.classList.add('claiming');}
+  if(window.buzz)buzz('tap');
   const res=(window.Wallet&&Wallet.claimMilestone)
     ? await Wallet.claimMilestone(btn.dataset.claim,btn)
     : {error:'Wallet not ready'};
@@ -15775,13 +15782,21 @@ async function claimAch(btn){
 
      Either way this runs ONLY on a claim. Nothing celebrates because a reward
      has merely become available — see paintUnlocks, which used to. */
-  if(btn.dataset.kind==='comp'){
-    stampAchievement(btn.closest('.ach'),res.earned);
-  } else if(res.earned>0){
-    celebrate(btn.dataset.label,'+'+res.earned.toLocaleString('en-GB')+' Discs',
-      {eyebrow:'Milestone claimed',accent:'var(--gold)'});
+  /* THE CARD ANSWERS FIRST. A flare opens on the card you pressed and the ring
+     and tick are drawn onto it, so the claim lands where your thumb is; the
+     page is redrawn only once that has played — redrawing at once threw the
+     card, and the moment, away under the animation. A milestone then gets the
+     full screen, naming the next rung so the ladder is visible. */
+  if(achCard){achCard.classList.add('just-claimed');stampAchievement(achCard,res.earned);}
+  if(btn.dataset.kind!=='comp'&&res.earned>0){
+    const m=+String(btn.dataset.claim).split(':')[1]||0;
+    const nextM=MILESTONES.filter(function(x){return x>m;})[0];
+    setTimeout(function(){
+      celebrate(btn.dataset.label,'+'+res.earned.toLocaleString('en-GB')+' Discs'+(nextM?' \u00b7 next: '+milestoneLabel(nextM):''),
+        {eyebrow:'Milestone claimed',accent:'var(--gold)'});
+    },650);
   }
-  renderAchievements();
+  setTimeout(renderAchievements,1150);
 }
 /* The small one. A ring and a tick drawn onto the card that was claimed,
    the same visual language as the Shop's purchase stamp — a line being drawn
@@ -17676,15 +17691,32 @@ function hasSlur(s){const f=String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,""
 function validUsername(u){return/^[a-zA-Z0-9_]{3,20}$/.test(u);}
 
 var _profileRenderTok = 0;
+/* A PROFILE YOU HAVE ALREADY OPENED PAINTS AT ONCE. The profile row and the
+   six network reads under it were fetched on every visit — about two seconds
+   on a phone before anything moved. Both are kept for the session, keyed by
+   user id: a revisit draws from them in the same frame and a background read
+   redraws only if something actually changed. Anything that writes a profile,
+   a list or a follow drops the lot, so an edit is never shown stale. */
+var _profCache = {};
+function profWrapCloud(){
+  if(!window.Cloud||Cloud._profWrapped)return;
+  Cloud._profWrapped=true;
+  ['saveProfile','follow','unfollow','saveList','deleteList'].forEach(function(k){
+    const f=Cloud[k]; if(typeof f!=='function')return;
+    Cloud[k]=function(){ _profCache={}; return f.apply(this,arguments); };
+  });
+}
 async function renderProfile(){
   const profileTok = ++_profileRenderTok;
+  profWrapCloud();
   const host=document.getElementById('profile-body');if(!host)return;
   const params=new URLSearchParams(location.search);
   const publicId=params.get('u');
   const me=window.Cloud&&Cloud.getUser&&Cloud.getUser();
   if(publicId&&(!me||me.id!==publicId)){
-    host.innerHTML='<p class="reco-note ld-line">Loading profile\u2026</p>';
-    const prof=await Cloud.fetchProfile(publicId);
+    const pc=_profCache[publicId];
+    if(!pc)host.innerHTML='<p class="reco-note ld-line">Loading profile\u2026</p>';
+    const prof=pc?pc.prof:await Cloud.fetchProfile(publicId);
     if(profileTok!==_profileRenderTok)return;
     if(!prof){host.innerHTML='<div class="empty"><span class="emoji">'+ICONS.person+'</span><h3>Profile not found</h3><p>This user doesn\u2019t exist or hasn\u2019t set up a profile.</p></div>';return;}
     await drawProfile(host,prof,false,profileTok);return;
@@ -17693,8 +17725,9 @@ async function renderProfile(){
     host.innerHTML='<div class="empty"><span class="emoji">'+ICONS.person+'</span><h3>Your profile</h3><p>Log in to create a public profile.</p><button class="btn-primary" id="prof-login" style="margin-top:8px;">Log in / Sign up</button></div>';
     const b=document.getElementById('prof-login');if(b)b.addEventListener('click',function(){Cloud.openAuth();});return;
   }
-  host.innerHTML='<p class="reco-note ld-line">Loading your profile\u2026</p>';
-  let prof=await Cloud.fetchProfile(me.id);
+  const pc=_profCache[me.id];
+  if(!pc)host.innerHTML='<p class="reco-note ld-line">Loading your profile\u2026</p>';
+  let prof=pc?pc.prof:await Cloud.fetchProfile(me.id);
   if(profileTok!==_profileRenderTok)return;
   if(!prof)prof={id:me.id,username:'user_'+me.id.slice(0,8),bio:'',avatar_url:'',top3:[]};
   await drawProfile(host,prof,true,profileTok);
@@ -17937,18 +17970,36 @@ async function drawProfile(host,prof,isOwner,profileTok){
     try{return Promise.resolve(p).catch(function(){return fallback;});}
     catch(e){return Promise.resolve(fallback);}
   }
-  const jobs=await Promise.all([
-    isOwner?Promise.resolve({albums:loadAlbums(),songs:loadSongs()})
-           :safe(Cloud.fetchUserRatings(prof.id),{albums:{},songs:{}}),
-    safe(Cloud.followCounts(prof.id),{followers:0,following:0}),
-    safe(Cloud.client().rpc('collection_net_worth',{p_user:prof.id}),null),
-    (isOwner&&window.Wallet&&Wallet.loadClaims)?safe(Wallet.loadClaims(),null):Promise.resolve(null),
-    (!isOwner&&me)?safe(Cloud.isFollowing(prof.id),false):Promise.resolve(false),
-    safe(Cloud.fetchLists(prof.id),[]),
-    isOwner?Promise.resolve(Object.values(window.loadLikedSongs?loadLikedSongs():{}))
-           :(prof.likes_public?safe(Cloud.fetchLikedSongs(prof.id),[]):Promise.resolve(null))
-  ]);
+  function fetchJobs(p){
+    return Promise.all([
+      isOwner?Promise.resolve(null):safe(Cloud.fetchUserRatings(p.id),{albums:{},songs:{}}),
+      safe(Cloud.followCounts(p.id),{followers:0,following:0}),
+      safe(Cloud.client().rpc('collection_net_worth',{p_user:p.id}),null),
+      (isOwner&&window.Wallet&&Wallet.loadClaims)?safe(Wallet.loadClaims(),null):Promise.resolve(null),
+      (!isOwner&&me)?safe(Cloud.isFollowing(p.id),false):Promise.resolve(false),
+      safe(Cloud.fetchLists(p.id),[]),
+      isOwner?Promise.resolve(null)
+             :(p.likes_public?safe(Cloud.fetchLikedSongs(p.id),[]):Promise.resolve(null))
+    ]);
+  }
+  const pc=_profCache[prof.id];
+  const net=(pc&&pc.prof===prof)?pc.jobs:await fetchJobs(prof);
   if(profileTok!==_profileRenderTok)return;
+  if(!pc||pc.prof!==prof){
+    _profCache[prof.id]={prof:prof,jobs:net,at:Date.now()};
+  }else if(Date.now()-pc.at>3000){
+    // Painted from the session copy: read again behind it, redraw only on a change.
+    pc.at=Date.now();
+    Promise.all([Cloud.fetchProfile(prof.id),fetchJobs(prof)]).then(function(r){
+      if(!r[0]||_profCache[prof.id]!==pc)return;
+      if(JSON.stringify(r)===JSON.stringify([pc.prof,pc.jobs]))return;
+      _profCache[prof.id]={prof:r[0],jobs:r[1],at:Date.now()};
+      if(profileTok===_profileRenderTok&&host.isConnected&&document.body.dataset.section==='profile')renderProfile();
+    }).catch(function(){});
+  }
+  // Your own ratings and liked songs are local, so always read fresh.
+  const jobs=net.slice();
+  if(isOwner){jobs[0]={albums:loadAlbums(),songs:loadSongs()};jobs[6]=Object.values(window.loadLikedSongs?loadLikedSongs():{});}
   const albumsObj=jobs[0].albums||{},songsObj=jobs[0].songs||{};
   const counts=jobs[1]||{followers:0,following:0};
   const netWorth=(jobs[2]&&jobs[2].data&&Number(jobs[2].data.net_worth))||0;
@@ -18153,6 +18204,16 @@ async function drawProfile(host,prof,isOwner,profileTok){
         '<span class="pl-chev" aria-hidden="true"></span></button>'+eyeBtn(sh.k,sh.title)+'</div>'+
       '<div class="pl-body" id="pl-body-'+sh.k+'"><div class="pl-inner">'+songRows(sh.arr,sh.empty,sh.id,sh.own)+'</div></div></div>';
   }
+  function listsShelf(inner){
+    const open=shelfOpen.mine!==0&&!(shelfOpen.mine==null&&shownLists.length>4);
+    const strip=shownLists.slice(0,5).map(function(l){const it=(l.items||[])[0];return it?'<img src="'+thumb(esc(it.art||''),160)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">':'';}).join('');
+    return'<div class="pl-shelf pl-mine'+(open?' is-open':'')+'" data-shelf="mine">'+
+      '<div class="pl-head"><button type="button" class="pl-toggle" aria-expanded="'+open+'" aria-controls="pl-body-mine">'+
+        '<span class="pl-strip">'+(strip||'<span class="pl-strip-empty"></span>')+'</span>'+
+        '<span class="pl-tt"><b>'+(isOwner?'Your lists':'Lists')+'</b><small>'+shownLists.length+(shownLists.length===1?' list':' lists')+'</small></span>'+
+        '<span class="pl-chev" aria-hidden="true"></span></button></div>'+
+      '<div class="pl-body" id="pl-body-mine"><div class="pl-inner">'+inner+'</div></div></div>';
+  }
   const shownLists=lists.filter(function(l){return isOwner||!(hid.has('*')||hid.has(l.id));});
   let listsHtml='';
   if(shelves.length||shownLists.length||isOwner){
@@ -18163,7 +18224,7 @@ async function drawProfile(host,prof,isOwner,profileTok){
       (shelves.length?'<div class="pl-shelves">'+shelves.map(shelfHtml).join('')+'</div>':'')+
       (!shownLists.length
         ?(isOwner?'<div class="reco-note">Create a list like \u201CBest Drake albums\u201D.</div>':'')
-        :'<div class="lists-wrap" id="prof-lists">'+shownLists.map(function(l){const covers=(l.items||[]).slice(0,4).map(function(it){return'<img src="'+thumb(esc(it.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">';}).join('');return'<div class="list-card'+(hid.has(l.id)?' is-hidden':'')+'" data-list="'+esc(l.id)+'" data-hide-key="'+esc(l.id)+'">'+eyeBtn(l.id,l.title,' pl-eye-card')+'<div class="list-covers">'+(covers||'<span class="list-empty">empty</span>')+'</div><div class="list-title">'+esc(l.title)+'</div><div class="list-meta">'+(l.items||[]).length+' '+(l.kind==='song'?'songs':'albums')+'<i class="pl-hid-tag"> \u00b7 hidden</i></div></div>';}).join('')+'</div>')+
+        :listsShelf('<div class="lists-wrap" id="prof-lists">'+shownLists.map(function(l){const covers=(l.items||[]).slice(0,4).map(function(it){return'<img src="'+thumb(esc(it.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">';}).join('');return'<div class="list-card'+(hid.has(l.id)?' is-hidden':'')+'" data-list="'+esc(l.id)+'" data-hide-key="'+esc(l.id)+'">'+eyeBtn(l.id,l.title,' pl-eye-card')+'<div class="list-covers">'+(covers||'<span class="list-empty">empty</span>')+'</div><div class="list-title">'+esc(l.title)+'</div><div class="list-meta">'+(l.items||[]).length+' '+(l.kind==='song'?'songs':'albums')+'<i class="pl-hid-tag"> \u00b7 hidden</i></div></div>';}).join('')+'</div>'))+
       '</div>';
   }
 
@@ -18233,7 +18294,7 @@ async function drawProfile(host,prof,isOwner,profileTok){
     '</div>'+
     mastersHtml(masters,isOwner,prof.username||'they')+
     doneHtml+
-    aboutYouHtml(albumsObj,songsObj,prof,isOwner)+(isOwner&&window.Passport?'<div class="prof-section-title">Music Passport</div>'+Passport.teaserHtml():'')+
+    
     tasteMatchHtml(taste,prof.username||'they')+
     '<div class="prof-section-title">Top 3 albums</div>'+
     '<div class="top3" id="prof-top3">'+slots+'</div>'+
@@ -18269,7 +18330,7 @@ async function drawProfile(host,prof,isOwner,profileTok){
   host.querySelectorAll('.pl-toggle').forEach(function(b){b.addEventListener('click',function(){
     const sh=b.closest('.pl-shelf'),open=!sh.classList.contains('is-open');
     sh.classList.toggle('is-open',open);b.setAttribute('aria-expanded',String(open));
-    if(open)shelfOpen[sh.dataset.shelf]=1;else delete shelfOpen[sh.dataset.shelf];
+    if(open)shelfOpen[sh.dataset.shelf]=1;else if(sh.dataset.shelf==='mine')shelfOpen.mine=0;else delete shelfOpen[sh.dataset.shelf];
     try{localStorage.setItem(SHELF_KEY,JSON.stringify(shelfOpen));}catch(e){}
   });});
   if(isOwner){
@@ -30005,16 +30066,14 @@ window.renderAdminStats = renderAdminStats;
         strip.style.transform = 'translate3d(' + (-target) + 'px,0,0)';
         anim.cancel();
       }).catch(function () {});
-      // Every tile that crosses the needle flicks it, and the slow end ticks
-      // under the thumb. Read off the rendered position, one read per frame.
-      var needle = el('draw-window').querySelector('.draw-needle');
+      // The needle is a fixed sight-line and never moves (it used to flick per
+      // tile, which read as items knocking it). The slow end ticks under the thumb. Read off the rendered position, one read per frame.
       var lastIdx = null, lastBuzz = 0, t0 = performance.now();
       var tick = function (now) {
         var m = getComputedStyle(strip).transform, x = 0;
         if (m && m !== 'none') { var p = m.match(/matrix\(([^)]+)\)/); if (p) x = parseFloat(p[1].split(',')[4]) || 0; }
         var idx = Math.floor((windowW / 2 - x) / TILE);
         if (lastIdx !== null && idx !== lastIdx) {
-          if (needle && needle.animate) needle.animate([{ transform: 'rotate(' + (idx > lastIdx ? -9 : 9) + 'deg)' }, { transform: 'none' }], { duration: 160, easing: 'cubic-bezier(.2,.9,.3,1.4)' });
           if (now - lastBuzz > 120 && now - t0 > SPIN_MS * 0.45 && window.buzz) { buzz('tap'); lastBuzz = now; }
         }
         lastIdx = idx;
@@ -30042,12 +30101,6 @@ window.renderAdminStats = renderAdminStats;
       // known from the arithmetic, so no layout read.
       var flare = el('draw-flare');
       if (flare) flare.style.left = (windowW / 2 - jitter) + 'px';
-      // The needle takes the hit and settles.
-      var ndl = wnd.querySelector('.draw-needle');
-      if (!still && ndl && ndl.animate) {
-        ndl.animate([{ transform: 'rotate(8deg)' }, { transform: 'rotate(-4deg)' }, { transform: 'rotate(1.5deg)' }, { transform: 'none' }],
-          { duration: 560, easing: 'cubic-bezier(.2,.7,.3,1)' });
-      }
       go.textContent = 'Open another';
       var r = el('draw-result');
       r.className = 'draw-result in tier-' + (won.tier || 'common');
@@ -30252,14 +30305,31 @@ window.renderAdminStats = renderAdminStats;
   /* Replay is the day-five prize of a run's first week. `replay_unlocked`
      absent from the wallet means it has not loaded yet (locked for now, and an
      event re-renders on load); present but undefined means the column does
-     not exist yet, which reads as open so nothing locks before the migration. */
+     not exist yet, which reads as open so nothing locks before the migration.
+
+     THE LAST ANSWER IS REMEMBERED PER ACCOUNT (2026-10-20). Before the wallet
+     loaded, an unlocked account was painted locked and then flipped to open a
+     second later — and that flip read as a fresh unlock, burst and all, on
+     every launch. Now the first paint uses what this account's gate said last
+     time (crate_ prefix, so an account switch wipes it), and `known()` tells
+     Replay whether a change is real or merely the wallet arriving. */
+  var GATE_KEY = 'crate_replay_gate_v1';
+  function gateUser() { try { var u = window.Cloud && Cloud.getUser && Cloud.getUser(); return u && u.id; } catch (e) { return null; } }
+  function remembered() {
+    try { var g = JSON.parse(localStorage.getItem(GATE_KEY) || 'null'), u = gateUser(); return g && u && g.u === u ? !!g.open : null; } catch (e) { return null; }
+  }
   window.ReplayGate = {
     unlocked: function () {
       var w = window.Wallet && Wallet.get ? Wallet.get() : null;
-      if (!w || !window.Cloud || !Cloud.isOn || !Cloud.isOn()) return false;
-      if (w.is_admin) return true;
-      if (!('replay_unlocked' in w)) return false;
-      return w.replay_unlocked === undefined ? true : !!w.replay_unlocked;
+      if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return false;
+      if (!w || !('replay_unlocked' in w)) return remembered() === true;
+      var open = !!w.is_admin || w.replay_unlocked === undefined || !!w.replay_unlocked;
+      try { localStorage.setItem(GATE_KEY, JSON.stringify({ u: gateUser(), open: open })); } catch (e) {}
+      return open;
+    },
+    known: function () {
+      var w = window.Wallet && Wallet.get ? Wallet.get() : null;
+      return !!(w && 'replay_unlocked' in w) || remembered() !== null;
     },
     progress: function () {
       var w = window.Wallet && Wallet.get ? Wallet.get() : null, s = (w && w.login_streak) || 0;
@@ -32926,7 +32996,7 @@ window.renderAdminStats = renderAdminStats;
     sess = Recall.session(live.mode);
     Object.keys(live.sess || {}).forEach(function (k) { sess[k] = live.sess[k]; });
     if (window.Boards) {
-      if (!Boards.live('recall')) Boards.start('recall', live.mode, { day: Recall.dayNo(), local: live.mode !== 'daily' && live.mode !== 'endless' });
+      if (!Boards.live('recall')) Boards.start('recall', boardMode(live.mode), { day: Recall.dayNo(), local: boardMode(live.mode) !== 'daily' && boardMode(live.mode) !== 'endless' });
       Boards.clock(el('recall-clock'), 'recall');
     }
     if (live.between) { nextRound(); return true; }
@@ -33368,6 +33438,8 @@ window.renderAdminStats = renderAdminStats;
     if (window.Wallet && Wallet.awardGame && st.songs > 0) Wallet.awardGame('recall', { reason: 'Recall' });
     track2('recall_session', { songs: st.songs, score: st.score, streak: st.bestStreak });
     _boardRes = window.Boards ? Boards.finish('recall', { score: st.score, played: st.played, songs: st.songs }) : null;
+    // Read by onboarding, which follows the first round with its own payoff.
+    window.RecallLast = { mode: sess.mode, score: st.score, songs: st.songs, played: st.played, avgReveal: st.avgReveal, board: _boardRes };
     if (on()) { try { Cloud.recallSession(st.score, st.songs, st.bestStreak, Math.round(st.avgReveal)); } catch (e) {} }
   }
   async function finishSession(note) {
@@ -33554,13 +33626,16 @@ window.renderAdminStats = renderAdminStats;
     } catch (e) {}
   }
 
+  /* The onboarding round is an Endless run that stops after one song, so it is
+     ranked on the Endless board: a new account's first score has a real place. */
+  function boardMode(key) { return key === 'tutorial' ? 'endless' : key; }
   function startMode(key) {
     if (key === 'daily' && Recall.dailyDone()) { paintLobby(); return; }
     if (sess && !sess.done && !sess.filed) fileAbandoned(sess);
     sess = Recall.session(key);
     _boardRes = null;
     if (window.Boards) {
-      Boards.start('recall', key, { day: Recall.dayNo(), local: key !== 'daily' && key !== 'endless' });
+      Boards.start('recall', boardMode(key), { day: Recall.dayNo(), local: boardMode(key) !== 'daily' && boardMode(key) !== 'endless' });
       Boards.clock(el('recall-clock'), 'recall');
     }
     track2('recall_start', { mode: key });
@@ -37345,6 +37420,19 @@ window.track = function (name, props) {
   var LOOKAHEAD = 4;     // how close to the end before topping up
   var FROM_ALBUM = 2;    // songs taken per visit before an album rotates back
   var MAX_ALBUMS = 40;   // ceiling on records expanded in one session
+  /* SPENT RECORDS ARE REMEMBERED. A crate of seventy records whose songs have
+     all been rated or served made the first card wait for /api/preview on each
+     of them IN TURN — one round trip per dead record, which is where a heavy
+     account's 10-15s went. A record that gave nothing is written down for 30
+     days and skipped without a fetch; under crate_ so an account switch wipes
+     it with the rest. */
+  var SPENT_KEY = 'crate_fy_spent_v1', SPENT_TTL = 30 * 864e5;
+  var _spent = null;
+  function isSpent(id) {
+    if (!_spent) _spent = readSeen(SPENT_KEY);
+    return !!(_spent[id] && Date.now() - _spent[id] < SPENT_TTL);
+  }
+  function markSpent(id) { isSpent(id); _spent[id] = Date.now(); writeSeen(SPENT_KEY, _spent); }
   var CLIP_S = 30;
 
   var _built = false, _busy = false, _topping = false;
@@ -37838,7 +37926,7 @@ window.track = function (name, props) {
       return box;
     }));
     var p = raw.then(function (b) {
-      return { alb: alb, list: b.list.slice(), art: alb.art || b.art || '', link: b.link };
+      return { alb: alb, list: b.list.slice(), art: alb.art || b.art || '', link: b.link, err: b.err };
     }).then(function (box) {
       if (_inflight[alb.id] === p) delete _inflight[alb.id];
       // A rebuild started meanwhile: hand the box back, but do not plant it in
@@ -37858,6 +37946,7 @@ window.track = function (name, props) {
       var r = await fetch(u);
       if (r.ok) j = await r.json();
     } catch (e) {}
+    var err = !j;
     var list = [];
     ((j && j.tracks) || []).forEach(function (t) {
       if (!t || !t.preview || !t.title) return;
@@ -37869,7 +37958,7 @@ window.track = function (name, props) {
       if (t.ms && t.ms < 60000) return;
       list.push(t);
     });
-    return { alb: alb, list: list, art: alb.art || (j && j.cover) || '', link: (j && j.link) || '' };
+    return { alb: alb, list: list, art: alb.art || (j && j.cover) || '', link: (j && j.link) || '', err: err };
   }
 
   /* Take up to FROM_ALBUM unseen, unrated songs off the front pool, then
@@ -37891,6 +37980,12 @@ window.track = function (name, props) {
          are dropped below, so this now counts only what is still worth
          keeping. */
       if (Object.keys(_tracks).length >= MAX_ALBUMS && !_tracks[alb.id]) { queue.push(alb); break; }
+      if (!_tracks[alb.id] && isSpent(alb.id)) continue;
+      // The next few are fetched alongside, so a run of spent records costs
+      // one round trip rather than one each.
+      queue.slice(0, 4).forEach(function (a) {
+        if (a && a.id && !_tracks[a.id] && !isSpent(a.id)) albumTracks(a).catch(function () { return null; });
+      });
       var box = await albumTracks(alb);
       var took = 0;
       while (box.list.length && took < FROM_ALBUM && out.length < want) {
@@ -37922,6 +38017,7 @@ window.track = function (name, props) {
       // and the cached tracklist goes with it, so the ceiling above frees up.
       if (box.list.length) queue.push(alb);
       else delete _tracks[alb.id];
+      if (!took && !box.list.length && !box.err) markSpent(alb.id);
     }
     return out;
   }
@@ -38939,7 +39035,7 @@ window.track = function (name, props) {
        should mean something fresher, so that visit gets a real rebuild
        instead. The threshold is measured from when leave() actually ran, not
        from anything guessed at render time. */
-    if (!force && _leftAt && (Date.now() - _leftAt > 10000)) force = true;
+    if (!force && _leftAt && (Date.now() - _leftAt > 15 * 60000)) force = true;
     // A feed built for another account (or before signing in) is not this one's.
     if (_built && _owner !== ownerId()) force = true;
     _leftAt = 0; _onFeed = true; clearTimeout(_fresh);
@@ -39212,7 +39308,7 @@ window.track = function (name, props) {
   function discs() { try { return (window.Wallet && Wallet.get && Wallet.get().discs) || 0; } catch (e) { return 0; } }
 
   /* ---- chrome --------------------------------------------------------- */
-  var STEPS = ['welcome', 'username', 'first', 'artists', 'albums', 'game', 'shop'];
+  var STEPS = ['welcome', 'username', 'first', 'artists', 'albums', 'game', 'shop', 'finale'];
   /* NO "SKIP THE REST". The way out of a record you cannot score is "Don't
      know it." on the card itself, which is a smaller, more honest offer: it
      costs one album rather than the whole flow, and it means nobody is ever
@@ -39338,15 +39434,34 @@ window.track = function (name, props) {
   }
 
   /* ---- 0. welcome ------------------------------------------------------ */
+  /* The first touch IS the app's motif: the record is the button. Pressing it
+     drops the needle, the record spins up and the first line lands — a
+     discovery, not an instruction. The CTA does the same for anybody who
+     reaches for the button instead. */
   function welcome() {
     show(
-      '<div class="onb-hero">' +
-        '<div class="onb-disc" aria-hidden="true"></div>' +
+      '<div class="onb-hero onb-hero2">' +
+        '<button class="onb-deck" id="onb-deck" aria-label="Drop the needle">' +
+          '<span class="onb-disc" aria-hidden="true"></span>' +
+          '<span class="onb-arm" aria-hidden="true"></span>' +
+        '</button>' +
         '<div class="onb-word">VINALL</div>' +
+        '<p class="onb-tag" id="onb-tag">Tap the record.</p>' +
       '</div>',
-      cta('Begin')
+      cta('Drop the needle')
     );
-    onCta(next);
+    var dropped = false;
+    function drop() {
+      if (dropped) { next(); return; }
+      dropped = true;
+      var h = host.querySelector('.onb-hero2'); if (h) h.classList.add('playing');
+      if (window.buzz) buzz('good');
+      var t = el('onb-tag'); if (t) t.innerHTML = 'Rate records. Play games.<br>Find out what your taste says about you.';
+      var b = el('onb-go'); if (b) b.textContent = 'Let\u2019s go';
+      var d = el('onb-deck'); if (d && window.burst) try { burst(d, { count: 18, spread: 110 }); } catch (e) {}
+    }
+    var deck = el('onb-deck'); if (deck) deck.addEventListener('click', drop);
+    onCta(drop);
   }
 
   /* A named record out of the static pool, so the artwork is the one the
@@ -39664,11 +39779,13 @@ window.track = function (name, props) {
      daily unplayed, which is a real one to come back to. */
   function game() {
     var before = discs();
-    show('<h2 class="onb-h">Recall is open.</h2>', cta('Play a round'));
-    try {
-      celebrate('Recall', 'One second of a record.',
-        { eyebrow: 'Arcade game unlocked', accent: 'var(--c-blue)' });
-    } catch (e) {}
+    show(
+      '<div class="onb-kicker">Arcade · Recall</div>' +
+      '<h2 class="onb-h">Name it in one second.</h2>' +
+      '<div class="onb-ladder" aria-hidden="true"><i>1s<b>1,000</b></i><i>3s<b>750</b></i><i>5s<b>500</b></i><i>10s<b>250</b></i></div>' +
+      '<p class="onb-sub">One song. The sooner you name it, the more it\u2019s worth \u2014 and it goes straight on the leaderboard.</p>',
+      cta('I\u2019m ready'));
+    window.RecallLast = null;
     onCta(function () {
       if (!window.openRecall) { afterGame(before); return; }
       var m = el('recall-modal');
@@ -39686,18 +39803,52 @@ window.track = function (name, props) {
     });
   }
 
+  /* THE PAYOFF IS THEIR SCORE, ITS PLACE AND WHAT IT PAID — all three real.
+     The score is Recall's own (window.RecallLast, set when the run files), the
+     place is the Endless board's answer from game_finish (the tutorial round
+     is an Endless run of one song, see boardMode), and the Discs are the
+     balance read back after the award. Nothing here is computed for show. */
+  var VERDICT = { 1000: ['One second.', 'That is a real ear.'], 750: ['Three seconds.', 'Sharp.'],
+                  500: ['Five seconds.', 'Solid start.'], 250: ['Ten seconds.', 'Got there.'] };
   async function afterGame(before) {
+    var last = window.RecallLast || null, sc = (last && last.score) || 0, got = !!(last && last.songs);
+    var v = VERDICT[sc] || (got ? ['Nailed it.', ''] : ['Not this time.', 'It comes round again \u2014 the daily is waiting in the Arcade.']);
+    show(
+      '<div class="onb-result' + (got ? ' won' : '') + '">' +
+        '<div class="onb-kicker">Your first Recall</div>' +
+        '<div class="onb-big"><b id="onb-sc">0</b><small>points</small></div>' +
+        '<h2 class="onb-h">' + esc(v[0]) + '</h2>' + (v[1] ? '<p class="onb-sub">' + esc(v[1]) + '</p>' : '') +
+        '<div class="onb-rank" id="onb-rank"><span class="onb-rank-t ld-line">Finding your place on the board\u2026</span></div>' +
+        '<div class="onb-wallet onb-wallet-sm"><b id="onb-tick">' + discs().toLocaleString('en-GB') + '</b><span>' + ICONS.coin + ' Discs</span></div>' +
+      '</div>',
+      cta('Spend them'));
+    var scEl = el('onb-sc');
+    if (window.Play && Play.count) Play.count(scEl, 0, sc, 900); else if (scEl) scEl.textContent = sc.toLocaleString('en-GB');
+    if (window.buzz) buzz(got ? 'big' : 'tap');
+    if (got && window.burst) setTimeout(function () { try { burst(scEl, { count: sc >= 750 ? 60 : 30, spread: 160 }); } catch (e) {} }, 650);
+    onCta(next);
     // The balance is the truth. Re-read rather than assuming a win.
     try { if (window.Wallet && Wallet.refresh) await Wallet.refresh(); } catch (e) {}
     var now = discs(), gained = Math.max(0, now - before);
-    show(
-      '<div class="onb-wallet"><b id="onb-tick">0</b><span>' + ICONS.coin + '</span></div>',
-      cta('Spend them')
-    );
     tick(el('onb-tick'), Math.max(0, now - gained), now, 1100);
-    if (gained && window.burst) try { burst(el('onb-tick'), { count: 24, spread: 120 }); } catch (e) {}
-    if (window.buzz) buzz('big');
-    onCta(next);
+    // The board answers when game_finish does; a dead network just says so.
+    var res = null;
+    try { res = await Promise.race([Promise.resolve(last && last.board), new Promise(function (r) { setTimeout(r, 5000); })]); } catch (e) {}
+    var rk = el('onb-rank'); if (!rk) return;
+    if (res && res.rank && !res.error) {
+      var pct = res.total ? Math.max(1, Math.round(100 * res.rank / res.total)) : 0;
+      rk.innerHTML = '<span class="onb-rank-n">#' + Number(res.rank).toLocaleString('en-GB') + '</span>' +
+        '<span class="onb-rank-t">of ' + Number(res.total).toLocaleString('en-GB') + ' on the Recall board' +
+        (pct && pct <= 50 ? ' \u00b7 top ' + pct + '%' : '') + '</span>';
+      rk.classList.add('in');
+      if (window.buzz) buzz('good');
+      S.recall = { score: sc, rank: res.rank, total: res.total }; save();
+    } else if (got) {
+      rk.innerHTML = '<span class="onb-rank-t">Your score is in. The board will catch up.</span>';
+      S.recall = { score: sc }; save();
+    } else {
+      rk.innerHTML = '<span class="onb-rank-t">No score to rank this time.</span>';
+    }
   }
 
   /* A counter that lands on the real number. The Wallet has one of these but
@@ -39793,8 +39944,40 @@ window.track = function (name, props) {
   }
 
   /* ---- the driver ------------------------------------------------------ */
+  /* ---- 7. you are in ----------------------------------------------------
+     A recap of what they actually did in the last few minutes — every figure
+     read back from the real stores — then three doors, so the end of the
+     tutorial is an invitation rather than a dismissal. */
+  function finale() {
+    var r = S.recall || {};
+    var stats = [
+      [ratedCount(), ratedCount() === 1 ? 'record rated' : 'records rated'],
+      [r.score || 0, r.rank ? 'Recall \u00b7 #' + Number(r.rank).toLocaleString('en-GB') : 'Recall points'],
+      [discs(), 'Discs']
+    ];
+    show(
+      '<div class="onb-fin">' +
+        '<div class="onb-kicker">You\u2019re in' + (S.username ? ', ' + esc(S.username) : '') + '</div>' +
+        '<h2 class="onb-h">That\u2019s the loop.</h2>' +
+        '<div class="onb-fin-stats">' + stats.map(function (x, i) {
+          return '<div style="--i:' + i + '"><b data-to="' + x[0] + '">0</b><span>' + esc(x[1]) + '</span></div>';
+        }).join('') + '</div>' +
+        '<div class="onb-doors">' +
+          '<button class="onb-door" data-door="foryou" style="--d:var(--c-pink)"><b>For You</b><span>Thirty seconds, then a score.</span></button>' +
+          '<button class="onb-door" data-door="games" style="--d:var(--c-violet)"><b>Arcade</b><span>Today\u2019s daily games.</span></button>' +
+          '<button class="onb-door" data-door="home" style="--d:var(--c-cyan)"><b>Today</b><span>A few small questions.</span></button>' +
+        '</div>' +
+      '</div>', cta('Start using VINALL'));
+    host.querySelectorAll('[data-to]').forEach(function (b, i) { setTimeout(function () { tick(b, 0, +b.dataset.to || 0, 800); }, 200 + i * 160); });
+    if (window.buzz) buzz('big');
+    var fin = host.querySelector('.onb-fin');
+    if (fin && window.burst) setTimeout(function () { try { burst(fin, { count: 70, spread: 220 }); } catch (e) {} }, 500);
+    host.querySelectorAll('[data-door]').forEach(function (b) { b.addEventListener('click', function () { finish(false, b.dataset.door); }); });
+    onCta(function () { finish(false); });
+  }
+
   var DRAW = { welcome: welcome, username: username, first: first,
-               artists: artists, albums: albums, game: game, shop: shop };
+               artists: artists, albums: albums, game: game, shop: shop, finale: finale };
   function draw() {
     var name = STEPS[S.step];
     if (!name) { finish(false); return; }
@@ -39811,7 +39994,7 @@ window.track = function (name, props) {
     catch (e) { bail(e); }
   }
 
-  function finish(skipped) {
+  function finish(skipped, door) {
     S.done = true; S.skipped = !!skipped; save();
     var o = el('onb');
     if (o) o.classList.remove('open');
@@ -39820,8 +40003,9 @@ window.track = function (name, props) {
       renderStats(); renderAlbums(); renderSongs();
       if (window.renderProfile) renderProfile();
       if (window.renderGameBests) renderGameBests();
-      if (window.goToView) goToView('home');
+      if (window.goToView) goToView(door || 'home');
     } catch (e) {}
+    try { window.dispatchEvent(new Event('vinall:onboarded')); } catch (e) {}
   }
 
   function open() {
@@ -41418,8 +41602,8 @@ window.track = function (name, props) {
 
 </body>
 <script src="/assets/interactions.js?v=3"></script>
-<script src="/assets/replay.js?v=2"></script>
-<script src="/assets/you.js?v=2"></script>
+<script src="/assets/replay.js?v=3"></script>
+<script src="/assets/you.js?v=6"></script>
 <script src="/assets/glow.js?v=3"></script>
 <script src="/assets/comments.js?v=2" defer></script>
 <script src="/assets/boards.js?v=2"></script>
@@ -41428,4 +41612,5 @@ window.track = function (name, props) {
 <script src="/assets/passport-core.js?v=1"></script>
 <script src="/assets/passport.js?v=1"></script>
 <script src="/assets/safety.js?v=1"></script>
+<script src="/assets/discover.js?v=1"></script>
 </html>
