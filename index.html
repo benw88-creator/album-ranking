@@ -16428,8 +16428,9 @@ const Cloud=(function(){
     await flushRatingDeletes();
     if(!isOn()||user.id!==uid)return;
     if(!await pullRatingDeletions())return;
-    let rows=[];try{const res=await sb.from('app_state').select('key,value').eq('user_id',uid);if(res.error||!isOn()||user.id!==uid)return;rows=res.data||[];}catch(e){return;}
+    let rows=[];try{const res=await sb.from('app_state').select('key,value,updated_at').eq('user_id',uid);if(res.error||!isOn()||user.id!==uid)return;rows=res.data||[];}catch(e){return;}
     const cloud={};rows.forEach(function(r){cloud[r.key]=r.value;});
+    seenReset(uid);rows.forEach(function(r){_seen[r.key]=Date.parse(r.updated_at);try{_cloudJson[r.key]=JSON.stringify(r.value);}catch(e){}});
     const deleted=lsGet(RATING_DELETIONS_KEY)||{};
     const mAlb=applyRatingDeletions(mergeItemMap(lsGet('crate_albums_v1')||{},cloud['crate_albums_v1']||{}),'album',deleted);
     const mSng=applyRatingDeletions(mergeItemMap(lsGet('crate_songs_v1')||{},cloud['crate_songs_v1']||{}),'song',deleted);
@@ -16543,7 +16544,28 @@ const Cloud=(function(){
     if((key==='crate_albums_v1'||key==='crate_songs_v1')&&!await flushRatingDeletes())return;
     if(!isOn()||user.id!==uid)return;
     const value=lsGet(key);if(value===null)return;
-    try{await sb.from('app_state').upsert({user_id:uid,key:key,value:value,updated_at:new Date().toISOString()});}catch(e){}
+    const at=new Date().toISOString();
+    try{const r=await sb.from('app_state').upsert({user_id:uid,key:key,value:value,updated_at:at});
+      if(!r.error&&user&&user.id===uid){seenReset(uid);_seen[key]=Date.parse(at);try{_cloudJson[key]=JSON.stringify(value);}catch(e){}}}catch(e){}
+  }
+  /* What the cloud held last time we looked, so a tab coming back to the front
+     can ask "did anything change?" (key + updated_at, ~1KB) instead of
+     re-downloading every blob (25-300KB). Our own successful pushes update it,
+     so they do not count as a change. */
+  let _seen={},_cloudJson={},_seenUid=null;
+  function seenReset(uid){if(_seenUid!==uid){_seen={};_cloudJson={};_seenUid=uid;}}
+  async function cloudUnchanged(){
+    const uid=user&&user.id;if(!uid||_seenUid!==uid||!Object.keys(_seen).length)return false;
+    try{
+      const res=await sb.from('app_state').select('key,updated_at').eq('user_id',uid);
+      if(res.error||!res.data)return false;
+      if(res.data.length!==Object.keys(_seen).length)return false;
+      return res.data.every(function(r){return _seen[r.key]===Date.parse(r.updated_at);});
+    }catch(e){return false;}
+  }
+  // Local edits whose push failed (offline) still go up, without a download.
+  function pushLocalDiffs(){
+    SYNC_KEYS.forEach(function(k){const v=lsGet(k);if(v===null)return;let s;try{s=JSON.stringify(v);}catch(e){return;}if(s!==_cloudJson[k])pushKey(k);});
   }
   // Seventeen small upserts have no reason to queue behind each other.
   async function pushAll(){await Promise.all(SYNC_KEYS.map(pushKey));}
@@ -16559,7 +16581,10 @@ const Cloud=(function(){
     if (document.hidden || !isOn()) return;
     if (Date.now() - _lastMerge < 60000) return;
     _lastMerge = Date.now();
-    pullAndMerge().then(function () {
+    cloudUnchanged().then(function (same) {
+      if (same) { pushLocalDiffs(); return; }
+      return pullAndMerge();
+    }).then(function () {
       try {
         if (window.renderStats) renderStats();
         if (window.renderAlbums) renderAlbums();

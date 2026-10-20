@@ -1,5 +1,20 @@
 # VINALL launch technical fixes
 
+## Sixth pass: free-tier efficiency and write limits (2026-10-20)
+
+- **Tab return no longer re-downloads the account.** `pullAndMerge` ran on every return to
+  the tab (at most once a minute) and fetched every `app_state` blob (25KB typical, 300KB
+  heavy). It now asks `key, updated_at` first (~1KB) and only pulls when another device
+  changed something; local edits whose push failed still go up without a download. Our
+  own pushes record their timestamp, so they do not count as a change. Test:
+  `launch-sync.spec.mjs` "tab return probes timestamps".
+- **`20261020120000_write_limits.sql` applied and recorded.** Daily new-row caps on ten
+  client-writable tables, size checks on `app_state` (2MB, 100 keys), `ratings.data`,
+  `lists.items`, `analytics_events.props`, a 120,000-row ceiling and date range on
+  `listening_days_put`, and crash reports capped at 120 a minute globally and trimmed.
+  Every limit sits far above the busiest real use measured the same day. Verified in a
+  rolled-back production transaction first.
+
 ## Fifth pass: ratings cap, Spotify removed, live moderation test (2026-10-20)
 
 - **Live moderation test passed on production** (rolled-back transaction, synthetic

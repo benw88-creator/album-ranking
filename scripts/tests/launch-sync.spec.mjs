@@ -61,3 +61,42 @@ test('authenticated deletion survives a stale-device reload, an offline retry an
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('crate_rating_delete_pending_v1')))).toEqual({});
   expect(rows['100']).toBeUndefined();
 });
+
+// Returning to the tab asks only whether anything changed (key + updated_at)
+// and downloads nothing when it has not; a change made elsewhere is pulled.
+test('tab return probes timestamps and skips the download when the cloud is unchanged', async ({page}) => {
+  const uid='11111111-1111-4111-8111-111111111111',now=Date.now();
+  const user={id:uid,email:'fixture@example.test',aud:'authenticated',role:'authenticated',app_metadata:{},user_metadata:{},created_at:new Date().toISOString()};
+  const token=[Buffer.from(JSON.stringify({alg:'none',typ:'JWT'})).toString('base64url'),Buffer.from(JSON.stringify({sub:uid,role:'authenticated',aud:'authenticated',exp:Math.floor(now/1000)+3600})).toString('base64url'),'fixture'].join('.');
+  const rating={id:'100',name:'Record 100',artist:'Test Artist',score:85,ratedAt:now-60000,savedAt:now-60000};
+  const store={crate_albums_v1:{value:{100:rating},updated_at:'2026-10-20T10:00:00.123456+00:00'}};const seen={full:0,probe:0};
+  await page.addInitScript(({user,token,rating})=>{
+    localStorage.setItem('sb-cqfxyebejpkyhswolrwi-auth-token',JSON.stringify({access_token:token,refresh_token:'fixture-refresh',token_type:'bearer',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,user}));
+    localStorage.setItem('crate_albums_v1',JSON.stringify({100:rating}));
+    localStorage.setItem('crate_onboard_v1',JSON.stringify({done:true,step:5}));
+  },{user,token,rating});
+  await page.route('**/auth/v1/user',route=>route.fulfill({json:user}));
+  await page.route('**/rest/v1/**',route=>{
+    const req=route.request(),url=new URL(req.url()),name=url.pathname.split('/').pop();
+    const single=(req.headers().accept||'').includes('object+json');
+    if(name==='profiles'){const p={id:uid,username:'Fixture',is_admin:false,discs:1000,owned_themes:['classic'],ratings_visibility:'public'};return route.fulfill({json:single?p:[p]});}
+    if(name==='app_state'&&req.method()==='GET'){
+      const sel=url.searchParams.get('select')||'';
+      if(sel.includes('value')){seen.full++;return route.fulfill({json:Object.entries(store).map(([key,r])=>({key,value:r.value,updated_at:r.updated_at}))});}
+      seen.probe++;return route.fulfill({json:Object.entries(store).map(([key,r])=>({key,updated_at:r.updated_at}))});
+    }
+    if(name==='app_state'){const b=req.postDataJSON();for(const row of Array.isArray(b)?b:[b])store[row.key]={value:row.value,updated_at:row.updated_at.replace('Z','000+00:00')};return route.fulfill({json:{}});}
+    if(name==='rating_deletions')return route.fulfill({json:[]});
+    return route.fulfill({json:[]});
+  });
+  await start(page);
+  await page.evaluate(()=>Cloud.ready);
+  await expect.poll(()=>seen.full).toBeGreaterThan(0);
+  await page.waitForTimeout(800);
+  const before=seen.full;
+  const back=()=>page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>false});document.dispatchEvent(new Event('visibilitychange'));});
+  await back();
+  await expect.poll(()=>seen.probe).toBeGreaterThan(0);
+  await page.waitForTimeout(400);
+  expect(seen.full).toBe(before);
+});
