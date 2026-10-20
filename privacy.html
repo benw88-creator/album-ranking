@@ -1,10 +1,9 @@
 <!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8">
-<link href="/assets/fonts/fonts.css" rel="stylesheet">
-
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="index, follow">
+<meta name="color-scheme" content="dark">
 <title>VINALL — Privacy Policy</title>
 <meta name="description" content="How VINALL stores your data, who can see it, and how to delete it.">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png?v=2">
@@ -14,358 +13,107 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/browser-192.png?v=2">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=2">
 <style>
-  /* A legal document, set like one.
-
-     The old pages were the app's colours with headings in them. What makes a
-     policy read as serious is not decoration, it is the apparatus around the
-     text: a masthead that says which document this is and which version, a
-     contents list you can jump from, numbered sections you can cite, a clear
-     measure, and a footer that says who is responsible. That is what Apple's
-     and Spotify's pages do and it is all this does too.
-
-     Deliberately quieter than the app: one accent, used for links and section
-     numerals and nothing else. */
-  :root {
-    --bg:#0a0908; --surface:#131210; --surface-2:#1a1816;
-    --text:#f0ede8; --body:#cfcbc4; --dim:#8a8680; --faint:#5d5a56;
-    --gold:#F5C842; --border:rgba(255,245,235,0.09); --border-2:rgba(255,245,235,0.16);
-  }
+  /* Set like a native legal screen: system type at reading size, plain
+     headings, no ornament. Shared verbatim with terms.html. */
+  :root { --bg:#0a0908; --bar:rgba(10,9,8,.86); --text:#f0ede8; --body:#bdb9b2; --dim:#7d7974; --line:rgba(255,245,235,.1); --seg:rgba(255,245,235,.07); --link:#e9c35a; }
   * { box-sizing:border-box; margin:0; padding:0; }
-  html { -webkit-text-size-adjust:100%; scroll-behavior:smooth; }
-  body {
-    background:var(--bg); color:var(--body);
-    font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
-    line-height:1.7; font-size:16px;
-    -webkit-font-smoothing:antialiased;
+  html { -webkit-text-size-adjust:100%; }
+  body { background:var(--bg); color:var(--body); font:14px/1.5 -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', sans-serif; -webkit-font-smoothing:antialiased; }
+  .bar {
+    position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between;
+    padding:env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
+    background:var(--bar); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-bottom:.5px solid var(--line);
   }
-  ::selection { background:rgba(245,200,66,0.22); }
-
-  /* ---- masthead ---- */
-  .doc-top {
-    position:sticky; top:0; z-index:5;
-    display:flex; align-items:center; gap:14px;
-    /* THE TOP INSET IS THE WHOLE FIX. The left and right insets were here and
-       the top one was not, so on a notched phone — and inside the app, which
-       sets viewport-fit=cover — this bar sat UNDER the status bar and the
-       Dynamic Island. Back to the app and the Privacy/Terms switch were both
-       up there, half-covered and hard to hit.
-
-       max(), not a bare env(): a phone with no inset keeps the normal 14px
-       rather than collapsing to zero. Same rule as the app's own safe-area
-       block, which learned it the same way. */
-    padding:max(14px, calc(env(safe-area-inset-top) + 10px))
-            max(18px, env(safe-area-inset-right))
-            14px
-            max(18px, env(safe-area-inset-left));
-    background:rgba(10,9,8,0.82); backdrop-filter:blur(14px);
-    border-bottom:1px solid var(--border);
-  }
-  .doc-top a.home {
-    /* 44px of height, which is Apple's floor and which neither of these
-       controls had: they were text links at their line height. */
-    display:flex; align-items:center; gap:9px; min-height:44px;
-    color:var(--text); text-decoration:none;
-    font-weight:800; letter-spacing:.14em; font-size:13px; text-transform:uppercase;
-  }
-  .doc-top .disc {
-    width:19px; height:19px; border-radius:50%; flex-shrink:0;
-    background:radial-gradient(circle at 38% 32%, #2b2620 0%, #131110 55%, #090807 100%);
-    box-shadow:inset 0 0 0 1px rgba(245,200,66,0.5);
-    position:relative;
-  }
-  .doc-top .disc::after {
-    content:''; position:absolute; inset:42%; border-radius:50%; background:var(--gold);
-  }
-  .doc-top a.home .back-arrow { font-size:15px; margin-right:2px; color:var(--text-2); transition:transform .2s; }
-  .doc-top a.home:hover .back-arrow { transform:translateX(-3px); }
-  .doc-top nav { margin-left:auto; display:flex; gap:4px; }
-  .doc-top nav { display:flex; gap:4px; }
-  .doc-top nav a {
-    color:var(--dim); text-decoration:none; font-size:12.5px; font-weight:600;
-    /* 6px of vertical padding on a 12.5px link is a 30px target. These are the
-       only two controls on the page and one of them is the way back to the
-       app, so they get the 44 that a thumb needs. */
-    padding:0 13px; min-height:44px; display:inline-flex; align-items:center;
-    border-radius:999px; border:1px solid transparent;
-  }
-  .doc-top nav a[aria-current="page"] { color:var(--text); border-color:var(--border-2); background:var(--surface); }
-  .doc-top nav a:hover { color:var(--text); }
-
-  .wrap { max-width:720px; margin:0 auto; padding:52px max(20px, env(safe-area-inset-left)) 96px; }
-
-  /* ---- title block ---- */
-  .doc-kicker {
-    font:700 11px/1 'IBM Plex Mono',ui-monospace,monospace; letter-spacing:.2em;
-    text-transform:uppercase; color:var(--gold); margin-bottom:16px;
-  }
-  h1 { font-size:clamp(30px,7vw,42px); line-height:1.1; letter-spacing:-0.03em; color:var(--text); font-weight:800; }
-  .doc-meta {
-    display:flex; flex-wrap:wrap; gap:8px 22px; margin-top:20px; padding-bottom:28px;
-    border-bottom:1px solid var(--border);
-    font:11.5px/1.5 'IBM Plex Mono',ui-monospace,monospace; color:var(--faint);
-    letter-spacing:.04em; text-transform:uppercase;
-  }
-  .doc-meta b { color:var(--dim); font-weight:600; }
-  .lede { font-size:17.5px; line-height:1.65; color:var(--text); margin:30px 0 8px; }
-
-  /* ---- contents ---- */
-  .toc { margin:34px 0 8px; padding:20px 22px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
-  /* The contents list is not a numbered section and its items are not bullets.
-     Both of those rules are global further down and both leaked in here: the
-     heading picked up a section numeral it has no business having, and every
-     entry grew a dash in front of its own number. */
-  .toc h2 {
-    font:700 10.5px/1 'IBM Plex Mono',ui-monospace,monospace; letter-spacing:.2em;
-    text-transform:uppercase; color:var(--faint); margin:0 0 14px; border:0; padding:0;
-    display:block;
-  }
-  .toc h2::before { content:none; }
-  .toc li { padding-left:0; }
-  .toc li::before { content:none; }
-  .toc ol { list-style:none; counter-reset:toc; display:grid; gap:2px; }
-  .toc li { counter-increment:toc; }
-  .toc a {
-    display:flex; gap:12px; padding:5px 0; color:var(--body); text-decoration:none; font-size:14.5px;
-  }
-  .toc a::before {
-    content:counter(toc,decimal-leading-zero);
-    font:600 12px/1.6 'IBM Plex Mono',ui-monospace,monospace; color:var(--faint); flex-shrink:0;
-  }
-  .toc a:hover { color:var(--gold); }
-
-  /* ---- sections ---- */
-  section { counter-increment:sec; margin-top:46px; scroll-margin-top:72px; }
-  body { counter-reset:sec; }
-  h2 {
-    font-size:20px; line-height:1.3; letter-spacing:-0.015em; color:var(--text); font-weight:700;
-    padding-bottom:12px; border-bottom:1px solid var(--border); margin-bottom:16px;
-    display:flex; gap:13px; align-items:baseline;
-  }
-  h2::before {
-    content:counter(sec,decimal-leading-zero);
-    font:600 12px/1 'IBM Plex Mono',ui-monospace,monospace; color:var(--gold);
-    flex-shrink:0; position:relative; top:-1px;
-  }
-  p + p, ul + p, p + ul, p + .box, ul + .box, .box + p { margin-top:14px; }
-  ul { padding-left:0; list-style:none; display:grid; gap:10px; margin-top:6px; }
-  li { padding-left:20px; position:relative; }
-  li::before { content:''; position:absolute; left:4px; top:11px; width:5px; height:1px; background:var(--faint); }
-  b, strong { color:var(--text); font-weight:600; }
-  a { color:var(--gold); text-decoration:none; border-bottom:1px solid rgba(245,200,66,0.32); }
-  a:hover { border-bottom-color:var(--gold); }
-
-  .box {
-    background:var(--surface-2); border:1px solid var(--border-2); border-left:2px solid var(--gold);
-    border-radius:0 12px 12px 0; padding:16px 20px; margin:20px 0;
-  }
-  .box .lbl {
-    display:block; font:700 10px/1 'IBM Plex Mono',ui-monospace,monospace; letter-spacing:.18em;
-    text-transform:uppercase; color:var(--gold); margin-bottom:9px;
-  }
-
-  /* A definition-style pair, for the "what is stored" kind of list where the
-     term matters as much as the description. */
-  .defs { display:grid; gap:0; margin-top:8px; }
-  .defs > div { display:grid; grid-template-columns:200px 1fr; gap:6px 24px; padding:14px 0; border-top:1px solid var(--border); }
-  .defs > div:last-child { border-bottom:1px solid var(--border); }
-  .defs dt, .defs .t { color:var(--text); font-weight:600; font-size:14.5px; }
-  .defs dd, .defs .d { font-size:15px; }
-  @media (max-width:620px) { .defs > div { grid-template-columns:1fr; gap:4px; } }
-
-  /* ---- footer ---- */
-  footer {
-    margin-top:64px; padding-top:26px; border-top:1px solid var(--border);
-    font-size:13.5px; color:var(--dim);
-  }
-  footer .row { display:flex; flex-wrap:wrap; gap:8px 24px; align-items:baseline; }
-  footer .sep { color:var(--faint); }
-  footer p { margin-top:12px; }
-
+  .bar .back { display:flex; align-items:center; gap:2px; min-height:44px; padding:0 8px; color:var(--link); font-size:15px; text-decoration:none; }
+  .bar .back svg { width:11px; height:18px; }
+  .seg { display:flex; padding:2px; border-radius:8px; background:var(--seg); margin-right:8px; }
+  .seg a { min-width:72px; padding:5px 10px; border-radius:6px; text-align:center; font-size:12.5px; font-weight:500; color:var(--dim); text-decoration:none; }
+  .seg a[aria-current="page"] { background:rgba(255,245,235,.14); color:var(--text); }
+  main { max-width:640px; margin:0 auto; padding:24px max(20px, env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+  h1 { font-size:22px; line-height:1.25; font-weight:700; color:var(--text); letter-spacing:-.01em; }
+  .meta { margin:4px 0 16px; font-size:12px; color:var(--dim); }
+  h2 { margin:24px 0 6px; font-size:15px; line-height:1.35; font-weight:600; color:var(--text); }
+  p + p, p + ul, ul + p { margin-top:8px; }
+  ul { padding-left:18px; }
+  li + li { margin-top:4px; }
+  b { color:var(--text); font-weight:600; }
+  a { color:var(--link); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  footer { margin-top:32px; padding-top:12px; border-top:.5px solid var(--line); font-size:12px; color:var(--dim); }
   @media print {
-    .doc-top, .toc { display:none; }
-    body { background:#fff; color:#111; }
-    h1, h2, b, strong, .defs .t { color:#000; }
-    a { color:#000; border:0; }
-    h2::before, .doc-kicker { color:#555; }
-    .box { border:1px solid #999; background:none; }
+    .bar { display:none; }
+    body { background:#fff; color:#222; } h1, h2, b { color:#000; } a { color:#000; } .meta, footer { color:#555; }
   }
-
 </style></head>
 <body>
-<header class="doc-top">
-  <a class="home" href="/" data-back aria-label="Back to VINALL"><span class="back-arrow" aria-hidden="true">&larr;</span><span class="disc"></span>Back to VINALL</a>
-  <nav>
+<header class="bar">
+  <a class="back" href="/" data-back aria-label="Back to VINALL"><svg viewBox="0 0 11 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2 2 9l7 7"/></svg>VINALL</a>
+  <nav class="seg" aria-label="Legal documents">
     <a href="/privacy.html" aria-current="page">Privacy</a>
     <a href="/terms.html">Terms</a>
   </nav>
 </header>
-<div class="wrap">
-<div class="doc-kicker">VINALL &middot; Legal</div>
+<main>
 <h1>Privacy Policy</h1>
-<div class="doc-meta">
-  <span><b>Effective</b> 15 October 2026</span>
-  <span><b>Version</b> 1.6</span>
-  <span><b>Applies to</b> vinall.xyz and the VINALL app</span>
-</div>
+<p class="meta">Effective 20 October 2026 · Version 1.7</p>
 
-<p class="lede">VINALL is an independent app for rating and remembering music, operated by Excus Ltd, which is the data controller for the personal data described here. This policy covers
-what it stores, who can see it, and how to delete it. VINALL has no advertising, and your data is
-never sold or shared for marketing.</p>
+<p>This policy covers the VINALL app and vinall.xyz. VINALL is operated by Excus Ltd, the data controller for the personal data described here. We do not show advertising, and we never sell your data or share it for marketing.</p>
 
-<nav class="toc" aria-label="Contents">
-  <h2>Contents</h2>
-  <ol>
-    <li><a href="#s1">What is stored</a></li>
-    <li><a href="#s2">Stored on your device</a></li>
-    <li><a href="#s3">What other people can see</a></li>
-    <li><a href="#s4">Other services</a></li>
-    <li><a href="#s5">Deleting everything</a></li>
-    <li><a href="#s6">Age</a></li>
-    <li><a href="#s7">How long it is kept</a></li>
-    <li><a href="#s8">Why we are allowed to store it</a></li>
-    <li><a href="#s9">Where it is held</a></li>
-    <li><a href="#s10">Your rights</a></li>
-    <li><a href="#s11">Changes to this policy</a></li>
-    <li><a href="#s12">Contact</a></li>
-  </ol>
-</nav>
-
-<section id="s1"><h2>What is stored</h2>
-<div class="defs">
-  <div><span class="t">Your account</span><span class="d">The email address you sign up with, and an encrypted password. Handled by Supabase Auth; we never see your password. If you sign in with Apple or Google instead, we receive the email address (or Apple&rsquo;s private relay address) and the name they share, and no password.</span></div>
-  <div><span class="t">Your music</span><span class="d">The albums and songs you rate, your scores, notes, lists and diary entries.</span></div>
-  <div><span class="t">Your lore</span><span class="d">The answers you tap on Today, plus any optional note you add.</span></div>
-  <div><span class="t">Your profile</span><span class="d">Username, avatar, bio, and anything else you choose to fill in.</span></div>
-  <div><span class="t">Imported listening history</span><span class="d">Optional. If you upload your own Spotify data, VINALL stores how many times you played each track and for how long, both in total and per day, so Replay can show what you played in a given week, month or year. <b>Individual plays are added up in your browser and never uploaded</b>; only those totals are stored. Nobody else can see them, and you can remove them from your profile without affecting anything else.</span></div>
-  <div><span class="t">Imported library</span><span class="d">If you import your Spotify library, the songs, albums and playlists you choose become ratings, lists or a shortlist in VINALL. To match them to the catalogue, each track's title, artist and Spotify link are sent to VINALL's server; matches are cached without anything that identifies you.</span></div>
-  <div><span class="t">Usage events</span><span class="d">Which questions were shown, answered or skipped, so we can tell whether the app is any good. These are tied to your account but contain no message content.</span></div>
-  <div><span class="t">Crash reports</span><span class="d">If something breaks, the error message and page address are recorded so it can be fixed.</span></div>
-  <div><span class="t">Notifications</span><span class="d">Only if you switch them on. On the website, turning on notifications stores the address your browser gives us for delivering them; the message is encrypted and passed through your browser&rsquo;s own push service (Apple, Google, Microsoft or Mozilla, depending on the browser), which cannot read it. Turning them off, or logging out, deletes that address. In the app, reminders are scheduled on your phone itself and nothing is stored with us.</span></div>
-  <div><span class="t">Blocks and reports</span><span class="d">If you block someone, we store the fact that you blocked them. If you report something, we store what you reported, why, and who you are, so it can be reviewed. The person you block or report is never told who did it.</span></div>
-</div>
-</section>
-
-<section id="s2"><h2>Stored on your device</h2>
-<p>VINALL keeps a working copy of your ratings, diary entries, game progress and Replay summaries
-in your browser&rsquo;s storage, so the app is fast and works when the connection drops. It also
-stores your login session and the theme you have equipped. None of this is a tracking cookie
-and none of it is shared with anyone. Clearing your browser data for this site removes all of it;
-anything already synced to your account comes back when you sign in.</p>
-</section>
-
-<section id="s3"><h2>What other people can see</h2>
-<p>VINALL is partly social, so some of this is public by design.</p>
+<h2>What we collect</h2>
 <ul>
-  <li><b>Public</b> &mdash; your username, avatar, bio, ratings (unless you choose Friends or Just me), lists, lore answers you have not marked private, comments, Community Choice picks, who you follow and who follows you, Groove memberships, and game leaderboard scores.</li>
-  <li><b>Private</b> &mdash; your email address, your usage events, any listening history you imported, and anything you mark private.</li>
+  <li><b>Account.</b> Your email address and an encrypted password, handled by Supabase Auth; we never see the password. If you sign in with Apple or Google, we receive the email address (or Apple’s private relay address) and the name they share, and no password.</li>
+  <li><b>Your music and profile.</b> The albums and songs you rate, with scores, notes, lists, diary entries, the answers you give on Today, comments and Community Choice picks. Your username, avatar, bio and anything else you add to your profile.</li>
+  <li><b>Age group.</b> Under 13, 13–17 or 18 and over. We never store your date of birth.</li>
+  <li><b>Spotify imports</b> (optional). If you upload your Spotify data, your browser adds up your plays and we store only how many times and for how long you played each track, in total and per day, for Replay. Individual plays are never uploaded, and nobody else can see these totals. To match an imported library, each track’s title, artist and Spotify link are sent to our server; matches are cached without anything that identifies you.</li>
+  <li><b>Usage events and crash reports.</b> Which questions were shown, answered or skipped (linked to your account, with no message content), and the error message and page address when something breaks.</li>
+  <li><b>Notifications</b> (only if you turn them on). On the website we store the address your browser provides for delivery; messages are encrypted and passed through your browser’s push service (Apple, Google, Microsoft or Mozilla), which cannot read them. Turning notifications off or logging out deletes that address. App reminders are scheduled on your phone and nothing is stored with us.</li>
+  <li><b>Blocks and reports.</b> Who you block, and what you report, why and who you are, so it can be reviewed. The other person is never told who blocked or reported them.</li>
 </ul>
-<p>Your ratings visibility can be changed at any time on your profile. <b>Just me</b> and <b>Friends</b>
-(people you follow who follow you back) also keep your scores and notes out of the public Crate feed
-and album reviews, and switching away from <b>Anyone</b> removes what you had already posted there.</p>
-</section>
+<p>The app also keeps a working copy of your ratings, diary, game progress and Replay summaries on your device, along with your login session and theme, so it is fast and works offline. These are not tracking cookies and are not shared. Clearing the app’s or site’s data removes them; anything synced to your account returns when you sign in.</p>
 
-<section id="s4"><h2>Other services</h2>
-<div class="defs">
-  <div><span class="t">Supabase</span><span class="d">Stores the database and handles logins. EU region (eu-west-1).</span></div>
-  <div><span class="t">Vercel</span><span class="d">Hosts the site.</span></div>
-  <div><span class="t">Deezer</span><span class="d">Provides album artwork, track listings, catalogue information and the 30-second preview clips VINALL plays. When you search, or open an album page, the words you searched for and the album and artist names are sent to Deezer so it can answer. Nothing that identifies you is sent with them, and browsing VINALL does not tell Deezer who you are.</span></div>
-  <div><span class="t">YouTube</span><span class="d">Plays Community Choice moments, through YouTube&rsquo;s own embedded player (youtube.com). Nothing loads from YouTube until you agree to it, which we ask the first time a pick would play from YouTube (you can say no and keep the Deezer preview); once a video plays, YouTube&rsquo;s own privacy policy applies to that player. When you pick a moment, the song and artist name are sent to YouTube to find the video, with nothing that identifies you.</span></div>
-  <div><span class="t">Apple</span><span class="d">Provides a small number of preview clips and cover images where Deezer has none. The same applies: album and artist names only, nothing that identifies you.</span></div>
-  <div><span class="t">Wikidata and MusicBrainz</span><span class="d">Used to find which public streaming-chart page belongs to an artist, for the Bid Wars and Collection valuations. Only the artist&rsquo;s Deezer number is sent, nothing that identifies you. VINALL does not use Spotify&rsquo;s services.</span></div>
-  <div><span class="t">Discogs</span><span class="d">Used only when you start a Bid War in Score mode, to look up how the Discogs community rates a record. The album and artist names are sent so it can answer; nothing that identifies you is.</span></div>
-  <div><span class="t">kworb.net</span><span class="d">Provides public streaming totals used by the Bid Wars game. No personal data is sent there.</span></div>
-  <div><span class="t">MusicBrainz</span><span class="d">Used by Music Passport to find out which country an artist is from. Your browser asks MusicBrainz directly, so it sees your IP address and the artist names, and nothing else about you.</span></div>
-  <div><span class="t">jsDelivr</span><span class="d">Delivers the code library VINALL uses to talk to its database. Your browser downloads it from jsDelivr&rsquo;s network, which sees your IP address as part of that request.</span></div>
-  <div><span class="t">Apple and Google sign-in</span><span class="d">Only if you choose to sign in with them. They confirm who you are and share your email address and name with VINALL under their own privacy policies.</span></div>
-</div>
-</section>
+<h2>Who can see it</h2>
+<p><b>Public:</b> your username, avatar, bio, ratings (unless set to Friends or Just me), lists, Today answers you have not marked private, comments, Community Choice picks, follows and followers, Groove memberships and leaderboard scores. <b>Private:</b> your email address, usage events, imported listening history and anything you mark private.</p>
+<p>You can change who sees your ratings on your profile at any time. <b>Friends</b> means people you follow who follow you back. Friends and Just me keep your scores and notes out of the public Crate feed and album reviews, and switching away from Anyone removes what you had already posted there.</p>
 
-<section id="s5"><h2>Deleting everything</h2>
-<div class="box">
-  <span class="lbl">Immediate and permanent</span>
-  <p>Go to your profile and choose <b>Delete my account</b>. This removes your ratings, lore, lists,
-  grooves, profile, avatar, any listening history you imported, and your login. It cannot be undone,
-  and there is no waiting period.</p>
-</div>
-</section>
+<h2>Services we use</h2>
+<p><b>Supabase</b> stores the database and handles sign-in, in its EU region (eu-west-1). <b>Vercel</b> hosts the site on a global network. The other services below receive nothing that identifies you, except where stated. VINALL does not use Spotify’s services.</p>
+<ul>
+  <li><b>Deezer</b> supplies artwork, track listings, catalogue data and 30-second previews. Your searches and the names of albums and artists you open are sent to it. <b>Apple</b> supplies a few previews and covers Deezer lacks, on the same basis.</li>
+  <li><b>YouTube</b> plays some Community Choice picks in its own embedded player. Nothing loads from YouTube until you agree, and you can keep the Deezer preview instead. Once a video plays, YouTube’s privacy policy applies to that player. When you pick a moment, the song and artist name are sent to YouTube to find the video.</li>
+  <li><b>Wikidata</b> and <b>MusicBrainz</b> receive an artist’s Deezer ID to find their public streaming-chart page for Bid Wars and Collection values. <b>kworb.net</b> supplies those streaming totals. <b>Discogs</b> receives album and artist names when you start a Bid War in Score mode.</li>
+  <li><b>MusicBrainz</b> is also asked directly by your device for artists’ countries in Music Passport, so it sees your IP address and the artist names.</li>
+  <li><b>jsDelivr</b> delivers the code library the website uses to reach the database, and sees your IP address.</li>
+  <li><b>Apple</b> and <b>Google</b> sign-in, if you use them, confirm who you are and share your email address and name under their own privacy policies.</li>
+</ul>
 
-<section id="s6"><h2>Age</h2>
-<p>You must be <b>13 or over</b> to use VINALL. When you first sign in we ask which group you are in
-(under 13, 13&ndash;17, or 18 and over) and keep only that answer, never your date of birth. Accounts
-for under-13s are signed out and closed.</p>
-<p>If you are <b>13&ndash;17</b>, your ratings start visible to friends only, which also keeps them out of
-the public feed. You can change that, but please do not post anything that identifies where you live
-or go to school. VINALL has no direct messages, does not use your location, and does not show
-advertising. If you believe someone under 13 has an account, contact us and it will be removed.</p>
-</section>
+<h2>How long we keep it</h2>
+<p>Your account and content are kept until you delete your account. Usage events are deleted after 13 months and crash reports after 90 days; both stop being linked to you when your account is deleted. Reports about an account or post are kept with the decision after review, so moderation stays consistent; reports you filed are deleted with your account. A suspended account’s data is kept until it is deleted, so an appeal can be reviewed.</p>
 
-<section id="s7"><h2>How long it is kept</h2>
-<div class="defs">
-  <div><span class="t">Your account and your music</span><span class="d">For as long as you have an account. Deleting your account removes them straight away.</span></div>
-  <div><span class="t">Usage events and crash reports</span><span class="d">Usage events are deleted after <b>13 months</b>, long enough to compare the same season a year apart. Crash reports are deleted after <b>90 days</b>, by which time any bug they point to has been fixed or superseded. Both stop being linked to you as soon as your account is deleted.</span></div>
-  <div><span class="t">Reports</span><span class="d">Reports about an account or post are kept after a review is finished, with the decision, because a record of what was decided is the only way to be consistent about it. Reports you filed yourself are deleted with your account.</span></div>
-  <div><span class="t">Suspensions</span><span class="d">A suspended account can no longer sign in. Its data is kept until it is deleted, so that an appeal can be reviewed.</span></div>
-</div>
-</section>
+<h2>Deleting your account</h2>
+<p>Choose <b>Delete my account</b> on your profile. This immediately and permanently removes your ratings, Today answers, lists, Grooves, profile, avatar, imported listening history and login. There is no waiting period and it cannot be undone.</p>
 
-<section id="s8"><h2>Why we are allowed to store it</h2>
-<p>If you are in the UK or EU, the legal bases are <b>contract</b> for your account and the music you
-rate, since the app cannot work without them, and <b>legitimate interests</b> for usage events, crash
-reports and moderation records, which keep the app working and safe.</p>
-<p>Features such as Replay, Music DNA, About You and Taste Match analyse your own ratings and
-listening to describe your taste. That analysis is shown to you (and, for Taste Match, to the person
-you compare with, only where your ratings are public). It is not used for advertising and no decision
-with legal or similarly significant effect is made from it.</p>
-</section>
+<h2>Age</h2>
+<p>You must be 13 or over to use VINALL. Under-13 accounts are signed out and closed; if you believe a child under 13 has an account, contact us and we will remove it. If you are 13–17, your ratings start visible to friends only, which keeps them out of the public feed. Please do not post anything that identifies where you live or go to school. VINALL has no direct messages, does not use your location and shows no advertising.</p>
 
-<section id="s9"><h2>Where it is held</h2>
-<p>The database and logins are in Supabase&rsquo;s EU region (eu-west-1). Hosting is Vercel, whose
-network is global, so a page request may be served from outside the UK or EU. Both are bound by
-their own data-processing terms.</p>
-</section>
+<h2>Legal basis and profiling</h2>
+<p>Under UK and EU data protection law, we rely on <b>contract</b> for your account and the music you rate, as the app cannot work without them, and on <b>legitimate interests</b> for usage events, crash reports and moderation records, which keep the app working and safe.</p>
+<p>Replay, Music DNA, About You and Taste Match analyse your ratings and listening to describe your taste. The results are shown to you and, for Taste Match, to the person you are compared with, only where your ratings are public. They are not used for advertising, and no decision with legal or similarly significant effects is made from them.</p>
 
-<section id="s10"><h2>Your rights</h2>
-<p>If you are in the UK or EU you can ask for a copy of your data, ask for it to be corrected, ask
-for it to be erased, ask us to restrict how it is used, or object to the uses based on legitimate
-interests. You can download your ratings yourself at any time (Settings, Your ratings, Export).
-Deleting your account erases it immediately. For anything else, email us and you will get an answer
-within one month.</p>
-<div class="box">
-  <span class="lbl">Complaints about your data</span>
-  <p>If you think we have handled your personal data wrongly, you can complain to us directly. Email
-  <a href="mailto:vinall.support@gmail.com?subject=Data%20protection%20complaint">vinall.support@gmail.com</a>
-  with &ldquo;Data protection complaint&rdquo; in the subject (any message that is clearly a complaint
-  counts, however it is worded). We will acknowledge it within <b>30 days</b>, look into it properly,
-  keep you updated if it takes longer, and tell you the outcome and what we have done about it.</p>
-</div>
-<p>You can also complain to the
-<a href="https://ico.org.uk/make-a-complaint/" rel="noopener">Information Commissioner&rsquo;s Office</a>.
-They usually expect you to have raised it with us first.</p>
-</section>
+<h2>Where it is held</h2>
+<p>The database and sign-in run in Supabase’s EU region. Vercel’s network is global, so a page may be served from outside the UK or EU. Both providers are bound by data processing terms.</p>
 
-<section id="s11"><h2>Changes to this policy</h2>
-<p>If this policy changes in a way that affects what is stored or who can see it, the effective date
-at the top of this page changes with it and the app will say so. Minor corrections and clarifications
-are made without notice.</p>
-</section>
+<h2>Your rights</h2>
+<p>If you are in the UK or EU, you can ask to access, correct or erase your data, restrict how it is used, or object to uses based on legitimate interests. You can export your ratings at any time from Settings → Your ratings → Export, and deleting your account erases your data immediately. For anything else, email us and we will reply within one month.</p>
+<p>To complain about how we have handled your data, email <a href="mailto:vinall.support@gmail.com?subject=Data%20protection%20complaint">vinall.support@gmail.com</a>, ideally with “Data protection complaint” in the subject, although any message that is clearly a complaint counts. We will acknowledge it within 30 days, investigate, keep you updated and tell you the outcome. You can also complain to the <a href="https://ico.org.uk/make-a-complaint/" rel="noopener">Information Commissioner’s Office</a>, which usually expects you to contact us first.</p>
 
-<section id="s12"><h2>Contact</h2>
-<p>The data controller is <b>Excus Ltd, a company registered in England and Wales (company number 17517058), registered office 71-75 Shelton Street, Covent Garden, London WC2H 9JQ</b>.</p>
-<p>Email <a href="mailto:vinall.support@gmail.com">vinall.support@gmail.com</a>. Data-protection questions,
-access requests, deletion requests and complaints all go to the same address.</p>
-</section>
-<footer>
-  <div class="row">
-    <span>VINALL</span><span class="sep">&middot;</span>
-    <a href="/privacy.html">Privacy Policy</a><span class="sep">&middot;</span>
-    <a href="/terms.html">Terms of Use</a><span class="sep">&middot;</span>
-    <a href="/" data-back>Back to VINALL</a>
-  </div>
-  <p>VINALL is operated by Excus Ltd (company number 17517058). Catalogue information, artwork and preview clips are
-  supplied by Deezer. Questions about this document go to
-  <a href="mailto:vinall.support@gmail.com">vinall.support@gmail.com</a>.</p>
-</footer>
-</div>
+<h2>Changes</h2>
+<p>If we change what we store or who can see it, we will update the effective date above and tell you in the app. Minor corrections may be made without notice.</p>
+
+<h2>Contact</h2>
+<p>Excus Ltd, registered in England and Wales (company number 17517058), 71–75 Shelton Street, Covent Garden, London WC2H 9JQ. Email <a href="mailto:vinall.support@gmail.com">vinall.support@gmail.com</a> for any privacy question or request.</p>
+
+<footer>© Excus Ltd. Catalogue information, artwork and previews supplied by Deezer.</footer>
+</main>
 <script>
 (function () {
   function sameSiteReferrer() {

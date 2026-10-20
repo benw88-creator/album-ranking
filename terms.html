@@ -1,10 +1,9 @@
 <!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8">
-<link href="/assets/fonts/fonts.css" rel="stylesheet">
-
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="index, follow">
+<meta name="color-scheme" content="dark">
 <title>VINALL — Terms of Use</title>
 <meta name="description" content="The terms you agree to by using VINALL.">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png?v=2">
@@ -14,342 +13,98 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/browser-192.png?v=2">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=2">
 <style>
-  /* A legal document, set like one.
-
-     The old pages were the app's colours with headings in them. What makes a
-     policy read as serious is not decoration, it is the apparatus around the
-     text: a masthead that says which document this is and which version, a
-     contents list you can jump from, numbered sections you can cite, a clear
-     measure, and a footer that says who is responsible. That is what Apple's
-     and Spotify's pages do and it is all this does too.
-
-     Deliberately quieter than the app: one accent, used for links and section
-     numerals and nothing else. */
-  :root {
-    --bg:#0a0908; --surface:#131210; --surface-2:#1a1816;
-    --text:#f0ede8; --body:#cfcbc4; --dim:#8a8680; --faint:#5d5a56;
-    --gold:#F5C842; --border:rgba(255,245,235,0.09); --border-2:rgba(255,245,235,0.16);
-  }
+  /* Set like a native legal screen: system type at reading size, plain
+     headings, no ornament. Shared verbatim with terms.html. */
+  :root { --bg:#0a0908; --bar:rgba(10,9,8,.86); --text:#f0ede8; --body:#bdb9b2; --dim:#7d7974; --line:rgba(255,245,235,.1); --seg:rgba(255,245,235,.07); --link:#e9c35a; }
   * { box-sizing:border-box; margin:0; padding:0; }
-  html { -webkit-text-size-adjust:100%; scroll-behavior:smooth; }
-  body {
-    background:var(--bg); color:var(--body);
-    font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
-    line-height:1.7; font-size:16px;
-    -webkit-font-smoothing:antialiased;
+  html { -webkit-text-size-adjust:100%; }
+  body { background:var(--bg); color:var(--body); font:14px/1.5 -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', sans-serif; -webkit-font-smoothing:antialiased; }
+  .bar {
+    position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between;
+    padding:env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
+    background:var(--bar); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-bottom:.5px solid var(--line);
   }
-  ::selection { background:rgba(245,200,66,0.22); }
-
-  /* ---- masthead ---- */
-  .doc-top {
-    position:sticky; top:0; z-index:5;
-    display:flex; align-items:center; gap:14px;
-    /* THE TOP INSET IS THE WHOLE FIX. The left and right insets were here and
-       the top one was not, so on a notched phone — and inside the app, which
-       sets viewport-fit=cover — this bar sat UNDER the status bar and the
-       Dynamic Island. Back to the app and the Privacy/Terms switch were both
-       up there, half-covered and hard to hit.
-
-       max(), not a bare env(): a phone with no inset keeps the normal 14px
-       rather than collapsing to zero. Same rule as the app's own safe-area
-       block, which learned it the same way. */
-    padding:max(14px, calc(env(safe-area-inset-top) + 10px))
-            max(18px, env(safe-area-inset-right))
-            14px
-            max(18px, env(safe-area-inset-left));
-    background:rgba(10,9,8,0.82); backdrop-filter:blur(14px);
-    border-bottom:1px solid var(--border);
-  }
-  .doc-top a.home {
-    /* 44px of height, which is Apple's floor and which neither of these
-       controls had: they were text links at their line height. */
-    display:flex; align-items:center; gap:9px; min-height:44px;
-    color:var(--text); text-decoration:none;
-    font-weight:800; letter-spacing:.14em; font-size:13px; text-transform:uppercase;
-  }
-  .doc-top .disc {
-    width:19px; height:19px; border-radius:50%; flex-shrink:0;
-    background:radial-gradient(circle at 38% 32%, #2b2620 0%, #131110 55%, #090807 100%);
-    box-shadow:inset 0 0 0 1px rgba(245,200,66,0.5);
-    position:relative;
-  }
-  .doc-top .disc::after {
-    content:''; position:absolute; inset:42%; border-radius:50%; background:var(--gold);
-  }
-  .doc-top a.home .back-arrow { font-size:15px; margin-right:2px; color:var(--text-2); transition:transform .2s; }
-  .doc-top a.home:hover .back-arrow { transform:translateX(-3px); }
-  .doc-top nav { margin-left:auto; display:flex; gap:4px; }
-  .doc-top nav { display:flex; gap:4px; }
-  .doc-top nav a {
-    color:var(--dim); text-decoration:none; font-size:12.5px; font-weight:600;
-    /* 6px of vertical padding on a 12.5px link is a 30px target. These are the
-       only two controls on the page and one of them is the way back to the
-       app, so they get the 44 that a thumb needs. */
-    padding:0 13px; min-height:44px; display:inline-flex; align-items:center;
-    border-radius:999px; border:1px solid transparent;
-  }
-  .doc-top nav a[aria-current="page"] { color:var(--text); border-color:var(--border-2); background:var(--surface); }
-  .doc-top nav a:hover { color:var(--text); }
-
-  .wrap { max-width:720px; margin:0 auto; padding:52px max(20px, env(safe-area-inset-left)) 96px; }
-
-  /* ---- title block ---- */
-  .doc-kicker {
-    font:700 11px/1 'IBM Plex Mono',ui-monospace,monospace; letter-spacing:.2em;
-    text-transform:uppercase; color:var(--gold); margin-bottom:16px;
-  }
-  h1 { font-size:clamp(30px,7vw,42px); line-height:1.1; letter-spacing:-0.03em; color:var(--text); font-weight:800; }
-  .doc-meta {
-    display:flex; flex-wrap:wrap; gap:8px 22px; margin-top:20px; padding-bottom:28px;
-    border-bottom:1px solid var(--border);
-    font:11.5px/1.5 'IBM Plex Mono',ui-monospace,monospace; color:var(--faint);
-    letter-spacing:.04em; text-transform:uppercase;
-  }
-  .doc-meta b { color:var(--dim); font-weight:600; }
-  .lede { font-size:17.5px; line-height:1.65; color:var(--text); margin:30px 0 8px; }
-
-  /* ---- contents ---- */
-  .toc { margin:34px 0 8px; padding:20px 22px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
-  /* The contents list is not a numbered section and its items are not bullets.
-     Both of those rules are global further down and both leaked in here: the
-     heading picked up a section numeral it has no business having, and every
-     entry grew a dash in front of its own number. */
-  .toc h2 {
-    font:700 10.5px/1 'IBM Plex Mono',ui-monospace,monospace; letter-spacing:.2em;
-    text-transform:uppercase; color:var(--faint); margin:0 0 14px; border:0; padding:0;
-    display:block;
-  }
-  .toc h2::before { content:none; }
-  .toc li { padding-left:0; }
-  .toc li::before { content:none; }
-  .toc ol { list-style:none; counter-reset:toc; display:grid; gap:2px; }
-  .toc li { counter-increment:toc; }
-  .toc a {
-    display:flex; gap:12px; padding:5px 0; color:var(--body); text-decoration:none; font-size:14.5px;
-  }
-  .toc a::before {
-    content:counter(toc,decimal-leading-zero);
-    font:600 12px/1.6 'IBM Plex Mono',ui-monospace,monospace; color:var(--faint); flex-shrink:0;
-  }
-  .toc a:hover { color:var(--gold); }
-
-  /* ---- sections ---- */
-  section { counter-increment:sec; margin-top:46px; scroll-margin-top:72px; }
-  body { counter-reset:sec; }
-  h2 {
-    font-size:20px; line-height:1.3; letter-spacing:-0.015em; color:var(--text); font-weight:700;
-    padding-bottom:12px; border-bottom:1px solid var(--border); margin-bottom:16px;
-    display:flex; gap:13px; align-items:baseline;
-  }
-  h2::before {
-    content:counter(sec,decimal-leading-zero);
-    font:600 12px/1 'IBM Plex Mono',ui-monospace,monospace; color:var(--gold);
-    flex-shrink:0; position:relative; top:-1px;
-  }
-  p + p, ul + p, p + ul, p + .box, ul + .box, .box + p { margin-top:14px; }
-  ul { padding-left:0; list-style:none; display:grid; gap:10px; margin-top:6px; }
-  li { padding-left:20px; position:relative; }
-  li::before { content:''; position:absolute; left:4px; top:11px; width:5px; height:1px; background:var(--faint); }
-  b, strong { color:var(--text); font-weight:600; }
-  a { color:var(--gold); text-decoration:none; border-bottom:1px solid rgba(245,200,66,0.32); }
-  a:hover { border-bottom-color:var(--gold); }
-
-  .box {
-    background:var(--surface-2); border:1px solid var(--border-2); border-left:2px solid var(--gold);
-    border-radius:0 12px 12px 0; padding:16px 20px; margin:20px 0;
-  }
-  .box .lbl {
-    display:block; font:700 10px/1 'IBM Plex Mono',ui-monospace,monospace; letter-spacing:.18em;
-    text-transform:uppercase; color:var(--gold); margin-bottom:9px;
-  }
-
-  /* A definition-style pair, for the "what is stored" kind of list where the
-     term matters as much as the description. */
-  .defs { display:grid; gap:0; margin-top:8px; }
-  .defs > div { display:grid; grid-template-columns:200px 1fr; gap:6px 24px; padding:14px 0; border-top:1px solid var(--border); }
-  .defs > div:last-child { border-bottom:1px solid var(--border); }
-  .defs dt, .defs .t { color:var(--text); font-weight:600; font-size:14.5px; }
-  .defs dd, .defs .d { font-size:15px; }
-  @media (max-width:620px) { .defs > div { grid-template-columns:1fr; gap:4px; } }
-
-  /* ---- footer ---- */
-  footer {
-    margin-top:64px; padding-top:26px; border-top:1px solid var(--border);
-    font-size:13.5px; color:var(--dim);
-  }
-  footer .row { display:flex; flex-wrap:wrap; gap:8px 24px; align-items:baseline; }
-  footer .sep { color:var(--faint); }
-  footer p { margin-top:12px; }
-
+  .bar .back { display:flex; align-items:center; gap:2px; min-height:44px; padding:0 8px; color:var(--link); font-size:15px; text-decoration:none; }
+  .bar .back svg { width:11px; height:18px; }
+  .seg { display:flex; padding:2px; border-radius:8px; background:var(--seg); margin-right:8px; }
+  .seg a { min-width:72px; padding:5px 10px; border-radius:6px; text-align:center; font-size:12.5px; font-weight:500; color:var(--dim); text-decoration:none; }
+  .seg a[aria-current="page"] { background:rgba(255,245,235,.14); color:var(--text); }
+  main { max-width:640px; margin:0 auto; padding:24px max(20px, env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+  h1 { font-size:22px; line-height:1.25; font-weight:700; color:var(--text); letter-spacing:-.01em; }
+  .meta { margin:4px 0 16px; font-size:12px; color:var(--dim); }
+  h2 { margin:24px 0 6px; font-size:15px; line-height:1.35; font-weight:600; color:var(--text); }
+  p + p, p + ul, ul + p { margin-top:8px; }
+  ul { padding-left:18px; }
+  li + li { margin-top:4px; }
+  b { color:var(--text); font-weight:600; }
+  a { color:var(--link); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  footer { margin-top:32px; padding-top:12px; border-top:.5px solid var(--line); font-size:12px; color:var(--dim); }
   @media print {
-    .doc-top, .toc { display:none; }
-    body { background:#fff; color:#111; }
-    h1, h2, b, strong, .defs .t { color:#000; }
-    a { color:#000; border:0; }
-    h2::before, .doc-kicker { color:#555; }
-    .box { border:1px solid #999; background:none; }
+    .bar { display:none; }
+    body { background:#fff; color:#222; } h1, h2, b { color:#000; } a { color:#000; } .meta, footer { color:#555; }
   }
-
 </style></head>
 <body>
-<header class="doc-top">
-  <a class="home" href="/" data-back aria-label="Back to VINALL"><span class="back-arrow" aria-hidden="true">&larr;</span><span class="disc"></span>Back to VINALL</a>
-  <nav>
+<header class="bar">
+  <a class="back" href="/" data-back aria-label="Back to VINALL"><svg viewBox="0 0 11 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2 2 9l7 7"/></svg>VINALL</a>
+  <nav class="seg" aria-label="Legal documents">
     <a href="/privacy.html">Privacy</a>
     <a href="/terms.html" aria-current="page">Terms</a>
   </nav>
 </header>
-<div class="wrap">
-<div class="doc-kicker">VINALL &middot; Legal</div>
+<main>
 <h1>Terms of Use</h1>
-<div class="doc-meta">
-  <span><b>Effective</b> 15 October 2026</span>
-  <span><b>Version</b> 1.6</span>
-  <span><b>Applies to</b> vinall.xyz and the VINALL app</span>
-</div>
+<p class="meta">Effective 20 October 2026 · Version 1.7</p>
 
-<p class="lede">VINALL is operated by Excus Ltd (&ldquo;we&rdquo;). By using it you agree to these terms, which are an agreement between you and Excus Ltd.</p>
+<p>These terms are an agreement between you and Excus Ltd (“we”), which operates the VINALL app and vinall.xyz. By using VINALL you agree to them.</p>
 
-<nav class="toc" aria-label="Contents">
-  <h2>Contents</h2>
-  <ol>
-    <li><a href="#s1">Your account</a></li>
-    <li><a href="#s2">What you post</a></li>
-    <li><a href="#s3">Reporting and blocking</a></li>
-    <li><a href="#s-u18">Keeping under-18s safe</a></li>
-    <li><a href="#s4">Games, Discs and cosmetics</a></li>
-    <li><a href="#s5">Music and artwork</a></li>
-    <li><a href="#s6">Availability</a></li>
-    <li><a href="#s7">Ending things</a></li>
-    <li><a href="#s8">Governing law</a></li>
-    <li><a href="#s9">Contact</a></li>
-  </ol>
-</nav>
+<h2>Your account</h2>
+<p>You must be 13 or over. We ask your age group when you first sign in and close accounts belonging to under-13s. You may have one account, must not impersonate anyone, and are responsible for activity under your login.</p>
 
-<section id="s1"><h2>Your account</h2>
+<h2>Your content</h2>
+<p>You keep ownership of your ratings, notes and other content. By posting it, you allow us to store it and display it in VINALL, including to other users where you have made it public.</p>
+<p>Do not post anything that:</p>
 <ul>
-  <li>You must be <b>13 or over</b>. We ask which age group you are in when you first sign in; accounts for under-13s are closed.</li>
-  <li>One account per person. Do not pretend to be someone else.</li>
-  <li>You are responsible for what happens under your login.</li>
+  <li>is abusive, harassing, hateful or threatening, or intended to bully;</li>
+  <li>is sexually explicit or sexualises minors;</li>
+  <li>encourages or instructs suicide, self-harm or eating disorders;</li>
+  <li>promotes dangerous stunts or challenges, or the use or sale of illegal drugs or other harmful substances;</li>
+  <li>asks someone under 18 to meet, or for their address, school, phone number, photos or other accounts;</li>
+  <li>contains someone else’s private information;</li>
+  <li>is spam, a scam or advertising; or</li>
+  <li>is otherwise illegal.</li>
 </ul>
-</section>
 
-<section id="s2"><h2>What you post</h2>
-<p>Your ratings, notes and lore stay yours. By posting them you allow VINALL to store and display
-them in the app, including to other users where you have made them public.</p>
-<p>Do not post anything that is:</p>
-<ul>
-  <li>abusive, harassing, hateful or threatening, or meant to bully someone;</li>
-  <li>sexually explicit, or anything that sexualises minors;</li>
-  <li>encouraging or giving instructions for suicide, self-harm or eating disorders;</li>
-  <li>promoting dangerous stunts or challenges, or the use or sale of illegal drugs or other harmful substances;</li>
-  <li>asking someone under 18 to meet up, or for their address, school, phone number, photos or other accounts;</li>
-  <li>someone else&rsquo;s private information;</li>
-  <li>spam, scams or advertising;</li>
-  <li>illegal.</li>
-</ul>
-</section>
+<h2>Reporting, blocking and moderation</h2>
+<p>Every profile, review, feed post, comment and Community Choice pick can be reported, and any profile can be blocked, which hides that person from your feeds, comments, notifications and search. Nobody is told who reported or blocked them. Slurs and targeted abuse are refused automatically when posted.</p>
+<p>A person reviews every report, aiming to do so within 48 hours. Reports involving a child’s safety, requests to meet or for personal details, threats, self-harm or illegal content are prioritised and reviewed within 24 hours where possible. You will be told whether we took action. If we remove your content, we will tell you what was removed and why. Serious or repeated breaches may lead to suspension, and where a child may be at risk we may share information with the police or the National Crime Agency.</p>
+<p>To appeal a decision or complain about how we handled a report, email <a href="mailto:vinall.support@gmail.com">vinall.support@gmail.com</a>. A person will review it and we will reply within 14 days.</p>
 
-<section id="s3"><h2>Reporting and blocking</h2>
-<div class="box">
-  <span class="lbl">How to report</span>
-  <p>Every profile, review, feed post, album comment, song comment and Community Choice pick has a
-  <b>Report</b> button, and every profile has a <b>Block</b> button that hides that person from your
-  feeds. The person you report or block is never told who did it.</p>
-</div>
-<p>Reports go to a moderation queue that a person reviews. We aim to look at every report within
-<b>48 hours</b>, and sooner for anything involving a child&rsquo;s safety, threats or illegal content.
-When a review is finished you get a notification saying whether we took action.</p>
-<p>If we remove something you posted, you are told what was removed and why. Serious or repeated
-breaches can lead to your account being suspended. Words that are never allowed (slurs and targeted
-abuse) are refused automatically when you post.</p>
-<p><b>Complaints and appeals.</b> If you disagree with a decision, or want to complain about how we
-handled a report, email <a href="mailto:vinall.support@gmail.com">vinall.support@gmail.com</a>. A
-different decision is made by a person, and we reply within 14 days.</p>
-<p>If you see something that puts someone in immediate danger, contact the emergency services (999 in the UK) first.</p>
-</section>
+<h2>Users aged 13 to 17</h2>
+<p>Ratings and notes start visible to friends only (people you follow who follow you back), which keeps them out of the public feed, album reviews, Taste Match and people suggestions. Your username, photo, bio, comments, lists, follows and Groove memberships can still be seen, so choose ones that do not identify you. VINALL has no direct messages or group chats and never uses your location. Never share your address, school, phone number or other accounts, or agree to meet someone from VINALL; report anyone who asks, using <b>Asking to meet up or for personal details</b>.</p>
+<p>If someone is in immediate danger, call <b>999</b>. For support, contact <b>Childline</b> (under 19) on 0800 1111 or at childline.org.uk, or <b>Samaritans</b> on 116 123, both free and available 24 hours a day. Concerns about online sexual abuse can be reported to CEOP at ceop.police.uk. Parents and carers can contact us about an account or a child under 13 at <a href="mailto:vinall.support@gmail.com">vinall.support@gmail.com</a>.</p>
 
-<section id="s-u18"><h2>Keeping under-18s safe</h2>
-<p>VINALL is for people aged 13 and over, and some of the people using it are under 18. This is
-what is in place to protect them, and what to do if something goes wrong.</p>
-<ul>
-  <li><b>Private by default.</b> If you are 13&ndash;17, your ratings and notes start visible only to
-  friends (people you follow who follow you back). That keeps them out of the public feed, album
-  reviews, Taste Match and people suggestions. Your username, profile photo, bio, comments, lists,
-  follows and Groove memberships can still be seen by others, so choose a username and photo that do
-  not identify you.</li>
-  <li><b>No private messages.</b> VINALL has no direct messages or group chat, and it never uses your location.</li>
-  <li><b>Keep your details to yourself.</b> Never share your address, school, phone number or other
-  accounts, and never agree to meet someone you met on VINALL. If anyone asks, report them with
-  <b>Asking to meet up or for personal details</b>.</li>
-  <li><b>Bullying.</b> Block anyone who is unkind to you: they disappear from your feeds, comments,
-  notifications and search, and they are not told. Slurs and targeted abuse are refused automatically.
-  Report anything else.</li>
-  <li><b>Harmful content.</b> Content that encourages suicide, self-harm or eating disorders, dangerous
-  challenges, or drug use is not allowed and is removed when reported.</li>
-  <li><b>Safety reports come first.</b> Reports about a child&rsquo;s safety, someone asking to meet or
-  for personal details, threats, self-harm or illegal content go to the top of the moderation queue,
-  and we aim to review them within <b>24 hours</b>. Where a child may be at risk, we may pass
-  information to the police or the National Crime Agency.</li>
-</ul>
-<div class="box">
-  <span class="lbl">If you need to talk to someone</span>
-  <p>If anyone is in immediate danger, call <b>999</b>. <b>Childline</b> (under 19): 0800 1111 or
-  childline.org.uk, free and 24/7. <b>Samaritans</b>: 116 123, free and 24/7. You can also report
-  worries about online sexual abuse to CEOP at ceop.police.uk.</p>
-</div>
-<p>Parents or carers who are worried about an account, or who believe a child under 13 is using
-VINALL, can email <a href="mailto:vinall.support@gmail.com">vinall.support@gmail.com</a>.</p>
-</section>
+<h2>Discs and in-app items</h2>
+<p>Discs are in-app points. <b>They have no cash value, cannot be bought, and cannot be exchanged for money or anything outside VINALL.</b> We may adjust or reset Discs obtained through a bug. Cosmetic items bought with Discs remain on your account while it exists. Boosts such as Streak Freeze and 2× Discs are used up when they take effect and are not refunded. Streaming figures and prices shown in games come from public third-party data, are approximate and should not be relied on.</p>
 
-<section id="s4"><h2>Games, Discs and cosmetics</h2>
-<p>Discs are points inside VINALL. <b>They have no cash value, cannot be bought, and cannot be
-exchanged for money or for anything outside the app.</b> They may be adjusted or reset if they were
-obtained by exploiting a bug. Cosmetic items bought with Discs stay on your account for as long as
-the account exists. Boosts, such as Streak Freeze and 2&times; Discs, are used up when they take effect and are not refunded.</p>
-<p>Streaming figures and market prices shown in the games come from public third-party data and are
-approximate. They are there to play with, not to rely on.</p>
-</section>
+<h2>Music and artwork</h2>
+<p>VINALL does not host music. Artwork, catalogue information and 30-second previews are supplied by Deezer and belong to their respective owners. Full tracks open in Deezer.</p>
 
-<section id="s5"><h2>Music and artwork</h2>
-<p>VINALL does not host any music. Album artwork, catalogue information and the 30-second preview
-clips are supplied by Deezer and remain the property of their respective owners. Preview playback is
-limited to a short clip; full tracks open in Deezer.</p>
-</section>
+<h2>Availability and liability</h2>
+<p>VINALL is provided as is. We do not guarantee that it will always be available or that data will never be lost, so keep your own copy of anything important. Nothing in these terms limits liability for death or personal injury caused by negligence, for fraud, or for anything else that cannot be limited under the law of England and Wales.</p>
 
-<section id="s6"><h2>Availability</h2>
-<p>VINALL is provided as-is, with no guarantee that it will be available, or that nothing will ever
-be lost. Keep your own copy of anything you would be upset to lose.</p>
-<p>Nothing in these terms limits liability for death or personal injury caused by negligence, for
-fraud, or for anything else that cannot be limited under the law of England and Wales.</p>
-</section>
+<h2>Ending your use</h2>
+<p>You can delete your account at any time from your profile, which removes your data immediately. We may suspend or remove accounts that break these terms.</p>
 
-<section id="s7"><h2>Ending things</h2>
-<p>You can delete your account at any time from your profile, which removes everything immediately.
-We can suspend or remove accounts that break these terms.</p>
-</section>
+<h2>Governing law</h2>
+<p>These terms are governed by the law of England and Wales. If you are a consumer, you keep any mandatory protections of the country where you live.</p>
 
-<section id="s8"><h2>Governing law</h2>
-<p>These terms are governed by the law of England and Wales. If you are a consumer, you keep the
-benefit of any mandatory protections of the country you live in.</p>
-</section>
+<h2>Contact</h2>
+<p>Excus Ltd, registered in England and Wales (company number 17517058), 71–75 Shelton Street, Covent Garden, London WC2H 9JQ. Email <a href="mailto:vinall.support@gmail.com">vinall.support@gmail.com</a>.</p>
 
-<section id="s9"><h2>Contact</h2>
-<p>VINALL is operated by <b>Excus Ltd, a company registered in England and Wales (company number 17517058), registered office 71-75 Shelton Street, Covent Garden, London WC2H 9JQ</b>.</p>
-<p>Email <a href="mailto:vinall.support@gmail.com">vinall.support@gmail.com</a>.</p>
-</section>
-<footer>
-  <div class="row">
-    <span>VINALL</span><span class="sep">&middot;</span>
-    <a href="/privacy.html">Privacy Policy</a><span class="sep">&middot;</span>
-    <a href="/terms.html">Terms of Use</a><span class="sep">&middot;</span>
-    <a href="/" data-back>Back to VINALL</a>
-  </div>
-  <p>VINALL is operated by Excus Ltd (company number 17517058). Catalogue information, artwork and preview clips are
-  supplied by Deezer. Questions about this document go to
-  <a href="mailto:vinall.support@gmail.com">vinall.support@gmail.com</a>.</p>
-</footer>
-</div>
+<footer>© Excus Ltd. Catalogue information, artwork and previews supplied by Deezer.</footer>
+</main>
 <script>
 (function () {
   function sameSiteReferrer() {
