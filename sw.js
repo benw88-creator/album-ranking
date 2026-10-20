@@ -25,10 +25,10 @@ const MEDIA = VERSION + '-media';
 const PRECACHE = [
   '/offline.html',
   '/manifest.webmanifest',
-  '/assets/icons/browser-192.png?v=official',
-  '/assets/icons/browser-512.png?v=official',
-  '/assets/icons/apple-touch-icon.png?v=official',
-  '/assets/icons/favicon.ico?v=official',
+  '/assets/icons/browser-192.png?v=2',
+  '/assets/icons/browser-512.png?v=2',
+  '/assets/icons/apple-touch-icon.png?v=2',
+  '/assets/icons/favicon-32.png?v=2',
   '/assets/interactions.css?v=3',
   '/assets/interactions.js?v=2'
 ];
@@ -184,8 +184,8 @@ self.addEventListener('push', (event) => {
     body: d.body || '',
     tag: d.tag || undefined,
     renotify: !!d.tag,
-    icon: '/assets/icons/browser-192.png?v=official',
-    badge: '/assets/icons/browser-192.png?v=official',
+    icon: '/assets/icons/browser-192.png?v=2',
+    badge: '/assets/icons/browser-192.png?v=2',
     image: d.image || undefined,
     data: { url: d.url || '/' },
   }));

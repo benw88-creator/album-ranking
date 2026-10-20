@@ -70,8 +70,7 @@ function page({ title, desc, image, url, body, cta }) {
 <meta property="og:url" content="${esc(SITE + url)}">
 ${image ? `<meta property="og:image" content="${esc(image)}"><meta property="og:image:width" content="1000"><meta property="og:image:height" content="1000"><meta name="twitter:image" content="${esc(image)}">` : ''}
 <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">
-<meta name="theme-color" content="#0a0908"><link rel="icon" href="/assets/icons/favicon.ico?v=official"><link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png?v=official"><link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/browser-192.png?v=official"><link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png?v=official">
-<link href="/assets/fonts/fonts.css" rel="stylesheet">
+<meta name="theme-color" content="#0a0908"><link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png?v=2"><link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png?v=2"><link rel="icon" type="image/png" sizes="48x48" href="/assets/icons/favicon-48.png?v=2"><link rel="icon" type="image/png" sizes="96x96" href="/assets/icons/favicon-96.png?v=2"><link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/browser-192.png?v=2"><link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=2"><link href="/assets/fonts/fonts.css" rel="stylesheet">
 <style>
 :root{--bg:#0a0908;--text:#f5efe6;--dim:rgba(245,239,230,.62);--faint:rgba(245,239,230,.4);--gold:#f5c842}
 *{box-sizing:border-box;margin:0}

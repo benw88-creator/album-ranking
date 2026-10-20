@@ -4406,7 +4406,7 @@ Added so the site can be wrapped without failing review for the obvious reasons.
   ground. Icons are generated, not hand-drawn: `assets/icons/` holds 192/512
   plus **maskable** variants at 66% scale (a maskable icon whose art fills the
   square gets its edges cropped by Android's circular mask), a 180px opaque
-  `apple-touch-icon`, 1024px for the store listing, and 16/32 favicons.
+  `apple-touch-icon`, 1024px for the store listing, and 16/32/48/96 PNG favicons (no `.ico`; `scripts/make-browser-icons.mjs` downscales in linear light so the thin lines stay crisp).
 - `sw.js` — **network-first for navigations, deliberately.** `index.html` is
   one 650KB file that changes on every push, so a cache-first shell would serve
   last week's build with nothing to indicate it. The cache is a fallback for

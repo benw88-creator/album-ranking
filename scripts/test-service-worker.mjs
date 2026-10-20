@@ -35,7 +35,7 @@ test('first offline navigation uses the offline page', async () => {
 });
 test('static assets retain their cache refresh through worker suspension', async () => {
   const w = worker({ cached: new Response('old icon'), network: async () => new Response('official icon') });
-  const event = w.dispatch('https://vinall.test/assets/icons/favicon.ico', 'cors');
+  const event = w.dispatch('https://vinall.test/assets/icons/favicon-32.png', 'cors');
   assert.equal(event.waits.length, 1);
   assert.equal(await (await event.response).text(), 'old icon');
   await Promise.all(event.waits); assert.deepEqual(w.writes, ['official icon']);

@@ -33,7 +33,7 @@ test('public documents, branding and official icons', async ({ page }) => {
     expect(await page.locator('head').textContent()).not.toContain('Music Ranker');
     expect(await page.locator('link[rel="icon"]').count()).toBeGreaterThan(0);
   }
-  for (const icon of ['favicon.ico', 'favicon-16.png', 'favicon-32.png', 'apple-touch-icon.png', 'browser-192.png', 'browser-512.png']) {
+  for (const icon of ['favicon-16.png', 'favicon-32.png', 'favicon-48.png', 'favicon-96.png', 'apple-touch-icon.png', 'browser-192.png', 'browser-512.png']) {
     const response = await page.request.get('/assets/icons/' + icon);
     expect(response.ok()).toBeTruthy();
     expect((await response.body()).length).toBeGreaterThan(100);
