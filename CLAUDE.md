@@ -895,7 +895,10 @@ Never leave uncommitted work sitting on one machine.
 
 Set in Vercel → Project → Settings → Environment Variables. Not in the repo.
 
-- `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` — used only server-side by `api/_streams.js` (stream valuation)
+- `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` — **unused since 2026-10-20** and safe to delete.
+  `api/_streams.js` now gets the Spotify artist id kworb needs from Wikidata (Deezer id
+  P2722 → Spotify id P1902), with MusicBrainz as fallback. Nothing calls Spotify's API.
+  Legacy base62 album ids are resolved through `crate_feed` name + artist to Deezer.
 - `DISCOGS_TOKEN` — a personal access token from Discogs → Settings → Developers,
   generated instantly with no OAuth flow. Market-mode Bid Wars and
   `/api/album-market` return a 500 saying so until it is set; nothing else is

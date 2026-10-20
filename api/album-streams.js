@@ -130,10 +130,10 @@ export default async function handler(req, res) {
   let albumId = req.query.album || '';
   if (!albumId) {
     try {
-      const s = await fetch('https://api.spotify.com/v1/search?type=album&limit=1&q=' + encodeURIComponent(q),
-        { headers: { Authorization: 'Bearer ' + token } });
+      const s = await fetch('https://api.deezer.com/search/album?limit=1&q=' + encodeURIComponent(q),
+        { signal: AbortSignal.timeout(8000) });
       const d = await s.json();
-      const it = d.albums && d.albums.items && d.albums.items[0];
+      const it = d.data && d.data[0];
       if (!it) { res.status(404).json({ error: 'No album found for that search' }); return; }
       albumId = it.id;
     } catch (e) { res.status(502).json({ error: 'Search failed' }); return; }

@@ -1,5 +1,22 @@
 # VINALL launch technical fixes
 
+## Fifth pass: ratings cap, Spotify removed, live moderation test (2026-10-20)
+
+- **Live moderation test passed on production** (rolled-back transaction, synthetic
+  users): non-admin refused the queue; each report alerts every admin; Remove deletes
+  the post and actions the report; reporter and author both notified; suspend and
+  unsuspend work. Nothing persisted.
+- **`20261020100000_rating_daily_cap.sql` applied and recorded.** New rating rows past
+  150 albums / 400 songs a UTC day are skipped (never refused, so chunked syncs and
+  imports still land the rest and trickle in later). Re-rates never count. Busiest real
+  day before: 129 / 263. Verified first in a rolled-back transaction (160 → 150 kept,
+  re-rate at cap works, 410 songs → 400).
+- **Spotify Web API removed entirely.** `_streams.js` maps the Deezer artist id to the
+  Spotify artist id kworb needs via Wikidata (P2722 → P1902), MusicBrainz as fallback;
+  legacy base62 album ids resolve through `crate_feed` to Deezer. Verified live: Blonde,
+  IGOR, In Rainbows, SOS, MBDTF (legacy) and ICEMAN (legacy) value with the documented
+  match rates. Privacy policy and store notes updated. `SPOTIFY_CLIENT_*` can be deleted.
+
 ## Fourth pass: API hardening, moderation, economy races (2026-10-16)
 
 **Deployed (app-level):**

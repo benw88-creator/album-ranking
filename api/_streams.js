@@ -22,94 +22,100 @@ export function normTitle(s) {
     .toLowerCase();
 }
 
-export async function spotifyToken() {
-  const id = process.env.SPOTIFY_CLIENT_ID;
-  const secret = process.env.SPOTIFY_CLIENT_SECRET;
-  if (!id || !secret) return null;
-  try {
-    const r = await fetch('https://accounts.spotify.com/api/token', { signal: AbortSignal.timeout(8000),
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: 'Basic ' + Buffer.from(id + ':' + secret).toString('base64'),
-      },
-      body: 'grant_type=client_credentials',
-    });
-    if (!r.ok) return null;
-    const d = await r.json();
-    return d.access_token || null;
-  } catch (e) { return null; }
-}
+// kworb indexes its tables by Spotify ARTIST id
+// (kworb.net/spotify/artist/<id>_songs.html), and that id is the only thing
+// valuation needs from the Spotify world. It used to come from Spotify's Web
+// API (Client Credentials search), which put a game and a derived listenership
+// metric on Spotify's developer terms. It now comes from open data, keyed on
+// the DEEZER artist id the album already carries, so there is no name guessing:
+//   1. Wikidata: the item with Deezer artist id P2722 -> its Spotify id P1902
+//   2. MusicBrainz fallback: the deezer.com/artist URL -> artist -> spotify URL
+// No Spotify credential is used anywhere any more. `token` arguments remain in
+// the signatures only so callers did not have to change shape; they are ignored.
+const UA = 'VINALL/1.0 (+https://vinall.xyz; vinall.support@gmail.com)';
+const _artistIds = {};          // deezer artist id -> spotify artist id (or null)
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
+const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZnh5ZWJlanBreWhzd29scndpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMDI0MTYsImV4cCI6MjA5Njc3ODQxNn0.x9zL_qKAt465D-5Vw6bu8IIn-RxgUdfVbUoe1i4rsZs';
 
-// Album ids are DEEZER's since the catalogue moved, and a Deezer id means
-// nothing to Spotify — so this asked Spotify about a numeric id, got a 400 and
-// returned null, and every record rated after the switch was silently
-// unpriceable: not buyable in the Collection, never picked for a Bid War,
-// dropped from Higher or Lower's streams mode. It did not error anywhere,
-// which is what made it a leak rather than an outage.
-//
-// kworb is why Spotify cannot leave entirely: it indexes its tables by Spotify
-// ARTIST id (kworb.net/spotify/artist/<id>_songs.html). So the tracklist comes
-// from Deezer and the one thing still asked of Spotify is "what is this
-// artist's id" — one search per artist, cached across a batch, and no album
-// metadata is read or stored.
-const UA = 'vinall-bid-wars/1.0 (+https://vinall.xyz)';
-const _artistIds = {};          // lowercased artist name -> spotify artist id
+// Kept for callers; there is nothing to mint now.
+export async function spotifyToken() { return 'unused'; }
 
 function looseName(s) {
   return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
-async function deezerAlbum(albumId) {
-  const r = await fetch('https://api.deezer.com/album/' + encodeURIComponent(albumId), { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': UA } });
+async function getJson(url, headers) {
+  const r = await fetch(url, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': UA, ...(headers || {}) } });
   if (!r.ok) return null;
-  const d = await r.json();
+  return r.json();
+}
+
+async function deezerAlbum(albumId) {
+  const d = await getJson('https://api.deezer.com/album/' + encodeURIComponent(albumId));
   if (!d || d.error) return null;
   const tracks = ((d.tracks && d.tracks.data) || []).map(function (t) { return t.title_short || t.title; });
   if (!tracks.length) return null;
-  return { artist: (d.artist || {}).name || '', name: d.title, tracks: tracks };
+  return { artist: (d.artist || {}).name || '', artistDz: String((d.artist || {}).id || ''), name: d.title, tracks: tracks };
 }
 
-async function spotifyArtistId(name, token) {
-  if (!name) return null;
-  const k = looseName(name);
-  if (_artistIds[k] !== undefined) return _artistIds[k];
+async function spotifyIdFor(deezerArtistId) {
+  if (!/^\d+$/.test(deezerArtistId)) return null;
+  if (_artistIds[deezerArtistId] !== undefined) return _artistIds[deezerArtistId];
+  let id = null;
   try {
-    const r = await fetch('https://api.spotify.com/v1/search?type=artist&limit=5&q=' + encodeURIComponent(name), { signal: AbortSignal.timeout(8000),
-      headers: { Authorization: 'Bearer ' + token },
-    });
-    if (!r.ok) { _artistIds[k] = null; return null; }
-    const d = await r.json();
-    const items = (d.artists && d.artists.items) || [];
-    // Exact name first. Taking items[0] blindly is how a tribute act or a
-    // covers project ends up supplying somebody else's stream table.
-    const hit = items.find(function (a) { return looseName(a.name) === k; });
-    const id = hit ? hit.id : null;
-    _artistIds[k] = id;
-    return id;
-  } catch (e) { _artistIds[k] = null; return null; }
+    const q = 'SELECT ?sp WHERE { ?a wdt:P2722 "' + deezerArtistId + '"; wdt:P1902 ?sp. } LIMIT 2';
+    const d = await getJson('https://query.wikidata.org/sparql?format=json&query=' + encodeURIComponent(q),
+      { Accept: 'application/sparql-results+json' });
+    const b = (d && d.results && d.results.bindings) || [];
+    if (b.length === 1) id = b[0].sp.value;   // two answers is ambiguous: take neither
+  } catch (e) {}
+  if (!id) {
+    try {
+      const u = await getJson('https://musicbrainz.org/ws/2/url?fmt=json&inc=artist-rels&resource='
+        + encodeURIComponent('https://www.deezer.com/artist/' + deezerArtistId));
+      const rel = ((u && u.relations) || []).find(function (r) { return r.artist; });
+      if (rel) {
+        const a = await getJson('https://musicbrainz.org/ws/2/artist/' + rel.artist.id + '?fmt=json&inc=url-rels');
+        const sp = ((a && a.relations) || []).map(function (r) { return r.url && r.url.resource || ''; })
+          .map(function (s) { const m = s.match(/open\.spotify\.com\/artist\/([A-Za-z0-9]{22})/); return m && m[1]; })
+          .filter(Boolean);
+        if (new Set(sp).size === 1) id = sp[0];
+      }
+    } catch (e) {}
+  }
+  if (id && !/^[A-Za-z0-9]{22}$/.test(id)) id = null;
+  _artistIds[deezerArtistId] = id;
+  return id;
 }
 
-export async function albumInfo(albumId, token) {
+// A legacy Spotify base62 album id, still on records rated before the switch.
+// Its name and artist are in the public crate_feed; the record is then found
+// on Deezer by exact folded name + artist, and valued exactly like a new one.
+async function legacyToDeezer(albumId) {
+  const rows = await getJson(SUPABASE_URL + '/rest/v1/crate_feed?select=album_name,album_artist&album_id=eq.'
+    + encodeURIComponent(albumId) + '&limit=1', { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON });
+  const row = Array.isArray(rows) && rows[0];
+  if (!row || !row.album_name) return null;
+  const s = await getJson('https://api.deezer.com/search/album?limit=10&q='
+    + encodeURIComponent((row.album_artist || '') + ' ' + row.album_name));
+  const want = looseName(row.album_name), wa = looseName(row.album_artist);
+  const hit = ((s && s.data) || []).find(function (a) {
+    return looseName(a.title) === want && (!wa || looseName(a.artist && a.artist.name) === wa);
+  });
+  return hit ? String(hit.id) : null;
+}
+
+export async function albumInfo(albumId) {
   try {
-    if (/^\d+$/.test(String(albumId))) {
-      const dz = await deezerAlbum(albumId);
-      if (!dz) return null;
-      const artistId = await spotifyArtistId(dz.artist, token);
-      if (!artistId) return null;
-      return { artistId: artistId, artist: dz.artist, name: dz.name, tracks: dz.tracks };
-    }
-    // A legacy Spotify album id, still on every record rated before the switch.
-    const r = await fetch('https://api.spotify.com/v1/albums/' + encodeURIComponent(albumId), { signal: AbortSignal.timeout(8000),
-      headers: { Authorization: 'Bearer ' + token },
-    });
-    if (!r.ok) return null;
-    const d = await r.json();
-    const artistId = d.artists && d.artists[0] && d.artists[0].id;
-    const tracks = ((d.tracks && d.tracks.items) || []).map(function (t) { return t.name; });
-    if (!artistId || !tracks.length) return null;
-    return { artistId: artistId, artist: (d.artists[0] || {}).name || '', name: d.name, tracks: tracks };
+    let id = String(albumId);
+    if (!/^\d+$/.test(id)) id = await legacyToDeezer(id);
+    if (!id) return null;
+    const dz = await deezerAlbum(id);
+    if (!dz) return null;
+    const artistId = await spotifyIdFor(dz.artistDz);
+    if (!artistId) return null;
+    return { artistId: artistId, artist: dz.artist, name: dz.name, tracks: dz.tracks };
   } catch (e) { return null; }
 }
 

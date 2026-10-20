@@ -401,17 +401,11 @@ Three things this deliberately says out loud:
 
 ### The three outside dependencies, decided
 
-**Spotify — still there, but it is one lookup now.** The catalogue moved to
-Deezer; the only thing still asked of Spotify is *what is this artist's id*,
-because kworb indexes its stream tables by Spotify artist id. One search per
-artist, cached, no album metadata read or stored.
-
-The old worry was the 5-user Development Mode cap, and it does not apply: it caps
-*authenticated* users, and since the Spotify OAuth routes were removed there are
-none. Every request uses one app-level Client Credentials token, rate-limited
-rather than user-limited. **Do not apply for Extended Quota** as part of
-submission — it needs 250k MAU, it is unreachable, and the application invites
-questions you cannot answer yet.
+**Spotify: not used at all (since 2026-10-20).** The catalogue is Deezer's, and the one
+thing valuation needs, the Spotify artist id kworb indexes by, now comes from Wikidata
+(Deezer id P2722 to Spotify id P1902) with MusicBrainz as the fallback. No Spotify
+credential or API call remains, so the Developer Terms no longer apply. The
+`SPOTIFY_CLIENT_ID`/`SECRET` env vars can be deleted from Vercel.
 
 **kworb — keep it, with eyes open.** It powers the stream valuation behind Bid
 Wars, the Collection's prices and Higher or Lower, and it is scraped HTML from a
