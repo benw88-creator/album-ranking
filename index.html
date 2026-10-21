@@ -9794,6 +9794,69 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
 </script>
 
 <!-- ================================================================
+     MINIMUM APP VERSION — the only lever over builds already installed.
+
+     The app bundles this file, so a front-end fix never reaches an installed
+     copy, but every /api/ change and every migration does — at once, to every
+     build ever shipped. If one of those has to break an old build, this is
+     how its users are told to update. It only works in builds that contain
+     it, which is why it shipped in 1.0.
+
+     /app-version.json is a static file on the site (not a route, so it costs
+     nothing against the twelve-function cap; vercel.json gives it the CORS
+     header). Raise "min" there and every older build asks on its next launch
+     and on every return to the foreground. Put the store links in the same
+     file once the listings exist — no build needed to change them.
+
+     Fails OPEN: no network, a bad file, no App plugin — the app carries on.
+     A version check that can lock everybody out is worse than none.
+     ================================================================ -->
+<script>
+(function () {
+  if (!Native.on || !Native.has('App')) return;
+
+  function older(a, b) {
+    a = String(a).split('.'); b = String(b).split('.');
+    for (var i = 0; i < Math.max(a.length, b.length); i++) {
+      var x = parseInt(a[i], 10) || 0, y = parseInt(b[i], 10) || 0;
+      if (x !== y) return x < y;
+    }
+    return false;
+  }
+
+  var asking = false;
+  function check() {
+    if (asking) return;
+    Promise.all([
+      Native.call('App', 'getInfo'),
+      fetch(Native.api + '/app-version.json', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; })
+    ]).then(function (res) {
+      var info = res[0], want = res[1];
+      if (!info || !info.version || !want || !want.min || !older(info.version, want.min)) return;
+      var url = want[Native.platform] || '';
+      asking = true;
+      // The splash sits at z-index 1000, over every sheet. Wait for it to go.
+      (function show() {
+        if (document.getElementById('splash-gate') || !window.ask) return setTimeout(show, 400);
+        ask({
+          title: 'Update VINALL',
+          body: 'This version is too old to keep working properly. Get the latest from the ' +
+                (Native.platform === 'android' ? 'Play Store' : 'App Store') + '.',
+          confirm: url ? 'Update' : 'Got it', onlyOk: true
+        }).then(function () {
+          asking = false;
+          if (url) window.open(url, '_blank');
+        });
+      })();
+    }).catch(function () {});
+  }
+
+  check();
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+})();
+</script>
+
+<!-- ================================================================
      REMINDERS — the two things worth a nudge, and nothing else.
 
      Local notifications only: no server, no device token, no infrastructure
