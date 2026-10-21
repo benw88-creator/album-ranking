@@ -4482,18 +4482,6 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 @keyframes splashGround { to { background-color: rgba(10,9,8,0); } }
 .splash-gate.is-handing .splash-video-wrap { animation: splashGround 760ms 300ms cubic-bezier(.5,0,.7,1) forwards; }
 
-/* The flight itself. --fx/--fy are the vector from the record's centre to the
-   header mark's centre, --fs the scale that makes it exactly that size, all
-   measured at runtime. */
-.splash-disc.is-flying {
-  animation: discFlight 880ms cubic-bezier(.62,.02,.24,1) forwards;
-}
-/* Fallback only — playDismissAnimation drives the flight through
-   element.animate() wherever that exists. */
-@keyframes discFlight {
-  0%   { transform: translate(-50%, -50%) scale(1); }
-  100% { transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(var(--fs)); }
-}
 /* The spin-up. Two animations on one element would fight over `transform`, so
    the rotation lives on .sd-vinyl and the flight on .splash-disc — which is
    the same split that already keeps the centring translate off the rotation. */
@@ -4522,7 +4510,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 .brand-mark.is-receiving { opacity: 0; }
 /* The dissolve is a TRANSITION on opacity, never a second animation, and the
    reason is mechanical: both of these elements are already running one.
-   `.brand-mark` has vinylSpin and `.splash-disc` has discFlight, and the
+   `.brand-mark` has vinylSpin and `.splash-disc` has its flight transform, and the
    `animation` shorthand REPLACES the list — so adding a fade that way would
    stop the header record turning, and would restart the flight from the
    centre of the screen on its last frame. opacity is not touched by either
@@ -4545,7 +4533,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
    shape as the crossfade above, and the second time this one element's single
    `animation` slot has caused it. */
 .mark-ring {
-  position: fixed; border-radius: 50%; pointer-events: none; z-index: 200;
+  position: absolute; border-radius: 50%; pointer-events: none; z-index: 2;
   animation: markLand 520ms var(--ease) forwards;
 }
 @keyframes markLand {
@@ -4557,7 +4545,6 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
   html:not([data-motion="full"]) .splash-gate.is-handing,
   html:not([data-motion="full"]) .splash-gate.is-handing .splash-scrim,
   html:not([data-motion="full"]) .splash-gate.is-handing .splash-content,
-  html:not([data-motion="full"]) .splash-disc.is-flying,
   html:not([data-motion="full"]) .splash-gate.is-handing .splash-bloom { animation: none; }
 }
 
@@ -24539,10 +24526,11 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 function playDismissAnimation(gateEl, callback) {
   var reduced = window.motionReduced ? window.motionReduced() : false;
 
-  var done = false;
+  var done = false, cleanup = null;
   function finish() {
     if (done) return;
     done = true;
+    if (cleanup) cleanup();
     callback();
   }
 
@@ -24575,37 +24563,46 @@ function playDismissAnimation(gateEl, callback) {
     return;
   }
 
+  /* THE DESTINATION IS RE-MEASURED EVERY FRAME, AND THAT IS THE FIX.
+
+     It used to be measured once, at GO, and baked into keyframes. But the
+     favourite-artist hero is a sibling ABOVE <header>, and it opens (with a
+     height transition) when the profile lands — which is very often right
+     around the moment GO is pressed, because the splash waits on Cloud.ready.
+     The header then slid ~320px down while the record flew to where it USED
+     to be, and the record sat on top of the artist photo. Any scroll, a
+     viewport change or the keyboard did the same thing on a smaller scale.
+     Chasing the live target means it cannot land anywhere but on the mark.
+
+     Size comes from getComputedStyle, never the rect: `.brand-mark` is always
+     turning and a rotated element's bounding box is up to 41% larger than the
+     element. Only the CENTRE survives rotation, so only the centre is read
+     off the rect. */
   var from = disc.getBoundingClientRect();
-  var to = mark.getBoundingClientRect();
-
-  /* THE DESTINATION SIZE CANNOT COME OFF getBoundingClientRect, AND THAT WAS
-     THE POP.
-
-     `.brand-mark` carries `animation: vinylSpin 8s linear infinite` — the
-     header record is always turning — and getBoundingClientRect returns the
-     AXIS-ALIGNED BOUNDING BOX OF A ROTATED ELEMENT. A 32px square rotated by
-     θ measures 32·(|cos θ| + |sin θ|), which is 32 at 0° and 90° and 45.25 at
-     45°. Measured live at a random moment: 44.47.
-
-     So the scale was computed against a number that depended on where the
-     header record happened to be in its eight-second cycle at the instant
-     somebody pressed GO. It averages about 27% too large, is never too small,
-     and is different on every single load — which is exactly what an
-     intermittent "the vinyl is slightly bigger" reads like, and exactly why
-     it could never be pinned down by looking at the numbers in the code.
-
-     The LAYOUT width is what we want, and getComputedStyle gives it
-     transform-free. The CENTRE still comes off the rect: a square rotating
-     about its own centre keeps the same centre, so that measurement was
-     always correct, and it is the one that has to account for the header's
-     real position. */
-  var toW = parseFloat(getComputedStyle(mark).width) || mark.offsetWidth || to.width;
-  var fx = (to.left + to.width / 2) - (from.left + from.width / 2);
-  var fy = (to.top + to.height / 2) - (from.top + from.height / 2);
-  var fs = toW / (from.width || 1);
-  disc.style.setProperty('--fx', fx.toFixed(1) + 'px');
-  disc.style.setProperty('--fy', fy.toFixed(1) + 'px');
-  disc.style.setProperty('--fs', fs.toFixed(4));
+  var fromX = from.left + from.width / 2, fromY = from.top + from.height / 2;
+  var fromW = from.width || 1;
+  function target() {
+    var r = mark.getBoundingClientRect();
+    var w = parseFloat(getComputedStyle(mark).width) || mark.offsetWidth || r.width;
+    return { x: r.left + r.width / 2 - fromX, y: r.top + r.height / 2 - fromY, s: w / fromW };
+  }
+  // The same curve the keyframes used, so the feel is unchanged.
+  function bezier(x1, y1, x2, y2) {
+    return function (x) {
+      var t = x;
+      for (var i = 0; i < 8; i++) {
+        var u = 1 - t;
+        var dx = 3 * x1 * t * u * u + 3 * x2 * t * t * u + t * t * t - x;
+        var d = 3 * x1 * u * u + 6 * (x2 - x1) * t * u + 3 * (1 - x2) * t * t;
+        if (Math.abs(dx) < 1e-5 || Math.abs(d) < 1e-6) break;
+        t = Math.min(1, Math.max(0, t - dx / d));
+      }
+      var v = 1 - t;
+      return 3 * y1 * t * v * v + 3 * y2 * t * t * v + t * t * t;
+    };
+  }
+  var ease = bezier(.62, .02, .24, 1);
+  var DELAY = 300, DUR = 880, END = DELAY + DUR;
 
   if (window.buzz) buzz('good');
 
@@ -24614,73 +24611,70 @@ function playDismissAnimation(gateEl, callback) {
   gateEl.classList.add('is-handing');
   mark.classList.add('is-receiving');
 
-  // 2. Let go once it is properly turning. The delay is what makes the flight
-  //    read as being thrown rather than as a slide starting.
-  /* 2. The flight. Scale is interpolated GEOMETRICALLY (fs^p), not linearly.
-        A linear 1 → 0.05 spends half the flight above 50% size, so on a
-        desktop — where the record starts at 1,200-1,900px — it hung full-screen
-        and then collapsed into the corner in the last 200ms. Equal ratios per
-        step read as one steady zoom at every viewport. The easing sits on the
-        whole effect so the steps share one curve. No animated filter: a blur
-        that changes every frame re-rasterises a layer that size every frame. */
-  var flightAnim = null;
-  if (disc.animate) {
-    var frames = [];
-    for (var i = 0; i <= 8; i++) {
-      var p = i / 8;
-      frames.push({ transform: 'translate(calc(-50% + ' + (fx * p).toFixed(1) + 'px), calc(-50% + ' +
-        (fy * p).toFixed(1) + 'px)) scale(' + Math.pow(fs, p).toFixed(5) + ')' });
-    }
-    flightAnim = disc.animate(frames, { duration: 880, delay: 300, easing: 'cubic-bezier(.62,.02,.24,1)', fill: 'forwards' });
-    flightAnim.finished.then(finish, function () {});
-  } else {
-    setTimeout(function () { disc.classList.add('is-flying'); }, 300);
+  /* Every step hangs off ONE clock, read in one rAF loop, so a tab that was
+     hidden mid-flight (rAF and timers both stop) comes back to the end state
+     in order instead of to a disc frozen half way and a mark still at
+     opacity 0. finish() is the single cleanup and is idempotent. */
+  var t0 = performance.now(), raf = 0, wound = false, handed = false;
+  cleanup = function () {
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    document.removeEventListener('visibilitychange', onVis);
+    if (vinyl) vinyl.classList.remove('is-winding');
+    mark.classList.remove('is-receiving');
+  };
+  function onVis() { if (document.hidden) finish(); }
+  document.addEventListener('visibilitychange', onVis);
+
+  function ring() {
+    // Inside the mark's offset parent, at the mark's layout box, so it moves
+    // with the header if the hero is still settling — not pinned to a
+    // viewport point measured once.
+    var host = mark.offsetParent;
+    if (!host) return;
+    var el = document.createElement('span');
+    el.className = 'mark-ring';
+    el.style.left = mark.offsetLeft + 'px';
+    el.style.top = mark.offsetTop + 'px';
+    el.style.width = mark.offsetWidth + 'px';
+    el.style.height = mark.offsetHeight + 'px';
+    host.appendChild(el);
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 600);
   }
 
-  /* 3. Wind DOWN before it arrives. The record is turning at 0.34s a
-        revolution during the throw and the header mark turns at 8s — landing
-        one straight into the other is a 23x speed discontinuity on the one
-        frame you are asked to believe they are the same object. Dropping
-        `is-winding` at 820ms returns it to the 6s idle for the last stretch,
-        so what arrives is a record at rest against a mark that is idling. */
-  setTimeout(function () { if (vinyl) vinyl.classList.remove('is-winding'); }, 820);
-
-  /* 4. The handoff is a CROSSFADE over the last 160ms of the flight, not a
-        swap 60ms before the end.
-
-        The swap was hidden under a moving object because the object did not
-        arrive where the mark was — it could not, with the size being measured
-        off a rotating bounding box. Now that it lands exactly on the mark, the
-        two are superimposed, and the honest move is to dissolve one into the
-        other: the splash record has a dark label with a gold rim and the mark
-        has a gold label, so a hard cut between them at 32px is a visible
-        flicker even when the geometry is perfect. */
-  setTimeout(function () {
-    // Taking `is-receiving` off is the fade-IN — the mark carries a 160ms
-    // opacity transition, so it needs no second class to animate with.
-    mark.classList.remove('is-receiving');
-    disc.classList.add('is-handed');
-  }, 1020);
-  setTimeout(function () {
-    // Measured again rather than reusing `to`: a second of choreography has
-    // passed and the header is where it actually is now.
-    var r = mark.getBoundingClientRect();
-    var w = parseFloat(getComputedStyle(mark).width) || mark.offsetWidth;
-    var ring = document.createElement('span');
-    ring.className = 'mark-ring';
-    ring.style.left = (r.left + r.width / 2 - w / 2) + 'px';
-    ring.style.top = (r.top + r.height / 2 - w / 2) + 'px';
-    ring.style.width = w + 'px';
-    ring.style.height = w + 'px';
-    document.body.appendChild(ring);
-    setTimeout(function () { if (ring.parentNode) ring.parentNode.removeChild(ring); }, 600);
-    if (window.buzz) buzz('tap');
-  }, 1180);
-
-  disc.addEventListener('animationend', function (e) {
-    if (e.animationName === 'discFlight') finish();
-  });
-  setTimeout(finish, 1320);
+  function frame(now) {
+    raf = 0;
+    if (done) return;
+    var t = now - t0;
+    /* 3. Wind DOWN before it arrives: landing a record turning at 0.34s a
+          revolution onto a mark idling at 8s is a 23x speed jump on the one
+          frame you are asked to believe they are the same object. */
+    if (!wound && t >= 820) { wound = true; if (vinyl) vinyl.classList.remove('is-winding'); }
+    /* 4. The handoff is a 160ms CROSSFADE (both elements carry an opacity
+          transition), because the splash label and the mark's label differ
+          and a hard cut at 32px flickers even with perfect geometry. */
+    if (!handed && t >= END - 160) {
+      handed = true;
+      mark.classList.remove('is-receiving');
+      disc.classList.add('is-handed');
+    }
+    /* 2. The flight. Scale is GEOMETRIC (s^p): a linear 1 → 0.05 spends half
+          the flight above 50% size and collapses into the corner at the end. */
+    var p = t <= DELAY ? 0 : ease(Math.min(1, (t - DELAY) / DUR));
+    var g = target();
+    disc.style.transform = 'translate(calc(-50% + ' + (g.x * p).toFixed(2) + 'px), calc(-50% + ' +
+      (g.y * p).toFixed(2) + 'px)) scale(' + Math.pow(g.s, p).toFixed(5) + ')';
+    if (t >= END) {
+      ring();
+      if (window.buzz) buzz('tap');
+      finish();
+      return;
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  raf = requestAnimationFrame(frame);
+  // rAF never runs in a hidden tab; this guarantees the splash still goes.
+  setTimeout(finish, END + 600);
 }
 </script>
 

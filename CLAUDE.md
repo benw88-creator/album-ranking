@@ -5650,6 +5650,18 @@ The record also **winds down at 820ms** rather than arriving at 0.34s/rev into a
 mark idling at 8s — a 23x speed discontinuity on the one frame you are asked to
 believe they are the same object.
 
+**The destination is re-measured every frame (2026-10-21).** The flight was
+measured once at GO and baked into keyframes, but `#artist-hero` sits ABOVE
+`<header>` and opens with a height transition when the profile lands — usually
+right at GO, because the splash waits on `Cloud.ready`. The header slid ~330px
+down and the record landed on the artist photo. The flight is now one rAF loop
+that reads the mark's centre (rect) and width (computed style) each frame, with
+every step (wind-down, crossfade, ring, finish) on that one clock; a hidden tab
+finishes immediately and `finish()` always clears `is-receiving`. The ring sits
+in the mark's offset parent so it moves with the header.
+`scripts/tests/splash-flight.spec.mjs` covers hero-opens, scroll, hidden tab
+and repeated presses; the old code fails it by 334px.
+
 **`is-entering` is never added by anything.** The comment above about forcing the
 resting state describes a state that no longer exists; the class swap is a
 harmless no-op kept for safety. Worth knowing before trusting that paragraph.
