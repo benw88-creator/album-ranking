@@ -14,8 +14,13 @@ for them in chat.
 You are guiding me (Ben) through publishing VINALL to the Apple App Store, one step
 at a time. I'm on a Mac in the VINALL repo. The iOS app is a Capacitor 8 project in
 app/ and already builds and installs on my iPhone. VINALL is operated by Excus Ltd
-(UK company no. 17517058). My mum is the director, and she will own the Apple
-developer account.
+(UK company no. 17517058). My mum is the director.
+
+ALREADY DECIDED, do not re-open it: we are making a BRAND NEW Apple Account for
+my mum using the Excus Ltd company email, and enrolling in the Apple Developer
+Program as an ORGANISATION (Excus Ltd), not as an individual, with my mum as the
+Account Holder. The App Store seller will be Excus Ltd, which matches our privacy
+policy and terms. Your job is to make that happen, click by click.
 
 Before anything else, read these files fully: STORE-SUBMISSION.md (the prepared App
 Privacy answers, age rating, listing copy, App Review notes and the outstanding
@@ -44,24 +49,35 @@ HOW TO GUIDE ME
 
 THE STEPS (adjust if Apple's current process says otherwise)
 
-1. Decide the enrolment type. Explain Organisation (Excus Ltd) versus Individual
-   (my mum personally) for our case: the seller name shown on the App Store,
-   D-U-N-S, the legal-authority requirement, timing, and whether it matches our
-   privacy policy and terms, which name Excus Ltd. Give a recommendation and wait
-   for my decision. If Organisation, walk me through checking or getting Excus
-   Ltd's free D-U-N-S number via Apple's D-U-N-S lookup first, because it can take
-   days. Also tell me whether Apple wants a company-domain email for an
-   organisation and what to do since our support address is a gmail.
+1. Check what Excus Ltd needs before enrolling, and tell me what to gather:
+   - Its D-U-N-S number. Walk me through Apple's own D-U-N-S lookup (on the
+     developer site) with the company's exact registered name and address as on
+     Companies House. If it has none, walk me through requesting one free
+     through Apple's form, and tell me how long that usually takes and that the
+     name/address must match Companies House exactly.
+   - A website for the company (https://vinall.xyz) and a company-domain email
+     address if Apple requires one for organisations. Check Apple's current
+     rules. If the company email isn't on its own domain, tell me what to do.
+   - That my mum, as director, has legal authority to bind Excus Ltd, and what
+     Apple may do to verify that (e.g. a verification phone call).
+   Wait until I confirm we have the D-U-N-S number.
 
-2. Create my mum's Apple Account (if she doesn't already have one she wants to use)
-   with the company email: two-factor authentication on, her legal name exactly
-   as on her ID, a UK phone number. Explain what the "Account Holder" role means
-   and that it should be her.
+2. Create the new Apple Account for my mum with the Excus Ltd email, on her
+   iPhone or at account.apple.com: her legal name exactly as on her photo ID,
+   date of birth, a UK phone number she can receive codes on, and two-factor
+   authentication turned on (Apple requires it). Tell me which fields matter
+   for enrolment and which don't. Warn me about anything that makes enrolment
+   fail later, such as a name mismatch or the account being too new on a device.
 
-3. Enrol in the Apple Developer Program and pay the annual fee (expect £79/year;
-   confirm the current price). Prefer the Apple Developer app on her iPhone if
-   Apple recommends it for identity verification. Tell me what the identity
-   check involves, how long approval usually takes, and what emails to watch for.
+3. Enrol as an Organisation and pay the annual fee (expect £79/year; confirm
+   the current UK price). Use whichever route Apple currently recommends: the
+   Apple Developer app on her iPhone, or developer.apple.com/programs/enroll.
+   Go field by field: entity type (company/organisation), legal entity name
+   "Excus Ltd" exactly as on D-U-N-S, D-U-N-S number, headquarters address,
+   phone, website, her role/title as director, and accepting the Program
+   License Agreement. Then the payment step. Tell me what happens next (Apple
+   verification, a possible phone call to her, how long it usually takes, which
+   emails to watch for) and what to do if it stalls.
    Wait here until enrolment is confirmed.
 
 4. Once approved: have her invite me to the team (App Store Connect → Users and
@@ -113,5 +129,5 @@ THE STEPS (adjust if Apple's current process says otherwise)
     release the app, and what's due again each year (renewal, keeping the demo
     account alive, the support inbox).
 
-Start with step 1.
+Start with step 1. Don't re-explain the Individual vs Organisation choice; it is made.
 ```
