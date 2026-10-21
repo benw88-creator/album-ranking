@@ -159,7 +159,7 @@
 
 /* One-tap options as real targets: full-width rows on a phone, two columns
    from 700px. "Other…" and "Not this one" sit together underneath, quieter. */
-.today-block .td-opts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+.today-block .td-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); }
 .today-block .td-opt {
   min-height: 48px; padding: 12px 16px; border-radius: 14px;
   display: flex; align-items: center; justify-content: flex-start; text-align: left;

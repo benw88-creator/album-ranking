@@ -61,7 +61,12 @@ function loose(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, 
 async function dz(path) {
   const r = await fetch('https://api.deezer.com' + path, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': UA } });
   if (!r.ok) throw new Error('deezer ' + r.status);
-  return r.json();
+  const j = await r.json();
+  // Deezer answers a rate limit with a 200 and an error body. Read as data it
+  // was "no preview", cached at the edge for a day — a record silent for
+  // everybody because one minute was busy.
+  if (j && j.error) throw new Error('deezer ' + (j.error.code || j.error.type || 'error'));
+  return j;
 }
 
 /* A cover, a karaoke backing or a tribute carries the right title and the
@@ -184,10 +189,10 @@ export default async function handler(req, res) {
       link: best.link, cover: best.cover_xl || best.cover_big || null, tracks: tracks
     });
   } catch (e) {
-    // Never 500 into the player. An empty list means "use the Apple fallback",
-    // and a record that will not play is a row that hands off to Spotify —
-    // both are ordinary states, not errors worth breaking a page over.
+    // Every caller already treats a non-OK answer like a miss for display
+    // (the player falls back to Apple), but a failure is not a miss: 502 so the client retries and says so, never
+    // an empty list it would take as "this record has no clip".
     res.setHeader('Cache-Control', 'no-store');
-    res.status(200).json({ source: 'deezer', album: null, tracks: [], error: String((e && e.message) || e) });
+    res.status(502).json({ source: 'deezer', album: null, tracks: [], error: String((e && e.message) || e) });
   }
 }

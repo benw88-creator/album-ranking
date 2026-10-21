@@ -193,7 +193,7 @@
       thump(t, 0.35);
       [0, 2, 4, 5, 7].forEach(function (d, i) { bell(t + 0.05 + i * 0.06, note(5 + d), 1.3, 0.18, 0.9, 1.3); });
     }],
-    levelTick:[80, 3, function (t, o) { bell(t, note(4 + (o.n || 0)), 0.4, 0.2, 0.5); }],
+    levelTick:[80, 3, function (t, o) { bell(t, note(4 + Math.min(o.n || 0, 6)), 0.4, 0.2, 0.5); }],
     levelUp:  [900, 4, function (t, o) {
       var b = 4 + Math.min(o.n || 0, 6);
       pad(t, [note(0) / 2, note(3) / 2, note(5) / 2], 2.2, 0.16);

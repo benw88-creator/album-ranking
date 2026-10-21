@@ -8,7 +8,7 @@
 /* ---- Odometer -------------------------------------------------------- */
 .pl-roll { display: inline-flex; align-items: flex-start; line-height: 1; font-variant-numeric: tabular-nums; vertical-align: baseline; }
 .pl-col { display: inline-block; height: 1em; overflow: hidden; }
-.pl-strip { display: block; transition: transform 640ms var(--pl-spring); will-change: transform; }
+.pl-strip, .pl-roll .pl-strip { display: block; transition: transform 640ms var(--pl-spring); will-change: transform; }
 .pl-strip b { display: block; height: 1em; line-height: 1em; font: inherit; }
 .pl-sep { display: inline-block; }
 
@@ -26,19 +26,12 @@
 .pl-card.pl-land { animation: plLand 360ms var(--pl-spring); color: var(--gold); }
 @keyframes plLand { 40% { transform: translateY(2px) scale(1.06); } }
 
-/* ---- Guess the Cover: the record slides out of the sleeve ----------- */
+/* ---- Guess the Cover: the sleeve stays put ---------------------------
+   It used to slide aside on a right answer while a record rolled out from
+   behind it. The artwork IS the question, so it never moves: the verdict is
+   the border and the badge, not motion. */
 #game .g-cover { position: relative; z-index: 1; }
-.g-vinyl {
-  position: absolute; z-index: 0; top: 6%; left: 18%; width: 88%; aspect-ratio: 1; border-radius: 50%; opacity: 0;
-  background:
-    radial-gradient(circle, var(--gold) 0 12%, #0c0b0a 12.5% 14%, transparent 14.5%),
-    repeating-radial-gradient(circle, #141312 0 2px, #1f1d1b 2px 3px);
-  box-shadow: 0 10px 30px rgba(0,0,0,.7);
-  transition: transform 700ms var(--pl-spring), opacity 200ms ease;
-}
-.g-cover-wrap[data-game="cover"].correct .g-cover { transform: translateX(-30%) rotate(-3deg); }
-.g-cover-wrap[data-game="cover"].correct .g-vinyl { opacity: 1; transform: translateX(26%); animation: plSpin 2.4s linear 400ms infinite; }
-@keyframes plSpin { from { rotate: 0deg; } to { rotate: 1turn; } }
+.g-cover-wrap:is([data-game="cover"], [data-game="coverx"]).wrong { animation: none; }
 
 /* ---- The middle square: the crop opens like an aperture ------------- */
 .g-cover-wrap[data-game="coverx"] .g-cover { transition: transform 900ms cubic-bezier(.22, 1.18, .36, 1); }

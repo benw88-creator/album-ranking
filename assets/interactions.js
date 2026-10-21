@@ -125,3 +125,23 @@
   }).observe(document.body, { childList: true, subtree: true });
   sync();
 })();
+
+/* Native feel (2026-10-21). Safari ignores user-scalable=no for pinch, so the
+   gesture is refused; a second finger on a plain page is otherwise a zoom.
+   Images are never dragged out as files or ghosts, and a double-tap that
+   reaches nothing interactive is not a zoom either. */
+(function () {
+  ['gesturestart', 'gesturechange'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  document.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length > 1 && e.cancelable) e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('dragstart', function (e) {
+    if (e.target && e.target.tagName === 'IMG') e.preventDefault();
+  }, true);
+  document.addEventListener('contextmenu', function (e) {
+    var t = e.target;
+    if (t && (t.tagName === 'IMG' || (t.closest && t.closest('.art-wrap, .fy-art, .g-cover-wrap, .col-rec, .td-art-play')))) e.preventDefault();
+  }, true);
+})();

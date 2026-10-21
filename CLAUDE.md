@@ -6634,3 +6634,77 @@ self-time on load is well under a second at 4×). That is a CSS job.
 - **Discovery** (`assets/discover.js`): contextual prompts (reward waiting, game unlocked,
   milestone ≤3 away, today's Recall) before introductions; side-docked, tucks into an edge tab.
   New accounts get up to three a session. `window.UnlockGates` exposes the gate table.
+
+## Pre-submission pass (2026-10-21)
+
+- **Splash.** The tagline is "Best with sound on" with a headphones glyph. The
+  black dot in the middle of the disc was `.splash-bloom`: a 2px box whose glow
+  is a box-shadow, and a box-shadow never paints inside its own box. It is
+  filled now. The flying record had no edge, so on the dark app it vanished and
+  the hand-off read as a fade plus a ring; it carries a gold rim and its label
+  warms to the header mark's gold. GO answers on `pointerdown`, pops on click
+  and holds a three-dot loading state until the flight starts. A header mark
+  with no box falls back to the fade.
+- **Levels.** `applyWallet` only fires `levelUp` once `load()` has run. Before
+  that `state.level` is the default 1, so an award landing first (the daily
+  login on every load) read a level-200 account as climbing 1 -> 200 with a
+  rising pitch per tick (`note(203)`). Big jumps count their last six levels
+  and `levelTick` pitch is capped.
+- **Class collision.** `.pl-strip` was both the odometer's digit strip
+  (play.css) and the profile shelf's sleeve strip (profile2.css, loaded later,
+  `display:flex`), so every odometer — Bid Wars chips, Drop, Cover Fire — laid
+  its digits out sideways. The shelf's is `.pls-strip`. Prefix new classes.
+- **/api/preview.** Deezer answers a rate limit with HTTP 200 and an `error`
+  body; the route read it as "no preview" and edge-cached the miss for a day,
+  and its catch-all returned 200 + empty tracks. `dz()` throws on `j.error` and
+  failures are 502 `no-store`. The client resolver treats an error body as an
+  error, retries transport failures twice (0.5s, 1.5s) and cuts a request at 9s.
+- **Recall "could not reach the audio".** A superseded play (double tap, or
+  Hear 3s while 1s loads) resolves `false` in VinalAudio and Recall called that
+  a network failure. `hearTok` ignores superseded presses; every Recall stop
+  bumps it. `--app-h` (visualViewport height) sizes the sleeve, and
+  `body.kb-up` shrinks it to 96px; in the native app `kb-up` comes from the
+  Capacitor keyboard events because the webview resizes and `--kb` reads 0.
+- **For You.** Rating never moves the feed. A clip that ends replays on the
+  same card (only while For You is on screen and no sheet is open).
+- **Higher or Lower.** `/api/album-streams?albums=` answers from `album_plays`
+  (14 days) first and values the rest four at a time, writing new totals back.
+  It used to cold-scrape kworb for all twelve albums in series.
+- **Market.** `buy()` reads the record from what the grid drew (`_shown`), so a
+  record from the "rated but not in the pool" backfill no longer lands on the
+  shelf as "Unknown". The price sweep never rewrites "Rate to unlock" into a
+  dead Buy. Pick buttons are drawn disabled while pricing (no card growth).
+  After a purchase `syncGrid()` re-applies affordability, picks and the chip;
+  "already own" marks the card owned and re-reads the shelf; searches are
+  tokened; a failed sell restores its label.
+- **Lists.** Hide all hides each list by key (an old `'*'` is expanded for the
+  owner), so lists can be switched back on one at a time. The 2/3/4 column
+  choice rides `hidden_lists` as one `cols:N` entry — no migration.
+- **Native feel.** Viewport is `maximum-scale=1, user-scalable=no` (owner's
+  launch call) and `gesturestart` is refused; images never drag or show the
+  long-press menu; `html, body { overflow-x: clip; overscroll-behavior: none }`.
+  Two-column grids are `repeat(2, minmax(0, 1fr))` — `1fr 1fr` let a long
+  Cover Fire title widen the sheet. `scripts/tests/overflow.spec.mjs` checks
+  every view and game sheet at 375px.
+- Earworm shows the artist from the start (no Reveal). Guess the Cover's
+  sleeve never moves. Today's album covers play the record's opening track.
+- **Audio engine.** `cut()`'s 72ms fade is tokened (`fadeIv`, cleared by
+  `halt()`): `'end'` fires right after `cut()`, and a listener starting the next
+  clip (For You's loop, Choice's play-all) had it paused by the old fade.
+  `hardStop` is armed once playback has started, from `currentTime`, not at
+  resolve time. A caller that supplies `opts.clip` gets `false` on failure,
+  never a by-name retry. Crate/Today preview `stop()` only stops audio they
+  started (setMode calls them on every view change). Your music's song feed
+  loops and no longer advances on rating; Replay's preview stops on a no-clip.
+- **Auth.** `onAuthStateChange` handles `SIGNED_OUT` (another tab, suspension)
+  with the local half of `logout()`, and a `SIGNED_IN` for a different user
+  re-runs `onAuthed` — only after `authInitDone`. A completed password reset
+  calls `onAuthed`. `Wallet.load()` drops its result if the account changed
+  while it was in flight. `_profCache` is cleared on logout and account change.
+- **Games.** Closing Cover Fire mid Today's Ten / head-to-head files the run
+  (the next-round timer is tracked in `nextT` and cleared). Closing Higher or
+  Lower mid-run ends it (Go used to stay dead). Bid Wars ignores a second
+  Lock tap within 400ms. Earworm's keydown ignores fields and sheets above it.
+  The tracklist round ignores a late fetch for a previous round. A lost Drop
+  still counts as played. `scripts/tests/prelaunch.spec.mjs` covers the
+  odometer, Earworm, For You not advancing and the pre-load level-up.

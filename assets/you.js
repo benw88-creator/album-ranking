@@ -490,7 +490,7 @@
     }
     paintRing();
     if (ym.session.length % 10 === 0 && window.toast) toast(ym.session.length + ' rated');
-    setTimeout(function () { if (feedOn() && ym.queue[ym.i] === x) feedGo(q + 1); }, 520);
+    // No auto-advance: the feed stays on the song you just rated (2026-10-21).
   }
   function paintRing() {
     var r = document.querySelector('#ym-body .ym-ring'); if (!r) return;
@@ -500,6 +500,12 @@
   }
   function wireFeed() {
     var host = $('view-yourmusic'); if (!host || host._feedWired) return; host._feedWired = true;
+    // The clip ends and plays again on the same card, as For You does.
+    try { VinalAudio.on('end', function () {
+      var q = _feedPlaying, c = q >= 0 && cardEl(q);
+      if (!c || !c.classList.contains('is-playing') || !feedOn() || document.hidden) return;
+      _feedPlaying = -1; feedPlay(q, true);
+    }); } catch (e) {}
     host.addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b || !b.closest('.ymf-card')) return;
       var q = +b.closest('.ymf-card').dataset.q;

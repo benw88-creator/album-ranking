@@ -41,6 +41,38 @@ const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY ||
 // each unmatched artist costs a kworb page fetch, and a serverless function
 // that runs for thirty seconds is a serverless function that times out.
 const BATCH_MAX = 12;
+const STALE_DAYS = 14;
+const SERVICE = () => process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// album_plays is service-role only (RLS on, no policies). Without the key this
+// quietly does nothing and every album is valued live, as before.
+async function cachedTotals(ids) {
+  const key = SERVICE(), out = {};
+  if (!key || !ids.length) return out;
+  try {
+    const since = new Date(Date.now() - STALE_DAYS * 86400000).toISOString();
+    const list = ids.map((id) => '"' + String(id).replace(/"/g, '') + '"').join(',');
+    const r = await fetch(SUPABASE_URL + '/rest/v1/album_plays?select=album_id,plays&source=eq.kworb&plays=gt.0' +
+      '&fetched_at=gt.' + encodeURIComponent(since) + '&album_id=in.(' + encodeURIComponent(list) + ')',
+      { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+    if (!r.ok) return out;
+    (await r.json()).forEach((row) => { if (row && row.plays) out[row.album_id] = Number(row.plays); });
+  } catch (e) {}
+  return out;
+}
+async function storeTotals(vals) {
+  const key = SERVICE();
+  if (!key || !vals.length) return;
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/album_plays', {
+      method: 'POST',
+      headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json',
+                 Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(vals.map((v) => ({ album_id: v.album_id, name: v.album || null, artist: v.artist || null,
+        plays: v.total, source: 'kworb', fetched_at: new Date().toISOString() }))),
+    });
+  } catch (e) {}
+}
 
 // The ids this caller may not price, because they are live on a board of
 // theirs. Fails closed: if the lookup errors we refuse nothing rather than
@@ -106,22 +138,39 @@ export default async function handler(req, res) {
     if (!ids.length) { res.status(400).json({ error: 'No album ids' }); return; }
     const cache = {};
     const results = [];
-    for (const id of ids) {
-      if (sealed && sealed.has(id)) {
-        // On one of your own boards. Higher or Lower drops it from the pool
-        // like any other album it cannot price.
-        results.push({ album_id: id, ok: false, reason: 'sealed' });
-        continue;
-      }
-      try {
-        const v = await valueAlbum(id, token, cache);
-        v.album_id = id;
-        delete v.missed;
-        results.push(v);
-      } catch (e) {
-        results.push({ album_id: id, ok: false, reason: 'failed' });
+    const open = ids.filter((id) => !(sealed && sealed.has(id)));
+    ids.forEach((id) => {
+      // On one of your own boards. Higher or Lower drops it from the pool
+      // like any other album it cannot price.
+      if (sealed && sealed.has(id)) results.push({ album_id: id, ok: false, reason: 'sealed' });
+    });
+    /* WARM FIRST, THEN FOUR AT A TIME. This used to value every album one
+       after another and never looked at album_plays, so a Higher or Lower run
+       cold-scraped kworb twelve times in a row — the 10-15 seconds before the
+       first round. The Market already keeps album_plays fresh for fourteen
+       days; anything in it is answered from there, the rest valued with a
+       little concurrency, and every new total written back for next time. */
+    const warm = await cachedTotals(open);
+    const cold = open.filter((id) => !warm[id]);
+    open.forEach((id) => { if (warm[id]) results.push({ album_id: id, ok: true, total: warm[id], cached: true }); });
+    const fresh = [];
+    let next = 0;
+    async function worker() {
+      while (next < cold.length) {
+        const id = cold[next++];
+        try {
+          const v = await valueAlbum(id, token, cache);
+          v.album_id = id;
+          delete v.missed;
+          results.push(v);
+          if (v.ok && v.total > 0) fresh.push(v);
+        } catch (e) {
+          results.push({ album_id: id, ok: false, reason: 'failed' });
+        }
       }
     }
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    await storeTotals(fresh);
     res.setHeader('Cache-Control', 'no-store');
     res.status(200).json({ results: results });
     return;

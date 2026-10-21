@@ -6,9 +6,11 @@
 <!-- viewport-fit=cover lets the page paint under the notch and home
      indicator; the safe-area insets further down put the content back
      inside them. Without cover, iOS letterboxes the page in black. -->
-<!-- Keep pinch zoom available. touch-action: manipulation removes accidental
-     double-tap delays without removing a low-vision user's browser controls. -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- No pinch or double-tap zoom (owner's call for launch, 2026-10-21): this is
+     an app, not a page. maximum-scale=1 also stops iOS zooming into a focused
+     field; Safari ignores user-scalable for pinch, so gesturestart is refused
+     in assets/interactions.js as well. Dynamic Type still scales the text. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>VINALL</title>
 <meta name="description" content="Rate, rank and discover the albums and songs you love.">
 <meta name="theme-color" content="#0a0908">
@@ -1700,13 +1702,6 @@ html[data-motion="none"] .view.enter { animation: none; }
 }
 .ew-clue b { color: var(--text); }
 .ew-clue-hint { border-color: var(--gold-dim); color: var(--gold); }
-#ew-hint {
-  font: 600 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em;
-  background: transparent; border: 1px dashed var(--border-strong);
-  color: var(--text-dim); border-radius: 999px; padding: 8px 12px; cursor: pointer;
-  transition: color 0.18s, border-color 0.18s;
-}
-#ew-hint:hover { color: var(--text); border-color: var(--text-dim); }
 #ew-status { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
 
 .ew-board { display: flex; flex-direction: column; gap: 6px; align-items: center; margin: 4px 0 16px; }
@@ -2528,7 +2523,7 @@ button.idx.loading { opacity: 0.6; }
   .detail-album-score i { display: none; }
   .detail-actions {
     grid-column: 1 / -1;
-    display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2);
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2);
     margin-top: var(--s4);
   }
   /* One primary, full width, because there is one thing this page is for. */
@@ -3997,7 +3992,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 .lists-wrap { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; max-width: 700px; }
 .list-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px; cursor: pointer; transition: transform 0.14s, border-color 0.14s; }
 .list-card:hover { transform: translateY(-3px); border-color: var(--border-strong); }
-.list-covers { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: var(--surface-3); margin-bottom: 10px; }
+.list-covers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: var(--surface-3); margin-bottom: 10px; }
 .list-covers img { width: 100%; height: 100%; object-fit: cover; }
 .list-covers img:only-child { grid-column: span 2; grid-row: span 2; }
 .list-empty { grid-column: span 2; display: flex; align-items: center; justify-content: center; color: var(--text-faint); font-size: 12px; }
@@ -4509,6 +4504,9 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 .splash-bloom {
   position: absolute; left: 50%; top: 50%; width: 2px; height: 2px;
   border-radius: 50%; pointer-events: none; opacity: 0;
+  /* Filled. A box-shadow never paints inside its own box, so an empty 2px
+     body left a dark dot dead centre of the flash. */
+  background: color-mix(in srgb, var(--gold) 70%, #fff); filter: blur(3px);
   box-shadow: 0 0 90px 50px color-mix(in srgb, var(--gold) 55%, transparent), 0 0 200px 120px color-mix(in srgb, var(--accent-2) 28%, transparent);
   transform: translate(-50%, -50%);
 }
@@ -5633,7 +5631,7 @@ body.entering-done #artist-hero {
 }
 .cc-lens button.is-on { color: var(--text); border-color: var(--cc); background: color-mix(in srgb, var(--cc) 14%, transparent); }
 .cc-label { font: 700 11px var(--font-body); letter-spacing: .09em; text-transform: uppercase; color: var(--text-dim); margin: 20px 0 9px; }
-.cc-catpick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cc-catpick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .cc-catpick .cc-chip { justify-content: center; padding: 10px 12px; }
 .cc-featpick { display: flex; flex-wrap: wrap; gap: 8px; }
 /* Whose-part chips wear the chosen category's hue, not the section's. */
@@ -5824,7 +5822,7 @@ html[data-motion="none"] .rv-bars i, html[data-motion="none"] .rv-card { animati
   box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 0 50px var(--gold-glow); animation: vinylSpin 6s linear infinite; }
 .sp-fan-disc::after { content: ''; position: absolute; inset: 37%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, var(--accent-2), var(--gold) 70%); }
 
-.sp-gets { list-style: none; padding: 0; margin: 20px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sp-gets { list-style: none; padding: 0; margin: 20px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .sp-gets li { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; padding: 12px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); }
 .sp-gets .sp-ic { grid-row: span 2; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, transparent); }
 .sp-gets b { font-size: 13.5px; } .sp-gets i { font-style: normal; font-size: 12px; color: var(--text-faint); }
@@ -6358,7 +6356,7 @@ html[data-motion="none"] .colb-tick circle, html[data-motion="none"] .colb-tick 
 /* The marks are printed, every one of them, earned or not. A ladder whose
    steps you cannot see is a ladder people climb by accident — the same reason
    Depth prints its rule. */
-.cert-marklist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; margin-top: 14px;
+.cert-marklist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 18px; margin-top: 14px;
   border-top: 1px solid var(--border); padding-top: 13px; }
 .cert-mark { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--text-faint); }
 .cert-mark.got { color: var(--text-dim); }
@@ -7481,9 +7479,9 @@ button.rw-day {
 .bl-note { font: 12px/1 var(--font-mono); color: var(--text-faint); margin-bottom: 6px; }
 
 .bl-grid { display: grid; gap: 10px; margin-top: 12px; }
-.bl-grid.n2 { grid-template-columns: 1fr 1fr; }
-.bl-grid.n3 { grid-template-columns: 1fr 1fr 1fr; }
-.bl-grid.n4 { grid-template-columns: 1fr 1fr; }
+.bl-grid.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bl-grid.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.bl-grid.n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .bl-pick {
   display: block; width: 100%; padding: 0; border: 2px solid transparent; border-radius: 14px;
   background: var(--surface-2); cursor: pointer; overflow: hidden; text-align: left;
@@ -7539,7 +7537,7 @@ button.rw-day {
 .bl-rec { text-align: center; font: 12px/1 var(--font-mono); color: var(--text-dim); margin-top: 10px; }
 .bl-rec b { color: var(--gold); font-size: 14px; }
 @media (max-width: 520px) {
-  .bl-grid.n3 { grid-template-columns: 1fr 1fr; }
+  .bl-grid.n3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bl-prompt { font-size: 17px; }
   .bl-final { font-size: 42px; }
 }
@@ -9559,24 +9557,24 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/interactions.css?v=5">
 <link rel="stylesheet" href="/assets/replay.css?v=4">
 <link rel="stylesheet" href="/assets/you.css?v=3">
-<link rel="stylesheet" href="/assets/games.css?v=4">
+<link rel="stylesheet" href="/assets/games.css?v=5">
 <link rel="stylesheet" href="/assets/store.css?v=3">
 <link rel="stylesheet" href="/assets/glow.css?v=7">
 <link rel="stylesheet" href="/assets/themes2.css?v=2">
-<link rel="stylesheet" href="/assets/play.css?v=1">
+<link rel="stylesheet" href="/assets/play.css?v=2">
 <link rel="stylesheet" href="/assets/cards.css?v=1">
 <link rel="stylesheet" href="/assets/foryou.css?v=3">
 <link rel="stylesheet" href="/assets/comments.css?v=2">
 <link rel="stylesheet" href="/assets/boards.css?v=2">
 <link rel="stylesheet" href="/assets/ladder.css?v=3">
-<link rel="stylesheet" href="/assets/profile2.css?v=1">
-<link rel="stylesheet" href="/assets/today.css?v=1">
+<link rel="stylesheet" href="/assets/profile2.css?v=3">
+<link rel="stylesheet" href="/assets/today.css?v=2">
 <link rel="stylesheet" href="/assets/home2.css?v=1">
-<link rel="stylesheet" href="/assets/charades.css?v=2">
+<link rel="stylesheet" href="/assets/charades.css?v=3">
 <link rel="stylesheet" href="/assets/passport.css?v=1">
 <link rel="stylesheet" href="/assets/artist.css?v=1">
 <link rel="stylesheet" href="/assets/discover.css?v=2">
-<link rel="stylesheet" href="/assets/polish.css?v=1">
+<link rel="stylesheet" href="/assets/polish.css?v=2">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -9940,6 +9938,10 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
     // otherwise churn a custom property that half the sheets are sized from.
     var kb = Math.max(0, Math.round(root.clientHeight - (vv.height + vv.offsetTop)));
     if (kb < 80) kb = 0;               // an accessory bar alone is not a keyboard
+    /* What is actually visible, keyboard or not. dvh never shrinks for a
+       keyboard, so anything sized off it (Recall's sleeve) kept its full
+       height and pushed the answer field under the keys. */
+    root.style.setProperty('--app-h', Math.round(vv.height) + 'px');
     if (kb) {
       root.style.setProperty('--vv-top', Math.round(vv.offsetTop) + 'px');
       root.style.setProperty('--vv-h', Math.round(vv.height) + 'px');
@@ -9961,6 +9963,17 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
 
   vv.addEventListener('resize', apply);
   vv.addEventListener('scroll', apply);
+  /* In the app the webview itself shrinks for the keyboard (Keyboard.resize
+     "native"), so the visible viewport and the layout agree and --kb reads 0.
+     The plugin's own events still say a keyboard is up, which is what the
+     compact layouts key off. */
+  window.addEventListener('keyboardWillShow', function () { document.body.classList.add('kb-up'); requestAnimationFrame(apply); });
+  window.addEventListener('keyboardDidShow', function () {
+    document.body.classList.add('kb-up'); apply();
+    var a = document.activeElement;
+    if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) try { a.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+  });
+  window.addEventListener('keyboardWillHide', function () { if (!last) document.body.classList.remove('kb-up'); });
   // The dropdown opens and grows as results arrive, after the keyboard has
   // already settled, so it is re-measured when its contents change too.
   document.addEventListener('input', function (e) { if (e.target && e.target.id === 'search-input') requestAnimationFrame(sizeSuggestions); }, true);
@@ -10106,8 +10119,8 @@ window.discAmt = function (n) {
   <div class="splash-scrim" id="splash-scrim"></div>
   <div class="splash-content">
     <div class="splash-word" id="splash-word" data-text="VINALL">VINALL</div>
-    <p class="splash-tag">The place for music.</p>
-    <button class="splash-cta" id="splash-cta">GO</button>
+    <p class="splash-tag splash-sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4.5" height="6.5" rx="1.6"/><rect x="16.5" y="14" width="4.5" height="6.5" rx="1.6"/></svg>Best with sound on</p>
+    <button class="splash-cta" id="splash-cta"><span class="sc-label">GO</span><span class="sc-load" aria-hidden="true"><i></i><i></i><i></i></span></button>
   </div>
 </div>
 
@@ -10911,7 +10924,6 @@ window.discAmt = function (n) {
         <span><span class="g-streak" id="g-streak"></span> <span id="g-score-disp">Score 0</span></span>
       </div>
       <div class="g-cover-wrap" id="g-cover-wrap">
-        <span class="g-vinyl" aria-hidden="true"></span>
         <img class="g-cover" id="g-cover" alt="">
         <div class="result-badge" id="g-badge"><div class="circle" id="g-circle"></div></div>
         <div class="confetti" id="g-confetti"></div>
@@ -11274,7 +11286,6 @@ window.discAmt = function (n) {
         <button data-ew-mode="daily" class="active">Daily</button>
         <button data-ew-mode="unlimited">Unlimited</button>
       </div>
-      <button id="ew-hint">Reveal artist</button>
     </div>
 
     <div class="gb-clock-row" id="ew-clock"></div>
@@ -14646,7 +14657,9 @@ function renderAlbums(){
   }
   function stop() {
     _tok++;
-    try { if (window.VinalAudio) VinalAudio.stop(); } catch (e) {}
+    // Only audio this module started. setMode calls this on every view
+    // change, and an unconditional stop silenced For You's clip on a re-tap.
+    try { if (_id != null && window.VinalAudio) VinalAudio.stop(); } catch (e) {}
     _id = null; paint();
   }
   window.CratePreview = { stop: stop, playing: function () { return _id; } };
@@ -14709,7 +14722,9 @@ function renderAlbums(){
   }
   function stop() {
     _tok++;
-    try { if (window.VinalAudio) VinalAudio.stop(); } catch (e) {}
+    // Only audio this module started. setMode calls this on every view
+    // change, and an unconditional stop silenced For You's clip on a re-tap.
+    try { if (_id != null && window.VinalAudio) VinalAudio.stop(); } catch (e) {}
     _id = null; paint();
   }
   window.TodayPreview = { stop: stop, playing: function () { return _id; } };
@@ -14722,13 +14737,17 @@ function renderAlbums(){
     if (_id === id) { stop(); return; }
     var name = b.dataset.name || '', artist = b.dataset.artist || '';
     if (!name) return;
+    /* An album card plays the record's opening track: asked by album with no
+       title, the route answers with the tracklist and the first clip is taken.
+       Asking for a TRACK called the album's name found nothing on most. */
+    var isAlbum = b.dataset.kind === 'album';
     stop();
     _id = id;
     b.classList.add('is-loading');
     var mine = ++_tok;
     if (window.buzz) buzz('tap');
     Promise.resolve()
-      .then(function () { VinalAudio.prime(); return VinalAudio.play({ artist: artist, title: name }, 30); })
+      .then(function () { VinalAudio.prime(); return VinalAudio.play(isAlbum ? { artist: artist, title: '', album: name } : { artist: artist, title: name }, 30); })
       .then(function (ok) {
         if (mine !== _tok) return;
         b.classList.remove('is-loading');
@@ -15320,7 +15339,7 @@ function renderAuthArea(connected){
       coverWrap.style.display='none';tracklistBox.style.display='block';
       guessInput.style.display='block';yearInput.style.display='none';
       guessInput.value='';guessInput.disabled=false;guessInput.placeholder='Name the album\u2026';
-      if(!r.tracks){trackOl.innerHTML='<li style="color:var(--text-dim)">loading tracks\u2026</li>';guessBtn.disabled=true;fetchTracks(r.id).then(function(tr){r.tracks=tr;fillTracklist(r);guessBtn.disabled=false;}).catch(function(){r.tracks=[];fillTracklist(r);guessBtn.disabled=false;});}else{fillTracklist(r);}
+      if(!r.tracks){trackOl.innerHTML='<li style="color:var(--text-dim)">loading tracks\u2026</li>';guessBtn.disabled=true;var rr=r;fetchTracks(r.id).then(function(tr){rr.tracks=tr;if(rounds[idx]!==rr)return;fillTracklist(rr);guessBtn.disabled=false;}).catch(function(){rr.tracks=[];if(rounds[idx]!==rr)return;fillTracklist(rr);guessBtn.disabled=false;});}else{fillTracklist(r);}
       setTimeout(function(){guessInput.focus();},60);
     }else if(gameType==='year'){
       coverWrap.style.display='block';tracklistBox.style.display='none';
@@ -15344,7 +15363,9 @@ function renderAuthArea(connected){
 
   function submit(){
     if(answered)return;
-    const r=rounds[idx];let ok=false,answerText='';
+    const r=rounds[idx];
+    // Enter in the field reaches here while the tracklist is still loading.
+    if(gameType==='tracklist'&&!r.tracks)return;let ok=false,answerText='';
     if(gameType==='year'){const guessY=parseInt(yearInput.value,10);if(!guessY)return;const actual=parseInt(r.year,10);ok=!isNaN(actual)&&Math.abs(guessY-actual)<=1;if(ok&&guessY!==actual)_near++;answerText='Released '+(r.year||'?');yearInput.disabled=true;}
     else{if(!guessInput.value.trim())return;ok=nameMatch(guessInput.value,r.name);answerText='It was \u201C'+r.name+'\u201D';guessInput.disabled=true;}
     answered=true;
@@ -16842,6 +16863,7 @@ const Cloud=(function(){
   document.addEventListener('click',function(){const m=document.getElementById('acct-menu');if(m)m.classList.remove('open');});
 
   async function onAuthed(u){
+    if(!user||user.id!==u.id)try{window._profCache={};}catch(e){}
     user=u;
     /* BEFORE refreshUI and before the merge. refreshUI paints the crate, and
        pullAndMerge would upload it — both of those have to happen against the
@@ -16986,6 +17008,7 @@ const Cloud=(function(){
     try{await sb.auth.signOut();}catch(e){}
     user=null;
     ratingsSyncReady=false;
+    try{window._profCache={};}catch(e){}
     wipeLocalAccountState();
     try{localStorage.removeItem(OWNER_KEY);}catch(e){}
     if(window.Wallet&&Wallet.reset)Wallet.reset();
@@ -17114,13 +17137,32 @@ const Cloud=(function(){
   const readyPromise = new Promise(function(res){_settleReady=res;});
   function settleReady(){ if(_settleReady){ const f=_settleReady; _settleReady=null; f(); } }
 
+  let authInitDone=false;
   async function init(){
     if(!window.supabase||!window.supabase.createClient){console.warn('Supabase library not loaded \u2014 accounts disabled.');settleReady();return;}
     sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON);ready=true;
     /* Supabase raises PASSWORD_RECOVERY itself when a recovery link signs
        somebody in, whatever shape the link took. The branches below read the
        URL; this is the backstop for when the library got there first. */
-    sb.auth.onAuthStateChange(function(ev){
+    sb.auth.onAuthStateChange(function(ev,session){
+      /* The session can end or change hands OUTSIDE this tab: a sign-out in
+         another tab, a suspension, a refresh that failed. Ignoring that left
+         this tab writing as the old account into localStorage that another
+         tab had already handed to someone else. Only after init, so the first
+         restore is not run twice; and a SIGNED_IN while nobody is signed in
+         here is the login form's own, which calls onAuthed itself. */
+      if(authInitDone){
+        if(ev==='SIGNED_OUT'&&user){
+          user=null;ratingsSyncReady=false;
+          wipeLocalAccountState();
+          try{localStorage.removeItem(OWNER_KEY);}catch(e){}
+          if(window.Wallet&&Wallet.reset)Wallet.reset();
+          refreshUI();
+          try{['renderStats','renderAlbums','renderSongs','renderActivity'].forEach(function(fn){if(typeof window[fn]==='function')window[fn]();});}catch(e){}
+          return;
+        }
+        if(ev==='SIGNED_IN'&&user&&session&&session.user&&session.user.id!==user.id){onAuthed(session.user);return;}
+      }
       if(ev!=='PASSWORD_RECOVERY')return;
       if(window.dismissSplash)try{dismissSplash();}catch(e){}
       setTimeout(function(){document.getElementById('auth-modal').classList.add('open');showAuthView('recovery');},250);
@@ -17180,6 +17222,9 @@ const Cloud=(function(){
         const{error}=await sb.auth.updateUser({password:pass});
         if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Set new password';return;}
         errEl.style.color='var(--gold)';errEl.textContent='Password updated. You\u2019re logged in.';
+        // The reset link signed this browser in; the app has to follow, or it
+        // says "logged in" over a logged-out screen (or the previous account).
+        try{const{data}=await sb.auth.getSession();if(data&&data.session&&data.session.user&&(!user||user.id!==data.session.user.id))await onAuthed(data.session.user);}catch(e){}
         btn.disabled=false;btn.textContent='Set new password';
         // clear the hash so it doesn't re-trigger on refresh
         history.replaceState(null,'',location.pathname);
@@ -17298,9 +17343,10 @@ const Cloud=(function(){
     }
     try{
       const{data}=await sb.auth.getSession();
-      if(data&&data.session&&data.session.user){await onAuthed(data.session.user);settleReady();return;}
+      if(data&&data.session&&data.session.user){await onAuthed(data.session.user);authInitDone=true;settleReady();return;}
     }catch(e){}
     refreshUI();
+    authInitDone=true;
     settleReady();
   }
 
@@ -18276,7 +18322,12 @@ async function drawProfile(host,prof,isOwner,profileTok){
      exists hidden_lists is undefined, nothing is hidden, and the eye says the
      feature is not switched on rather than pretending to have saved.
      Hiding is presentation, not privacy: the lists table stays readable. */
-  const hid=new Set(Array.isArray(prof.hidden_lists)?prof.hidden_lists:[]);
+  /* hidden_lists also carries the grid choice as one 'cols:N' entry, so the
+     layout rides the same column, syncs across devices and is what a visitor
+     sees — no schema change for a preference. */
+  const rawHid=Array.isArray(prof.hidden_lists)?prof.hidden_lists:[];
+  let listCols=2;rawHid.forEach(function(k){const m=/^cols:([234])$/.exec(k);if(m)listCols=+m[1];});
+  const hid=new Set(rawHid.filter(function(k){return !/^cols:/.test(k);}));
   const SHELF_KEY='vinall_prof_shelves_v1';
   let shelfOpen={};try{shelfOpen=JSON.parse(localStorage.getItem(SHELF_KEY)||'{}')||{};}catch(e){shelfOpen={};}
   const eyeSvg='<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M1.8 10S5 4.2 10 4.2 18.2 10 18.2 10 15 15.8 10 15.8 1.8 10 1.8 10z"/><circle cx="10" cy="10" r="2.6"/><path class="pl-eye-slash" d="M3 17L17 3"/></svg>';
@@ -18291,7 +18342,7 @@ async function drawProfile(host,prof,isOwner,profileTok){
     const strip=sh.arr.slice(0,5).map(function(it){return'<img src="'+thumb(esc(it.art||''),160)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">';}).join('');
     return'<div class="pl-shelf'+(open?' is-open':'')+(hid.has(sh.k)?' is-hidden':'')+'" data-shelf="'+sh.k+'" data-hide-key="'+sh.k+'">'+
       '<div class="pl-head"><button type="button" class="pl-toggle" aria-expanded="'+open+'" aria-controls="pl-body-'+sh.k+'">'+
-        '<span class="pl-strip">'+(strip||'<span class="pl-strip-empty"></span>')+'</span>'+
+        '<span class="pls-strip">'+(strip||'<span class="pls-strip-empty"></span>')+'</span>'+
         '<span class="pl-tt"><b>'+sh.title+'</b><small>'+(n?n+(n===1?' song':' songs'):'Empty')+(sh.note?' \u00b7 '+sh.note:'')+'<i class="pl-hid-tag"> \u00b7 hidden</i></small></span>'+
         '<span class="pl-chev" aria-hidden="true"></span></button>'+eyeBtn(sh.k,sh.title)+'</div>'+
       '<div class="pl-body" id="pl-body-'+sh.k+'"><div class="pl-inner">'+songRows(sh.arr,sh.empty,sh.id,sh.own)+'</div></div></div>';
@@ -18301,22 +18352,29 @@ async function drawProfile(host,prof,isOwner,profileTok){
     const strip=shownLists.slice(0,5).map(function(l){const it=(l.items||[])[0];return it?'<img src="'+thumb(esc(it.art||''),160)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">':'';}).join('');
     return'<div class="pl-shelf pl-mine'+(open?' is-open':'')+'" data-shelf="mine">'+
       '<div class="pl-head"><button type="button" class="pl-toggle" aria-expanded="'+open+'" aria-controls="pl-body-mine">'+
-        '<span class="pl-strip">'+(strip||'<span class="pl-strip-empty"></span>')+'</span>'+
+        '<span class="pls-strip">'+(strip||'<span class="pls-strip-empty"></span>')+'</span>'+
         '<span class="pl-tt"><b>'+(isOwner?'Your lists':'Lists')+'</b><small>'+shownLists.length+(shownLists.length===1?' list':' lists')+'</small></span>'+
         '<span class="pl-chev" aria-hidden="true"></span></button></div>'+
       '<div class="pl-body" id="pl-body-mine"><div class="pl-inner">'+inner+'</div></div></div>';
   }
+  /* "Hide all" hides each list by name, never a blanket '*', so the owner can
+     hide the lot and then switch one or two back on. An old '*' is expanded
+     the first time the owner sees it. */
+  const allHideKeys=['now','alltime','liked'].concat(lists.map(function(l){return l.id;}));
+  if(isOwner&&hid.has('*')){hid.delete('*');allHideKeys.forEach(function(k){hid.add(k);});}
+  const allHidden=function(){return allHideKeys.every(function(k){return hid.has(k);});};
   const shownLists=lists.filter(function(l){return isOwner||!(hid.has('*')||hid.has(l.id));});
   let listsHtml='';
   if(shelves.length||shownLists.length||isOwner){
-    listsHtml='<div class="pl-block'+(hid.has('*')?' all-hidden':'')+'" id="prof-lists-block">'+
+    listsHtml='<div class="pl-block'+(isOwner&&allHidden()?' all-hidden':'')+'" id="prof-lists-block">'+
       '<div class="prof-section-row"><div class="prof-section-title" style="margin:0;">Lists</div>'+
-      (isOwner?'<div class="pl-acts"><button type="button" class="btn-mini pl-all" data-hide="*" aria-pressed="'+hid.has('*')+'">'+(hid.has('*')?'Show all':'Hide all')+'</button><button class="btn-mini" id="prof-add-list">+ New list</button></div>':'')+'</div>'+
+      (isOwner?'<div class="pl-acts"><button type="button" class="btn-mini pl-all" data-hide="*" aria-pressed="'+allHidden()+'">'+(allHidden()?'Show all':'Hide all')+'</button><button class="btn-mini" id="prof-add-list">+ New list</button></div>':'')+'</div>'+
       (isOwner?'<div class="reco-note pl-all-note">Only you can see these.</div>':'')+
       (shelves.length?'<div class="pl-shelves">'+shelves.map(shelfHtml).join('')+'</div>':'')+
       (!shownLists.length
         ?(isOwner?'<div class="reco-note">Create a list like \u201CBest Drake albums\u201D.</div>':'')
-        :listsShelf('<div class="lists-wrap" id="prof-lists">'+shownLists.map(function(l){const covers=(l.items||[]).slice(0,4).map(function(it){return'<img src="'+thumb(esc(it.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">';}).join('');return'<div class="list-card'+(hid.has(l.id)?' is-hidden':'')+'" data-list="'+esc(l.id)+'" data-hide-key="'+esc(l.id)+'">'+eyeBtn(l.id,l.title,' pl-eye-card')+'<div class="list-covers">'+(covers||'<span class="list-empty">empty</span>')+'</div><div class="list-title">'+esc(l.title)+'</div><div class="list-meta">'+(l.items||[]).length+' '+(l.kind==='song'?'songs':'albums')+'<i class="pl-hid-tag"> \u00b7 hidden</i></div></div>';}).join('')+'</div>'))+
+        :listsShelf((isOwner?'<div class="pl-cols" role="radiogroup" aria-label="Columns">'+[2,3,4].map(function(c){return'<button type="button" role="radio" data-cols="'+c+'" aria-checked="'+(c===listCols)+'" aria-label="'+c+' columns">'+'<i></i>'.repeat(c)+'</button>';}).join('')+'</div>':'')+
+          '<div class="lists-wrap cols-'+listCols+'" id="prof-lists">'+shownLists.map(function(l){const covers=(l.items||[]).slice(0,4).map(function(it){return'<img src="'+thumb(esc(it.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">';}).join('');return'<div class="list-card'+(hid.has(l.id)?' is-hidden':'')+'" data-list="'+esc(l.id)+'" data-hide-key="'+esc(l.id)+'">'+eyeBtn(l.id,l.title,' pl-eye-card')+'<div class="list-covers">'+(covers||'<span class="list-empty">empty</span>')+'</div><div class="list-title">'+esc(l.title)+'</div><div class="list-meta">'+(l.items||[]).length+' '+(l.kind==='song'?'songs':'albums')+'<i class="pl-hid-tag"> \u00b7 hidden</i></div></div>';}).join('')+'</div>'))+
       '</div>';
   }
 
@@ -18429,28 +18487,43 @@ async function drawProfile(host,prof,isOwner,profileTok){
     const block=document.getElementById('prof-lists-block');
     function paintHidden(){
       if(!block)return;
-      block.classList.toggle('all-hidden',hid.has('*'));
+      const every=allHidden();
+      block.classList.toggle('all-hidden',every);
       block.querySelectorAll('[data-hide-key]').forEach(function(el){el.classList.toggle('is-hidden',hid.has(el.dataset.hideKey));});
-      block.querySelectorAll('[data-hide]').forEach(function(b){b.setAttribute('aria-pressed',String(hid.has(b.dataset.hide)));});
-      const all=block.querySelector('.pl-all');if(all)all.textContent=hid.has('*')?'Show all':'Hide all';
+      block.querySelectorAll('[data-hide]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.hide==='*'?every:hid.has(b.dataset.hide)));});
+      const all=block.querySelector('.pl-all');if(all)all.textContent=every?'Show all':'Hide all';
+      const wrap=block.querySelector('.lists-wrap');if(wrap)wrap.className='lists-wrap cols-'+listCols;
+      block.querySelectorAll('[data-cols]').forEach(function(b){b.setAttribute('aria-checked',String(+b.dataset.cols===listCols));});
     }
+    function saved(){return Array.from(hid).concat(listCols!==2?['cols:'+listCols]:[]);}
     if(block)block.addEventListener('click',async function(ev){
+      const cb=ev.target.closest('[data-cols]');
+      if(cb){
+        ev.stopPropagation();
+        const was=listCols,want=+cb.dataset.cols;if(want===was)return;
+        listCols=want;paintHidden();
+        const r=await Cloud.saveProfile({hidden_lists:saved()});
+        if(r&&r.error){listCols=was;paintHidden();if(window.toast)toast('Could not save that');return;}
+        prof.hidden_lists=saved();if(window.buzz)buzz('tap');
+        return;
+      }
       const b=ev.target.closest('[data-hide]');if(!b||b.disabled)return;
       ev.stopPropagation();
-      const key=b.dataset.hide,was=hid.has(key);
-      if(was)hid.delete(key);else hid.add(key);
+      const key=b.dataset.hide,before=new Set(hid);
+      if(key==='*'){const every=allHidden();allHideKeys.forEach(function(k){if(every)hid.delete(k);else hid.add(k);});}
+      else if(hid.has(key))hid.delete(key);else hid.add(key);
       paintHidden();b.disabled=true;
-      const res=await Cloud.saveProfile({hidden_lists:Array.from(hid)});
+      const res=await Cloud.saveProfile({hidden_lists:saved()});
       b.disabled=false;
       if(res&&res.error){
-        if(was)hid.add(key);else hid.delete(key);
+        hid.clear();before.forEach(function(k){hid.add(k);});
         paintHidden();
         const missing=/hidden_lists/.test(String(res.error));
         if(window.toast)toast(missing?'Hiding lists is not switched on yet':'Could not save that');
         if(window.reportIssue)reportIssue('hidden_lists save failed',{e:String(res.error)});
         return;
       }
-      prof.hidden_lists=Array.from(hid);
+      prof.hidden_lists=saved();
       if(window.buzz)buzz('tap');
     });
   }
@@ -21760,6 +21833,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   function levelUp(level, from) {
     try {
       from = Math.max(1, Math.min(from || level - 1, level - 1));
+      // A big jump counts through its last few levels only; the sub-line
+      // still says how many were gained.
+      var gained = level - from;
+      if (gained > 6) from = level - 6;
       if (_lvlPop && _lvlPop.parentNode && !_lvlPop.classList.contains('out')) { _lvlPop._to(level); return; }
       var pop = document.createElement('div');
       pop.className = 'lvl-pop';
@@ -21780,7 +21857,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         num.classList.remove('hit'); void num.offsetWidth; num.classList.add('hit');
         if (window.Sfx) Sfx.play(cur < target ? 'levelTick' : 'levelUp', { n: cur - from });
         if (cur < target) { if (window.buzz) buzz('tap', true); t = setTimeout(stepUp, 260); return; }
-        var jumped = target - from;
+        var jumped = Math.max(gained, target - from);
         sub.textContent = jumped > 1 ? jumped + ' levels' : '';
         if (window.burst) burst(num, { count: 40 + Math.min(40, jumped * 8), spread: 240 });
         if (window.buzz) buzz('big', true);
@@ -22154,6 +22231,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     try {
       const me = Cloud.getUser();
       const prof = me && await Cloud.fetchProfile(me.id);
+      // Signed out or switched while this was in flight: not ours to paint.
+      const now = Cloud.getUser();
+      if (!now || !me || now.id !== me.id) return state;
       if (prof) {
         state = {
           discs: prof.discs || 0,
@@ -22244,7 +22324,11 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (w.level != null) {
       var wasLevel = state.level;
       state.level = w.level;
-      if (wasLevel && w.level > wasLevel) levelUp(w.level, wasLevel);
+      /* Only once the profile has loaded. Before that state.level is the
+         default 1, and an award landing first (the daily login fires on every
+         load) read a level-200 account as climbing 1 -> 200: a pop counting
+         through 199 levels, each tick pitched higher than the last. */
+      if (loaded && wasLevel && w.level > wasLevel) levelUp(w.level, wasLevel);
     }
     updateShopButton();
     if (typeof window.renderStats === 'function') window.renderStats();
@@ -22585,6 +22669,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     },
     // Bid War payouts are credited by Postgres, not here, so the wallet has
     // to be re-read rather than adjusted locally after one settles.
+    _apply: applyWallet,   // test hook (scripts/tests/prelaunch.spec.mjs)
     refresh: async function () {
       await load();
       if (typeof window.renderStats === 'function') window.renderStats();
@@ -24132,11 +24217,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       bits.push('<span class="ew-clue"><b>' + rec.shape.join('</b> + <b>') + '</b></span>');
     }
     if (rec.genre) bits.push('<span class="ew-clue">' + esc(rec.genre) + '</span>');
-    if (ewState.hinted || ewState.done) {
-      bits.push('<span class="ew-clue ew-clue-hint">' + esc(rec.artist) + '</span>');
-    }
+    // The artist is a clue from the start; there is no reveal to spend.
+    if (rec.artist) bits.push('<span class="ew-clue ew-clue-hint">' + esc(rec.artist) + '</span>');
     el.clues.innerHTML = bits.join('');
-    el.hintBtn.style.display = (ewState.hinted || ewState.done || !rec.artist) ? 'none' : '';
     if (ewState.mode === 'unlimited' && ewState.fromPool) {
       ewRenderStatus('Rate a few more records and these come from your own library.');
     } else if (!ewState.done) {
@@ -24285,7 +24368,11 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   function ewOnKeydown(e) {
     if (!el.modal || !el.modal.classList.contains('open')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.key === 'Enter') { e.preventDefault(); ewSubmit(); return; }
+    var t = e.target;
+    if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+    // A sheet opened over Earworm (leaderboard, report, ask) owns the keys.
+    if (document.activeElement && document.activeElement !== document.body && !el.modal.contains(document.activeElement)) return;
+    if (e.key === 'Enter') { if (t && t.tagName === 'BUTTON') return; e.preventDefault(); ewSubmit(); return; }
     if (e.key === 'Backspace') { e.preventDefault(); ewBack(); return; }
     var ch = e.key.toUpperCase();
     if (ch.length === 1 && ch >= 'A' && ch <= 'Z') { e.preventDefault(); ewType(ch); }
@@ -24318,7 +24405,6 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     el.clues = document.getElementById('ew-clues');
     el.status = document.getElementById('ew-status');
     el.result = document.getElementById('ew-result');
-    el.hintBtn = document.getElementById('ew-hint');
 
     document.getElementById('ew-close').addEventListener('click', function () { el.modal.classList.remove('open'); });
     el.modal.addEventListener('click', function (e) { if (e.target === el.modal) el.modal.classList.remove('open'); });
@@ -24332,12 +24418,6 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       if (k === 'ENTER') ewSubmit();
       else if (k === 'BACK') ewBack();
       else ewType(k);
-    });
-    el.hintBtn.addEventListener('click', function () {
-      ewState.hinted = true;
-      ewSaveDaily();
-      ewRenderClues();
-      ewCardStatus();
     });
     document.addEventListener('keydown', ewOnKeydown);
 
@@ -24424,8 +24504,9 @@ function playDismissAnimation(gateEl, callback) {
   var mark = document.querySelector('.brand-mark');
 
   // No record or no header to fly it to — fall back to the fade rather than
-  // leaving somebody looking at a splash that will not go away.
-  if (!disc || !mark) {
+  // leaving somebody looking at a splash that will not go away. A mark with no
+  // box (header hidden behind the sign-in screen) would fly the record to 0,0.
+  if (!disc || !mark || !mark.getClientRects().length || !mark.offsetWidth) {
     gateEl.classList.add('is-hiding');
     setTimeout(finish, 680);
     return;
@@ -24612,7 +24693,8 @@ function playDismissAnimation(gateEl, callback) {
     function go() {
       if (done) return;
       done = true;
-      if (cta) { cta.classList.remove('waiting'); cta.disabled = false; }
+      // The dots stay: the button lifts away with the rest of the content,
+      // and snapping back to "GO" for one frame first read as a second press.
       run();
     }
     ready.then(go, go);
@@ -24629,7 +24711,21 @@ function playDismissAnimation(gateEl, callback) {
     });
   }
   var cta = document.getElementById('splash-cta');
-  if (cta) cta.addEventListener('click', dismiss);
+  if (cta) {
+    // Answered on touch-down, so the press registers before the finger lifts.
+    var up = function () { cta.classList.remove('is-down'); };
+    cta.addEventListener('pointerdown', function () { if (!gate.dataset.dismissing) cta.classList.add('is-down'); });
+    cta.addEventListener('pointerup', up);
+    cta.addEventListener('pointercancel', up);
+    cta.addEventListener('pointerleave', up);
+    cta.addEventListener('click', function () {
+      if (gate.dataset.dismissing) return;
+      up();
+      cta.classList.remove('pressed'); void cta.offsetWidth; cta.classList.add('pressed');
+      if (window.buzz) buzz('tap');
+      dismiss();
+    });
+  }
 
   /* AN AUTH RETURN DOES NOT GET A SPLASH. Somebody arriving from a reset email
      has already chosen to do a thing; making them press GO first puts the one
@@ -25253,6 +25349,8 @@ function playDismissAnimation(gateEl, callback) {
     if (st.done) {
       elInput.disabled = true;
       showResult(won);
+      // A lost day is still a day played.
+      if (window.notePlay) notePlay('drop');
       var ckd = document.getElementById('drop-clock');
       if (window.Boards) Boards.finish('drop', { guesses: st.g.length, solved: !!won }).then(function (res) {
         if (ckd) ckd.innerHTML = '';
@@ -25267,7 +25365,6 @@ function playDismissAnimation(gateEl, callback) {
           });
         }
         if (window.Wallet) Wallet.awardGame('drop', { reason: 'Daily Drop' });
-        if (window.notePlay) notePlay('drop');
         if (typeof logActivity === 'function' && window.ICONS) logActivity(ICONS.trophy, 'Solved the Daily Drop', guess.name);
       }
     }
@@ -26079,8 +26176,14 @@ function playDismissAnimation(gateEl, callback) {
   }
 
   // What the submit button does depends on where you are in the deck.
+  var _lockAt = 0;
   function warPrimary() {
     if (!_war) return;
+    // A double tap on Lock it in used to lock the NEXT record at 0 before it
+    // was seen, or seal the board past the review. There is no going back.
+    var now = Date.now();
+    if (now - _lockAt < 400) return;
+    _lockAt = now;
     if (_idx < _recs.length) lockCurrent(_war);
     else submitBids();
   }
@@ -28784,6 +28887,16 @@ window.renderAdminStats = renderAdminStats;
   var tab = 'mine';
   var busy = false;
   var _mine = null, _market = null;
+  /* What the Market grid is showing right now, and the context it was drawn
+     with. The grid is the pool PLUS the records you rated that the pool does
+     not carry; buy() used to look a record up in _market/_results only, so
+     buying one of those sent no name, artist or art and it landed on the
+     shelf as "Unknown" with a blank sleeve. */
+  var _shown = [], _ctx = null, _qTok = 0;
+  function shownRow(id) {
+    return (_shown || []).concat(_results || [], _market || [])
+      .filter(function (x) { return x.album_id === id; })[0] || {};
+  }
   // The Market must only sell what you have already ranked. Matched by id or
   // by folded name+artist, same fallback the one-copy-per-record dedup uses —
   // a record rated before the catalogue moved carries a different id than the
@@ -28978,7 +29091,7 @@ window.renderAdminStats = renderAdminStats;
      — and so `buy()`, which reads the record out of those arrays for its name
      and artwork, sees the same number the card is showing. */
   function applyPrice(albumId, price, ctx, reason) {
-    [_market, _results].forEach(function (list) {
+    [_market, _results, _shown].forEach(function (list) {
       (list || []).forEach(function (x) { if (x.album_id === albumId) x.price = price; });
     });
 
@@ -28994,7 +29107,9 @@ window.renderAdminStats = renderAdminStats;
     }
     if (!rec) return;
     var priceEl = rec.querySelector('.col-price');
-    var btn = rec.querySelector('.col-buy');
+    // Only a real Buy button. "Rate to unlock" carries .col-buy for its look
+    // and used to be rewritten into a Buy that did nothing.
+    var btn = rec.querySelector('button.col-buy[data-buy]');
 
     if (price == null) {
       /* Unpriceable is a real answer and a permanent one for that record —
@@ -29005,7 +29120,7 @@ window.renderAdminStats = renderAdminStats;
         : reason === 'sealed' ? 'on one of your live Bid Wars'
         : 'cannot be priced';
       if (priceEl) { priceEl.className = 'col-price col-unpriced'; priceEl.textContent = msg; }
-      if (btn) { btn.remove(); }
+      rec.querySelectorAll('.col-buy').forEach(function (x) { x.remove(); });
       var pk = rec.querySelector('.col-pick');
       if (pk) pk.remove();
       return;
@@ -29020,27 +29135,11 @@ window.renderAdminStats = renderAdminStats;
       if (!afford) btn.title = 'Not enough Discs';
       btn.textContent = 'Buy';
     }
-    // A pick can only be spent on a record with a price, so the button could
-    // not exist until now. Wired here rather than by a second wire() pass,
-    // which would double every handler already on the grid.
-    if (ctx.picks > 0 && !ctx.owned[albumId] && !rec.querySelector('.col-pick') && btn) {
-      var p = document.createElement('button');
-      p.className = 'btn-mini col-pick';
-      p.setAttribute('data-pick', albumId);
-      p.textContent = 'Use a pick';
-      p.addEventListener('click', function () {
-        var r2 = (_results || []).concat(_market || [])
-          .filter(function (x) { return x.album_id === albumId; })[0] || {};
-        /* No confirmation. A pick is the one purchase in the app that cannot
-           cost you anything you did not already win, and the dialog that used
-           to be here was a system alert titled with the domain — so spending a
-           Mythic prize came with a reminder that this is a web page. The card
-           already says what a pick does and how many are left; the button says
-           Use a pick. That is the confirmation. */
-        buy(p, albumId, true);
-      });
-      btn.insertAdjacentElement('afterend', p);
-    }
+    /* The pick button is drawn with the card (disabled while pricing) so the
+       card does not grow under your thumb when a price lands; it goes live
+       now. A pick can only be spent on a record with a price. */
+    var pk2 = rec.querySelector('button.col-pick');
+    if (pk2) pk2.disabled = !(ctx.picks > 0) || !!ctx.owned[albumId];
   }
 
   function worthOf(list) {
@@ -29182,7 +29281,7 @@ window.renderAdminStats = renderAdminStats;
         // even on a record you could afford — spending a pick on something
         // cheap is your call to make badly. Still gated on being rated, same
         // as Buy — collection_claim_pick_from checks it either way.
-        (opts.picks && rated ? '<button class="btn-mini col-pick" data-pick="' + esc(a.album_id) + '">Use a pick</button>' : '');
+        (opts.picks && rated ? '<button class="btn-mini col-pick" data-pick="' + esc(a.album_id) + '"' + (a.price == null ? ' disabled' : '') + '>Use a pick</button>' : '');
     }
     /* The art goes through Cert.art() whatever state it is in, so a finish
        bought on the album page shows here with no second implementation to
@@ -29336,7 +29435,10 @@ window.renderAdminStats = renderAdminStats;
       var admin = (window.Wallet && Wallet.get) ? Wallet.get().is_admin : false;
       var picks = (window.Wallet && Wallet.get) ? (Wallet.get().album_picks || 0) : 0;
       if (!items.length) {
-        body.innerHTML = '<div class="reco-note">Nothing in the crate to buy yet — rate some albums first.</div>';
+        body.innerHTML = _results
+          ? '<div class="reco-note">Nothing found for that search. <a href="#" id="col-clear">Back to the market</a></div>'
+          : '<div class="reco-note">Nothing in the crate to buy yet — rate some albums first.</div>';
+        wire(body);
         return;
       }
       /* Fold the name matches back into the id set, so everything downstream —
@@ -29370,12 +29472,14 @@ window.renderAdminStats = renderAdminStats;
             // A pick still has to go through pricing, so it is only offered on
             // a record that already has a price. The pricing sweep below puts
             // the button on as each price lands.
-            picks: picks > 0 && !isOwned && a.price != null,
+            picks: picks > 0 && !isOwned,
             afford: admin || a.price == null || discs >= a.price
           });
         }).join('') + '</div>';
       wire(body);
-      priceSweep(items, { owned: owned, picks: picks, discs: discs, admin: admin });
+      _shown = items;
+      _ctx = { owned: owned, picks: picks, discs: discs, admin: admin };
+      priceSweep(items, _ctx);
       return;
     }
 
@@ -29586,9 +29690,8 @@ window.renderAdminStats = renderAdminStats;
     btn.textContent = '…';
     if (window.ripple) ripple(btn);
 
-    // Could be a crate row or a search result — look in both.
-    var item = (_results || []).concat(_market || [])
-      .filter(function (x) { return x.album_id === albumId; })[0] || {};
+    // Whatever the grid drew it from — pool, search, or your own ratings.
+    var item = shownRow(albumId);
     var t = await token();
     var j = null;
     try {
@@ -29627,6 +29730,16 @@ window.renderAdminStats = renderAdminStats;
       var host = btn.closest('.col-rec') || btn.parentNode;
       host.appendChild(note);
       setTimeout(function () { if (note.parentNode) note.remove(); }, 4200);
+      /* "Already own" means this page's idea of the shelf was stale (bought on
+         another device, or under the record's other id). The card stops
+         offering a purchase and the shelf is re-read so the next render knows. */
+      if (/already own/i.test(raw) && host.classList) {
+        host.classList.add('owned');
+        host.querySelectorAll('button.col-buy, button.col-pick').forEach(function (x) { x.remove(); });
+        if (_ctx) _ctx.owned[albumId] = true;
+        loadMine(true);
+      }
+      if (/no album picks/i.test(raw) && _ctx) { _ctx.picks = 0; syncGrid(); }
       return;
     }
 
@@ -29665,8 +29778,24 @@ window.renderAdminStats = renderAdminStats;
       if (pickBtn) pickBtn.remove();
     }
     if (window.buzz) buzz('big');
-    if (window.Wallet && Wallet.refresh) Wallet.refresh();
-    else if (window.Wallet && Wallet.load) Wallet.load();
+    /* Every other card was drawn against the balance and picks you had BEFORE
+       this purchase, so a Buy you could no longer afford, or a pick you no
+       longer held, stayed live and failed on the server. Bring the grid into
+       line now, then again once the wallet has been re-read. */
+    if (_ctx) {
+      _ctx.owned[albumId] = true;
+      if (usePick) _ctx.picks = Math.max(0, _ctx.picks - 1);
+      else if (typeof j.price === 'number') _ctx.discs = Math.max(0, _ctx.discs - j.price);
+      syncGrid();
+    }
+    var wl = (window.Wallet && Wallet.refresh) ? Wallet.refresh() : (window.Wallet && Wallet.load) ? Wallet.load() : null;
+    Promise.resolve(wl).then(function () {
+      if (!_ctx || !window.Wallet || !Wallet.get) return;
+      var w = Wallet.get();
+      if (typeof w.discs === 'number') _ctx.discs = w.discs;
+      if (typeof w.album_picks === 'number') _ctx.picks = w.album_picks;
+      syncGrid();
+    }, function () {});
 
     if (_mine && !_mine.some(function (x) { return x.album_id === albumId; })) {
       _mine.push({
@@ -29680,6 +29809,27 @@ window.renderAdminStats = renderAdminStats;
     // this response rather than a second round trip.
     if (window.CollectionWorth) CollectionWorth.set(j.net_worth);
     if (window.track) track('collection_buy', { price: j.price });
+  }
+
+  /* Brings every live card into line with _ctx: afford, picks, the chip. */
+  function syncGrid() {
+    if (!_ctx || tab !== 'market') return;
+    var body = el('col-body'); if (!body) return;
+    body.querySelectorAll('.col-rec').forEach(function (rec) {
+      var id = rec.getAttribute('data-rec'), row = shownRow(id);
+      var b = rec.querySelector('button.col-buy[data-buy]');
+      if (b && !b.classList.contains('col-pricing') && typeof row.price === 'number') {
+        var ok = _ctx.admin || _ctx.discs >= row.price;
+        b.className = (ok ? 'btn-primary' : 'btn-mini') + ' col-buy';
+        b.disabled = !ok; b.title = ok ? '' : 'Not enough Discs';
+      }
+      var p = rec.querySelector('button.col-pick');
+      if (p) { if (!(_ctx.picks > 0)) p.remove(); else p.disabled = typeof row.price !== 'number'; }
+    });
+    var chip = body.querySelector('.rc-market-head .rw-chip b');
+    if (chip && !_ctx.admin) chip.innerHTML = discAmt(_ctx.discs);
+    var box = body.querySelector('.col-picks-box');
+    if (box) { if (_ctx.picks > 0) box.innerHTML = '<b>' + _ctx.picks + ' album pick' + (_ctx.picks === 1 ? '' : 's') + '</b>'; else box.remove(); }
   }
 
   async function sell(btn, albumId) {
@@ -29700,6 +29850,7 @@ window.renderAdminStats = renderAdminStats;
     } catch (e) {
       busy = false;
       btn.disabled = false;
+      btn.textContent = 'Sell ' + n(back);
       if (window.reportIssue) reportIssue('collection sell failed', { error: String(e.message || e) });
       return;
     }
@@ -29723,12 +29874,14 @@ window.renderAdminStats = renderAdminStats;
      Every valuation lands in album_plays, so searching for the same record
      again is instant, and so is the next person to search for it. */
   async function search(q) {
+    var mine = ++_qTok;
     if (!q || q.length < 2) { _results = null; render(); return; }
     var body = el('col-body');
     body.innerHTML = '<p class="reco-note ld-line">Searching…</p>';
     try {
       var d = await spotifyFetch('/search?' + new URLSearchParams({ q: q, type: 'album', limit: '18' }).toString(),
                                  { priority: true });
+      if (mine !== _qTok) return;
       var items = ((d.albums && d.albums.items) || []).filter(function (a) { return a && a.id; });
       var seen = {};
       _results = items.filter(function (a) {
@@ -29741,7 +29894,8 @@ window.renderAdminStats = renderAdminStats;
           price: null,
         };
       });
-    } catch (e) { _results = []; }
+    } catch (e) { if (mine === _qTok) _results = []; }
+    if (mine !== _qTok) return;
     render();
   }
 
@@ -30904,7 +31058,15 @@ window.renderAdminStats = renderAdminStats;
     paintStart();
     paintCard();
   }
-  function close() { clearAdvance(); modal.classList.remove('open'); }
+  /* Closing mid-run ends the run as it stands. It used to leave busy=true
+     (Go dead until a reload) and a claimed daily run never filed. */
+  function close() {
+    var live = playing();
+    clearAdvance();
+    if (live) over(false);
+    busy = false;
+    modal.classList.remove('open');
+  }
   function playing() { return el('hl-play').style.display !== 'none'; }
 
   /* ---- The pool ----------------------------------------------------------
@@ -31801,7 +31963,7 @@ window.renderAdminStats = renderAdminStats;
   if (!modal) return;
 
   var qs = [], i = 0, score = 0, streak = 0, bestStreak = 0, correct = 0;
-  var busy = false, deadline = 0, tick = null, match = null, mode = 'solo';
+  var busy = false, deadline = 0, tick = null, nextT = null, match = null, mode = 'solo';
   var marks = [];   // one true/false per round, for the daily's share row
   var riskArmed = false, riskRound = -1;   // -1 until spent, then the round it went on
 
@@ -31821,7 +31983,17 @@ window.renderAdminStats = renderAdminStats;
     paintDaily();
     paintLobby();
   }
-  function close() { stopClock(); modal.classList.remove('open'); paintCard(); }
+  /* Walking away from Today's Ten or a head-to-head files the run as it
+     stands. It used to just hide the sheet: the daily stayed unplayed (so it
+     could be replayed knowing the answers) and the pending next-round timer
+     carried on playing it to the end in the background. */
+  function close() {
+    var live = el('blitz-play').style.display !== 'none' && qs && qs.length && i < qs.length;
+    stopClock();
+    modal.classList.remove('open');
+    if (live && (mode === 'daily' || mode === 'match')) finish();
+    paintCard();
+  }
 
   async function paintLobby() {
     var host = el('blitz-matches');
@@ -32018,7 +32190,10 @@ window.renderAdminStats = renderAdminStats;
     bar.style.width = '0%';
     tick = setTimeout(function () { if (!busy) answer(-1); }, secs * 1000);
   }
-  function stopClock() { if (tick) { clearTimeout(tick); tick = null; } }
+  function stopClock() {
+    if (tick) { clearTimeout(tick); tick = null; }
+    if (nextT) { clearTimeout(nextT); nextT = null; }
+  }
 
   function answer(k) {
     if (busy) return;
@@ -32071,7 +32246,7 @@ window.renderAdminStats = renderAdminStats;
     }
     riskArmed = false;
     paintHud();
-    setTimeout(function () { i++; round(); }, right ? 520 : 900);
+    nextT = setTimeout(function () { nextT = null; i++; round(); }, right ? 520 : 900);
   }
 
   async function finish() {
@@ -32296,7 +32471,7 @@ window.renderAdminStats = renderAdminStats;
       .replace(/&/g, ' and ')
       .replace(/[^a-z0-9]+/g, ' ').trim();
   }
-  function keyOf(t) { return nm(t && t.artist) + '|' + nm(t && t.title); }
+  function keyOf(t) { return nm(t && t.artist) + '|' + nm(t && t.title) + ((t && !t.title && t.album) ? '|@' + nm(t.album) : ''); }
 
   /* ---- providers ---------------------------------------------------- */
   var PROVIDERS = {}, activeName = 'deezer';
@@ -32327,9 +32502,25 @@ window.renderAdminStats = renderAdminStats;
          because a phone lost signal would hand that person a different song
          from everybody else's, with nothing anywhere saying so. So a transport
          failure comes back as {error:true} and is never cached. */
-      function get(u) {
-        return fetch(u).then(function (r) { return r.ok ? r.json() : { __err: 1 }; })
-                       .catch(function () { return { __err: 1 }; });
+      /* A transport failure is retried twice with a short backoff before it
+         is called one. Most "could not reach the audio" reports were a single
+         dropped request on a phone moving between networks; and a request
+         that never answers is cut at nine seconds rather than left cueing for
+         ever. A route error body is an error, never an empty list. */
+      function once(u) {
+        var ac = window.AbortController ? new AbortController() : null;
+        var tm = ac ? setTimeout(function () { ac.abort(); }, 9000) : 0;
+        return fetch(u, ac ? { signal: ac.signal } : undefined)
+          .then(function (r) { return r.ok ? r.json() : { __err: 1 }; })
+          .catch(function () { return { __err: 1 }; })
+          .then(function (j) { clearTimeout(tm); return (j && j.error) ? { __err: 1 } : j; });
+      }
+      function get(u, n) {
+        n = n || 0;
+        return once(u).then(function (j) {
+          if (!(j && j.__err) || n >= 2 || (typeof navigator !== 'undefined' && navigator.onLine === false)) return j;
+          return new Promise(function (ok) { setTimeout(ok, n ? 1500 : 500); }).then(function () { return get(u, n + 1); });
+        });
       }
       function pickFrom(j) {
         if (j && j.__err) return { error: true };
@@ -32343,7 +32534,9 @@ window.renderAdminStats = renderAdminStats;
         if (!hit || !hit.preview) return null;
         return { url: hit.preview, cover: j.cover || null, link: j.link || null, source: 'Deezer', ms: hit.ms || 30000 };
       }
-      return get(base + '&track=' + encodeURIComponent(t.title || '') + bust).then(function (j) {
+      // No title (an album asked for its opening track) goes straight to the album.
+      var first = t.title ? get(base + '&track=' + encodeURIComponent(t.title) + bust) : Promise.resolve(null);
+      return first.then(function (j) {
         var got = pickFrom(j);
         if ((got && got.url) || !t.album) return got;
         return get(base + '&album=' + encodeURIComponent(t.album) + bust).then(function (k) {
@@ -32415,7 +32608,7 @@ window.renderAdminStats = renderAdminStats;
   });
 
   /* ---- the element -------------------------------------------------- */
-  var el = null, unlocked = false, raf = 0, stopAt = 0, playTok = 0, hardStop = 0;
+  var el = null, unlocked = false, raf = 0, stopAt = 0, playTok = 0, hardStop = 0, fadeIv = 0, fadeVol = 1;
   var listeners = { tick: [], end: [], error: [] };
   function emit(k, v) { (listeners[k] || []).forEach(function (f) { try { f(v); } catch (e) {} }); }
 
@@ -32502,7 +32695,15 @@ window.renderAdminStats = renderAdminStats;
      gets this version. */
   function stopExternal() { playTok++; halt(); }
 
+  // A fade in progress belongs to the clip it was cutting; anything that
+  // starts or stops the element first cancels it and puts the volume back.
+  function endFade() {
+    if (!fadeIv) return;
+    clearInterval(fadeIv); fadeIv = 0;
+    try { if (el) el.volume = fadeVol; } catch (e) {}
+  }
   function halt() {
+    endFade();
     if (raf) { cancelAnimationFrame(raf); raf = 0; }
     if (hardStop) { clearTimeout(hardStop); hardStop = 0; }
     stopAt = 0;
@@ -32526,12 +32727,18 @@ window.renderAdminStats = renderAdminStats;
     var p = provider();
     if (p.stop) { try { p.stop(); } catch (e) {} return; }
     if (!el) return;
-    var a = el, v = a.volume, steps = 6, i = 0;
-    var iv = setInterval(function () {
+    endFade();
+    /* Tokened. 'end' is emitted straight after cut(), and a listener that
+       starts the next clip (For You's loop, Choice's play-all) used to have
+       it paused 72ms later by this very fade. */
+    var a = el, v = a.volume, steps = 6, i = 0, t0 = playTok;
+    fadeVol = v;
+    fadeIv = setInterval(function () {
+      if (playTok !== t0) { endFade(); return; }
       i++;
       try { a.volume = Math.max(0, v * (1 - i / steps)); } catch (e) {}
       if (i >= steps) {
-        clearInterval(iv);
+        clearInterval(fadeIv); fadeIv = 0;
         try { a.pause(); a.currentTime = 0; a.volume = v; } catch (e) {}
       }
     }, 12);
@@ -32574,9 +32781,17 @@ window.renderAdminStats = renderAdminStats;
          A timer is throttled in the background but it still fires, where an
          animation frame simply does not. */
       if (hardStop) clearTimeout(hardStop);
-      hardStop = setTimeout(function () { if (stopAt) { cut(); emit('end'); } }, seconds * 1000 + 90);
+      /* Armed once sound has actually started, from where the clip really is.
+         Armed at resolve time it counted the load as listening: Recall's one
+         second could be cut before a phone had played any of it. */
+      function armHard(at) {
+        if (hardStop) clearTimeout(hardStop);
+        hardStop = setTimeout(function () { if (stopAt && tok === playTok) { cut(); emit('end'); } },
+          Math.max(0, stopAt - at) * 1000 + 90);
+      }
       var p = provider();
       if (p.play) {
+        armHard(from);
         return Promise.resolve(p.play(res, seconds)).then(function (ok) {
           if (ok !== false) { raf = requestAnimationFrame(frame); }
           return ok !== false;
@@ -32597,6 +32812,7 @@ window.renderAdminStats = renderAdminStats;
       if (pr && pr.then) {
         return pr.then(function () {
           if (tok !== playTok) return false;
+          armHard(a.currentTime || from);
           raf = requestAnimationFrame(frame);
           return true;
         }).catch(function (err) {
@@ -32610,10 +32826,15 @@ window.renderAdminStats = renderAdminStats;
              preview. One silent retry against a fresh lookup, exactly as the
              player does it — and because it is one, a genuinely dead track
              still says so rather than looping. */
-          if (tok !== playTok || (opts && opts.fresh)) return false;
+          /* A caller that handed over its own clip gets false back rather than
+             a by-name retry: a name can resolve to another pressing, and
+             Choice would then play its offset into somebody else's clip.
+             Those callers re-fetch the exact track themselves. */
+          if (tok !== playTok || (opts && (opts.fresh || opts.clip))) return false;
           return play(track, seconds, { fresh: true, from: from });
         });
       }
+      armHard(from);
       raf = requestAnimationFrame(frame);
       return true;
     });
@@ -33313,6 +33534,7 @@ window.renderAdminStats = renderAdminStats;
   }
 
   /* ---------- playing ---------- */
+  var hearTok = 0;
   function hear() {
     if (!song || revealed) return;
     startClock();
@@ -33322,8 +33544,12 @@ window.renderAdminStats = renderAdminStats;
     if (b) b.classList.add('on');
     modal.classList.add('rc-playing');
     if (window.buzz) buzz('tap');
+    /* A newer press (a double tap, or Hear 3s while the 1s clip is still
+       loading) supersedes this one, and the engine answers the old request
+       false. That is not a failed connection and must not say so. */
+    var mine = ++hearTok;
     VinalAudio.play(song, STEPS[step]).then(function (ok) {
-      if (ok === true) return;
+      if (ok === true || mine !== hearTok || !song || revealed) return;
       if (b) b.classList.remove('on');
       modal.classList.remove('rc-playing');
       if (ok === 'blocked') { say('Tap play to hear it.'); return; }
@@ -33371,7 +33597,7 @@ window.renderAdminStats = renderAdminStats;
     var elapsedMs = started() ? elapsed() : null;
     pauseClock();
     revealed = true;
-    VinalAudio.stop();
+    VinalAudio.stop(); hearTok++;
     movePlayhead(0);
     lastElapsedMs = elapsedMs;
     var got = Recall.settle(sess, song, step, attempts, correct, elapsedMs);
@@ -33552,7 +33778,7 @@ window.renderAdminStats = renderAdminStats;
     if (on()) { try { Cloud.recallSession(st.score, st.songs, st.bestStreak, Math.round(st.avgReveal)); } catch (e) {} }
   }
   async function finishSession(note) {
-    VinalAudio.stop();
+    VinalAudio.stop(); hearTok++;
     stopCountdown();
     pauseClock();
     var st = Recall.stats(sess);
@@ -33678,7 +33904,7 @@ window.renderAdminStats = renderAdminStats;
 
   /* ---------- lobby ---------- */
   function openLobby() {
-    VinalAudio.stop();
+    VinalAudio.stop(); hearTok++;
     stopCountdown();
     pauseClock();
     if (sess && !sess.done && !sess.filed) fileAbandoned(sess);
@@ -33769,7 +33995,7 @@ window.renderAdminStats = renderAdminStats;
      Hence the observer below rather than more wiring at each exit. Idempotent,
      because both routes can fire for one close. */
   function teardown() {
-    VinalAudio.stop();
+    VinalAudio.stop(); hearTok++;
     stopCountdown();
     if (!sess) { paintCard(); return; }
     // Closing PAUSES a run: the round, the reveal step and the time left are
@@ -33792,7 +34018,7 @@ window.renderAdminStats = renderAdminStats;
   // The app going to the background pauses the round the same way closing does.
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden || !sess || revealed || !clockAt) return;
-    pauseClock(); VinalAudio.stop(); saveLive();
+    pauseClock(); VinalAudio.stop(); hearTok++; saveLive();
     say('Paused. Play to carry on.');
   });
   window.addEventListener('pagehide', function () { if (sess && !sess.done && !sess.over && song) { pauseClock(); saveLive(); } });
@@ -35437,6 +35663,7 @@ window.track = function (name, props) {
     var cover = art
       ? '<button type="button" class="td-art-play" data-todayplay="' + esc2(item.id || '') +
           '" data-name="' + esc2(item.name || '') + '" data-artist="' + esc2(item.artist || '') +
+          '" data-kind="' + esc2(item.kind || '') +
           '" aria-label="Play ' + esc2(item.name || '') + '">' +
           '<img src="' + thumb(esc2(art),500) + '" alt="" decoding="async" loading="lazy">' +
           '<span class="td-play-ico"><span class="td-tri"></span><span class="td-bars"></span></span>' +
@@ -38061,10 +38288,15 @@ window.track = function (name, props) {
     var u = base + '?artist=' + encodeURIComponent(alb.artist || '') +
                    '&album=' + encodeURIComponent(alb.name || '');
     var j = null;
-    try {
-      var r = await fetch(u);
-      if (r.ok) j = await r.json();
-    } catch (e) {}
+    // One quiet retry: a single dropped request on a phone was enough to
+    // leave a card saying the album would not load.
+    for (var attempt = 0; attempt < 2 && !j; attempt++) {
+      if (attempt) await new Promise(function (ok) { setTimeout(ok, 700); });
+      try {
+        var r = await fetch(u);
+        if (r.ok) j = await r.json();
+      } catch (e) {}
+    }
     var err = !j;
     var list = [];
     ((j && j.tracks) || []).forEach(function (t) {
@@ -38958,7 +39190,6 @@ window.track = function (name, props) {
           v,
           { id: rec.albumId, name: rec.albumName, art: rec.art });
       }
-      var first = rec.myScore == null;
       rec.myScore = v > 0 ? v : null;
       // Rated songs never come back round in a LATER feed; the card in front
       // of you stays live, which is the point.
@@ -38974,18 +39205,10 @@ window.track = function (name, props) {
         if (v > 0) { card2.classList.remove('fy-commit'); void card2.offsetWidth; card2.classList.add('fy-commit'); }
       }
       if (window.buzz) buzz('good');
-      /* MOMENTUM. A first verdict carries you on to the next song once the
-         stamp has landed. Only the first — a re-rate is somebody still
-         thinking — and a touch, wheel, key or slider move in the meantime
-         cancels it: the feed is never taken from a hand that is on it. */
+      /* No momentum. Rating used to carry you on to the next song; the owner
+         asked for the feed to stay on the record you just rated — moving on
+         is always the listener's own swipe. */
       cancelAdvance();
-      var at2 = card2 ? Array.prototype.indexOf.call(host.children, card2) : -1;
-      if (first && v > 0 && at2 === _activeCard) {
-        _advT = setTimeout(function () {
-          _advT = 0;
-          if (document.body.dataset.section === 'foryou' && !document.hidden && _activeCard === at2) navigatePost(1);
-        }, 820);
-      }
     });
 
     host.addEventListener('input', function (e) {
@@ -39329,8 +39552,21 @@ window.track = function (name, props) {
       setTimeout(function () { rb.disabled = false; }, 500);
     });
     document.addEventListener('visibilitychange', function () { if (document.hidden) stopAll(); });
-    // The clip runs out on its own and the card has to stop saying it plays.
-    try { VinalAudio.on('end', function () { stopAll(); }); } catch (e) {}
+    /* The clip runs out and starts again on the same card: a preview never
+       moves the feed. Only while For You is the thing on screen — the engine
+       is shared, and an 'end' from Recall over the top must not restart this. */
+    try { VinalAudio.on('end', function () {
+      var i = _playing, c = _items[i];
+      if (i == null || !c || document.hidden || document.body.dataset.section !== 'foryou' ||
+          document.querySelector('.modal.open:not(#sc-modal)')) { stopAll(); return; }
+      var mine = _tok;
+      VinalAudio.play(trackOf(c), CLIP_S, { clip: c.clip }).then(function (ok) {
+        if (mine !== _tok || ok === true) return ok;
+        return VinalAudio.play(trackOf(c), CLIP_S, { fresh: true });
+      }).then(function (ok) {
+        if (mine === _tok && ok !== true) stopAll();
+      }, function () { if (mine === _tok) stopAll(); });
+    }); } catch (e) {}
   });
 
   window.ForYou = {
@@ -41530,9 +41766,9 @@ window.track = function (name, props) {
 </div>
 
 </body>
-<script src="/assets/interactions.js?v=3"></script>
-<script src="/assets/replay.js?v=4"></script>
-<script src="/assets/you.js?v=7"></script>
+<script src="/assets/interactions.js?v=4"></script>
+<script src="/assets/replay.js?v=6"></script>
+<script src="/assets/you.js?v=8"></script>
 <script src="/assets/glow.js?v=4"></script>
 <script src="/assets/comments.js?v=3" defer></script>
 <script src="/assets/boards.js?v=2"></script>
@@ -41542,5 +41778,5 @@ window.track = function (name, props) {
 <script src="/assets/passport.js?v=2"></script>
 <script src="/assets/safety.js?v=2"></script>
 <script src="/assets/discover.js?v=2"></script>
-<script src="/assets/sound.js?v=1"></script>
+<script src="/assets/sound.js?v=2"></script>
 </html>

@@ -325,7 +325,7 @@ html[data-motion="none"] #games-grid.arcade .gc-art, html[data-motion="none"] #g
 /* The record and its sleeve. */
 /* The sleeve gives way to the window's height first, so a 720px desktop
    window or a phone with its keyboard up still shows the controls. */
-#recall-modal { --rc-w: clamp(150px, min(66vw, calc(88dvh - 470px)), 268px); }
+#recall-modal { --rc-w: clamp(150px, min(66vw, calc(var(--app-h, 100dvh) * .88 - 470px)), 268px); }
 #recall-modal .rc-deck { position: relative; width: var(--rc-w); margin: 4px auto 0; }
 #recall-modal .rc-disc {
   position: absolute; inset: 4%; border-radius: 50%; z-index: 0;
@@ -462,7 +462,10 @@ html[data-motion="none"] #games-grid.arcade .gc-art, html[data-motion="none"] #g
 
 @media (max-width: 699px) {
   #recall-modal .modal-panel { padding: 22px 20px 20px; }
-  #recall-modal { --rc-w: clamp(150px, min(62vw, calc(84dvh - 450px)), 232px); }
+  #recall-modal { --rc-w: clamp(150px, min(62vw, calc(var(--app-h, 100dvh) * .84 - 450px)), 232px); }
+  /* Keyboard up: the sleeve gives its room to the field and the buttons. */
+  body.kb-up #recall-modal { --rc-w: 96px; }
+  body.kb-up #recall-modal .rc-top { margin-bottom: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
