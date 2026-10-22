@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>VINALL player</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#p{width:100%;height:100%}</style>
+</head><body><div id="p"></div>
+<script>
+/* The YouTube player for the native app. YouTube refuses an embed whose page
+   has no web referrer (error 153), and the app's page is capacitor://localhost.
+   This page is served from www.vinall.xyz, so the embed it makes has a real
+   one. The app frames it and drives it by postMessage (see YTBridge in
+   index.html); it reports state and time ten times a second. */
+(function () {
+  var q = new URLSearchParams(location.search);
+  var OK = { 'capacitor://localhost': 1, 'https://localhost': 1, 'https://vinall.xyz': 1, 'https://www.vinall.xyz': 1 };
+  var player = null;
+  function send(m) { m.ytb = 1; try { parent.postMessage(m, '*'); } catch (e) {} }
+  function num(k) { var v = q.get(k); return v == null ? undefined : +v; }
+  window.onYouTubeIframeAPIReady = function () {
+    player = new YT.Player('p', {
+      host: 'https://www.youtube.com', videoId: q.get('v'), width: '100%', height: '100%',
+      playerVars: { start: num('start'), end: num('end'), autoplay: num('autoplay') || 0, mute: num('mute') || 0,
+                    controls: q.get('controls') === '0' ? 0 : 1, playsinline: 1, rel: 0, fs: 0, iv_load_policy: 3,
+                    origin: location.origin, widget_referrer: location.href },
+      events: {
+        onReady: function () { send({ t: 'ready', dur: player.getDuration() }); },
+        onError: function (e) { send({ t: 'error', data: e && e.data }); }
+      }
+    });
+    setInterval(function () {
+      if (!player || !player.getPlayerState) return;
+      try { send({ t: 's', state: player.getPlayerState(), time: player.getCurrentTime(), dur: player.getDuration() }); } catch (e) {}
+    }, 100);
+  };
+  addEventListener('message', function (e) {
+    if (!OK[e.origin] || !player || !e.data || !e.data.ytc) return;
+    var m = e.data;
+    try {
+      if (m.ytc === 'play') player.playVideo();
+      else if (m.ytc === 'pause') player.pauseVideo();
+      else if (m.ytc === 'mute') player.mute();
+      else if (m.ytc === 'seek') player.seekTo(+m.s || 0, true);
+    } catch (er) {}
+  });
+  var sc = document.createElement('script');
+  sc.src = 'https://www.youtube.com/iframe_api';
+  sc.onerror = function () { send({ t: 'error', data: 'api' }); };
+  document.head.appendChild(sc);
+})();
+</script></body></html>

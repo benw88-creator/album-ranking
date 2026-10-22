@@ -44,11 +44,20 @@ test('lands on the mark', async ({ page }) => { await fly(page); });
 
 test('lands on the mark when the hero opens above the header mid-flight', async ({ page }) => {
   await fly(page, () => new Promise(r => setTimeout(() => {
-    const h = document.getElementById('artist-hero');
-    h.style.cssText += ';display:block;height:340px;transition:height .4s';
-    h.classList.remove('artist-hero-hidden');
-    r();
+    showArtistHero(document.getElementById('artist-hero')); r();
   }, 900)));
+  // Held during the flight, applied once the gate has gone.
+  await page.waitForFunction(() => { const h = document.getElementById('artist-hero');
+    return h.style.display === 'block' && !h.classList.contains('artist-hero-hidden'); }, null, { timeout: 3000 });
+});
+
+test('the flight runs as a compositor animation', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('#splash-cta');
+  await page.click('#splash-cta');
+  await page.waitForFunction(() => document.querySelector('.splash-gate.is-handing'));
+  const n = await page.evaluate(() => document.getElementById('splash-disc').getAnimations().filter(a => a.playState === 'running').length);
+  expect(n).toBe(1);
 });
 
 test('lands on the mark when the page scrolls mid-flight', async ({ page }) => {

@@ -9,7 +9,7 @@ const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 http.createServer((req, res) => {
   let pathname;
   try { pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname); } catch { res.writeHead(400).end(); return; }
-  if (!/^\/(assets|dither-frames)\//.test(pathname) && !['/', '/index.html', '/privacy.html', '/terms.html', '/reset.html', '/offline.html', '/manifest.webmanifest', '/sw.js'].includes(pathname)) { res.writeHead(404).end(); return; }
+  if (!/^\/(assets|dither-frames)\//.test(pathname) && !['/', '/index.html', '/privacy.html', '/terms.html', '/reset.html', '/offline.html', '/yt.html', '/manifest.webmanifest', '/sw.js'].includes(pathname)) { res.writeHead(404).end(); return; }
   const file = path.resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname));
   if (!file.startsWith(root + path.sep) || pathname.startsWith('/api/')) { res.writeHead(404).end(); return; }
   fs.stat(file, (error, stat) => {

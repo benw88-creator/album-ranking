@@ -5650,17 +5650,25 @@ The record also **winds down at 820ms** rather than arriving at 0.34s/rev into a
 mark idling at 8s — a 23x speed discontinuity on the one frame you are asked to
 believe they are the same object.
 
-**The destination is re-measured every frame (2026-10-21).** The flight was
-measured once at GO and baked into keyframes, but `#artist-hero` sits ABOVE
-`<header>` and opens with a height transition when the profile lands — usually
-right at GO, because the splash waits on `Cloud.ready`. The header slid ~330px
-down and the record landed on the artist photo. The flight is now one rAF loop
-that reads the mark's centre (rect) and width (computed style) each frame, with
-every step (wind-down, crossfade, ring, finish) on that one clock; a hidden tab
-finishes immediately and `finish()` always clears `is-receiving`. The ring sits
-in the mark's offset parent so it moves with the header.
-`scripts/tests/splash-flight.spec.mjs` covers hero-opens, scroll, hidden tab
-and repeated presses; the old code fails it by 334px.
+**The target is held still; the flight runs on the compositor (2026-10-22).**
+`#artist-hero` sits ABOVE `<header>` and opens with a height transition when the
+profile lands — usually right at GO, because the splash waits on `Cloud.ready` —
+so a destination measured at GO landed the record ~330px high, on the artist
+photo. Chasing the mark per frame (the 2026-10-21 fix) landed it but ran on the
+main thread, which is busy loading the account at GO: a jagged flight. Now any
+hero transition is finished instantly before measuring (under the splash),
+`heroResize()` defers while `.splash-gate.is-handing` is on, the gate keeps
+catching touches, and the flight is WAAPI keyframes. Every step is a timer
+cleared by `finish()`, which always clears `is-receiving`; a hidden tab finishes
+at once. `scripts/tests/splash-flight.spec.mjs` covers hero-opens, scroll,
+hidden tab, repeated presses and that the flight is a running animation.
+
+**YouTube in the app goes through `/yt.html` (2026-10-22).** YouTube refuses an
+embed whose page has no web referrer (error 153); the app's page is
+`capacitor://localhost`, so every Community Choice player failed in the app and
+worked on the site. Natively `loadYT()` returns `{ Player: YTBridge }`, which
+frames `https://www.vinall.xyz/yt.html` (the embed gets a real referrer) and
+mirrors YT.Player's methods over postMessage. The web path is unchanged.
 
 **`is-entering` is never added by anything.** The comment above about forcing the
 resting state describes a state that no longer exists; the class swap is a

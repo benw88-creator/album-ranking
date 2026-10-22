@@ -4469,7 +4469,9 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 
    Everything is driven from measured geometry rather than guessed offsets —
    see playDismissAnimation(). The custom properties are set there. */
-.splash-gate.is-handing { pointer-events: none; }
+/* Keeps catching touches for the 1.2s flight, so the page cannot be scrolled
+   out from under the record's destination. */
+.splash-gate.is-handing { touch-action: none; }
 .splash-gate.is-handing .splash-scrim,
 .splash-gate.is-handing .splash-content { animation: splashLift 340ms var(--ease) forwards; }
 @keyframes splashLift {
@@ -13857,7 +13859,9 @@ function searchBusy() {
 }
 
 function heroResize(hero, fn) {
-  if (searchBusy()) { _heroPending = { hero: hero, fn: fn }; watchHeroPending(); return; }
+  // Also held while the splash record is flying to the header mark: the
+  // flight is aimed at where the mark is, so the mark must not move under it.
+  if (searchBusy() || document.querySelector('.splash-gate.is-handing')) { _heroPending = { hero: hero, fn: fn }; watchHeroPending(); return; }
   var before = hero.getBoundingClientRect().height;
   var y = window.scrollY || window.pageYOffset || 0;
   fn();
@@ -24563,117 +24567,98 @@ function playDismissAnimation(gateEl, callback) {
     return;
   }
 
-  /* THE DESTINATION IS RE-MEASURED EVERY FRAME, AND THAT IS THE FIX.
+  /* THE TARGET IS MADE STILL, THEN THE FLIGHT RUNS ON THE COMPOSITOR.
 
-     It used to be measured once, at GO, and baked into keyframes. But the
-     favourite-artist hero is a sibling ABOVE <header>, and it opens (with a
-     height transition) when the profile lands — which is very often right
-     around the moment GO is pressed, because the splash waits on Cloud.ready.
-     The header then slid ~320px down while the record flew to where it USED
-     to be, and the record sat on top of the artist photo. Any scroll, a
-     viewport change or the keyboard did the same thing on a smaller scale.
-     Chasing the live target means it cannot land anywhere but on the mark.
+     `#artist-hero` sits ABOVE <header> and opens with a .55s height
+     transition when the profile lands — usually right around GO, because the
+     splash waits on Cloud.ready — so a destination measured once at GO was
+     ~330px stale by the landing. Chasing it every frame fixed the landing but
+     ran the flight on the main thread, which is exactly the thread busy
+     loading the account at that moment: dropped frames, a jagged flight.
+
+     So the moving part is removed instead of chased. Any hero transition in
+     progress is finished instantly (it is under the splash, nobody sees it),
+     heroResize() defers new ones while `.is-handing` is on, and the gate keeps
+     catching touches so the page cannot be scrolled under the flight. With a
+     still target the flight is plain keyframes, which the compositor runs
+     whatever the main thread is doing.
 
      Size comes from getComputedStyle, never the rect: `.brand-mark` is always
      turning and a rotated element's bounding box is up to 41% larger than the
-     element. Only the CENTRE survives rotation, so only the centre is read
-     off the rect. */
+     element. Only the CENTRE survives rotation. */
+  var hero = document.getElementById('artist-hero');
+  if (hero) { var ht = hero.style.transition; hero.style.transition = 'none'; void hero.offsetHeight; hero.style.transition = ht; }
+  gateEl.classList.add('is-handing');
   var from = disc.getBoundingClientRect();
-  var fromX = from.left + from.width / 2, fromY = from.top + from.height / 2;
-  var fromW = from.width || 1;
-  function target() {
-    var r = mark.getBoundingClientRect();
-    var w = parseFloat(getComputedStyle(mark).width) || mark.offsetWidth || r.width;
-    return { x: r.left + r.width / 2 - fromX, y: r.top + r.height / 2 - fromY, s: w / fromW };
-  }
-  // The same curve the keyframes used, so the feel is unchanged.
-  function bezier(x1, y1, x2, y2) {
-    return function (x) {
-      var t = x;
-      for (var i = 0; i < 8; i++) {
-        var u = 1 - t;
-        var dx = 3 * x1 * t * u * u + 3 * x2 * t * t * u + t * t * t - x;
-        var d = 3 * x1 * u * u + 6 * (x2 - x1) * t * u + 3 * (1 - x2) * t * t;
-        if (Math.abs(dx) < 1e-5 || Math.abs(d) < 1e-6) break;
-        t = Math.min(1, Math.max(0, t - dx / d));
-      }
-      var v = 1 - t;
-      return 3 * y1 * t * v * v + 3 * y2 * t * t * v + t * t * t;
-    };
-  }
-  var ease = bezier(.62, .02, .24, 1);
+  var to = mark.getBoundingClientRect();
+  var toW = parseFloat(getComputedStyle(mark).width) || mark.offsetWidth || to.width;
+  var fx = (to.left + to.width / 2) - (from.left + from.width / 2);
+  var fy = (to.top + to.height / 2) - (from.top + from.height / 2);
+  var fs = toW / (from.width || 1);
   var DELAY = 300, DUR = 880, END = DELAY + DUR;
 
   if (window.buzz) buzz('good');
 
   // 1. Wind it up, and lift the furniture off.
   if (vinyl) vinyl.classList.add('is-winding');
-  gateEl.classList.add('is-handing');
   mark.classList.add('is-receiving');
 
-  /* Every step hangs off ONE clock, read in one rAF loop, so a tab that was
-     hidden mid-flight (rAF and timers both stop) comes back to the end state
-     in order instead of to a disc frozen half way and a mark still at
-     opacity 0. finish() is the single cleanup and is idempotent. */
-  var t0 = performance.now(), raf = 0, wound = false, handed = false;
+  var timers = [], flight = null;
   cleanup = function () {
-    if (raf) cancelAnimationFrame(raf);
-    raf = 0;
+    timers.forEach(clearTimeout);
     document.removeEventListener('visibilitychange', onVis);
     if (vinyl) vinyl.classList.remove('is-winding');
     mark.classList.remove('is-receiving');
   };
+  // A hidden tab stops timers and animations; coming back to a half-flown
+  // record is worse than coming back to the app.
   function onVis() { if (document.hidden) finish(); }
   document.addEventListener('visibilitychange', onVis);
+  function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
 
-  function ring() {
-    // Inside the mark's offset parent, at the mark's layout box, so it moves
-    // with the header if the hero is still settling — not pinned to a
-    // viewport point measured once.
+  /* 2. The flight. Scale is GEOMETRIC (fs^p) over sixteen steps: a linear
+        1 → 0.05 spends half the flight above 50% size and collapses into the
+        corner at the end. Equal ratios per step read as one steady zoom. */
+  var frames = [];
+  for (var i = 0; i <= 16; i++) {
+    var p = i / 16;
+    frames.push({ transform: 'translate(calc(-50% + ' + (fx * p).toFixed(2) + 'px), calc(-50% + ' +
+      (fy * p).toFixed(2) + 'px)) scale(' + Math.pow(fs, p).toFixed(5) + ')' });
+  }
+  if (disc.animate) {
+    flight = disc.animate(frames, { duration: DUR, delay: DELAY, easing: 'cubic-bezier(.62,.02,.24,1)', fill: 'forwards' });
+  } else {
+    at(DELAY, function () { disc.style.transition = 'transform ' + DUR + 'ms cubic-bezier(.62,.02,.24,1)'; disc.style.transform = frames[16].transform; });
+  }
+
+  /* 3. Wind DOWN before it arrives: a record at 0.34s a revolution landing on
+        a mark idling at 8s is a 23x speed jump on the one frame you are asked
+        to believe they are the same object. */
+  at(820, function () { if (vinyl) vinyl.classList.remove('is-winding'); });
+
+  /* 4. The handoff is a 160ms CROSSFADE (both elements carry an opacity
+        transition): the splash label and the mark's label differ, and a hard
+        cut at 32px flickers even with perfect geometry. */
+  at(END - 160, function () { mark.classList.remove('is-receiving'); disc.classList.add('is-handed'); });
+
+  at(END, function () {
+    // Inside the mark's offset parent at its layout box, so it moves with the
+    // header if the hero opens the moment the gate lets go.
     var host = mark.offsetParent;
-    if (!host) return;
-    var el = document.createElement('span');
-    el.className = 'mark-ring';
-    el.style.left = mark.offsetLeft + 'px';
-    el.style.top = mark.offsetTop + 'px';
-    el.style.width = mark.offsetWidth + 'px';
-    el.style.height = mark.offsetHeight + 'px';
-    host.appendChild(el);
-    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 600);
-  }
-
-  function frame(now) {
-    raf = 0;
-    if (done) return;
-    var t = now - t0;
-    /* 3. Wind DOWN before it arrives: landing a record turning at 0.34s a
-          revolution onto a mark idling at 8s is a 23x speed jump on the one
-          frame you are asked to believe they are the same object. */
-    if (!wound && t >= 820) { wound = true; if (vinyl) vinyl.classList.remove('is-winding'); }
-    /* 4. The handoff is a 160ms CROSSFADE (both elements carry an opacity
-          transition), because the splash label and the mark's label differ
-          and a hard cut at 32px flickers even with perfect geometry. */
-    if (!handed && t >= END - 160) {
-      handed = true;
-      mark.classList.remove('is-receiving');
-      disc.classList.add('is-handed');
+    if (host) {
+      var el = document.createElement('span');
+      el.className = 'mark-ring';
+      el.style.left = mark.offsetLeft + 'px';
+      el.style.top = mark.offsetTop + 'px';
+      el.style.width = mark.offsetWidth + 'px';
+      el.style.height = mark.offsetHeight + 'px';
+      host.appendChild(el);
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 600);
     }
-    /* 2. The flight. Scale is GEOMETRIC (s^p): a linear 1 → 0.05 spends half
-          the flight above 50% size and collapses into the corner at the end. */
-    var p = t <= DELAY ? 0 : ease(Math.min(1, (t - DELAY) / DUR));
-    var g = target();
-    disc.style.transform = 'translate(calc(-50% + ' + (g.x * p).toFixed(2) + 'px), calc(-50% + ' +
-      (g.y * p).toFixed(2) + 'px)) scale(' + Math.pow(g.s, p).toFixed(5) + ')';
-    if (t >= END) {
-      ring();
-      if (window.buzz) buzz('tap');
-      finish();
-      return;
-    }
-    raf = requestAnimationFrame(frame);
-  }
-  raf = requestAnimationFrame(frame);
-  // rAF never runs in a hidden tab; this guarantees the splash still goes.
+    if (window.buzz) buzz('tap');
+    finish();
+  });
+  // Belt and braces for a browser that never runs the timers above.
   setTimeout(finish, END + 600);
 }
 </script>
@@ -27194,9 +27179,50 @@ window.renderAdminStats = renderAdminStats;
       return !!yes;
     });
   }
+  /* In the app, YouTube's own API is never loaded. YouTube refuses an embed
+     whose page has no web referrer (error 153), and the app's page is
+     capacitor://localhost, so every player failed there while the website
+     kept working. The app frames /yt.html from www.vinall.xyz instead, which
+     makes the embed with a real referrer, and this stands in for YT.Player:
+     same constructor, same methods, state and time pushed by the frame ten
+     times a second so the getters stay synchronous. getPlayerState only
+     appears once ready, as the real one's does — the pollers test for it. */
+  function YTBridge(el, o) {
+    var self = this, pv = o.playerVars || {}, ev = o.events || {}, q = new URLSearchParams({ v: o.videoId });
+    ['start', 'end', 'autoplay', 'mute', 'controls'].forEach(function (k) { if (pv[k] != null) q.set(k, pv[k]); });
+    var f = document.createElement('iframe');
+    f.src = Native.api + '/yt.html?' + q;
+    f.allow = 'autoplay; encrypted-media';
+    f.setAttribute('allowfullscreen', '');
+    f.style.cssText = 'width:100%;height:100%;border:0;display:block';
+    el.parentNode.replaceChild(f, el);
+    this._f = f; this._s = -1; this._t = 0; this._d = 0;
+    this._on = function (e) {
+      var m = e.data;
+      if (e.source !== f.contentWindow || !m || !m.ytb) return;
+      if (m.t === 's') { self._s = m.state; self._t = m.time; self._d = m.dur; }
+      else if (m.t === 'ready') {
+        self._d = m.dur || 0;
+        self.getPlayerState = function () { return self._s; };
+        if (ev.onReady) ev.onReady({ target: self });
+      } else if (m.t === 'error' && ev.onError) ev.onError({ data: m.data });
+    };
+    addEventListener('message', this._on);
+  }
+  YTBridge.prototype = {
+    _c: function (m) { try { this._f.contentWindow.postMessage(m, 'https://www.vinall.xyz'); } catch (e) {} },
+    getCurrentTime: function () { return this._t; },
+    getDuration: function () { return this._d; },
+    playVideo: function () { this._c({ ytc: 'play' }); },
+    pauseVideo: function () { this._c({ ytc: 'pause' }); },
+    mute: function () { this._c({ ytc: 'mute' }); },
+    seekTo: function (s) { this._t = +s || 0; this._c({ ytc: 'seek', s: s }); },
+    destroy: function () { removeEventListener('message', this._on); if (this._f.parentNode) this._f.parentNode.removeChild(this._f); }
+  };
   function loadYT() {
     if (_yt) return _yt;
     if (!ytOk()) return ytConsent().then(function (yes) { if (!yes) throw new Error('youtube declined'); return loadYT(); });
+    if (window.Native && Native.on) return (_yt = Promise.resolve({ Player: YTBridge }));
     _yt = new Promise(function (res, rej) {
       if (window.YT && YT.Player) { res(YT); return; }
       var prev = window.onYouTubeIframeAPIReady;

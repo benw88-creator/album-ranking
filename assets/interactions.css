@@ -132,6 +132,13 @@ body:has(#auth-modal.open) > :is(.wrap, #artist-hero, #player-bar, .activity, .a
    the sleeve slot is tinted so a cover still decoding is a square, not a hole. */
 @media (hover: none) {
   #albums-grid > *, #prof-rankings > * { content-visibility: visible; }
+  /* Still blanking on a fling (2026-10-22): every card's rank badge had a
+     backdrop blur, so a crate of a few hundred was a few hundred composited
+     backdrop layers and WebKit ran out of tile memory mid-scroll — badges
+     drawn as blurred smudges, whole rows black. The badge is opaque enough
+     not to need it, and the score's 30px shadow was the other heavy paint. */
+  .rank-badge { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(10,9,8,.86); }
+  .card .art-score { text-shadow: 0 1px 8px rgba(0,0,0,.8); }
 }
 .grid .card:nth-child(n+13) { animation: none; }
 .card .art-wrap { background: var(--surface-2); }
