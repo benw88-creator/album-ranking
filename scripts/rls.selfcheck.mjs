@@ -20,7 +20,12 @@ create policy "ratings select friends or public" on public.ratings for select us
           WHERE ((b.follower_id = ratings.user_id) AND (b.following_id = auth.uid())))))))));
 create policy "ratings insert own" on public.ratings for insert with check (auth.uid() = user_id);
 create policy "ratings select own" on public.ratings for select using (auth.uid() = user_id);`;
-const NEW = fs.readFileSync(new URL('../supabase/migrations/20261023180000_ratings_rls_consolidate.sql', import.meta.url), 'utf8');
+const FILE = fs.readFileSync(new URL('../supabase/migrations/20261023180000_ratings_rls_consolidate.sql', import.meta.url), 'utf8')
+  .replace(/^begin;|^commit;/gm, '');
+// The migration refuses to run while any visibility is NULL/unknown; the
+// equivalence below deliberately includes those, so it runs the policies alone.
+const GUARD = FILE.match(/do \$\$[\s\S]*?end \$\$;/)[0];
+const NEW = FILE.replace(GUARD, '');
 
 const users = Array.from({ length: 7 }, (_, i) => `00000000-0000-4000-8000-00000000000${i}`);
 const VIS = ['public', 'friends', 'private', null];
@@ -82,14 +87,17 @@ for (let s = 0; s < 12; s++) {
   for (const a of users) for (const b of users) if (a !== b && rnd() < 0.35) follows.push([a, b]);
   const scenario = { vis, follows };
   const before = await observe(await world(OLD, scenario));
-  const after = await observe(await world(NEW.replace(/^begin;|^commit;/gm, ''), scenario));
+  const after = await observe(await world(NEW, scenario));
   assert.deepEqual(after, before, 'scenario ' + s);
   Object.entries(before).forEach(([k, v]) => { if (k.endsWith('reads')) readsSeen.add(v); });
   compared += Object.keys(before).length;
 }
 // The scenarios must actually exercise the friends branch, not just public/private.
 assert.ok(readsSeen.size > 20, 'scenarios too uniform to prove anything');
-const db = await world(NEW.replace(/^begin;|^commit;/gm, ''), { vis: users.map(() => 'public'), follows: [] });
+const db = await world(FILE, { vis: users.map(() => 'public'), follows: [] });
+const blank = new PGlite();
+await blank.exec(`create table public.profiles(id uuid, ratings_visibility text); insert into public.profiles values (gen_random_uuid(), null);`);
+await assert.rejects(blank.exec(GUARD), /blank or unknown/);
 assert.equal((await db.query(`select count(*)::int n from pg_policies where tablename = 'ratings'`)).rows[0].n, 4);
 assert.match((await db.query(`select qual from pg_policies where policyname = 'ratings read'`)).rows[0].qual, /SELECT auth\.uid\(\)/i);
 console.log(`ok — ratings RLS: ${compared} read/write outcomes identical across 12 scenarios, ${readsSeen.size} distinct read sets`);

@@ -26,6 +26,16 @@
 
 begin;
 
+-- Refuse rather than guess: a NULL/unknown visibility reads public in the UI
+-- and private here. Nothing below runs if any exist.
+do $$
+begin
+  if exists (select 1 from public.profiles
+             where ratings_visibility is null or ratings_visibility not in ('public', 'friends', 'private')) then
+    raise exception 'profiles with a blank or unknown ratings_visibility exist; resolve them first';
+  end if;
+end $$;
+
 drop policy if exists "ratings select own" on public.ratings;
 drop policy if exists "ratings select friends or public" on public.ratings;
 drop policy if exists "ratings insert own" on public.ratings;
