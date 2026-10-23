@@ -15,7 +15,7 @@
  * never more than one load behind, and when you are, the app says so out loud.
  */
 
-const VERSION = 'vinall-v6';
+const VERSION = 'vinall-v7';
 const SHELL = VERSION + '-shell';
 const MEDIA = VERSION + '-media';
 
@@ -153,17 +153,37 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static media: serve from cache, and refresh it in the background so a
-  // replaced asset is picked up on the visit after next.
+  // Static media. A URL carrying ?v= names one exact build of the file:
+  // index.html bumps it whenever the file changes, and scripts/traps.mjs fails
+  // a push that forgets. So a cached copy of it is never stale and is served
+  // with no network request at all — that refresh used to cost one CDN request
+  // per asset per load. Unversioned media is still served from cache and
+  // refreshed in the background, so a replaced file is picked up on the visit
+  // after next.
   if (isMedia(url)) {
     const cached = caches.match(req);
-    const net = fetch(req).then(async (res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            await caches.open(MEDIA).then((c) => c.put(req, copy)).catch(() => {});
+    const versioned = url.searchParams.has('v');
+    const fetchAndKeep = () => fetch(req).then(async (res) => {
+      if (res && res.ok) {
+        const copy = res.clone();
+        await caches.open(MEDIA).then(async (c) => {
+          await c.put(req, copy);
+          // Older builds of the same file are dead weight once a new ?v= lands.
+          if (versioned && c.keys) {
+            for (const k of await c.keys()) {
+              const ku = new URL(k.url);
+              if (ku.pathname === url.pathname && ku.search !== url.search) await c.delete(k);
+            }
           }
-          return res;
-        }).catch(async () => (await cached) || Response.error());
+        }).catch(() => {});
+      }
+      return res;
+    });
+    if (versioned) {
+      event.respondWith(cached.then((hit) => hit || fetchAndKeep().catch(() => Response.error())));
+      return;
+    }
+    const net = fetchAndKeep().catch(async () => (await cached) || Response.error());
     event.waitUntil(net.then(() => {}));
     event.respondWith(cached.then((hit) => hit || net));
     return;

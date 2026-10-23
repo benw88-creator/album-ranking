@@ -4,6 +4,7 @@
 // script is the only place they make a noise. Exit code 1 if any fire.
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, '$1')), '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
@@ -90,6 +91,29 @@ const cl = html.match(/var LADDER = \[([^\]]+)\]/), sl = lastMatch(/v_ladder\s+i
 if (cl && sl && arr(cl[1]) !== arr(sl[1])) fail('ladder', `LADDER [${cl[1]}] != v_ladder [${sl[1]}]`);
 const cm = html.match(/var MAX_SCORE = (\d+)/), sm = lastMatch(/least\(coalesce\(p_score,\s*0\),\s*(\d+)\)/g, 'function public.blitz_submit');
 if (cm && sm && cm[1] !== sm[1]) fail('blitz-max', `Blitz MAX_SCORE ${cm[1]} != blitz_submit clamp ${sm[1]}`);
+
+// Versioned assets are cached for good: vercel.json sends `immutable` for any
+// /assets/ URL with ?v=, and sw.js serves them without revalidating. A file
+// edited without bumping its ?v= would therefore never reach anybody who has
+// the old one. Compared against where this branch left origin/main, working
+// tree included, so it catches the edit before the push that would ship it.
+{
+  const git = cmd => { try { return execSync(cmd, { cwd: root, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 << 20 }).toString(); } catch { return null; } };
+  const base = (git('git merge-base HEAD origin/main') || '').trim();
+  if (base) {
+    const changed = (git(`git diff --name-only ${base} -- assets`) || '').split('\n').filter(Boolean);
+    const pages = ['index.html', 'privacy.html', 'terms.html', 'reset.html', 'offline.html', 'yt.html'];
+    for (const page of pages) {
+      const now = fs.existsSync(path.join(root, page)) ? fs.readFileSync(path.join(root, page), 'utf8') : '';
+      const then = git(`git show ${base}:${page}`) || '';
+      for (const f of changed) {
+        const ver = s => { const m = s.match(new RegExp('/' + f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\?v=([\\w.-]+)')); return m && m[1]; };
+        const a = ver(then), b = ver(now);
+        if (a && b && a === b) fail('asset-version', `${f} changed but ${page} still loads it as ?v=${b} — bump it, or nobody gets the change`);
+      }
+    }
+  }
+}
 
 if (fails.length) { console.log(fails.join('\n')); console.log(`\n${fails.length} trap(s) sprung`); process.exit(1); }
 console.log(`ok — ${routes.length}/12 routes, ${views.size} views, ${labels.size} game labels, all traps clear`);

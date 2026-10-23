@@ -3711,11 +3711,14 @@ Design decisions worth not undoing:
   scatter across singles and reissues. `LASTFM_API_KEY` is no longer used here.
   The kworb dependency is scraped HTML, so it is the most brittle part of the feature: if
   match rates collapse, check the table markup in `artistStreamTable`.
-- **Wars settle live.** `bid_wars` is in the `supabase_realtime` publication, so the player
-  who bid first is pushed straight to the reveal when the second bid lands, instead of
-  sitting on "waiting" until they reload. A 15s poll covers a failed socket. `bid_war_bids`
-  and `bid_war_values` are deliberately not published — streaming either would unseal the
-  bids or leak the values.
+- **Wars settle by a 15s poll, not Realtime (2026-10-23).** The player who bid first is
+  moved to the reveal by `startPoll()` while their war is pending. The client used to also
+  hold a `postgres_changes` subscription on `bid_wars`; `pg_stat_statements` showed
+  `realtime.list_changes` as the largest consumer of database time (~3x every app query
+  combined), because Realtime decodes the whole WAL on a loop while anyone is subscribed.
+  Do not add `postgres_changes` back; use Broadcast if a push is ever needed. `bid_wars`
+  is still in the publication (harmless with no subscribers). `bid_war_bids` and
+  `bid_war_values` must never be published — that would unseal bids or leak values.
 - **Creation is a server route, not a Postgres function.** Postgres cannot make the HTTP
   call, and the browser must not: a player who fetches the playcounts themselves knows what
   every record is worth before bidding. The route verifies the caller's Supabase JWT and
@@ -6541,6 +6544,30 @@ The DPIA and the Online Safety Act assessments live in `compliance/`, which is
 - Birth year: the question is gone, the values are deleted, and
   `profiles_birth_year_unused` keeps the column empty. DMs: there is no insert policy
   on `messages` (`20261016100000`).
+
+## Scalability pass (2026-10-23)
+
+From a production `pg_stat_statements` read plus local load counts. None of it changes
+what a user sees.
+
+- **`?v=` assets are cached for good.** `vercel.json` sends `immutable` for any `/assets/`
+  URL carrying `?v=`, and `sw.js` (now `vinall-v7`) serves a cached `?v=` file with no
+  network request, pruning older builds of the same path. Measured locally: 46 → 11
+  server requests per warm load. **Edit an asset → bump its `?v=`**, or nobody who has the
+  old one ever gets it. `traps.mjs` (`asset-version`) now fails a push that forgets; it had
+  happened in 6 of the previous 74 asset edits. Unversioned media keeps the old
+  serve-then-refresh behaviour.
+- **Taste match** (`fetchScoresByUsers`) keeps each person's library for 10 minutes, shares
+  in-flight fetches, only caches complete libraries, and pages ordered on
+  `(user_id, album_id)`.
+- **Notification dot**: an unforced refresh within 30s of the last (same account) is
+  skipped; opening the panel forces one. The 60s poll is unchanged.
+- **`app_state`**: `pushKey` skips a blob identical to what the cloud last held.
+- **Analytics**: `track()` queues and sends one insert per ~4s (or on hide / logout); a
+  refused batch is resent row by row.
+- **Ratings RLS**: `..._20261023180000_ratings_rls_consolidate.sql` — **NOT APPLIED**.
+  Same rules, four policies instead of six, `auth.uid()` wrapped.
+  `scripts/rls.selfcheck.mjs` proves old and new agree on 1,248 read/write outcomes.
 
 ## Performance pass (2026-10-14) — For You's first card, and setMode's forced layouts
 

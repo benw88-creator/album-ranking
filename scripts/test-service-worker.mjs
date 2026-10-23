@@ -45,3 +45,18 @@ test('private API, cross-origin, reset and live share requests bypass caches', (
   for (const url of ['https://vinall.test/api/catalogue', 'https://remote.test/image.png', 'https://vinall.test/reset.html', 'https://vinall.test/u/person', 'https://vinall.test/a/42', 'https://vinall.test/r/rating']) assert.equal(w.dispatch(url).response, undefined);
   assert.equal(w.dispatch('https://vinall.test/', 'navigate', 'POST').response, undefined);
 });
+test('a cached versioned asset is served with no network request', async () => {
+  let calls = 0;
+  const w = worker({ cached: new Response('glow v4'), network: async () => { calls++; return new Response('glow v4 again'); } });
+  const event = w.dispatch('https://vinall.test/assets/glow.js?v=4', 'no-cors');
+  assert.equal(await (await event.response).text(), 'glow v4');
+  await Promise.all(event.waits);
+  assert.equal(calls, 0); assert.deepEqual(w.writes, []);
+});
+test('an uncached versioned asset is fetched once and kept', async () => {
+  let calls = 0;
+  const w = worker({ network: async () => { calls++; return new Response('glow v5'); } });
+  const event = w.dispatch('https://vinall.test/assets/glow.js?v=5', 'no-cors');
+  assert.equal(await (await event.response).text(), 'glow v5');
+  assert.equal(calls, 1); assert.deepEqual(w.writes, ['glow v5']);
+});

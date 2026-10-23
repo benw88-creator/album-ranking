@@ -16807,6 +16807,10 @@ const Cloud=(function(){
     if((key==='crate_albums_v1'||key==='crate_songs_v1')&&!await flushRatingDeletes())return;
     if(!isOn()||user.id!==uid)return;
     const value=lsGet(key);if(value===null)return;
+    // app_state upserts were the most frequent write in production, several per
+    // rating, many re-sending a blob the cloud already held byte for byte.
+    // _cloudJson is what the cloud held when we last read or wrote it.
+    try{if(_seenUid===uid&&_cloudJson[key]===JSON.stringify(value))return;}catch(e){}
     const at=new Date().toISOString();
     try{const r=await sb.from('app_state').upsert({user_id:uid,key:key,value:value,updated_at:at});
       if(!r.error&&user&&user.id===uid){seenReset(uid);_seen[key]=Date.parse(at);try{_cloudJson[key]=JSON.stringify(value);}catch(e){}}}catch(e){}
@@ -17056,6 +17060,7 @@ const Cloud=(function(){
      reason to keep somebody signed in, hence the catch. */
   async function logout(){
     try{ if(isOn()) await pushAll(); }catch(e){}
+    try{ if(window.track&&track.flush) track.flush(); }catch(e){}
     // This device stops receiving the last account's pushes before it stops
     // being that account — the rpc needs the session.
     try{ if(window.PushCtl) await PushCtl.forget(); }catch(e){}
@@ -17622,27 +17627,64 @@ const Cloud=(function(){
      of it: the scores are public in crate_feed because posting is public, but
      aggregating them into a portrait of somebody who opted out is not what
      that setting means. Callers show nothing unless this says 'public'. */
-  async function fetchScoresByUsers(userIds){
-    const out={scores:{},meta:{},vis:{}};
-    if(!sb||!userIds||!userIds.length)return out;
-    const ids=userIds.slice(0,60),PAGE=1000;
+  // Taste match reads each person's whole crate_feed library, and the album
+  // page, the Crate feed, People and Grooves all ask for overlapping people.
+  // So libraries are kept per person for ten minutes and a person already
+  // being fetched is waited on, not fetched again. Only a COMPLETE library is
+  // kept: a failed page, or the person the row cap cut through, is asked for
+  // again next time rather than remembered short. Pages are ordered on the
+  // (user_id, album_id) unique index so OFFSET paging cannot skip or repeat.
+  const _scoreLib={},_scorePending={},_scoreMeta={},SCORE_TTL=600000;
+  async function loadScoreLibs(ids){
+    const scores={},vis={},PAGE=1000;let complete=true,last=null;
     try{
       for(let from=0;;from+=PAGE){
         const res=await sb.from('crate_feed')
           .select('user_id,album_id,score,album_name,album_artist,album_art')
-          .in('user_id',ids).range(from,from+PAGE-1);
-        if(res.error)break;
+          .in('user_id',ids).order('user_id').order('album_id').range(from,from+PAGE-1);
+        if(res.error){complete=false;break;}
         const rows=res.data||[];
         rows.forEach(function(r){
+          last=r.user_id;
           if(r.score==null)return;
-          (out.scores[r.user_id]=out.scores[r.user_id]||{})[r.album_id]=r.score;
-          if(!out.meta[r.album_id])out.meta[r.album_id]={id:r.album_id,name:r.album_name||'',artist:r.album_artist||'',art:r.album_art||''};
+          (scores[r.user_id]=scores[r.user_id]||{})[r.album_id]=r.score;
+          if(!_scoreMeta[r.album_id])_scoreMeta[r.album_id]={id:r.album_id,name:r.album_name||'',artist:r.album_artist||'',art:r.album_art||''};
         });
-        if(rows.length<PAGE||from>40000)break;
+        if(rows.length<PAGE)break;
+        if(from>40000){complete=false;break;}
       }
       const p=await sb.from('profiles').select('id,ratings_visibility').in('id',ids);
-      (p.data||[]).forEach(function(x){out.vis[x.id]=x.ratings_visibility||'public';});
-    }catch(e){}
+      if(p.error)complete=false;
+      (p.data||[]).forEach(function(x){vis[x.id]=x.ratings_visibility||'public';});
+    }catch(e){complete=false;}
+    // Truncated by the cap: everybody up to (not including) the last user seen
+    // is whole, because rows arrive in user order.
+    const cut=complete?null:last,at=Date.now();
+    ids.forEach(function(id){
+      const whole=complete||(cut!==null&&id<cut&&id in vis);
+      _scoreLib[id]={at:whole?at:0,scores:scores[id]||{},vis:vis[id]};
+    });
+  }
+  async function fetchScoresByUsers(userIds){
+    const out={scores:{},meta:{},vis:{}};
+    if(!sb||!userIds||!userIds.length)return out;
+    const ids=userIds.slice(0,60),now=Date.now();
+    const stale=ids.filter(function(id){const c=_scoreLib[id];return !c||now-c.at>=SCORE_TTL;});
+    const fresh=stale.filter(function(id){return !_scorePending[id];});
+    if(fresh.length){
+      const p=loadScoreLibs(fresh);
+      fresh.forEach(function(id){_scorePending[id]=p;});
+      p.finally(function(){fresh.forEach(function(id){if(_scorePending[id]===p)delete _scorePending[id];});});
+    }
+    const waits=[];
+    stale.forEach(function(id){const p=_scorePending[id];if(p&&waits.indexOf(p)<0)waits.push(p);});
+    try{await Promise.all(waits);}catch(e){}
+    ids.forEach(function(id){
+      const c=_scoreLib[id];if(!c)return;
+      out.scores[id]=c.scores;
+      if(c.vis)out.vis[id]=c.vis;
+      Object.keys(c.scores).forEach(function(a){if(_scoreMeta[a])out.meta[a]=_scoreMeta[a];});
+    });
     return out;
   }
   async function fetchFeed(opts){
@@ -19662,8 +19704,12 @@ async function renderNotifications(){
   host.querySelectorAll('[data-war-notif]').forEach(function(el){el.addEventListener('click',function(){closeNotifPanel();setMode('wars');if(window.renderWars)renderWars();if(window.openBidWar)openBidWar(el.dataset.warNotif);});});
 }
 
-async function refreshNotifDot(){if(!Cloud.isOn()){const d=document.getElementById('notif-dot');if(d)d.style.display='none';return;}const c=await Cloud.unreadCount();const d=document.getElementById('notif-dot');if(d)d.style.display=c>0?'block':'none';}
-function openNotifPanel(){document.getElementById('notif-panel').classList.add('open');document.getElementById('notif-backdrop').style.display='block';renderNotifications();Cloud.markNotificationsRead().then(refreshNotifDot);}
+// The dot was asked for by login, a 2.5s timer, a minute's poll and every tab
+// focus, and was the most frequent query in production. An unforced ask inside
+// 30s of the last one (same account) reuses it; opening the panel forces.
+let _notifAsked=0,_notifUid=null;
+async function refreshNotifDot(force){if(!Cloud.isOn()){const d=document.getElementById('notif-dot');if(d)d.style.display='none';return;}const uid=Cloud.getUser().id;if(force!==true&&uid===_notifUid&&Date.now()-_notifAsked<30000)return;_notifAsked=Date.now();_notifUid=uid;const c=await Cloud.unreadCount();const d=document.getElementById('notif-dot');if(d)d.style.display=c>0?'block':'none';}
+function openNotifPanel(){document.getElementById('notif-panel').classList.add('open');document.getElementById('notif-backdrop').style.display='block';renderNotifications();Cloud.markNotificationsRead().then(function(){refreshNotifDot(true);});}
 function closeNotifPanel(){document.getElementById('notif-panel').classList.remove('open');document.getElementById('notif-backdrop').style.display='none';}
 
 let _suggestItem=null,_suggestKind='album';
@@ -25940,7 +25986,6 @@ function playDismissAnimation(gateEl, callback) {
       return;
     }
 
-    subscribeWars();
     act.innerHTML = '<p class="reco-note ld-line">Loading&hellip;</p>';
     chal.innerHTML = ''; hist.innerHTML = '';
 
@@ -26000,31 +26045,15 @@ function playDismissAnimation(gateEl, callback) {
   }
 
   // ---- staying current ----------------------------------------------------
-  // A war resolves inside the *opponent's* submit, on their machine. Without a
-  // push, the player who bid first stares at "waiting" until they reload, which
-  // is the worst moment in the game to feel dead. Realtime flips them straight
-  // to the reveal; the poll is a fallback for when the socket cannot connect.
+  // A war resolves inside the *opponent's* submit, on their machine. Without
+  // this, the player who bid first stares at "waiting" until they reload. The
+  // poll flips them to the reveal. There is deliberately no Realtime
+  // postgres_changes subscription: measured in production (2026-10-23) it was
+  // the largest single consumer of database time, because Realtime re-reads
+  // the whole WAL — every app_state blob included — on a loop while anybody is
+  // subscribed, and that cost grows with total write volume, not with wars.
 
-  var _chan = null;
   var _poll = null;
-
-  function subscribeWars() {
-    if (_chan || !on()) return;
-    try {
-      _chan = sb().channel('bid-wars')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'bid_wars' }, function (payload) {
-          var row = payload && payload.new;
-          if (!row || !row.id) return;
-          // RLS already limits this to wars we are in.
-          if (_war && row.id === _war.id && row.status === 'resolved') {
-            _war = row;
-            loadProfiles([other(row)]).then(function () { showReveal(row); markWarRevealSeen(row.id); });
-          }
-          renderWars();
-        })
-        .subscribe();
-    } catch (e) { _chan = null; }
-  }
 
   // Only runs while a war of ours is genuinely mid-flight.
   function startPoll() {
@@ -34631,18 +34660,41 @@ window.renderAdminStats = renderAdminStats;
      view. The question this exists to answer is whether anybody answers a
      SECOND question — before this there was no way to know, and that number
      decides whether the whole idea works. Fire-and-forget: a failed insert
-     must never interrupt what the user was doing. -->
+     must never interrupt what the user was doing.
+     Events are sent in one insert every few seconds (and as the page is hidden)
+     rather than one request each: analytics was the third most frequent write
+     in production. A batch the server refuses — one oversized row fails the
+     whole statement — is resent row by row, which is exactly the old path. -->
 <script>
-window.track = function (name, props) {
-  try {
-    if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
-    var u = Cloud.getUser();
-    if (!u) return;
-    Cloud.client().from('analytics_events')
-      .insert({ user_id: u.id, name: name, props: props || {} })
-      .then(function () {}, function () {});
-  } catch (e) {}
-};
+(function () {
+  var queue = [], timer = null, MAX = 20, WAIT = 4000;
+  function send(rows) {
+    return Cloud.client().from('analytics_events').insert(rows).then(function (r) {
+      if (r && r.error && rows.length > 1) rows.forEach(function (row) { send([row]); });
+    }, function () {});
+  }
+  function flush() {
+    clearTimeout(timer); timer = null;
+    if (!queue.length) return;
+    var u = window.Cloud && Cloud.isOn && Cloud.isOn() && Cloud.getUser();
+    // A batch queued by somebody who has since signed out is not theirs to send.
+    var rows = queue.splice(0).filter(function (row) { return u && row.user_id === u.id; });
+    try { if (rows.length) send(rows); } catch (e) {}
+  }
+  window.track = function (name, props) {
+    try {
+      if (!window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
+      var u = Cloud.getUser();
+      if (!u) return;
+      queue.push({ user_id: u.id, name: name, props: props || {} });
+      if (queue.length >= MAX) flush();
+      else if (!timer) timer = setTimeout(flush, WAIT);
+    } catch (e) {}
+  };
+  window.track.flush = flush;
+  document.addEventListener('visibilitychange', function () { if (document.hidden) flush(); });
+  window.addEventListener('pagehide', flush);
+})();
 </script>
 
 <!-- ================================================================
