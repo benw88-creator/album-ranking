@@ -93,3 +93,61 @@
 html[data-motion="none"] #albums-grid .card,
 html[data-motion="none"] #albums-grid .card .art { transition: none; }
 html[data-motion="none"] #albums-grid .card:hover .art { transform: none; }
+
+/* ---- Minimal: a gallery of sleeves (2026-10-24) ----------------------------
+   The Size control's sibling. Same cards, same markup, same taps: the body
+   under the sleeve, the rank badge, the score's "/100" and the bottom shade
+   go, and the cover is the card. One small number in the corner is all that
+   is left of the rating. setAlbumView() morphs between the two with a View
+   Transition where there is one. */
+.seg-icons button { display: inline-flex; align-items: center; justify-content: center; padding: 7px 10px; }
+.seg-icons svg { display: block; }
+
+#albums-grid[data-view="minimal"] { gap: var(--s4); }
+@media (max-width: 699px) {
+  #albums-grid[data-view="minimal"] { gap: 14px; }
+  #albums-grid[data-view="minimal"][data-size="s"] { gap: 8px; }
+}
+#albums-grid[data-view="minimal"] .card {
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: 0 18px 30px -20px rgba(0, 0, 0, .95), 0 2px 6px -2px rgba(0, 0, 0, .6);
+}
+#albums-grid[data-view="minimal"] .card .art-wrap { border-radius: 10px; }
+#albums-grid[data-view="minimal"] .card-body,
+#albums-grid[data-view="minimal"] .rank-badge,
+#albums-grid[data-view="minimal"] .card .art-score span { display: none; }
+/* The gloss and the edge stay; the shade that lifted the big score does not. */
+#albums-grid[data-view="minimal"] .card .art-wrap::after {
+  background: linear-gradient(135deg, rgba(255, 250, 240, .09) 0%, rgba(255, 250, 240, .02) 24%, transparent 44%);
+}
+/* One small number, in the score's own colour, on a chip dark enough to
+   read on a white sleeve. */
+#albums-grid[data-view="minimal"] .card .art-score {
+  left: auto; right: 8px; bottom: 8px;
+  font: 600 12px/1 var(--font-mono);
+  letter-spacing: 0;
+  padding: 4px 6px 3px;
+  border-radius: 6px;
+  background: rgba(10, 9, 8, .74);
+  box-shadow: 0 0 0 1px rgba(255, 245, 235, .08);
+  text-shadow: none;
+}
+#albums-grid[data-view="minimal"][data-size="s"] .card .art-score { font-size: 10.5px; right: 6px; bottom: 6px; padding: 3px 5px 2px; }
+#albums-grid[data-view="minimal"][data-size="l"] .card .art-score { font-size: 13px; right: 10px; bottom: 10px; }
+@media (hover: hover) and (pointer: fine) {
+  #albums-grid[data-view="minimal"] .card:hover {
+    border-color: transparent;
+    box-shadow: 0 30px 46px -22px rgba(0, 0, 0, .95), 0 0 0 1px color-mix(in srgb, var(--gold) 22%, transparent);
+  }
+}
+
+/* The morph: each named card glides from its old box to its new one. */
+html.crate-vt::view-transition-group(*) { animation-duration: .46s; animation-timing-function: cubic-bezier(.22, 1, .36, 1); }
+html.crate-vt::view-transition-old(*),
+html.crate-vt::view-transition-new(*) { animation-duration: .3s; }
+/* The page itself does not crossfade: a fade of the whole snapshot took the
+   floating nav and the header down and back up with it. Only the covers move. */
+html.crate-vt::view-transition-old(root) { animation: none; opacity: 0; }
+html.crate-vt::view-transition-new(root) { animation: none; }

@@ -9591,7 +9591,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/artist.css?v=1">
 <link rel="stylesheet" href="/assets/discover.css?v=2">
 <link rel="stylesheet" href="/assets/liked.css?v=1">
-<link rel="stylesheet" href="/assets/crate.css?v=1">
+<link rel="stylesheet" href="/assets/crate.css?v=2">
 <link rel="stylesheet" href="/assets/polish.css?v=2">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
@@ -10530,6 +10530,12 @@ window.discAmt = function (n) {
           <button data-size="s">S</button>
           <button data-size="m" class="active">M</button>
           <button data-size="l">L</button>
+        </div>
+      </div>
+      <div class="ctrl"><label>View</label>
+        <div class="seg seg-icons" id="albums-view" role="group" aria-label="View">
+          <button type="button" data-view="standard" class="active" aria-pressed="true" aria-label="Standard" title="Standard"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2" y="1.75" width="12" height="8.5" rx="1.5"/><path d="M2.5 12.6h7M2.5 14.6h4.5" stroke-linecap="round"/></svg></button>
+          <button type="button" data-view="minimal" aria-pressed="false" aria-label="Minimal" title="Minimal"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="1.75" y="1.75" width="5.5" height="5.5" rx="1.2"/><rect x="8.75" y="1.75" width="5.5" height="5.5" rx="1.2"/><rect x="1.75" y="8.75" width="5.5" height="5.5" rx="1.2"/><rect x="8.75" y="8.75" width="5.5" height="5.5" rx="1.2"/></svg></button>
         </div>
       </div>
     </div>
@@ -14663,8 +14669,18 @@ function albumColor(s) {
 function songColor(v){v=+v;if(v<=0)return '#504d4a';if(v<=3)return '#e24b4a';if(v<=6)return '#efb927';return '#4fb477';}
 
 const SIZE_MAP={s:'150px',m:'200px',l:'280px'};
+/* Minimal is a gallery: no card body below the sleeve, so the same size buys
+   a bigger cover on a wide screen. A phone is in columns and needs no map. */
+const SIZE_MAP_MIN={s:'170px',m:'236px',l:'330px'};
 let albumSize='m';
 try{albumSize=localStorage.getItem('crate_album_size')||'m';}catch(e){}
+/* Standard or Minimal. Same markup for both — CSS decides what shows — so a
+   switch never rebuilds the grid, its covers or its listeners. Stored under
+   crate_ and in SYNC_KEYS, like the size beside it. */
+let albumView='standard';
+// Stored as JSON ("minimal") so the app_state sync, which parses every
+// value, can carry it; a bare string would parse to null and never upload.
+try{albumView=/minimal/.test(localStorage.getItem('crate_album_view')||'')?'minimal':'standard';}catch(e){}
 
 function cmpStr(a,b){return String(a||'').toLowerCase().localeCompare(String(b||'').toLowerCase());}
 function sortAlbumList(list,mode){
@@ -14690,12 +14706,51 @@ function sortSongList(list,mode){
 
 function applyAlbumSize(){
   const grid=document.getElementById('albums-grid');
-  if(grid)grid.style.setProperty('--card-min',SIZE_MAP[albumSize]||'200px');
+  if(grid)grid.style.setProperty('--card-min',(albumView==='minimal'?SIZE_MAP_MIN:SIZE_MAP)[albumSize]||'200px');
+  if(grid)grid.dataset.view=albumView;
+  document.querySelectorAll('#albums-view button').forEach(function(b){const on=b.dataset.view===albumView;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on?'true':'false');});
   // A phone lays the grid out in columns rather than by minimum width — see
   // the .grid rules — so it needs the size as a name, not a pixel value.
   if(grid)grid.dataset.size=albumSize;
   document.querySelectorAll('#albums-size button').forEach(function(b){b.classList.toggle('active',b.dataset.size===albumSize);});
 }
+
+/* The switch morphs rather than cuts where the browser can: the cards on
+   screen are named for one View Transition, the browser animates each from
+   its old box to its new one, and the names come off again. Only what is in
+   view is named — a crate is hundreds of cards and a snapshot each would be
+   the fling problem again. No API, or reduced motion: the switch is instant. */
+function setAlbumView(v){
+  v=v==='minimal'?'minimal':'standard';
+  if(v===albumView)return;
+  const grid=document.getElementById('albums-grid');
+  const go=function(){
+    albumView=v;
+    try{localStorage.setItem('crate_album_view',JSON.stringify(v));}catch(e){}
+    if(window.Cloud)Cloud.push('crate_album_view');
+    applyAlbumSize();
+  };
+  const reduced=window.motionReduced&&motionReduced();
+  if(!grid||!document.startViewTransition||reduced||!grid.getClientRects().length){go();return;}
+  const vh=innerHeight,named=[];
+  for(const c of grid.children){
+    const r=c.getBoundingClientRect();
+    if(r.bottom<-40||r.top>vh+40)continue;
+    c.style.viewTransitionName='crate-c'+named.length;named.push(c);
+    if(named.length>=36)break;
+  }
+  /* A named card is drawn above the page while it moves, so the floating
+     bars at the bottom are named too: later in paint order, they stay on top. */
+  ['modes','player-bar'].forEach(function(id){const n=document.getElementById(id);if(n&&n.getClientRects().length){n.style.viewTransitionName='crate-'+id;named.push(n);}});
+  document.documentElement.classList.add('crate-vt');
+  let vt;
+  try{vt=document.startViewTransition(go);}catch(e){named.forEach(function(c){c.style.viewTransitionName='';});document.documentElement.classList.remove('crate-vt');go();return;}
+  vt.finished.catch(function(){}).then(function(){
+    named.forEach(function(c){c.style.viewTransitionName='';});
+    document.documentElement.classList.remove('crate-vt');
+  });
+}
+window.setAlbumView=setAlbumView;
 
 let albumFilter='',songFilter='';
 
@@ -14983,6 +15038,11 @@ function renderSongs(){
 (function wireControls(){
   const aSort=document.getElementById('albums-sort');if(aSort)aSort.addEventListener('change',renderAlbums);
   const sSort=document.getElementById('songs-sort');if(sSort)sSort.addEventListener('change',renderSongs);
+  const aView=document.getElementById('albums-view');
+  if(aView)aView.addEventListener('click',function(e){
+    const b=e.target.closest('button[data-view]');if(!b)return;
+    if(window.buzz)buzz('tap');setAlbumView(b.dataset.view);
+  });
   const aSize=document.getElementById('albums-size');
   if(aSize)aSize.addEventListener('click',function(e){
     const b=e.target.closest('button');if(!b)return;
@@ -16645,7 +16705,7 @@ const Cloud=(function(){
     return foreign;
   }
 
-  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best','crate_foryou_songs','crate_foryou_seen','crate_onboard_v1','crate_liked_songs_v1','crate_spotify_v1','crate_replay_v1','crate_yourmusic_v1','crate_earworm_v2'];
+  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_album_view','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best','crate_foryou_songs','crate_foryou_seen','crate_onboard_v1','crate_liked_songs_v1','crate_spotify_v1','crate_replay_v1','crate_yourmusic_v1','crate_earworm_v2'];
   const pending={};
   function isOn(){return!!(sb&&user);}
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
@@ -16867,6 +16927,7 @@ const Cloud=(function(){
     // Your music skips: per key, the later skip wins.
     (function(){const a=lsGet('crate_yourmusic_v1')||{},b=cloud['crate_yourmusic_v1']||{},out=Object.assign({},a);Object.keys(b).forEach(function(k){if(!(out[k]>=b[k]))out[k]=b[k];});if(Object.keys(out).length)lsSetRaw('crate_yourmusic_v1',out);})();
     if(cloud['crate_album_size']&&!localStorage.getItem('crate_album_size'))lsSetRaw('crate_album_size',cloud['crate_album_size']);
+    if(cloud['crate_album_view']&&!localStorage.getItem('crate_album_view')){lsSetRaw('crate_album_view',cloud['crate_album_view']);albumView=cloud['crate_album_view']==='minimal'?'minimal':'standard';applyAlbumSize();}
     /* Push back only what the merge actually CHANGED, and do not wait for it.
 
        This line was `await pushAll()`, and pushAll was a for-loop of awaits

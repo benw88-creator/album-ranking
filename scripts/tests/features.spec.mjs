@@ -195,3 +195,36 @@ test('Crate covers: the top three wear gold badges and the sleeve carries its gl
   await page.locator('#albums-grid .card').first().click();
   await expect(page.locator('#view-album-detail')).toBeVisible();
 });
+
+test('Crate Minimal view: covers and one small number, remembered, still opens the record', async ({ page }) => {
+  await start(page, { seeded: true });
+  await page.evaluate(() => { localStorage.removeItem('crate_album_view'); goToView('albums'); });
+  const grid = page.locator('#albums-grid');
+  await expect(grid).toHaveAttribute('data-view', 'standard');
+  await expect(page.locator('#albums-grid .card-body').first()).toBeVisible();
+  await page.locator('#albums-view [data-view="minimal"]').click();
+  await expect(grid).toHaveAttribute('data-view', 'minimal');
+  await expect(page.locator('#albums-view [data-view="minimal"]')).toHaveAttribute('aria-pressed', 'true');
+  const card = page.locator('#albums-grid .card').first();
+  await expect(card.locator('.card-body')).toBeHidden();
+  await expect(card.locator('.rank-badge')).toBeHidden();
+  await expect(card.locator('.art-score span')).toBeHidden();
+  await expect(card.locator('.art-score')).toBeVisible();
+  expect((await card.locator('.art-score').innerText()).trim()).toMatch(/^\d+$/);
+  // The cover is the whole card.
+  const [cardH, artH] = await card.evaluate(c => [c.getBoundingClientRect().height, c.querySelector('.art-wrap').getBoundingClientRect().height]);
+  expect(Math.abs(cardH - artH)).toBeLessThan(2);
+  // Remembered across a reload.
+  await page.reload();
+  await page.waitForFunction(() => typeof window.goToView === 'function');
+  const go = page.locator('#splash-cta'); if (await go.isVisible()) await go.click();
+  await page.evaluate(() => goToView('albums'));
+  await expect(page.locator('#albums-grid')).toHaveAttribute('data-view', 'minimal');
+  await page.locator('#albums-grid .card').first().click();
+  await expect(page.locator('#view-album-detail')).toBeVisible();
+  // And back.
+  await page.evaluate(() => goToView('albums'));
+  await page.locator('#albums-view [data-view="standard"]').click();
+  await expect(page.locator('#albums-grid')).toHaveAttribute('data-view', 'standard');
+  await expect(page.locator('#albums-grid .card-body').first()).toBeVisible();
+});

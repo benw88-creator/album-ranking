@@ -6780,3 +6780,12 @@ self-time on load is well under a second at 4×). That is a CSS job.
   The server board still gets `{guesses: 1, solved}`; no migration.
 - Tests: `scripts/tests/features.spec.mjs`. `window.__vinallTest` (set by the
   fixtures) exposes the day's answers to the suite only.
+- **Crate Minimal view** (2026-10-24): a View control beside Size on Albums
+  (`#albums-view`, `setAlbumView`). Same markup, CSS decides
+  (`#albums-grid[data-view="minimal"]` in `assets/crate.css`): cover plus one
+  small score, no body, badge or "/100" — so delete lives in Standard view and
+  on the album page. `crate_album_view` is stored as JSON (`"minimal"`) because
+  the app_state sync JSON-parses every value; `crate_album_size` is stored raw
+  and therefore never actually syncs. The switch is a View Transition over the
+  on-screen cards (max 36) plus the nav and player bar, named so they stay on
+  top; the root does not crossfade.
