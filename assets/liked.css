@@ -1,0 +1,21 @@
+/* Liked songs (assets/liked.js). The rows are the Crate's own .song-row, so
+   this only adds what a like needs: a heart big enough to hit, and the dimmed
+   state an unliked row wears until you leave the list. */
+
+/* The visible heart stays the quiet 22px outline the track rows use; the
+   target around it is 40px, because it is the whole point of this list. */
+.lk-heart { position: relative; width: 26px; height: 26px; }
+.lk-heart::after { content: ''; position: absolute; inset: -7px; }
+.lk-heart:focus-visible { outline: 2px solid var(--focus-ring, var(--gold)); outline-offset: 3px; }
+
+#liked-list .song-row { padding-right: 14px; }
+#liked-list .song-rate { gap: 14px; }
+.lk-row { transition: opacity .25s var(--ease); }
+.lk-row.lk-off { opacity: .45; }
+.lk-noart { width: 46px; height: 46px; border-radius: 8px; background: var(--surface-3); flex-shrink: 0; }
+
+@media (max-width: 560px) {
+  /* The Crate's songs row already carries a preview, a slider, a score, +Top
+     and a bin; the heart takes no extra gap there. */
+  #songs-list .lk-heart { width: 22px; height: 22px; }
+}

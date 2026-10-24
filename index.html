@@ -526,6 +526,7 @@ body[data-section="crate"]        { --section: var(--c-cyan);    --section-dim: 
    nav button, one colour. */
 body[data-section="albums"]       { --section: var(--c-cyan);    --section-dim: var(--c-cyan-dim); }
 body[data-section="songs"]        { --section: var(--c-cyan);    --section-dim: var(--c-cyan-dim); }
+body[data-section="liked"]        { --section: var(--c-cyan);    --section-dim: var(--c-cyan-dim); }
 body[data-section="choice"]       { --section: var(--c-cyan);    --section-dim: var(--c-cyan-dim); }
 /* Each of these MATCHES its nav button's hue above. The bar says where you
    are and the page's temperature agrees with it; two destinations painted the
@@ -1389,8 +1390,16 @@ html[data-motion="none"] .view.enter { animation: none; }
 .drop-status b { color: var(--gold); font-family: var(--font-mono); }
 .drop-count { font: 12px/1.3 var(--font-mono); color: var(--text-faint); text-align: right; flex-shrink: 0; }
 .drop-count b { color: var(--text-dim); }
-.drop-hint { font-size: 12.5px; line-height: 1.4; color: var(--gold); margin-bottom: 10px; }
+.drop-hint { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
 .drop-hint:empty { display: none; }
+/* Earlier clues stay, quietly; the newest one carries the colour. */
+.drop-clue { font-size: 12.5px; line-height: 1.4; color: var(--text-dim); }
+.drop-clue.latest { color: var(--gold); }
+.drop-clue-n { font: 600 10px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--text-faint); margin-right: 8px; }
+.drop-clue.latest .drop-clue-n { color: var(--gold); opacity: .75; }
+.drop-clue.fresh { animation: dropClueIn .42s var(--ease) both; }
+@keyframes dropClueIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .drop-clue.fresh { animation: none; } }
 
 .drop-search { position: relative; margin-bottom: 16px; }
 /* A repeat guess is refused rather than spent — say so on the input
@@ -1753,6 +1762,23 @@ html[data-motion="none"] .view.enter { animation: none; }
 .ew-result h3 { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
 .ew-result p { color: var(--text-dim); font-size: 14px; margin-top: 2px; }
 .ew-result-actions { margin-top: 14px; }
+/* One guess a round: the streak line above the keys, the answer under a miss. */
+.ew-tally { display: flex; align-items: center; gap: 14px; min-height: 30px; margin: -6px 0 10px; }
+.ew-stat { display: inline-flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--text-faint); }
+.ew-stat i { font-style: normal; letter-spacing: .06em; text-transform: uppercase; font-size: 10.5px; }
+.ew-stat b { font: 600 15px/1 var(--font-mono); color: var(--gold); }
+.ew-stat.dim b { color: var(--text-dim); }
+.ew-skip { margin-left: auto; height: 30px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border-strong);
+  background: transparent; color: var(--text-dim); font: 600 12.5px/1 var(--font-body); cursor: pointer; }
+.ew-skip:hover { color: var(--text); border-color: var(--text-faint); }
+.ew-skip[hidden] { display: none; }
+.ew-row.ew-answer .ew-cell { border-color: var(--green); color: var(--green); background: transparent; animation: ewAnswerIn .45s var(--ease) .3s both; }
+@keyframes ewAnswerIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+/* An answered round has nothing to type: the keys step aside so the result
+   sits where they were, not below the fold on a phone. */
+.ew-keys.ew-spent { display: none; }
+.ew-result p.ew-result-line { font: 600 13px/1.4 var(--font-mono); color: var(--gold); margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { .ew-row.ew-answer .ew-cell { animation: none; } }
 @media (max-width: 520px) {
   .ew-key { height: 46px; max-width: none; }
   /* Eleven letters and two word breaks have to fit a 375px phone. The panel
@@ -9563,6 +9589,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/passport.css?v=1">
 <link rel="stylesheet" href="/assets/artist.css?v=1">
 <link rel="stylesheet" href="/assets/discover.css?v=2">
+<link rel="stylesheet" href="/assets/liked.css?v=1">
 <link rel="stylesheet" href="/assets/polish.css?v=2">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
@@ -10047,6 +10074,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
      ================================================================ -->
 <script>
 window.ICONS = {
+  heart: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.6S2.6 10.4 1.6 7.1C.9 4.8 2.2 2.6 4.4 2.5c1.4-.1 2.7.7 3.6 2 .9-1.3 2.2-2.1 3.6-2 2.2.1 3.5 2.3 2.8 4.6C13.4 10.4 8 13.6 8 13.6Z"/></svg>',
   trophy: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M5 2.5h6v3.2a3 3 0 0 1-6 0V2.5Z"/><path d="M5 3.3H3.2a1.6 1.6 0 0 0 0 3.2c.4 0 .8-.1 1.1-.4M11 3.3h1.8a1.6 1.6 0 0 1 0 3.2c-.4 0-.8-.1-1.1-.4"/><path d="M8 8.7v2.1M5.6 13.5h4.8M6.4 11v1.3a1.6 1.6 0 0 0 0 1.2M9.6 11v1.3a1.6 1.6 0 0 1 0 1.2"/></svg>',
   disc: '<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none"/></svg>',
   // The currency mark: a small pressed disc, gold with a dark centre. Used
@@ -10542,6 +10570,19 @@ window.discAmt = function (n) {
     </div>
   </section>
 
+  <!-- ============================ LIKED SONGS ============================
+       VINALL's own hearts, kept apart from any streaming service. Drawn by
+       assets/liked.js; the store is crate_liked_songs_v1 (see toggleLikedSong). -->
+  <section id="view-liked" class="view" style="display:none;">
+    <div class="section-head"><h2 id="liked-title">Liked songs</h2></div>
+    <div id="liked-list"></div>
+    <div class="empty" id="liked-empty" style="display:none;">
+      <span class="emoji" data-icon="heart"></span>
+      <h3>No liked songs yet</h3>
+      <p>Tap the heart on any song to keep it here.</p>
+    </div>
+  </section>
+
   <!-- ============================ COMMUNITY CHOICE ============================
        The best stretch of a song, picked by one person and agreed with (or not)
        by everybody who hears it. A fourth Crate sub-tab rather than a nav item:
@@ -10649,7 +10690,7 @@ window.discAmt = function (n) {
         <div class="gc-art" aria-hidden="true"><i>E</i><i>A</i><i>R</i></div>
         <div class="gc-emoji" data-icon="mic"></div>
         <h3>Earworm</h3>
-        <p>Spell the record, letter by letter.</p>
+        <p>Spell the record. One guess, keep the streak.</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" id="ew-card-status"></div>
       </div>
@@ -11331,12 +11372,12 @@ window.discAmt = function (n) {
   <div class="modal-panel">
     <button class="modal-close" id="ew-close" aria-label="Close">&times;</button>
     <div class="modal-head"><span class="mh-emoji" data-icon="mic"></span>
-      <div><h2>Earworm</h2><p>Spell the record. Six tries.</p></div></div>
+      <div><h2>Earworm</h2><p>Spell the record. One guess.</p></div></div>
 
     <div class="ew-head-row">
       <div class="ew-mode" id="ew-mode">
         <button data-ew-mode="daily" class="active">Daily</button>
-        <button data-ew-mode="unlimited">Unlimited</button>
+        <button data-ew-mode="unlimited">Endless</button>
       </div>
     </div>
 
@@ -11344,6 +11385,7 @@ window.discAmt = function (n) {
     <div class="ew-clues" id="ew-clues"></div>
     <div id="ew-status"></div>
     <div class="ew-board" id="ew-board"></div>
+    <div class="ew-tally" id="ew-tally"></div>
     <div class="ew-keys" id="ew-keys"></div>
     <div id="ew-result"></div>
   </div>
@@ -12435,7 +12477,7 @@ function renderTracks(tracks, meta) {
       '<div class="song-rate">' +
         '<input type="range" class="song-slider" min="0" max="10" step="1" value="' + val + '" data-track="' + t.id + '">' +
         '<div class="song-score">' + val + '</div>' +
-        '<button type="button" class="song-like' + (window.likedSongHas && likedSongHas(t.id) ? ' liked' : '') + '" data-like="' + esc(t.id) + '" aria-label="Like">' +
+        '<button type="button" class="song-like' + (window.likedSongHas && likedSongHas(t.id, t.name, (t.artists || []).map(function (a) { return a.name; }).join(', ')) ? ' liked' : '') + '" data-like="' + esc(t.id) + '" aria-label="Like">' +
           '<svg viewBox="0 0 24 24" width="15" height="15"><path d="M12 20.6s-7.6-4.5-10.2-9C.3 8.6 1 5.4 3.7 4.1c2-.9 4.3-.3 5.7 1.4l2.6 3.1 2.6-3.1c1.4-1.7 3.7-2.3 5.7-1.4 2.7 1.3 3.4 4.5 1.9 7.5-2.6 4.5-10.2 9-10.2 9Z"/></svg>' +
         '</button>' +
       '</div></div>';
@@ -12748,22 +12790,56 @@ window.shortlistCount = shortlistCount;
    server call (Cloud.setLikesPublic) because that is what other people's
    clients actually check. */
 const LIKED_SONGS_KEY = 'crate_liked_songs_v1';
-function loadLikedSongs() { try { return JSON.parse(localStorage.getItem(LIKED_SONGS_KEY)) || {}; } catch (e) { return {}; } }
-function likedSongHas(id) { return !!loadLikedSongs()[id]; }
+/* AN UNLIKE IS A TOMBSTONE, NOT A DELETE. The map merges per item by union
+   (mergeItemMap), so a deleted key simply came back from whichever device
+   still held it: unliking on the phone was undone by the laptop's next merge.
+   An unlike writes { off: true, savedAt: now }, which wins the merge by its
+   stamp like any other edit. loadLikedSongs() returns live likes only; the
+   raw map, tombstones included, is for writers. */
+function loadLikedRaw() { try { return JSON.parse(localStorage.getItem(LIKED_SONGS_KEY)) || {}; } catch (e) { return {}; } }
+function loadLikedSongs() {
+  const raw = loadLikedRaw(), out = {};
+  Object.keys(raw).forEach(function (k) { const r = raw[k]; if (r && !r.off) out[k] = r; });
+  return out;
+}
+/* One song, one like. For You keys a song by artist|title, an album page by
+   its Deezer track id, and an old crate by a Spotify one — so the same song
+   liked from two screens was two rows. Matching falls back to the folded
+   title + first artist, the rule trap 4 asks for. */
+function likedFold(name, artist) {
+  const f = function (s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/\s*[\(\[][^\)\]]*[\)\]]\s*/g, ' ').replace(/\s+-\s+.*$/, '').replace(/[^a-z0-9]/g, ''); };
+  const a = String(artist || '').split(/,|&| feat\.? | x /i)[0];
+  return f(name) + '|' + f(a);
+}
+function likedFind(meta) {
+  if (!meta) return null;
+  const live = loadLikedSongs();
+  if (meta.id && live[meta.id]) return live[meta.id];
+  if (!meta.name) return null;
+  const k = likedFold(meta.name, meta.artist);
+  for (const id in live) if (likedFold(live[id].name, live[id].artist) === k) return live[id];
+  return null;
+}
+function likedSongHas(id, name, artist) { return !!likedFind({ id: id, name: name, artist: artist }); }
 function toggleLikedSong(meta) {
   if (!meta || !meta.id) return false;
-  const list = loadLikedSongs();
-  if (list[meta.id]) {
-    delete list[meta.id];
+  const list = loadLikedRaw(), hit = likedFind(meta), now = Date.now();
+  if (hit) {
+    list[hit.id] = { id: hit.id, off: true, savedAt: now };
+    if (hit.id !== meta.id && list[meta.id] && !list[meta.id].off) list[meta.id] = { id: meta.id, off: true, savedAt: now };
     persist(LIKED_SONGS_KEY, list);
-    if (window.Cloud) Cloud.unlikeSong(meta.id);
+    if (window.Cloud) Cloud.unlikeSong(hit.id);
+    window.dispatchEvent(new CustomEvent('vinall:liked', { detail: { id: hit.id, on: false } }));
     return false;
   }
-  list[meta.id] = { id: meta.id, name: meta.name || '', artist: meta.artist || '', art: meta.art || '', savedAt: Date.now() };
+  list[meta.id] = { id: meta.id, name: meta.name || '', artist: meta.artist || '', art: meta.art || '', savedAt: now };
   persist(LIKED_SONGS_KEY, list);
   if (window.Cloud) Cloud.likeSong(list[meta.id]);
+  window.dispatchEvent(new CustomEvent('vinall:liked', { detail: { id: meta.id, on: true } }));
   return true;
 }
+window.loadLikedRaw = loadLikedRaw;
 window.loadLikedSongs = loadLikedSongs;
 window.likedSongHas = likedSongHas;
 window.toggleLikedSong = toggleLikedSong;
@@ -14229,6 +14305,7 @@ const views = {
   crate: document.getElementById('view-crate'),
   albums: document.getElementById('view-albums'),
   songs: document.getElementById('view-songs'),
+  liked: document.getElementById('view-liked'),
   choice: document.getElementById('view-choice'),
   /* `views` is an EXPLICIT map and is not derived from the DOM. A nav button
      added without the matching entry here hides every section and shows a
@@ -14295,7 +14372,7 @@ function setMode(mode, fromCode) {
   var _changed = mode !== currentMode || mode === 'album-detail';
   currentMode = mode;
   window.currentMode = mode;
-  var pageNames = { albums: 'Albums', songs: 'Songs', crate: 'The Crate', choice: 'Community Choice', foryou: 'For You', games: 'Arcade', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves', replay: 'Replay', about: 'About you', yourmusic: 'Your music', 'album-detail': 'Album' };
+  var pageNames = { albums: 'Albums', songs: 'Songs', liked: 'Liked songs', crate: 'The Crate', choice: 'Community Choice', foryou: 'For You', games: 'Arcade', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves', replay: 'Replay', about: 'About you', yourmusic: 'Your music', 'album-detail': 'Album' };
   document.title = mode === 'home' ? 'VINALL' : 'VINALL — ' + (pageNames[mode] || 'Discover');
   Object.keys(views).forEach(function (k) { views[k].style.display = (k === mode) ? 'block' : 'none'; });
   /* A fade keeps geometry and fixed descendants stable. A transformed view
@@ -14323,7 +14400,7 @@ function setMode(mode, fromCode) {
   /* One nav button can stand for several views. The Crate button covers
      albums, songs and the community feed, so it has to stay lit on all three —
      otherwise switching sub-tab visibly unselects the nav item you are inside. */
-  var CRATE_GROUP = ['albums', 'songs', 'crate', 'choice'];
+  var CRATE_GROUP = ['albums', 'songs', 'liked', 'crate', 'choice'];
   document.querySelectorAll('#modes button').forEach(function (b) {
     var m = b.dataset.mode;
     var on = m === mode ||
@@ -14370,13 +14447,14 @@ function setMode(mode, fromCode) {
   if (mode === 'choice' && window.renderChoice) window.renderChoice();
   if (mode === 'albums') renderAlbums();
   if (mode === 'songs') renderSongs();
+  if (mode === 'liked' && window.LikedSongs) window.LikedSongs.render();
   if (mode === 'foryou' && window.renderForYou) window.renderForYou();
   /* LEAVING has to silence it. setMode only changes `display`, and an <audio>
      element does not care that the card holding it is hidden — without this,
      a record carries on playing over whatever you went to look at. */
   if (mode !== 'foryou' && window.ForYou) window.ForYou.leave();
   // Same rule as the feed: `display:none` does not stop an <audio> element.
-  if (mode !== 'songs' && window.CratePreview) window.CratePreview.stop();
+  if (mode !== 'songs' && mode !== 'liked' && window.CratePreview) window.CratePreview.stop();
   if (mode !== 'home' && window.TodayPreview) window.TodayPreview.stop();
   if (mode !== 'choice' && window.ChoiceFeed) window.ChoiceFeed.stop();
   if (mode === 'games' && window.renderGameBests) window.renderGameBests();
@@ -14724,7 +14802,7 @@ function renderAlbums(){
     e.preventDefault(); e.stopPropagation();
     var id = b.dataset.crateplay;
     if (_id === id) { stop(); return; }
-    var rec = (window.loadSongs ? loadSongs() : {})[id];
+    var rec = (window.loadSongs ? loadSongs() : {})[id] || (window.loadLikedSongs ? loadLikedSongs() : {})[id];
     if (!rec) return;
     stop();
     _id = id;
@@ -14845,6 +14923,7 @@ function renderSongs(){
         '<button class="sr-play" data-crateplay="'+esc(s.id)+'" aria-label="Play a preview of '+esc(s.name)+'"></button>'+
         '<input type="range" class="song-slider" min="0" max="10" step="1" value="'+s.score+'" data-song="'+s.id+'">'+
         '<div class="song-score">'+s.score+'</div>'+
+        (window.LikedSongs?LikedSongs.heart({id:s.id,name:s.name,artist:s.artist,art:s.art}):'')+
         '<button class="top-add-btn" data-topadd="'+s.id+'" aria-label="Add to Top 5 or Top 10" title="Add to Top 5 / Top 10">+Top</button>'+
         '<button class="del-btn" data-delsong="'+s.id+'" aria-label="Remove">'+ICONS.trash+'</button>'+
       '</div>'+
@@ -16564,7 +16643,7 @@ const Cloud=(function(){
     return foreign;
   }
 
-  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best','crate_foryou_songs','crate_foryou_seen','crate_onboard_v1','crate_liked_songs_v1','crate_spotify_v1','crate_replay_v1','crate_yourmusic_v1'];
+  const SYNC_KEYS=['crate_albums_v1','crate_songs_v1','crate_claimed','crate_activity','crate_album_size','crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_liner_v1','crate_gamelog_v1','crate_shortlist_v1','crate_blitz_best','crate_blitz_daily','crate_hl_best','crate_recall_daily','crate_recall_best','crate_foryou_songs','crate_foryou_seen','crate_onboard_v1','crate_liked_songs_v1','crate_spotify_v1','crate_replay_v1','crate_yourmusic_v1','crate_earworm_v2'];
   const pending={};
   function isOn(){return!!(sb&&user);}
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
@@ -16708,6 +16787,13 @@ const Cloud=(function(){
     // the same per-item rule the ratings use.
     lsSetRaw('crate_shortlist_v1',mergeItemMap(lsGet('crate_shortlist_v1')||{},cloud['crate_shortlist_v1']||{}));
     lsSetRaw('crate_liked_songs_v1',mergeItemMap(lsGet('crate_liked_songs_v1')||{},cloud['crate_liked_songs_v1']||{}));
+    /* Earworm: one answer a day, so a day both devices hold keeps the EARLIER
+       answer (the first go is the honest one, as with mergeDailyOnce); bests
+       take the larger. */
+    {const a=lsGet('crate_earworm_v2'),b=cloud['crate_earworm_v2'];
+     if(a||b){const A=a||{},B=b||{},days=Object.assign({},B.days||{});
+       Object.keys(A.days||{}).forEach(function(d){const x=A.days[d],y=days[d];if(!y||((x&&x.at)||0)<=((y&&y.at)||0))days[d]=x;});
+       lsSetRaw('crate_earworm_v2',{days:days,best:maxByKey(A.best,B.best)});}}
     ['crate_best_cover','crate_best_coverx','crate_best_tracklist','crate_best_year','crate_blitz_best'].forEach(function(k){const a=lsGet(k)||0,b=cloud[k]||0;if(Math.max(a,b))lsSetRaw(k,Math.max(a,b));});
     const mHl=maxByKey(lsGet('crate_hl_best'),cloud['crate_hl_best']);
     if(Object.keys(mHl).length)lsSetRaw('crate_hl_best',mHl);
@@ -18356,7 +18442,11 @@ async function drawProfile(host,prof,isOwner,profileTok){
         tiles.push({v:log.favourite.label,k:'Favourite arcade game',
                     sub:log.favourite.n+' round'+(log.favourite.n===1?'':'s')+' played',small:true});
       }
-      if(log.earworm){
+      // One guess a round now, so the best is a streak rather than a row count.
+      var ewBest=window.EarwormStats?EarwormStats.best():null;
+      if(ewBest&&(ewBest.streak||ewBest.daily)){
+        tiles.push({v:Math.max(ewBest.streak||0,ewBest.daily||0),k:'Best Earworm streak',hot:Math.max(ewBest.streak||0,ewBest.daily||0)>=10});
+      }else if(log.earworm){
         // Kept: which record it was is the interesting half of "3/6".
         tiles.push({v:log.earworm.rows+'/6',k:'Best Earworm',
                     sub:log.earworm.title+(log.earworm.artist?' — '+log.earworm.artist:'')});
@@ -23864,7 +23954,6 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
 (function () {
   'use strict';
 
-  var ROWS = 6;
   var MIN_LEN = 4;
   var MAX_LEN = 11; // a phone can show eleven columns; beyond that it's mush
 
@@ -24118,15 +24207,70 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     return out[Math.floor(Math.random() * out.length)];
   }
 
+  /* ONE GUESS A ROUND (2026-10-24). Earworm stopped being six tries at one
+     word. You get a single guess at each record, typed on the same board, or
+     you skip it. A right answer extends your streak; a wrong one or a skip
+     ends it. That turns the game from "eventually" into "do you know it".
+
+     - Daily is today's record, one go, shared by everybody. The streak is
+       days in a row solved, kept in crate_earworm_v2 (SYNC_KEYS) so it is the
+       same on every device — and so is the day, which is what stops a second
+       device from being a second guess.
+     - Endless draws from your own library (or the famous list) and is sudden
+       death: the run is the streak. Each solve pays 100 + 10 a letter, with a
+       streak bonus of a tenth per record in a row, capped at double from the
+       eleventh on. Best streak and best score are kept.
+     - The board, keyboard and tile colours are unchanged. After a guess the
+       row flips as it always did and the answer is set out under it. */
+  var EW_STORE = 'crate_earworm_v2';
+  function ewStore() {
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem(EW_STORE)); } catch (e) {}
+    s = s && typeof s === 'object' ? s : {};
+    if (!s.days || typeof s.days !== 'object') s.days = {};
+    if (!s.best || typeof s.best !== 'object') s.best = {};
+    return s;
+  }
+  function ewStoreWrite(s) {
+    // Keep a season of days; the streak never needs more.
+    var keys = Object.keys(s.days).sort();
+    while (keys.length > 400) delete s.days[keys.shift()];
+    try { localStorage.setItem(EW_STORE, JSON.stringify(s)); } catch (e) {}
+    if (window.Cloud && Cloud.push) Cloud.push(EW_STORE);
+  }
+  function ewDayKey(offset) {
+    var d = new Date(); d.setDate(d.getDate() - (offset || 0));
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  /* Days in a row solved. Today counts once it is played; an unplayed today
+     does not break a streak that ran to yesterday. */
+  function ewDailyStreak(s) {
+    s = s || ewStore();
+    var i = s.days[ewDayKey(0)] ? 0 : 1, n = 0;
+    for (; i < 800; i++) {
+      var d = s.days[ewDayKey(i)];
+      if (!d || d.r !== 'W') break;
+      n++;
+    }
+    return n;
+  }
+  function ewPoints(letters, streak) {
+    var mult = 1 + 0.1 * Math.min(Math.max(streak - 1, 0), 10);
+    return Math.round((100 + 10 * letters) * mult);
+  }
+
   var ewState = {
-    mode: 'daily',          // 'daily' | 'unlimited'
+    mode: 'daily',          // 'daily' | 'unlimited' (shown as Endless)
     rec: null,              // the record being guessed
-    fromPool: false,        // unlimited fell back to the famous list
-    rows: [],               // array of {letters:[], marks:[]}
+    fromPool: false,        // endless fell back to the famous list
+    rows: [],               // the one guess, as [{letters, marks}]
     current: '',
-    done: false,
+    done: false,            // this round is answered
     won: false,
-    hinted: false
+    skipped: false,
+    gained: 0,              // points this round paid (endless)
+    hinted: false,
+    run: { streak: 0, score: 0, over: false, used: {} }
   };
 
   var el = {};
@@ -24139,8 +24283,14 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     var pick;
     ewState.fromPool = false;
     if (ewState.mode === 'unlimited') {
-      pick = ewLibraryPick();
-      if (!pick) { pick = ewRandomPick(); ewState.fromPool = true; }
+      if (ewState.run.over) ewState.run = { streak: 0, score: 0, over: false, used: {} };
+      var used = ewState.run.used;
+      for (var tries = 0; tries < 12; tries++) {
+        pick = ewLibraryPick();
+        if (!pick) { pick = ewRandomPick(); ewState.fromPool = true; }
+        if (!pick || !used[pick.answer]) break;
+      }
+      if (pick) used[pick.answer] = 1;
     } else {
       pick = ewDailyPick();
     }
@@ -24149,19 +24299,22 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     ewState.current = '';
     ewState.done = false;
     ewState.won = false;
+    ewState.skipped = false;
+    ewState.gained = 0;
     ewState.hinted = false;
+    ewState.fresh = -1; ewState.typed = -1;
 
     if (ewState.mode === 'daily') ewRestoreDaily();
     ewRenderAll();
-    /* Daily runs are timed by the server from first sight; Unlimited is
-       built from your own library, so it keeps a local clock and no board. */
+    /* Daily runs are timed by the server from first sight. Endless is built
+       from your own library and has no board, so it has no clock either. */
     var ewck = document.getElementById('ew-clock');
-    if (window.Boards && ewck) {
-      if (ewState.done || !pick) ewck.innerHTML = '';
+    if (ewck) {
+      if (ewState.done || !pick || ewState.mode !== 'daily' || !window.Boards) ewck.innerHTML = '';
       else {
-        Boards.start('earworm', ewState.mode, { day: Boards.day(), local: ewState.mode !== 'daily' });
+        Boards.start('earworm', 'daily', { day: Boards.day() });
         Boards.clock(ewck, 'earworm', { score: function (ms) {
-          return ewState.done || ewState.mode !== 'daily' ? '' : Boards.preview.earworm(ewState.rows.length, ms, ewLen(), ewState.hinted);
+          return ewState.done ? '' : Boards.preview.earworm(0, ms, ewLen(), false);
         } });
       }
     }
@@ -24179,27 +24332,35 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     }
   }
 
-  /* --- persistence (daily only; unlimited is meant to be endless) --------
-     v2: the v1 key belongs to a pool with no genre or artwork in it and a
-     different pick for any given date. */
+  /* --- persistence --------------------------------------------------------
+     The synced store first; the v2 per-day key is the fallback for a game
+     played before the store existed. A day half-played under the old six
+     guesses has already had a guess, so it counts as answered. */
   function ewKey() { return 'vinal_earworm2_' + ewToday(); }
   function ewRestoreDaily() {
+    if (!ewState.rec) return;
+    var d = ewStore().days[ewToday()];
+    if (d && d.a === ewState.rec.answer) {
+      if (d.g) ewState.rows.push(ewScore(d.g));
+      ewState.done = true; ewState.won = d.r === 'W'; ewState.skipped = d.r === 'S';
+      return;
+    }
     try {
       var st = JSON.parse(localStorage.getItem(ewKey()));
-      if (!st || !ewState.rec || st.answer !== ewState.rec.answer) return;
-      (st.guesses || []).forEach(function (g) { ewState.rows.push(ewScore(g)); });
-      ewState.done = !!st.done; ewState.won = !!st.won; ewState.hinted = !!st.hinted;
+      if (!st || st.answer !== ewState.rec.answer || !(st.guesses || []).length) return;
+      var g = st.won ? ewState.rec.answer : st.guesses[0];
+      ewState.rows.push(ewScore(g));
+      ewState.done = true; ewState.won = !!st.won;
     } catch (e) {}
   }
   function ewSaveDaily() {
     if (ewState.mode !== 'daily' || !ewState.rec) return;
-    try {
-      localStorage.setItem(ewKey(), JSON.stringify({
-        answer: ewState.rec.answer,
-        guesses: ewState.rows.map(function (r) { return r.letters.join(''); }),
-        done: ewState.done, won: ewState.won, hinted: ewState.hinted
-      }));
-    } catch (e) {}
+    var s = ewStore();
+    s.days[ewToday()] = { r: ewState.won ? 'W' : (ewState.skipped ? 'S' : 'L'),
+      g: ewState.rows.length ? ewState.rows[0].letters.join('') : '', a: ewState.rec.answer, at: Date.now() };
+    var streak = ewDailyStreak(s);
+    if (streak > (s.best.daily || 0)) s.best.daily = streak;
+    ewStoreWrite(s);
   }
 
   /* --- scoring ----------------------------------------------------------
@@ -24243,6 +24404,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     ewRenderBoard();
     ewRenderKeyboard();
     ewRenderClues();
+    ewRenderTally();
     ewRenderResult();
   }
 
@@ -24253,36 +24415,40 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     return shape.map(function (n) { return 'repeat(' + n + ', 1fr)'; }).join(' var(--ew-wordgap)');
   }
 
+  function ewRowHtml(rec, tpl, cls, cell) {
+    var html = '<div class="ew-row' + cls + '" style="grid-template-columns:' + tpl + '">', c = 0;
+    for (var w = 0; w < rec.shape.length; w++) {
+      if (w) html += '<i class="ew-gap" aria-hidden="true"></i>';
+      for (var k = 0; k < rec.shape[w]; k++, c++) html += cell(c);
+    }
+    return html + '</div>';
+  }
+
   function ewRenderBoard() {
     var rec = ewState.rec;
     if (!rec || !rec.answer) { el.board.innerHTML = ''; return; }
-    var n = rec.answer.length;
     // The grid is as wide as the title, so the cell size has to come down
     // as titles get longer or eleven columns won't fit a phone.
-    el.board.style.setProperty('--ew-cols', n);
-    var tpl = ewTemplate(rec.shape);
-    var html = '';
-    for (var r = 0; r < ROWS; r++) {
-      var row = ewState.rows[r];
-      var live = (r === ewState.rows.length && !ewState.done);
-      // Every keystroke redraws the board; only the row just submitted may flip.
-      var won = row && ewState.won && r === ewState.rows.length - 1;
-      html += '<div class="ew-row' + (r === ewState.fresh ? ' fresh' : '') + (won && r === ewState.fresh ? ' ew-win' : '') + '" style="grid-template-columns:' + tpl + '">';
-      var c = 0;
-      for (var w = 0; w < rec.shape.length; w++) {
-        if (w) html += '<i class="ew-gap" aria-hidden="true"></i>';
-        for (var k = 0; k < rec.shape[w]; k++, c++) {
-          if (row) {
-            html += '<div class="ew-cell ' + row.marks[c] + '" style="animation-delay:' + (c * 0.07) + 's">' + row.letters[c] + '</div>';
-          } else if (live) {
-            var ch = ewState.current[c] || '';
-            html += '<div class="ew-cell' + (ch ? ' filled' : '') + (ch && c === ewState.typed ? ' typed' : '') + '">' + ch + '</div>';
-          } else {
-            html += '<div class="ew-cell"></div>';
-          }
-        }
-      }
-      html += '</div>';
+    el.board.style.setProperty('--ew-cols', rec.answer.length);
+    var tpl = ewTemplate(rec.shape), row = ewState.rows[0], html;
+    if (row) {
+      // Only a guess just submitted flips; a restored one sits still.
+      var fresh = ewState.fresh === 0;
+      html = ewRowHtml(rec, tpl, (fresh ? ' fresh' : '') + (ewState.won && fresh ? ' ew-win' : ''), function (c) {
+        return '<div class="ew-cell ' + row.marks[c] + '" style="' + (fresh ? 'animation-delay:' + (c * 0.07) + 's' : 'animation:none') + '">' + row.letters[c] + '</div>';
+      });
+    } else if (ewState.skipped) {
+      html = '';
+    } else {
+      html = ewRowHtml(rec, tpl, '', function (c) {
+        var ch = ewState.done ? '' : (ewState.current[c] || '');
+        return '<div class="ew-cell' + (ch ? ' filled' : '') + (ch && c === ewState.typed ? ' typed' : '') + '">' + ch + '</div>';
+      });
+    }
+    // A miss or a skip sets the answer out under the guess, in the same cells.
+    if (ewState.done && !ewState.won) {
+      var ans = rec.answer;
+      html += ewRowHtml(rec, tpl, ' ew-answer', function (c) { return '<div class="ew-cell">' + ans[c] + '</div>'; });
     }
     el.board.innerHTML = html;
   }
@@ -24301,6 +24467,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       html += '</div>';
     });
     el.keys.innerHTML = html;
+    el.keys.classList.toggle('ew-spent', !!ewState.done);
   }
 
   function ewRenderClues() {
@@ -24320,30 +24487,60 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     // The artist is a clue from the start; there is no reveal to spend.
     if (rec.artist) bits.push('<span class="ew-clue ew-clue-hint">' + esc(rec.artist) + '</span>');
     el.clues.innerHTML = bits.join('');
-    if (ewState.mode === 'unlimited' && ewState.fromPool) {
+    if (ewState.mode === 'unlimited' && ewState.fromPool && !ewState.done) {
       ewRenderStatus('Rate a few more records and these come from your own library.');
     } else if (!ewState.done) {
-      var left = ROWS - ewState.rows.length;
-      ewRenderStatus(left + ' guess' + (left === 1 ? '' : 'es') + ' left');
+      ewRenderStatus('One guess. Skip it if you don’t know it.');
     } else {
       ewRenderStatus('');
     }
   }
 
+  /* The streak and, in Endless, the score — one quiet line above the keys,
+     with Skip at the other end of it while a round is live. */
+  function ewRenderTally() {
+    if (!el.tally) return;
+    var s = ewStore(), html = '';
+    if (ewState.mode === 'daily') {
+      var st = ewDailyStreak(s);
+      html += '<span class="ew-stat"><i>Streak</i><b>' + st + '</b></span>';
+      if ((s.best.daily || 0) > st) html += '<span class="ew-stat dim"><i>Best</i><b>' + s.best.daily + '</b></span>';
+    } else {
+      var r = ewState.run;
+      html += '<span class="ew-stat"><i>Streak</i><b>' + r.streak + '</b></span>' +
+              '<span class="ew-stat"><i>Score</i><b>' + r.score.toLocaleString('en-GB') + '</b></span>';
+      if ((s.best.streak || 0) > r.streak) html += '<span class="ew-stat dim"><i>Best</i><b>' + s.best.streak + '</b></span>';
+    }
+    var live = ewState.rec && !ewState.done;
+    html += '<button type="button" class="ew-skip" id="ew-skip"' + (live ? '' : ' hidden') + '>Skip</button>';
+    el.tally.innerHTML = html;
+  }
+
   function ewRenderResult() {
     var rec = ewState.rec;
     if (!ewState.done || !rec) { el.result.innerHTML = ''; return; }
-    var grid = ewShareGrid();
+    var daily = ewState.mode === 'daily', run = ewState.run, line;
+    if (daily) {
+      var st = ewDailyStreak();
+      var hadRun = (ewStore().days[ewDayKey(1)] || {}).r === 'W';
+      line = ewState.won ? (st > 1 ? st + ' days in a row' : 'Streak started') : (hadRun ? 'Streak reset. Back tomorrow.' : 'Back tomorrow for the next one.');
+    } else if (ewState.won) {
+      line = '+' + ewState.gained.toLocaleString('en-GB') + (run.streak > 1 ? ' · ' + run.streak + ' in a row' : '');
+    } else {
+      line = 'Run over · ' + run.streak + ' in a row · ' + run.score.toLocaleString('en-GB') + ' points' +
+        (run.newBest ? ' · new best' : '');
+    }
     el.result.innerHTML =
-      '<div class="ew-result">' +
+      '<div class="ew-result' + (ewState.won ? ' won' : '') + '">' +
         (rec.art ? '<img class="ew-result-art" src="' + esc(rec.art) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
-        '<h3>' + (ewState.won ? 'Got it — ' : 'It was ') + esc(rec.title) + '</h3>' +
+        '<h3>' + (ewState.won ? 'Got it — ' : (ewState.skipped ? 'Skipped — ' : 'It was ')) + esc(rec.title) + '</h3>' +
         '<p>' + esc(rec.artist) + (rec.genre ? ' · ' + esc(rec.genre) : '') + '</p>' +
-        (ewState.mode === 'daily' ? '<div class="drop-share">' + esc(grid) + '</div><div class="gb-slot" id="ew-gb"></div>' : '') +
+        '<p class="ew-result-line">' + esc(line) + '</p>' +
+        (daily ? '<div class="drop-share">' + esc(ewShareGrid()) + '</div><div class="gb-slot" id="ew-gb"></div>' : '') +
         '<div class="ew-result-actions">' +
-          (ewState.mode === 'daily'
+          (daily
             ? '<button class="btn-primary" type="button" id="ew-copy">' + Native.hand + ' result</button>'
-            : '<button class="btn-primary" type="button" id="ew-again">Another one</button>') +
+            : '<button class="btn-primary" type="button" id="ew-again">' + (ewState.won ? 'Next' : 'New run') + '</button>') +
         '</div>' +
       '</div>';
     var copy = document.getElementById('ew-copy');
@@ -24355,37 +24552,24 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   }
 
   function ewShareGrid() {
-    var head = 'VINALL Earworm — ' + ewToday() + '\n' +
-      (ewState.won ? ewState.rows.length : 'X') + '/' + ROWS +
-      (ewState.hinted ? ' (hint)' : '') + '\n';
-    var body = ewState.rows.map(function (r) {
-      return r.marks.map(function (m) {
-        return m === 'exact' ? '🟩' : (m === 'present' ? '🟨' : '⬛');
-      }).join('');
-    }).join('\n');
-    return head + body;
+    var st = ewDailyStreak();
+    var head = 'VINALL Earworm — ' + ewToday() + '\n';
+    var body = ewState.rows.length
+      ? ewState.rows[0].marks.map(function (m) { return m === 'exact' ? '🟩' : (m === 'present' ? '🟨' : '⬛'); }).join('')
+      : 'Skipped';
+    return head + body + (ewState.won ? '\nStreak ' + st : '');
   }
-  /* THE URL IS PART OF THE SHARE, NOT PART OF THE RESULT.
-
-     ewShareGrid() built the whole message including its footer, and
-     ewRenderResult() printed that string verbatim into `.drop-share` as a
-     preview — so the domain appeared on screen under the record you had
-     just been shown, reading as a stray caption on the artwork rather than as
-     the last line of something you were about to paste. Splitting it means
-     the screen shows the grid and the clipboard gets the link, with one
-     definition of each and no way for them to drift. */
+  /* THE URL IS PART OF THE SHARE, NOT PART OF THE RESULT. The screen shows
+     the grid and the clipboard gets the link, with one definition of each. */
   function ewShareText() { return ewShareGrid() + '\nvinall.xyz'; }
 
-  /* Today's result on the Minigames card, the same as the Daily Drop's.
-     The element was already in the markup and nothing ever wrote to it. */
+  /* Today's result on the Arcade card. */
   function ewCardStatus() {
     var node = document.getElementById('ew-card-status');
     if (!node) return;
-    var st = null;
-    try { st = JSON.parse(localStorage.getItem(ewKey())); } catch (e) {}
-    node.textContent = (st && st.done)
-      ? (st.won ? st.guesses.length + '/' + ROWS + (st.hinted ? ' (hint)' : '') : 'X/' + ROWS)
-      : '';
+    var s = ewStore(), d = s.days[ewToday()], st = ewDailyStreak(s);
+    node.textContent = d ? (d.r === 'W' ? 'Solved · streak ' + st : (d.r === 'S' ? 'Skipped' : 'Missed'))
+                         : (st ? 'Streak ' + st : '');
   }
 
   /* --- input ------------------------------------------------------------- */
@@ -24404,7 +24588,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     ewRenderBoard();
   }
   function ewSubmit() {
-    if (ewState.done || !ewState.rec) return;
+    if (!ewState.rec) return;
+    // Answered: Enter moves an Endless run on, and does nothing else.
+    if (ewState.done) { if (ewState.mode === 'unlimited') ewLoadAnswer(); return; }
     if (ewState.current.length !== ewLen()) {
       // No dictionary check: titles aren't words, and rejecting "SICKOMODE"
       // for not being in a word list would be absurd. Length is the only
@@ -24415,53 +24601,64 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       ewRenderStatus('Needs all ' + ewLen() + ' letters');
       return;
     }
-    var scored = ewScore(ewState.current);
-    ewState.rows.push(scored);
-    ewState.fresh = ewState.rows.length - 1; ewState.typed = -1;
-    ewState.won = ewState.current === ewState.rec.answer;
+    var guess = ewState.current;
+    ewState.rows = [ewScore(guess)];
+    ewState.fresh = 0; ewState.typed = -1;
     ewState.current = '';
-    if (ewState.won || ewState.rows.length >= ROWS) ewState.done = true;
+    ewSettle(guess === ewState.rec.answer, false);
+  }
+  function ewSkip() {
+    if (!ewState.rec || ewState.done) return;
+    ewState.rows = []; ewState.current = ''; ewState.fresh = -1;
+    ewSettle(false, true);
+  }
+
+  /* The one place a round ends. `done` is set before anything else runs, so
+     a second Enter, a double tap or Skip after a guess all find it answered. */
+  function ewSettle(won, skipped) {
+    ewState.done = true; ewState.won = won; ewState.skipped = skipped;
+    var mode = ewState.mode, rec = ewState.rec, run = ewState.run;
+    if (mode === 'unlimited') {
+      if (won) {
+        run.streak++;
+        ewState.gained = ewPoints(ewLen(), run.streak);
+        run.score += ewState.gained;
+      } else run.over = true;
+      var s = ewStore(), better = false;
+      if (run.streak > (s.best.streak || 0)) { s.best.streak = run.streak; better = true; }
+      if (run.score > (s.best.score || 0)) { s.best.score = run.score; better = true; }
+      run.newBest = !won && better && run.streak > 0;
+      if (better) ewStoreWrite(s);
+    }
     ewSaveDaily();
     ewRenderAll();
     ewCardStatus();
 
-    /* The win already has confetti. What this game was missing is the other
-       five guesses — the ones that actually make up a session. A guess with
-       greens in it should feel different from one with none, at the moment
-       you submit it, not at the end. */
-    if (window.buzz) {
-      var exact = (scored.marks || []).filter(function (m) { return m === 'exact'; }).length;
-      buzz(ewState.won ? 'big' : (exact ? 'good' : 'bad'));
-    }
+    if (window.buzz) buzz(won ? 'big' : 'bad');
 
-    if (ewState.done && window.notePlay) notePlay('earworm');
-    if (ewState.done && window.Boards) {
-      var ewm = ewState.mode;
-      Boards.finish('earworm', { guesses: ewState.rows.length, solved: ewState.won, letters: ewLen(), hinted: ewState.hinted }).then(function (res) {
-        var gs = document.getElementById('ew-gb');
-        if (gs && res && ewState.mode === ewm) Boards.result(gs, res);
-      });
-    }
-    if (ewState.done && ewState.won) {
-      // Fewest rows is the best result, so this is a minimum rather than a
-      // maximum — and it carries what it was for, because "solved in 2" means
-      // nothing without the record it was two guesses at.
-      if (window.noteEarworm) {
-        noteEarworm(ewState.rows.length, ewState.rec.title, ewState.rec.artist, ewState.rec.kind);
-      }
-      /* "Earworm in 1" and "Earworm in 5" are different results and deserve
-         to be named differently; "Achievement Unlocked / Earworm solved" was
-         the same sentence for both and for everything else in the app. */
-      if (typeof celebrate === 'function') {
-        celebrate(ewState.rec.title, ewState.rec.artist || '', {
-          eyebrow: 'Earworm in ' + ewState.rows.length + (ewState.hinted ? ' (hint)' : ''),
-          accent: 'var(--hue-2)'
+    if (mode === 'daily') {
+      if (window.notePlay) notePlay('earworm');
+      if (window.Boards) {
+        Boards.finish('earworm', { guesses: 1, solved: won, letters: ewLen(), hinted: false }).then(function (res) {
+          var ck = document.getElementById('ew-clock'); if (ck) ck.innerHTML = '';
+          var gs = document.getElementById('ew-gb');
+          if (gs && res && ewState.mode === 'daily') Boards.result(gs, res);
         });
       }
-      // The payout used to be computed here and thrown away — the client
-      // cannot be trusted with an amount, so wallet_award_game decides it.
-      if (ewState.mode === 'daily' && window.Wallet) Wallet.awardGame('earworm', { reason: 'Earworm' });
-      if (typeof logActivity === 'function' && window.ICONS) logActivity(ICONS.trophy, 'Solved Earworm', ewState.rec.title);
+      if (won) {
+        var streak = ewDailyStreak();
+        if (typeof celebrate === 'function') {
+          celebrate(rec.title, rec.artist || '', {
+            eyebrow: streak > 1 ? 'Earworm · ' + streak + ' days running' : 'Earworm solved',
+            accent: 'var(--hue-2)'
+          });
+        }
+        // The client never names an amount; wallet_award_game decides it.
+        if (window.Wallet) Wallet.awardGame('earworm', { reason: 'Earworm' });
+        if (typeof logActivity === 'function' && window.ICONS) logActivity(ICONS.trophy, 'Solved Earworm', rec.title);
+      }
+    } else if (!won && window.notePlay) {
+      notePlay('earworm');
     }
   }
 
@@ -24472,20 +24669,48 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
     // A sheet opened over Earworm (leaderboard, report, ask) owns the keys.
     if (document.activeElement && document.activeElement !== document.body && !el.modal.contains(document.activeElement)) return;
-    if (e.key === 'Enter') { if (t && t.tagName === 'BUTTON') return; e.preventDefault(); ewSubmit(); return; }
+    // Focus sits on a button after the sheet opens (the close) or after a
+    // mode tap, and Enter on a focused button presses it: a typed guess and
+    // Enter closed the game or did nothing. A guess in progress owns Enter.
+    if (e.key === 'Enter') {
+      if (e.repeat) return;
+      var onBtn = t && t.tagName === 'BUTTON';
+      // Share, Next and Skip keep their own Enter; so does a mode button
+      // before anything is typed. Everything else — the close, a mode tapped
+      // a moment ago, an on-screen key just clicked — is not what Enter means.
+      if (onBtn && (el.result.contains(t) || el.tally.contains(t))) return;
+      if (onBtn && t.closest('#ew-mode') && !ewState.current && !ewState.done) return;
+      e.preventDefault(); ewSubmit(); return;
+    }
     if (e.key === 'Backspace') { e.preventDefault(); ewBack(); return; }
     var ch = e.key.toUpperCase();
     if (ch.length === 1 && ch >= 'A' && ch <= 'Z') { e.preventDefault(); ewType(ch); }
   }
 
   /* --- wiring ------------------------------------------------------------ */
+  /* Leaving Endless mid-round parks the round rather than dropping it:
+     otherwise flicking to Daily and back would be a free skip that kept the
+     streak alive. */
+  var ewParked = null;
   function ewSetMode(m) {
     if (ewState.mode === m) return;
+    if (ewState.mode === 'unlimited' && ewState.rec) {
+      ewParked = { rec: ewState.rec, fromPool: ewState.fromPool, rows: ewState.rows, current: ewState.current,
+                   done: ewState.done, won: ewState.won, skipped: ewState.skipped, gained: ewState.gained };
+    }
     ewState.mode = m;
     document.querySelectorAll('#ew-mode button').forEach(function (b) {
       b.classList.toggle('active', b.dataset.ewMode === m);
       b.setAttribute('aria-pressed', b.dataset.ewMode === m ? 'true' : 'false');
     });
+    if (m === 'unlimited' && ewParked) {
+      Object.keys(ewParked).forEach(function (k) { ewState[k] = ewParked[k]; });
+      ewParked = null; ewState.fresh = -1; ewState.typed = -1;
+      ewGenreToken++;
+      var ck = document.getElementById('ew-clock'); if (ck) ck.innerHTML = '';
+      ewRenderAll();
+      return;
+    }
     ewLoadAnswer();
   }
 
@@ -24505,6 +24730,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     el.clues = document.getElementById('ew-clues');
     el.status = document.getElementById('ew-status');
     el.result = document.getElementById('ew-result');
+    el.tally = document.getElementById('ew-tally');
+    el.tally.addEventListener('click', function (e) { if (e.target.closest('#ew-skip')) { if (window.buzz) buzz('tap', true); ewSkip(); } });
 
     document.getElementById('ew-close').addEventListener('click', function () { el.modal.classList.remove('open'); });
     el.modal.addEventListener('click', function (e) { if (e.target === el.modal) el.modal.classList.remove('open'); });
@@ -24526,6 +24753,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     ewCardStatus();
     window.openEarworm = ewOpen;
     window.paintEarwormCard = ewCardStatus;
+    if (window.__vinallTest) window.__ewAnswer = function () { return ewState.rec && ewState.rec.answer; };
+    window.EarwormStats = { best: function () { return ewStore().best; }, dailyStreak: function () { return ewDailyStreak(); } };
   }
 
   ewInit();
@@ -25350,7 +25579,7 @@ function playDismissAnimation(gateEl, callback) {
         ? 'Solved in <b>' + st.g.length + '</b>. Back tomorrow.'
         : 'Out of guesses. Back tomorrow.';
       elCount.textContent = '';
-      elHint.textContent = '';
+      elHint.innerHTML = ''; elHint._n = 0;
       return;
     }
     var left = GUESS_LIMIT - st.g.length;
@@ -25364,23 +25593,73 @@ function playDismissAnimation(gateEl, callback) {
       if (window.Play) Play.roll(fb, fit); else fb.textContent = fit;
     } else elCount.innerHTML = total + ' ' + (mode === 'album' ? 'albums' : 'songs') + ' in today’s list';
     elCount._fit = st.g.length ? fit : total; elCount._mode = mode;
-    elHint.textContent = hintFor(st.g.length);
+    paintClues(st);
   }
 
-  /* Being stuck with no way forward is not difficulty, it's a dead end.
-     Two free nudges, on a timer rather than a button, so they cost
-     nothing and nobody has to decide whether taking one is cheating. */
-  function hintFor(used) {
-    if (!answer) return '';
-    if (used >= 5) {
-      var first = String(answer.name).replace(/[^A-Za-z0-9]/g, '').charAt(0).toUpperCase();
-      var words = String(answer.name).trim().split(/\s+/).length;
-      return 'Hint: the title starts with “' + first + '” and is ' + words + ' word' + (words === 1 ? '' : 's') + ' long.';
+  /* A CLUE AFTER EVERY WRONG GUESS (2026-10-24). Being stuck with no way
+     forward is not difficulty, it is a dead end — so each miss buys the next
+     rung of a ladder that runs from broad (the genre) to nearly there (the
+     title's first letter and length). Clues never touch the score: the board
+     and the leaderboard still count guesses, so a wrong guess costs exactly
+     what it always did, and the clue is what you get for paying it.
+
+     A rung the board has already answered is skipped rather than repeated —
+     telling somebody the genre after a green Genre tile is a clue in name
+     only. The title rung is always the fifth, the last a game can reach. */
+  function cluesFor(guesses) {
+    if (!answer || !guesses.length) return [];
+    var known = { artist: false, year: false, genre: false, size: false, extra: false };
+    guesses.forEach(function (gi) {
+      var g = POOL[mode][gi], c = scoreGuess(g, answer, mode);
+      if (c[0].state === 'hit') known.artist = true;
+      if (c[1].state === 'hit') known.year = true;
+      if (c[2].state === 'hit') known.genre = true;
+      if (c[3].state === 'hit') known.size = true;
+      if (c[4].state === 'hit') known.extra = true;
+    });
+    var ladder = [];
+    if (answer.genre && !known.genre) ladder.push('It’s filed under ' + answer.genre + '.');
+    if (!known.year) ladder.push('It came out in the ' + (Math.floor(answer.year / 10) * 10) + 's.');
+    if (!known.artist) {
+      var an = String(answer.artist).replace(/^the\s+/i, '');
+      var ai = an.replace(/[^A-Za-z0-9]/g, '').charAt(0).toUpperCase();
+      var aw = an.trim().split(/\s+/).length;
+      ladder.push('The artist’s name starts with “' + ai + '”' + (aw > 1 ? ' and is ' + aw + ' words.' : '.'));
     }
-    if (used >= 3) {
-      return 'Hint: it came out in the ' + (Math.floor(answer.year / 10) * 10) + 's.';
+    if (mode === 'song') {
+      var al = flat(answer.album || ''), nm = flat(answer.name);
+      if (al && al.indexOf(nm) === -1 && nm.indexOf(al) === -1) ladder.push('It’s on the album “' + answer.album + '”.');
+      if (!known.year) ladder.push('It was released in ' + answer.year + '.');
+      if (!known.size) ladder.push('It runs ' + mmss(answer.size) + '.');
+      if (!known.extra) ladder.push('It’s track ' + answer.extra + ' on its record.');
+    } else {
+      if (!known.year) ladder.push('It was released in ' + answer.year + '.');
+      if (!known.size) ladder.push('It has ' + answer.size + ' tracks.');
+      if (!known.extra) ladder.push('It runs ' + mmss(answer.extra) + ' end to end.');
     }
-    return '';
+    // Always available, so a board that has already answered most of the
+    // above still gets a clue for every miss: two steps towards the title.
+    var letters = String(answer.name).replace(/[^A-Za-z0-9]/g, '');
+    ladder.push('The title has ' + letters.length + ' letters and numbers in it.');
+    ladder.push('The title ends with “' + letters.charAt(letters.length - 1).toUpperCase() + '”.');
+    var first = String(answer.name).replace(/[^A-Za-z0-9]/g, '').charAt(0).toUpperCase();
+    var words = String(answer.name).trim().split(/\s+/).length;
+    var title = 'The title starts with “' + first + '” and is ' + words + ' word' + (words === 1 ? '' : 's') + ' long.';
+    var n = Math.min(guesses.length, GUESS_LIMIT - 1);
+    var out = ladder.slice(0, Math.min(n, 4));
+    if (n >= 5 || out.length < n) out.push(title);
+    return out.slice(0, n);
+  }
+  function paintClues(st) {
+    var list = st.done ? [] : cluesFor(st.g);
+    if (!list.length) { elHint.innerHTML = ''; return; }
+    var fresh = elHint._n != null && elHint._mode === mode && list.length > elHint._n;
+    elHint.innerHTML = list.map(function (c, k) {
+      var last = k === list.length - 1;
+      return '<div class="drop-clue' + (last ? ' latest' : '') + (last && fresh ? ' fresh' : '') + '">' +
+        '<span class="drop-clue-n">Clue ' + (k + 1) + '</span>' + esc(c) + '</div>';
+    }).join('');
+    elHint._n = list.length; elHint._mode = mode;
   }
 
   /* Which size tier a tile's value gets. The longest single word decides it,
@@ -25631,6 +25910,8 @@ function playDismissAnimation(gateEl, callback) {
     if (card) card.addEventListener('click', openDrop);
     updateCardStatus();
     window.openDailyDrop = openDrop;
+    // The local test suite only (scripts/tests/fixtures.mjs sets the flag).
+    if (window.__vinallTest) window.__dropAnswer = function () { return answer && answer.name; };
     window.paintDropCard = updateCardStatus;
   }
 
@@ -26956,6 +27237,7 @@ window.renderAdminStats = renderAdminStats;
   var TABS = [
     { mode: 'albums', label: 'Albums' },
     { mode: 'songs',  label: 'Songs' },
+    { mode: 'liked',  label: 'Liked' },
     { mode: 'crate',  label: 'Everyone' },
     { mode: 'choice', label: 'Choice' }
   ];
@@ -38837,7 +39119,7 @@ window.renderAdminStats = renderAdminStats;
         '</button>' +
         '<button class="fy-peek" data-cmt="' + i + '" type="button" hidden></button>' +
         '<button class="fy-cmt" data-cmt="' + i + '" aria-label="Comments"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.6 3.8c-.5.4-1.2 0-1.2-.6V16A2.5 2.5 0 0 1 4 13.5Z"/></svg><span class="fy-cmt-n"></span></button>' +
-        '<button class="fy-like' + (window.likedSongHas && likedSongHas(c.key) ? ' liked' : '') + '" data-like="' + i + '" aria-label="Like"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 20.6s-7.6-4.5-10.2-9C.3 8.6 1 5.4 3.7 4.1c2-.9 4.3-.3 5.7 1.4l2.6 3.1 2.6-3.1c1.4-1.7 3.7-2.3 5.7-1.4 2.7 1.3 3.4 4.5 1.9 7.5-2.6 4.5-10.2 9-10.2 9Z"/></svg></button>' +
+        '<button class="fy-like' + (window.likedSongHas && likedSongHas(c.key, c.title, c.artist) ? ' liked' : '') + '" data-like="' + i + '" aria-label="Like"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 20.6s-7.6-4.5-10.2-9C.3 8.6 1 5.4 3.7 4.1c2-.9 4.3-.3 5.7 1.4l2.6 3.1 2.6-3.1c1.4-1.7 3.7-2.3 5.7-1.4 2.7 1.3 3.4 4.5 1.9 7.5-2.6 4.5-10.2 9-10.2 9Z"/></svg></button>' +
       '</div>' +
       '<div class="fy-meta">' +
         '<div class="fy-why">' + esc(c.why || '') + '</div>' +
@@ -41486,10 +41768,12 @@ window.renderAdminStats = renderAdminStats;
     J.items.forEach(function (it) { if (!got(it)) sum.none++; });
 
     if (J.opts.liked) {
-      var liked = loadLikedSongs(), rows = [];
+      // Raw, tombstones included: writing back a filtered map would drop
+      // them, and a song unliked in VINALL must not return via an import.
+      var liked = loadLikedRaw(), rows = [];
       J.items.forEach(function (it) {
         var m = got(it);
-        if (!m || it.dest.indexOf('liked') < 0 || liked[m.id]) return;
+        if (!m || it.dest.indexOf('liked') < 0 || liked[m.id] || likedSongHas(m.id, m.name, m.artist)) return;
         liked[m.id] = { id: m.id, name: m.name, artist: m.artist, art: m.art, savedAt: now, from: 'spotify' };
         rows.push({ user_id: me().id, track_key: m.id, name: m.name, artist: m.artist, art: m.art });
         sum.liked++;
@@ -41902,8 +42186,8 @@ window.renderAdminStats = renderAdminStats;
 
 </body>
 <script src="/assets/interactions.js?v=4"></script>
-<script src="/assets/replay.js?v=6"></script>
-<script src="/assets/you.js?v=8"></script>
+<script src="/assets/replay.js?v=7"></script>
+<script src="/assets/you.js?v=9"></script>
 <script src="/assets/glow.js?v=4"></script>
 <script src="/assets/comments.js?v=3" defer></script>
 <script src="/assets/boards.js?v=2"></script>
@@ -41913,5 +42197,6 @@ window.renderAdminStats = renderAdminStats;
 <script src="/assets/passport.js?v=2"></script>
 <script src="/assets/safety.js?v=2"></script>
 <script src="/assets/discover.js?v=2"></script>
+<script src="/assets/liked.js?v=1"></script>
 <script src="/assets/sound.js?v=2"></script>
 </html>

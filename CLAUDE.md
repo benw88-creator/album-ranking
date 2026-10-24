@@ -6755,3 +6755,28 @@ self-time on load is well under a second at 4×). That is a CSS job.
   The tracklist round ignores a late fetch for a previous round. A lost Drop
   still counts as played. `scripts/tests/prelaunch.spec.mjs` covers the
   odometer, Earworm, For You not advancing and the pre-load level-up.
+
+## Liked songs, Drop clues, one-guess Earworm (2026-10-24)
+
+- **Liked songs** are VINALL's own: `crate_liked_songs_v1` (SYNC_KEYS, per-item
+  merge), never sent to Spotify or Deezer. **An unlike is a tombstone**
+  (`{off: true, savedAt}`), because a deleted key came back from the other
+  device's union merge. `loadLikedSongs()` is live likes only; writers use
+  `loadLikedRaw()`. `likedSongHas(id, name, artist)` also matches by folded
+  title + first artist, so For You's `artist|title` key and an album page's
+  track id are one like (trap 4). The Crate has a **Liked** sub-tab
+  (`view-liked`, in `views`, `CRATE_GROUP` and the Crate TABS), drawn by
+  `assets/liked.js`, whose `LikedSongs.heart()` is the heart on Crate song rows.
+- **The reminder** is a Discover prompt added by `liked.js`: 3+ likes, list not
+  opened for 14 days (`crate_liked_seen_v1`), one instance per 21 days, off for
+  good after two dismissals — inside Discover's own once-a-session cap.
+- **Daily Drop** gives a clue after every wrong guess (`cluesFor`), broad to
+  narrow, skipping anything the tiles already answered, title rung last.
+  Scoring and the board are untouched.
+- **Earworm is one guess a round** with Skip. Daily: today's record, one go,
+  the streak is days in a row (`crate_earworm_v2.days`, SYNC_KEYS, the earlier
+  answer wins a merge, so a second device is not a second guess). Endless:
+  sudden death, `100 + 10/letter` × a tenth per record in a row (max 2×).
+  The server board still gets `{guesses: 1, solved}`; no migration.
+- Tests: `scripts/tests/features.spec.mjs`. `window.__vinallTest` (set by the
+  fixtures) exposes the day's answers to the suite only.

@@ -46,7 +46,7 @@
     return {
       albums: (typeof window.loadAlbums === 'function' ? window.loadAlbums() : lsJSON('crate_albums_v1')) || {},
       songs: (typeof window.loadSongs === 'function' ? window.loadSongs() : lsJSON('crate_songs_v1')) || {},
-      liked: lsJSON('crate_liked_songs_v1') || {}
+      liked: (window.loadLikedSongs ? loadLikedSongs() : lsJSON('crate_liked_songs_v1')) || {}
     };
   }
   function lat() { return +(localStorage.getItem(LDAYS_AT) || 0); }

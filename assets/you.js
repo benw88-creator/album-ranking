@@ -221,7 +221,7 @@
   // Everything the Spotify import left behind, as two candidate lists.
   function gather() {
     var st = lsJSON('crate_spotify_v1') || lsJSON('vinall_spotify_v1') || {}, imp = st.imported || {};
-    var liked = lsJSON('crate_liked_songs_v1') || {}, sl = lsJSON('crate_shortlist_v1') || {};
+    var liked = (window.loadLikedSongs ? loadLikedSongs() : lsJSON('crate_liked_songs_v1')) || {}, sl = lsJSON('crate_shortlist_v1') || {};
     var plays = {}, last = {}, albPlays = {};
     (ym.listen || []).forEach(function (r) {
       var k = T.recKey(r.track, r.artist); plays[k] = (plays[k] || 0) + (r.plays || 0);

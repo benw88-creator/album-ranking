@@ -56,6 +56,7 @@ export const test = base.extend({
 });
 export async function start(page, { seeded = false } = {}) {
   await page.addInitScript(({ seeded }) => {
+    window.__vinallTest = true;
     if (seeded) {
       const records = {};
       for (let i = 100; i < 112; i++) records[i] = { id: String(i), name: `Record ${i}`, artist: 'Test Artist', artistId: '42', art: '/assets/icons/icon-512.png', score: 85, ratedAt: Date.now() };
