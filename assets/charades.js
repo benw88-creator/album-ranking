@@ -133,7 +133,8 @@
       var o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
       o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t);
       if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + ms / 1000);
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.18, t + 0.012);
+      // Quiet like the rest of VINALL's effects (2026-10-24): about 10 dB down.
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime((vol || 0.18) * 0.32, t + 0.012);
       g.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
       o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + ms / 1000 + 0.02);
     } catch (e) {}

@@ -1712,6 +1712,7 @@ html[data-motion="none"] .view.enter { animation: none; }
 .ew-clue b { color: var(--text); }
 .ew-clue-hint { border-color: var(--gold-dim); color: var(--gold); }
 #ew-status { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
+#ew-status:empty { display: none; }
 
 .ew-board { display: flex; flex-direction: column; gap: 6px; align-items: center; margin: 4px 0 16px; }
 /* The columns are written per row in JS: every letter is a 1fr track and
@@ -9590,6 +9591,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/artist.css?v=1">
 <link rel="stylesheet" href="/assets/discover.css?v=2">
 <link rel="stylesheet" href="/assets/liked.css?v=1">
+<link rel="stylesheet" href="/assets/crate.css?v=1">
 <link rel="stylesheet" href="/assets/polish.css?v=2">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
@@ -14726,7 +14728,7 @@ function renderAlbums(){
     const glow=col.replace('rgb(','rgba(').replace(')',',0.22)');
     return '<div class="card" data-id="'+a.id+'" style="--score:'+col+'; --score-glow:'+glow+';">'+
       '<div class="art-wrap">'+
-      '<div class="rank-badge">#'+rankMap[a.id]+'</div>'+
+      '<div class="rank-badge'+(rankMap[a.id]<=3?' top r'+rankMap[a.id]:'')+'">#'+rankMap[a.id]+'</div>'+
       '<img class="art" src="'+thumb(a.art,artPx)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'">'+
       '<div class="art-score">'+a.score+'<span>/100</span></div>'+
       '</div>'+
@@ -24489,8 +24491,6 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     el.clues.innerHTML = bits.join('');
     if (ewState.mode === 'unlimited' && ewState.fromPool && !ewState.done) {
       ewRenderStatus('Rate a few more records and these come from your own library.');
-    } else if (!ewState.done) {
-      ewRenderStatus('One guess. Skip it if you don’t know it.');
     } else {
       ewRenderStatus('');
     }
@@ -26686,7 +26686,7 @@ function playDismissAnimation(gateEl, callback) {
               (oc === 'lost' ? ' for turning up' : '')
           : 'No Discs — that’s your three wars for today';
       }
-      verdict.innerHTML = (oc === 'won' ? 'You took it' : (oc === 'lost' ? nameOf(other(w)) + ' took it' : 'Dead even')) +
+      verdict.innerHTML = (oc === 'won' ? 'You win' : (oc === 'lost' ? nameOf(other(w)) + ' took it' : 'Dead even')) +
         (line ? '<small>' + line + '</small>' : '');
       verdict.classList.add('in');
       if (window.Wallet && Wallet.refresh) Wallet.refresh();
@@ -42192,11 +42192,11 @@ window.renderAdminStats = renderAdminStats;
 <script src="/assets/comments.js?v=3" defer></script>
 <script src="/assets/boards.js?v=2"></script>
 <script src="/assets/play.js?v=2"></script>
-<script src="/assets/charades.js?v=3"></script>
+<script src="/assets/charades.js?v=4"></script>
 <script src="/assets/passport-core.js?v=1"></script>
 <script src="/assets/passport.js?v=2"></script>
 <script src="/assets/safety.js?v=2"></script>
 <script src="/assets/discover.js?v=2"></script>
 <script src="/assets/liked.js?v=1"></script>
-<script src="/assets/sound.js?v=2"></script>
+<script src="/assets/sound.js?v=3"></script>
 </html>

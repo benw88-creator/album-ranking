@@ -167,3 +167,31 @@ test('Earworm Endless: a right answer extends the streak and scores with a bonus
   expect(best.streak).toBe(2);
   expect(best.score).toBeGreaterThan(200);
 });
+
+// Final polish pass (2026-10-24, second round).
+test('Earworm shows no instruction line under the clues', async ({ page }) => {
+  await start(page);
+  await page.evaluate(() => { localStorage.removeItem('crate_earworm_v2'); window.openEarworm(); });
+  await expect(page.locator('#ew-modal')).toHaveClass(/open/);
+  await expect(page.locator('#ew-status')).toHaveText('');
+  await expect(page.locator('#ew-status')).toBeHidden();
+  await expect(page.locator('#ew-modal')).not.toContainText('Skip it if you');
+});
+
+test('Crate covers: the top three wear gold badges and the sleeve carries its gloss', async ({ page }) => {
+  await start(page, { seeded: true });
+  await page.evaluate(() => {
+    const a = JSON.parse(localStorage.getItem('crate_albums_v1'));
+    Object.values(a).forEach((r, i) => { r.score = 99 - i; });
+    localStorage.setItem('crate_albums_v1', JSON.stringify(a));
+    goToView('albums');
+  });
+  await expect(page.locator('#albums-grid .card')).toHaveCount(12);
+  await expect(page.locator('#albums-grid .rank-badge.top')).toHaveCount(3);
+  await expect(page.locator('#albums-grid .rank-badge.r1')).toHaveText('#1');
+  const gloss = await page.locator('#albums-grid .card .art-wrap').first().evaluate(n => getComputedStyle(n, '::after').backgroundImage);
+  expect(gloss).toContain('135deg');
+  // Still opens the record.
+  await page.locator('#albums-grid .card').first().click();
+  await expect(page.locator('#view-album-detail')).toBeVisible();
+});

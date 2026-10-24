@@ -16,7 +16,7 @@
 
    IT BEHAVES. Off in Settings means off (vinall_sfx = 'off'). Nothing plays
    in a hidden tab. While a music preview is playing every effect drops to
-   about a third, so a rating never talks over the record. The context is
+   about a third again, so a rating never talks over the record. The context is
    only created inside a real gesture, which is what iOS requires.
    ================================================================ */
 (function () {
@@ -24,6 +24,8 @@
   var KEY = 'vinall_sfx';
   var ctx = null, master = null, room = null, voices = 0, last = {}, duckUntil = 0;
   var MAX_VOICES = 14;
+  // The bus level, and the level under a playing preview.
+  var LEVEL = 0.17, LEVEL_MUSIC = 0.06;
 
   function enabled() { try { return localStorage.getItem(KEY) !== 'off'; } catch (e) { return true; } }
   function setEnabled(on) {
@@ -60,8 +62,15 @@
     try { ctx = new AC({ latencyHint: 'interactive' }); } catch (e) { return; }
     var comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -18; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.2;
-    master = ctx.createGain(); master.gain.value = 0.55;
-    master.connect(comp); comp.connect(ctx.destination);
+    /* QUIET BY DESIGN (2026-10-24). The effects were reported as loud enough
+       to dominate, so the whole bus sits about 10 dB lower than it did and a
+       gentle low-pass takes the glassy top off the bells and ticks. Every
+       sound keeps its place relative to the others — the vocabulary below is
+       untouched — and nothing here reaches the music, which plays through
+       <audio>, not this context. */
+    master = ctx.createGain(); master.gain.value = LEVEL;
+    var soft = ctx.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = 6800; soft.Q.value = 0.5;
+    master.connect(soft); soft.connect(comp); comp.connect(ctx.destination);
     /* The room: a short, dark, generated impulse. Enough to make a bell bloom
        rather than click off, never enough to sound like a hall. */
     try {
@@ -221,7 +230,7 @@
     if (s[1] >= 3) duckUntil = now + 450;
     try {
       // Under a playing preview, everything is a third as loud.
-      master.gain.setTargetAtTime(musicOn() ? 0.2 : 0.55, ctx.currentTime, 0.02);
+      master.gain.setTargetAtTime(musicOn() ? LEVEL_MUSIC : LEVEL, ctx.currentTime, 0.02);
       s[2](ctx.currentTime + 0.005, o || {});
     } catch (e) {}
   }
