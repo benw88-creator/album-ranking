@@ -21,7 +21,11 @@
 .album-page-modal .modal-panel::before { z-index: 4; background: rgba(255, 255, 255, .32); }
 
 .album-page-modal .ap-close {
-  position: absolute; top: 14px; right: 14px; z-index: 5;
+  /* Sticky, not absolute: an absolute button scrolled away with the sheet,
+     leaving a long thread with no visible way out. The negative bottom margin
+     lets the hero start under it rather than below it. */
+  position: sticky; top: 14px; right: auto; z-index: 5;
+  display: flex; margin: 14px 14px -54px auto;
   width: 40px; height: 40px; border-radius: 50%;
   background: rgba(10, 9, 8, .42); border: 1px solid rgba(255, 255, 255, .16); color: #fff;
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
@@ -76,7 +80,7 @@
 .ap-you-score { font-size: 30px; }
 .ap-stat-you { padding-left: 18px; border-left: 1px solid var(--border); }
 .ap-avg-label { font: 600 10px/1.2 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--text-faint); }
-.ap-avg-count { justify-self: end; align-self: end; font-size: 13px; color: var(--text-dim); white-space: nowrap; }
+.ap-avg-count { grid-column: -2; justify-self: end; align-self: end; font-size: 13px; color: var(--text-dim); white-space: nowrap; }
 
 .ap-spread { grid-column: 1 / -1; position: relative; height: 16px; margin-top: 12px; }
 .ap-spread[hidden] { display: none; }
