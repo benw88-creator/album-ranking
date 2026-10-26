@@ -35,8 +35,7 @@
 // Every valuation is written back to `album_plays`, so the work is done once
 // for everybody and the next render of the same crate reads it from the GET.
 
-import { priceFromStreams } from './collection-buy.js';
-import { spotifyToken, valueAlbum } from './_streams.js';
+import { priceFromStreams, priceAlbum } from './collection-buy.js';
 import { cors } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
@@ -115,36 +114,19 @@ async function verify(jwt, SERVICE) {
    An album that cannot be priced is reported as such and NOT written. A row
    saying zero plays would read as a real valuation of zero on every future
    request, and a wrong stream total reads as a bug. */
-async function valueBatch(ids, SERVICE, sealed) {
-  const token = await spotifyToken();
-  if (!token) return { error: 'Could not reach Spotify' };
-
+async function valueBatch(ids, SERVICE, sealed, hints) {
   const cache = {};
   const out = {};
-  const writes = [];
   for (const id of ids) {
     if (sealed && sealed.has(id)) { out[id] = { price: null, reason: 'sealed' }; continue; }
     try {
-      const v = await valueAlbum(id, token, cache);
-      if (!v.ok || !v.total) { out[id] = { price: null, reason: v.reason || 'unpriceable' }; continue; }
-      out[id] = { price: priceFromStreams(v.total), reason: null };
-      writes.push({
-        album_id: id, name: v.album || null, artist: v.artist || null,
-        plays: v.total, source: 'kworb', fetched_at: new Date().toISOString(),
-      });
+      const p = await priceAlbum(id, SERVICE, { cache: cache, hint: hints[id] });
+      // `transient` tells the card "not just now" from a real "cannot be priced".
+      out[id] = p.price ? { price: p.price, reason: null }
+        : { price: null, reason: p.reason || 'unpriceable', transient: !!p.transient };
     } catch (e) {
-      out[id] = { price: null, reason: 'failed' };
+      out[id] = { price: null, reason: 'failed', transient: true };
     }
-  }
-
-  if (writes.length) {
-    try {
-      await fetch(SUPABASE_URL + '/rest/v1/album_plays', {
-        method: 'POST',
-        headers: svcHeaders(SERVICE, { Prefer: 'resolution=merge-duplicates,return=minimal' }),
-        body: JSON.stringify(writes),
-      });
-    } catch (e) { /* the price is still correct for this response */ }
   }
   return { prices: out };
 }
@@ -168,9 +150,18 @@ export default async function handler(req, res) {
 
     let body = req.body;
     if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
-    const ids = Array.isArray(body && body.album_ids)
-      ? body.album_ids.map((s) => String(s || '').trim()).filter(Boolean).slice(0, BATCH)
-      : [];
+    /* `albums: [{id, name, artist}]` carries the name for a legacy Spotify id
+       that crate_feed has never seen (a private rating). `album_ids` is the
+       older shape and still accepted. */
+    const hints = {};
+    const ids = (Array.isArray(body && body.albums)
+      ? body.albums.map((a) => {
+          const id = String((a && a.id) || '').trim();
+          if (id) hints[id] = { name: a.name || null, artist: a.artist || null };
+          return id;
+        })
+      : Array.isArray(body && body.album_ids) ? body.album_ids.map((s) => String(s || '').trim()) : [])
+      .filter(Boolean).slice(0, BATCH);
     if (!ids.length) { res.status(400).json({ error: 'No album ids' }); return; }
 
     const sealed = await sealedFor(jwt);
@@ -178,7 +169,7 @@ export default async function handler(req, res) {
     // board being valued by accident.
     if (sealed === null) { res.status(503).json({ error: 'Could not check your live wars' }); return; }
 
-    const r = await valueBatch(ids, SERVICE, sealed);
+    const r = await valueBatch(ids, SERVICE, sealed, hints);
     if (r.error) { res.status(502).json({ error: r.error }); return; }
     res.setHeader('Cache-Control', 'no-store');
     res.status(200).json({ prices: r.prices });

@@ -986,7 +986,7 @@
         '<i style="--t:var(--c-violet)"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6" opacity=".45"/></svg></i>' +
         '<i style="--t:var(--c-pink)"><svg viewBox="0 0 24 24"><text x="12" y="18.5" text-anchor="middle" font-size="17" font-weight="800" font-family="sans-serif">?</text></svg></i>' +
       '</span>' +
-      '<span class="rp-teaser-t"><b>New games coming soon</b><small>More to play, on the way</small></span>' +
+      '<span class="rp-teaser-t"><b>New games coming soon</b><small>More on the way</small></span>' +
       '<em class="rp-soon">Soon</em></div>';
   }
 
@@ -1104,10 +1104,28 @@
     });
   }
 
-  // The invitation on Home. Unlocked, only when this year has something in
-  // it — for a brand new account it would be a door to an empty room. Locked,
-  // always: that card is the reason to come back tomorrow.
+  /* The invitation on Home: one bar, the same shape as the teaser under it.
+     It used to be a full hero card (record, collage, stats, an import list
+     and a demo button), which pushed Today below the fold on a phone. Today
+     is the loop, so it leads; Replay is a door to its own page, and a door
+     only needs to say where it goes and how close it is to opening.
+
+     Locked, the bar shows the streak as pips and opens the Replay page, which
+     still carries the import and the demo. Unlocked, it plays your year. For a
+     brand new account with nothing this year it is the teaser alone — a door
+     to an empty room is not an invitation. */
   var _gateWas = null, _fresh = false;
+  var REC = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><circle cx="12" cy="12" r="6.6" fill="none" stroke="#000" stroke-opacity=".28" stroke-width=".7"/><circle cx="12" cy="12" r="3.2" fill="#0b0810"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>';
+  var LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="5" y="10.5" width="14" height="10" rx="2.6" fill="currentColor"/></svg>';
+  function barHtml(o) {
+    return '<button class="rp-door' + (o.locked ? ' locked' : '') + (o.fresh ? ' rp-unlocked' : '') + '" ' + o.attr + ' aria-label="' + esc(o.label) + '">' +
+      '<span class="rp-teaser-sheen" aria-hidden="true"></span>' +
+      '<span class="rp-door-ico" aria-hidden="true">' + (o.cover ? '<img src="' + esc(thumbOf(o.cover, 120)) + '" alt="" decoding="async" onerror="this.remove()">' : '') +
+        '<i>' + (o.locked ? LOCK : REC) + '</i></span>' +
+      '<span class="rp-teaser-t"><b>' + o.title + '</b><small>' + o.sub + '</small></span>' +
+      (o.pips || '') +
+      '<em class="rp-door-go">' + o.go + '</em></button>';
+  }
   function renderHomeCard() {
     var h = $('rp-home-card'); if (!h) return;
     var g = gate();
@@ -1115,31 +1133,44 @@
       h._wired = true;
       h.addEventListener('click', function (e) {
         var a = e.target.closest('[data-rp-act]'); if (a) { e.preventDefault(); act(a.dataset.rpAct); return; }
-        var o = e.target.closest('[data-rp-open]'); if (o) open(null, o.dataset.rpOpen);
+        var o = e.target.closest('[data-rp-open]'); if (o) { open(null, o.dataset.rpOpen); return; }
+        if (e.target.closest('[data-rp-page]') && window.goToView) goToView('replay');
       });
-      h.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-rp-open]')) { e.preventDefault(); open(null, e.target.dataset.rpOpen); } });
     }
     if (!g.open) {
-      var lsig = 'L' + JSON.stringify(g.progress) + topCovers(1)[0];
+      var pr = g.progress, need = pr ? Math.max(1, Math.round(+pr.need || 5)) : 5;
+      var st = pr ? Math.max(0, Math.min(need, Math.floor(+pr.streak || 0))) : 0, pips = '';
+      for (var i = 0; i < need; i++) pips += '<i class="' + (i < st ? 'on' : '') + '"></i>';
+      var lsig = 'L' + st + '/' + need;
       if (h._sig === lsig) return; h._sig = lsig;
-      h.innerHTML = '<div class="rp-home-card rp-home">' + lockedHtml(g, true) + teaserHtml() + '</div>';
-      paintPals(h); return;
+      var left = need - st;
+      h.innerHTML = '<div class="rp-home-card rp-home">' + barHtml({
+        locked: true, attr: 'data-rp-page', label: 'VINALL Replay, locked. ' + st + ' of ' + need + ' days. Open Replay',
+        title: 'VINALL Replay',
+        sub: pr ? (left > 0 ? (left === 1 ? 'One more day to unlock' : left + ' more days to unlock') : 'Unlocking…') : 'Unlocks on a 5 day login streak',
+        pips: pr ? '<span class="rp-door-pips" aria-hidden="true">' + pips + '</span>' : '',
+        go: 'View'
+      }) + teaserHtml() + '</div>';
+      return;
     }
     var input = crateInput(), yr = R.period('year'), c = R.crateStats(input, yr);
-    if (c.albums + c.songs < 3) { h.innerHTML = ''; h._sig = ''; return; }
-    var covers = c.covers.slice(0, 6), fresh = _fresh;
-    var sig = yr.key + c.albums + '/' + c.songs + (covers[0] || '') + (fresh ? '!' : '');
+    if (c.albums + c.songs < 3) {
+      if (h._sig === 'T') return; h._sig = 'T';
+      h.innerHTML = '<div class="rp-home-card rp-home">' + teaserHtml() + '</div>'; return;
+    }
+    var fresh = _fresh, cover = c.covers[0] || '';
+    var sig = yr.key + c.albums + '/' + c.songs + cover + (fresh ? '!' : '');
     if (h._sig === sig) return; h._sig = sig;
     _fresh = false;
-    h.innerHTML = '<div class="rp-home-card rp-home"><div class="rp-hero rp-hc' + (fresh ? ' rp-unlocked' : '') + '" role="button" tabindex="0" aria-label="Play your ' + yr.label + ' Replay" data-rp-open="' + yr.key + '"' + (covers[0] ? ' data-rp-pal="' + esc(covers[0]) + '"' : '') + '>' +
-      '<div class="rp-hero-record" aria-hidden="true"></div>' + collage(covers, 160) +
-      '<span class="rp-kicker">' + (fresh ? 'Unlocked · ' : '') + 'VINALL Replay · so far</span><h2 class="rp-hero-word">' + yr.label + '</h2>' +
-      '<div class="rp-hero-stats">' + heroStat(c.albums, c.albums === 1 ? 'album' : 'albums') + heroStat(c.songs, c.songs === 1 ? 'song' : 'songs') +
-        (c.discoveryCount ? heroStat(c.discoveryCount, c.discoveryCount === 1 ? 'new artist' : 'new artists') : '') + '</div>' +
-      '<span class="rp-play rp-play-sm" aria-hidden="true"><i>▶</i>Play your year</span></div>' + teaserHtml() + '</div>';
-    paintPals(h);
-    countUps(h);
-    if (fresh && window.burst) { var hero = h.querySelector('.rp-hero'); setTimeout(function () { if (hero.isConnected) burst(hero, { count: 34, spread: 200 }); }, 300); }
+    var bits = [pl(c.albums, 'album'), pl(c.songs, 'song')];
+    if (c.discoveryCount) bits.push(pl(c.discoveryCount, 'new artist'));
+    h.innerHTML = '<div class="rp-home-card rp-home">' + barHtml({
+      fresh: fresh, cover: cover, attr: 'data-rp-open="' + yr.key + '"', label: 'Play your ' + yr.label + ' Replay',
+      title: (fresh ? 'Unlocked · ' : '') + 'Your ' + esc(yr.label) + ' Replay',
+      sub: esc(bits.join(' · ')) + ' so far',
+      go: '<i aria-hidden="true">▶</i>Play'
+    }) + teaserHtml() + '</div>';
+    if (fresh && window.burst) { var bar = h.querySelector('.rp-door'); setTimeout(function () { if (bar.isConnected) burst(bar, { count: 24, spread: 140 }); }, 300); }
   }
   // The gate changed (a login extended the streak, or the backend arrived):
   // repaint both entries. Crossing from locked to open is the unlock moment.

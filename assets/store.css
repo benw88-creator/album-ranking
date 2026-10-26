@@ -234,6 +234,22 @@ button.rw-chip:hover { border-color: rgba(255,255,255,.22); background: rgba(255
 }
 #view-collection .col-rec > :last-child:is(.btn-mini, .btn-primary) { margin-bottom: 14px; }
 #view-collection .col-rec .col-err { margin: 8px 14px 14px; }
+/* A card with no button ends on its words, so the words carry the bottom
+   padding — "cannot be priced" sat on the card's edge and was clipped. The
+   state lines are body type, not the price's mono figure. */
+#view-collection .col-rec > .col-meta:last-child { padding-bottom: 14px; }
+#view-collection .col-price.col-unpriced, #view-collection .col-price.col-paid {
+  font: 500 12px/1.35 var(--font-body); color: var(--text-faint); letter-spacing: 0;
+}
+#view-collection .col-price.col-paid { color: var(--text-dim); }
+#view-collection .col-price.col-paid span { color: var(--text-faint); font-weight: 400; }
+.col-retry {
+  margin-left: 4px; padding: 2px 8px; min-height: 0; border-radius: 999px;
+  border: 1px solid var(--border-strong); background: transparent; color: var(--text);
+  font: 600 11px/1.4 var(--font-body); cursor: pointer;
+}
+.col-err.col-err-bar { margin: 0 0 14px; border: 1px solid color-mix(in srgb, var(--red) 40%, transparent); border-radius: 12px; padding: 10px 12px; }
+.col-err.col-err-bar a { color: var(--text); }
 .rc-market-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 0 0 14px; font-size: 13px; }
 .rc-market-head a { color: var(--text-dim); }
 

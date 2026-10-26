@@ -17,7 +17,7 @@
 //   checked server-side in collection_claim_pick_from; this route only decides
 //   which function to call, never whether the caller has a pick.
 
-import { spotifyToken, valueAlbum } from './_streams.js';
+import { valueAlbum } from './_streams.js';
 import { cors } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
@@ -61,6 +61,58 @@ function svcHeaders(key, extra) {
   }, extra || {});
 }
 
+/* ONE price for a record, shared by the card and the till.
+
+   /api/collection-prices (what the card prints) and this route (what is
+   charged) used to price separately: the card from a fresh cache row or a
+   valuation, the till from a fresh row or ANOTHER valuation, and a failure in
+   either was reported as "cannot be priced". Now both call this:
+
+     1. a cached kworb valuation under 14 days old;
+     2. otherwise value the record now and cache it;
+     3. if that valuation could not RUN (MusicBrainz, Wikidata, Deezer or
+        kworb failed to answer), the last valuation we ever made, however old
+        — the record was priceable then and a stream total only goes up, so
+        it is a conservative price, never an inflated one;
+     4. otherwise no price, with `transient` saying whether that is "not just
+        now" or a real "too few tracks matched".
+
+   Nothing is charged without a price: the buy route refuses on (4). */
+export async function priceAlbum(albumId, SERVICE, opts) {
+  opts = opts || {};
+  let cached = null;
+  try {
+    const c = await fetch(SUPABASE_URL
+      + '/rest/v1/album_plays?select=plays,fetched_at,source&album_id=eq.' + encodeURIComponent(albumId),
+      { headers: svcHeaders(SERVICE) });
+    const rows = await c.json();
+    const row = Array.isArray(rows) && rows[0];
+    if (row && row.plays > 0 && row.source === 'kworb') cached = row;
+  } catch (e) { /* a cold cache is slow, not broken */ }
+  if (cached && new Date(cached.fetched_at).getTime() > Date.now() - STALE_DAYS * 86400000) {
+    return { price: priceFromStreams(cached.plays), streams: cached.plays, reason: null };
+  }
+  const v = await valueAlbum(albumId, 'unused', opts.cache || {}, opts.hint);
+  if (v.ok && v.total > 0) {
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/album_plays', {
+        method: 'POST',
+        headers: svcHeaders(SERVICE, { Prefer: 'resolution=merge-duplicates,return=minimal' }),
+        body: JSON.stringify([{
+          album_id: albumId, name: v.album || (opts.hint && opts.hint.name) || null,
+          artist: v.artist || (opts.hint && opts.hint.artist) || null,
+          plays: v.total, source: 'kworb', fetched_at: new Date().toISOString(),
+        }]),
+      });
+    } catch (e) { /* the price is still right for this request */ }
+    return { price: priceFromStreams(v.total), streams: v.total, reason: null };
+  }
+  if (v.transient && cached) {
+    return { price: priceFromStreams(cached.plays), streams: cached.plays, reason: null, stale: true };
+  }
+  return { price: null, streams: null, reason: v.reason || 'unpriceable', transient: !!v.transient };
+}
+
 export default async function handler(req, res) {
   // Answers the preflight and stops. Must be first: the method checks below
   // would 405 an OPTIONS, and three of these routes have one.
@@ -90,47 +142,27 @@ export default async function handler(req, res) {
   if (!albumId) { res.status(400).json({ error: 'No album given' }); return; }
 
   try {
-    // The cache first. A record already valued for a Bid War costs nothing to
-    // price again, which is most of them.
-    let streams = null;
-    try {
-      const c = await fetch(SUPABASE_URL
-        + '/rest/v1/album_plays?select=plays,fetched_at,source&album_id=eq.' + encodeURIComponent(albumId),
-        { headers: svcHeaders(SERVICE) });
-      const rows = await c.json();
-      const row = Array.isArray(rows) && rows[0];
-      if (row && row.plays && row.source === 'kworb'
-          && new Date(row.fetched_at).getTime() > Date.now() - STALE_DAYS * 86400000) {
-        streams = row.plays;
+    const pr = await priceAlbum(albumId, SERVICE, { hint: { name: body.name, artist: body.artist } });
+    if (!pr.price) {
+      // Nothing is charged without a price, and a failure to reach a service
+      // is said as one: "cannot be priced" is reserved for a real answer.
+      if (pr.transient) {
+        res.status(503).json({ error: 'Pricing is unavailable just now — nothing was charged. Try again in a moment.', reason: pr.reason });
+      } else {
+        res.status(400).json({ error: 'That record cannot be priced — not enough of its tracks matched.', reason: pr.reason });
       }
-    } catch (e) { /* a cold cache is slow, not broken */ }
-
-    if (!streams) {
-      const token = await spotifyToken();
-      if (!token) { res.status(502).json({ error: 'Could not reach Spotify' }); return; }
-      const v = await valueAlbum(albumId, token, {});
-      if (!v.ok) {
-        res.status(400).json({
-          error: 'That record cannot be priced — not enough of its tracks matched.',
-          reason: v.reason,
-        });
-        return;
-      }
-      streams = v.total;
-      try {
-        await fetch(SUPABASE_URL + '/rest/v1/album_plays', {
-          method: 'POST',
-          headers: svcHeaders(SERVICE, { Prefer: 'resolution=merge-duplicates,return=minimal' }),
-          body: JSON.stringify([{
-            album_id: albumId, name: body.name || null, artist: body.artist || null,
-            plays: streams, source: 'kworb', fetched_at: new Date().toISOString(),
-          }]),
-        });
-      } catch (e) {}
+      return;
     }
-
-    const price = priceFromStreams(streams);
-    if (!price) { res.status(400).json({ error: 'That record has no stream count to price.' }); return; }
+    const price = pr.price, streams = pr.streams;
+    /* The card's number is the most the buyer agreed to. A record revalued
+       between showing and buying (its cache aged out and kworb now counts
+       more) is refused, with the new figure, rather than charged a price
+       nobody saw. Cheaper than shown is fine — that is never a surprise. */
+    const expect = Number(body.expect);
+    if (!body.pick && Number.isFinite(expect) && expect > 0 && price > expect) {
+      res.status(409).json({ error: 'The price changed to ' + price.toLocaleString('en-GB') + ' Discs — nothing was charged.', price: price });
+      return;
+    }
 
     const fn = body.pick ? 'collection_claim_pick_from' : 'collection_buy_from';
     const buy = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + fn, {

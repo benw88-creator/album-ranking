@@ -6789,3 +6789,44 @@ self-time on load is well under a second at 4×). That is a CSS job.
   and therefore never actually syncs. The switch is a View Transition over the
   on-screen cards (max 36) plus the nav and player bar, named so they stay on
   top; the root does not crossfade.
+
+## Collection pricing, the album sheet, the Home Replay bar (2026-10-26)
+
+- **"Cannot be priced" had two real causes, both server-side.** (1) `normTitle` only
+  stripped a remaster tag straight after the dash, and kworb lists Prince as
+  "When Doves Cry - 2015 Paisley Park Remaster": Purple Rain matched 1 of 9. It now
+  strips a version tail after a spaced dash, and `artistStreamTable` keeps a `base`
+  map (title before " - ") as a fallback (Rumours went 64% → 11/11). (2) Artists
+  missing from Wikidata (Malcolm Todd) rely on MusicBrainz, which rate-limits shared
+  Vercel egress; a 503 was cached as "no Spotify id" and shown as a permanent
+  "cannot be priced". `getJsonT` throws `Transient` on 429/5xx/timeouts, failures are
+  never cached, and `valueAlbum` returns `transient: true` → the card says "price
+  unavailable just now" with a Retry, and retries once by itself after 12s.
+- **`priceAlbum()` in `collection-buy.js` is the one price** for the card
+  (`/api/collection-prices` POST) and the till: fresh cache → valuation → on an
+  outage, the last valuation ever made (stream totals only rise) → else no price.
+  The buy route refuses without a price (503 transient / 400 real) and with **409
+  if the price is above `expect`** (the card's number) — nothing is charged.
+  POST takes `albums: [{id, name, artist}]` so a legacy id nobody posted can be
+  found by name. `node scripts/collection.selfcheck.mjs` (in `npm run check`).
+- **Client:** collection caches are per account (`own()`); a failed shelf read is
+  `_mineOk = false` and pauses buying (it used to read as "owns nothing" and show Buy
+  on owned records); the Market re-reads the shelf when it is >30s old; owned cards
+  on the Market show what you paid; `vinall:wallet` (dispatched by `Wallet.load` and
+  `applyWallet`) re-syncs Buy buttons.
+- **The wallet now loads itself.** A restored session can run `onAuthed` while the
+  page is still parsing, before the Wallet script exists, and the boot load was
+  skipped — balance 0, every Buy "Not enough Discs". The Wallet module loads on
+  definition if signed in, and again on `Cloud.ready`.
+- **Album sheet** (`#albumpage-modal`, `assets/albumpage.css`): square sleeve on a
+  blurred bed, close button on its own layer (it used to paint under the banner),
+  average + your score + spread, no nested scrollers, sticky composer at 16px.
+  Ratings are read by id AND exact name+artist (trap 4).
+- **Home:** the Replay hero card is a one-line `.rp-door` bar beside the teaser
+  (`.rp-bar` was already the story's progress bar — prefix new classes). Locked it
+  opens the Replay page; unlocked it plays the year.
+- Default theme `classic` displays as **Vinall** (client name only; the
+  `shop_items` row still says Crate and is not shown anywhere).
+- `scripts/tests/collection.spec.mjs` covers the Market, the paused shelf, Home and
+  the album sheet. On this Mac run Chromium with
+  `CHROME_PATH=$PWD/.browsers/chromium_headless_shell-1248/chrome-headless-shell-mac-arm64/chrome-headless-shell`.

@@ -190,7 +190,54 @@ body[data-section="replay"] { --section: var(--c-pink); --section-dim: var(--c-p
   padding: 7px 10px; border-radius: 999px; color: #0b0810;
   background: linear-gradient(90deg, var(--c-cyan), var(--c-violet) 55%, var(--c-pink));
 }
-.rp-home-card .rp-teaser { margin-top: 10px; }
+/* Home: the Replay bar sits on the teaser's exact shape, so the two read as a
+   pair of strips rather than a hero and a footnote. The pair is tight (8px)
+   and the block gives Today back the room the old hero card took. */
+.rp-home-card { margin-bottom: var(--s4, 16px); }
+.rp-home-card .rp-teaser { margin: 8px 0 0; }
+/* On Home both strips are one line each, so the pair costs ~130px rather than
+   the old hero's ~400 and Today opens inside the first screen. */
+.rp-home-card .rp-teaser { padding: 10px 12px 10px 10px; gap: 12px; }
+.rp-home-card .rp-teaser-tiles i { width: 32px; height: 32px; border-radius: 10px; margin-right: -9px; }
+.rp-home-card .rp-teaser-tiles svg { width: 18px; height: 18px; }
+.rp-home-card .rp-teaser-t, .rp-door .rp-teaser-t { margin-left: 2px; }
+.rp-home-card .rp-teaser-t b, .rp-home-card .rp-teaser-t small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-home-card .rp-teaser-t b { font-size: 14.5px; }
+.rp-home-card .rp-soon { padding: 7px 9px; }
+.rp-door .rp-door-ico { width: 38px; height: 38px; }
+.rp-door {
+  position: relative; overflow: hidden; overflow: clip; isolation: isolate; width: 100%;
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 10px; margin: 0;
+  border-radius: 18px; border: 1px solid rgba(255,255,255,.09);
+  background: linear-gradient(100deg, color-mix(in srgb, var(--gold) 18%, #0d0b11), #0d0b11 58%, color-mix(in srgb, var(--c-pink) 12%, #0d0b11));
+  color: #fff; font: inherit; text-align: left; cursor: pointer;
+  transition: transform .18s var(--ease, ease), border-color .18s var(--ease, ease);
+}
+.rp-door:active { transform: scale(.985); }
+@media (hover: hover) { .rp-door:hover { border-color: color-mix(in srgb, var(--gold) 45%, transparent); } }
+.rp-door:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.rp-door .rp-teaser-t { margin-left: 2px; }
+.rp-door-ico { position: relative; flex: 0 0 auto; width: 42px; height: 42px; }
+.rp-door-ico img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 11px; box-shadow: 0 8px 20px -8px rgba(0,0,0,.8); }
+.rp-door-ico i {
+  position: absolute; inset: 0; display: grid; place-items: center; border-radius: 11px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 30%, #16131c), #0d0b11);
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent); color: var(--gold);
+}
+.rp-door-ico img + i { inset: auto -5px -5px auto; width: 22px; height: 22px; border-radius: 50%; background: #0d0b11; }
+.rp-door-ico svg { width: 22px; height: 22px; }
+.rp-door-ico img + i svg { width: 14px; height: 14px; }
+.rp-door-pips { display: flex; gap: 4px; flex: 0 0 auto; }
+.rp-door-pips i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.16); }
+.rp-door-pips i.on { background: var(--gold); box-shadow: 0 0 8px color-mix(in srgb, var(--gold) 70%, transparent); }
+.rp-door-go {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; font: 700 10px/1 var(--font-mono); font-style: normal;
+  letter-spacing: .16em; text-transform: uppercase; padding: 8px 11px; border-radius: 999px;
+  color: #0b0810; background: var(--gold);
+}
+.rp-door.locked .rp-door-go { color: #fff; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14); }
+.rp-door-go i { font-style: normal; font-size: 9px; letter-spacing: 0; }
+@media (max-width: 380px) { .rp-door-pips { display: none; } }
 
 /* ---- locked ---- */
 .rp-locked { min-height: 0; align-content: start; padding-top: clamp(26px, 4vw, 44px); }
@@ -223,7 +270,6 @@ body[data-section="replay"] { --section: var(--c-pink); --section-dim: var(--c-p
 .rp-locked.compact .rp-lock-needs li:nth-child(2) { padding-top: 8px; padding-bottom: 8px; }
 
 /* Home card that invites people in, above Today. */
-.rp-home-card { margin-bottom: var(--s5, 24px); }
 .rp-home-card .rp-hero { min-height: 230px; margin: 0; border-radius: 24px; cursor: pointer; }
 .rp-home-card .rp-hero.rp-locked { cursor: default; min-height: 0; }
 .rp-home-card .rp-hero-word { font-size: clamp(54px, 12vw, 92px); }

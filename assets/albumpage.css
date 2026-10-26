@@ -1,0 +1,184 @@
+/* Album sheet (#albumpage-modal) — the community view of one record, opened
+   from the Crate feed.
+
+   The sleeve leads, square and uncropped, on a blurred bed of its own colours
+   that dissolves into the sheet. It used to be a 16:7 banner, which cut every
+   square sleeve to a strip of its middle and darkened what was left; and the
+   banner was painted over the close button, which is the clipped box at the
+   top right of the old screen.
+
+   Loaded after the main stylesheet so these win at equal specificity (trap 1).
+   No ratings list or comment list scrolls inside the sheet any more: two
+   nested scrollers inside a scrolling sheet is what made the old one feel
+   cramped and cut rows off mid-line. */
+
+.album-page-modal .modal-panel {
+  max-width: 520px; padding: 0 0 calc(var(--s5, 24px) + env(safe-area-inset-bottom, 0px));
+  overflow-x: hidden;
+}
+.album-page-modal .modal-panel > :not(.ap-hero):not(.ap-close) { margin-left: 20px; margin-right: 20px; }
+/* The sheet's grab handle has to sit over the bed, not under it. */
+.album-page-modal .modal-panel::before { z-index: 4; background: rgba(255, 255, 255, .32); }
+
+.album-page-modal .ap-close {
+  position: absolute; top: 14px; right: 14px; z-index: 5;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(10, 9, 8, .42); border: 1px solid rgba(255, 255, 255, .16); color: #fff;
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  font-size: 22px; line-height: 1;
+}
+.album-page-modal .ap-close:hover { background: rgba(10, 9, 8, .62); color: #fff; }
+
+/* ---- hero ---- */
+.ap-hero {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: grid; justify-items: center; gap: 18px;
+  padding: 44px 24px 22px; text-align: center;
+}
+.ap-bed { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.ap-bed img {
+  width: 100%; height: 100%; object-fit: cover;
+  /* scale, not width: a blur samples past its own edges, and a 1:1 bed
+     shows a pale rim all the way round. */
+  transform: scale(1.5); filter: blur(34px) saturate(1.35); opacity: .55;
+}
+.ap-bed::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 20%, transparent) 0%, var(--surface) 96%);
+}
+.ap-sleeve {
+  width: min(64%, 264px); aspect-ratio: 1; border-radius: 10px; overflow: hidden;
+  background: var(--surface-3);
+  box-shadow: 0 28px 60px -22px rgba(0, 0, 0, .9), 0 0 0 1px rgba(255, 255, 255, .08);
+}
+.ap-sleeve img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ap-hero-content { display: grid; gap: 4px; max-width: 100%; }
+.ap-hero-name {
+  font-family: var(--font-display); font-size: clamp(22px, 6vw, 28px); font-weight: 800;
+  letter-spacing: -0.02em; line-height: 1.1; margin: 0;
+  overflow-wrap: anywhere;
+}
+.ap-hero-artist { font-size: 15px; color: var(--text-dim); }
+
+/* ---- the numbers ---- */
+.ap-avg {
+  display: grid; grid-template-columns: auto auto 1fr; align-items: end; gap: 6px 22px;
+  margin-top: 4px; padding: 16px 18px 14px;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 18px;
+}
+.ap-stat { display: grid; gap: 4px; min-width: 0; }
+.ap-stat[hidden] { display: none; }
+.ap-avg-score, .ap-you-score {
+  font-family: var(--font-display); font-weight: 800; letter-spacing: -0.04em; line-height: .9;
+  color: var(--score, var(--text)); font-variant-numeric: tabular-nums;
+}
+.ap-avg-score { font-size: 46px; }
+.ap-you-score { font-size: 30px; }
+.ap-stat-you { padding-left: 18px; border-left: 1px solid var(--border); }
+.ap-avg-label { font: 600 10px/1.2 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--text-faint); }
+.ap-avg-count { justify-self: end; align-self: end; font-size: 13px; color: var(--text-dim); white-space: nowrap; }
+
+.ap-spread { grid-column: 1 / -1; position: relative; height: 16px; margin-top: 12px; }
+.ap-spread[hidden] { display: none; }
+.ap-spread-track {
+  position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; border-radius: 1px;
+  background: linear-gradient(90deg, #e05a4f, #e7a645 50%, #6fcf6a);
+  opacity: .28;
+}
+.ap-spread b {
+  position: absolute; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%;
+  background: var(--score); box-shadow: 0 0 0 2px var(--surface-2);
+}
+.ap-spread b.me {
+  width: 15px; height: 15px; margin: -7.5px 0 0 -7.5px; z-index: 1;
+  background: transparent; border: 2px solid var(--score); box-shadow: 0 0 0 2px var(--surface-2), 0 0 10px color-mix(in srgb, var(--score) 60%, transparent);
+}
+
+.ap-rate.btn-primary {
+  display: flex; align-items: center; justify-content: center; align-self: stretch;
+  width: calc(100% - 40px); min-height: 50px; margin-top: 14px; margin-bottom: 26px; border-radius: 14px;
+  font-size: 15px; font-weight: 700;
+}
+
+/* ---- ratings ---- */
+.ap-section-title, .ap-comment-title {
+  font: 600 10.5px/1 var(--font-mono); letter-spacing: .16em; text-transform: uppercase;
+  color: var(--text-faint); margin-bottom: 6px;
+}
+.ap-ratings-list { display: flex; flex-direction: column; margin-bottom: 26px; }
+.ap-rating-row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.ap-rating-row:last-child { border-bottom: 0; }
+.ap-rating-av { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
+.ap-rating-who { flex: 1; min-width: 0; }
+.ap-rating-name { font-weight: 650; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ap-rating-name span {
+  margin-left: 6px; padding: 2px 6px; border-radius: 999px; vertical-align: 1px;
+  font: 600 9.5px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text-dim); background: var(--surface-3);
+}
+.ap-rating-note { font-size: 13px; color: var(--text-dim); margin-top: 3px; line-height: 1.4; overflow-wrap: anywhere; }
+.ap-rating-score {
+  flex-shrink: 0; font-family: var(--font-display); font-weight: 800; font-size: 22px;
+  letter-spacing: -0.03em; color: var(--score, var(--text)); font-variant-numeric: tabular-nums;
+}
+.ap-rating-score span { font-size: 11px; font-weight: 500; letter-spacing: 0; color: var(--text-faint); margin-left: 1px; }
+.ap-empty { font-size: 13.5px; color: var(--text-faint); padding: 10px 0 4px; }
+
+/* ---- comments ---- */
+.ap-comment-section { margin-top: 0; }
+.ap-comment-title { margin-bottom: 12px; }
+.ap-comment-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+.ap-comment-row { display: flex; gap: 10px; align-items: flex-start; }
+.ap-comment-av { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
+.ap-comment-bubble {
+  flex: 1; min-width: 0; padding: 9px 12px;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px 14px 14px 4px;
+}
+.ap-comment-name { font-size: 12px; font-weight: 700; color: var(--text-dim); margin-bottom: 3px; }
+.ap-comment-body { font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.ap-comment-time { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+.ap-comment-act {
+  background: none; border: 0; padding: 4px 2px; margin: -4px 0; min-height: 0;
+  font: inherit; color: var(--text-dim); text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
+/* The composer stays reachable at the bottom of the sheet while you read. */
+.ap-comment-input-row {
+  position: sticky; bottom: calc(-1 * (var(--s5, 24px) + env(safe-area-inset-bottom, 0px)));
+  z-index: 2; display: flex; gap: 10px; align-items: center;
+  margin: 0 -20px; padding: 12px 20px calc(12px + var(--s5, 24px) + env(safe-area-inset-bottom, 0px));
+  margin-bottom: calc(-1 * (var(--s5, 24px) + env(safe-area-inset-bottom, 0px)));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 0%, transparent), var(--surface) 14px);
+}
+.ap-comment-input-row .ap-comment-av { width: 32px; height: 32px; }
+.ap-comment-input {
+  flex: 1; min-width: 0; height: 44px;
+  background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 22px;
+  color: var(--text); font-family: var(--font-body);
+  /* 16px exactly: anything smaller and iOS zooms the page on focus. */
+  font-size: 16px; padding: 0 16px;
+}
+.ap-comment-input::placeholder { color: var(--text-faint); }
+.ap-comment-input:focus { outline: none; border-color: var(--gold); }
+.ap-comment-send {
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; padding: 0;
+  display: grid; place-items: center; cursor: pointer;
+  background: var(--gold); border: 0; color: var(--accent-ink, #0a0908);
+  transition: transform .15s var(--ease, ease), opacity .15s;
+}
+.ap-comment-send:active { transform: scale(.92); }
+.ap-comment-send:disabled { opacity: .5; }
+#ap-comment-login-prompt { padding-bottom: 4px; }
+
+@media (min-width: 700px) {
+  .album-page-modal .modal-panel { padding-bottom: 24px; }
+  .ap-hero { padding-top: 40px; }
+  .ap-comment-input-row { bottom: -24px; margin-bottom: -24px; padding-bottom: 36px; }
+}
+@media (max-width: 360px) {
+  .ap-avg { gap: 6px 14px; padding: 14px; }
+  .ap-avg-score { font-size: 40px; }
+  .ap-stat-you { padding-left: 14px; }
+}

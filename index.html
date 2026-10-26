@@ -4355,77 +4355,7 @@ html[data-motion="none"] .badge-baddie::after { animation: none; }
 @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
 .cf-load-art { width: 100%; height: 100%; }
 
-/* ---- ALBUM PAGE MODAL ---- */
-.album-page-modal .modal-panel { max-width: 540px; }
-.ap-hero {
-  position: relative; border-radius: 16px; overflow: hidden;
-  margin-bottom: 20px; aspect-ratio: 16/7;
-}
-.ap-hero img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.65) saturate(1.2); }
-.ap-hero-fade { position: absolute; inset: 0; background: linear-gradient(to top, rgba(10,9,8,0.95) 0%, transparent 55%); }
-.ap-hero-content { position: absolute; bottom: 16px; left: 18px; right: 18px; }
-.ap-hero-name { font-family: var(--font-display); font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
-.ap-hero-artist { font-size: 14px; color: var(--text-dim); margin-top: 4px; }
-.ap-avg {
-  display: flex; align-items: center; gap: 14px; margin: 0 0 16px;
-  padding: 14px 16px;
-  background: var(--surface-2); border-radius: 14px;
-  border: 1px solid var(--border);
-}
-.ap-avg-score {
-  font-family: var(--font-display); font-size: 48px; font-weight: 800;
-  letter-spacing: -0.04em; color: var(--score, var(--text));
-  line-height: 1;
-}
-.ap-avg-label { font-size: 13px; color: var(--text-dim); }
-.ap-avg-count { font-size: 13px; color: var(--text-faint); margin-left: auto; }
-/* VINALL community comments on the album (not on ratings) */
-.ap-comment-section { margin-top: 16px; }
-.ap-comment-title {
-  font-family: var(--font-display); font-size: 12px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint);
-  margin-bottom: 12px;
-}
-.ap-ratings-list { display: flex; flex-direction: column; gap: 10px; max-height: 32vh; overflow-y: auto; margin-bottom: 16px; }
-.ap-rating-row {
-  display: flex; align-items: flex-start; gap: 12px;
-  padding: 12px;
-  background: var(--surface-2); border-radius: 12px;
-}
-.ap-rating-av { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
-.ap-rating-score {
-  margin-left: auto; flex-shrink: 0;
-  font-family: var(--font-display); font-weight: 800; font-size: 20px;
-  letter-spacing: -0.02em; color: var(--score, var(--text));
-}
-.ap-rating-note { font-size: 13px; color: var(--text-dim); margin-top: 4px; font-style: italic; line-height: 1.4; }
-/* Community comment box */
-.ap-comment-list { display: flex; flex-direction: column; gap: 10px; max-height: 24vh; overflow-y: auto; margin-bottom: 12px; }
-.ap-comment-row { display: flex; gap: 10px; }
-.ap-comment-av { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
-.ap-comment-bubble {
-  background: var(--surface-2); border-radius: 12px 12px 12px 3px;
-  padding: 8px 12px; flex: 1; min-width: 0;
-}
-.ap-comment-name { font-size: 12px; font-weight: 700; color: var(--text-dim); margin-bottom: 3px; }
-.ap-comment-body { font-size: 14px; line-height: 1.45; }
-.ap-comment-time { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
-.ap-comment-input-row { display: flex; gap: 8px; align-items: center; }
-.ap-comment-input {
-  flex: 1; height: 40px;
-  background: var(--surface-2); border: 1.5px solid var(--border-strong);
-  border-radius: 20px; color: var(--text);
-  font-family: var(--font-body); font-size: 14px; padding: 0 16px;
-}
-.ap-comment-input:focus { outline: none; border-color: var(--gold); }
-.ap-comment-send {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: var(--gold); border: none; color: #0a0908;
-  font-size: 15px; display: flex; align-items: center; justify-content: center;
-  cursor: pointer; flex-shrink: 0;
-  transition: transform 0.15s, background 0.15s;
-}
-.ap-comment-send:hover { transform: scale(1.1); background: #ffd84a; }
+/* ---- ALBUM PAGE MODAL: assets/albumpage.css ---- */
 
 @keyframes pop { 0% { transform: scale(0) rotate(-25deg); opacity: 0; } 55% { transform: scale(1.18) rotate(6deg); opacity: 1; } 100% { transform: scale(1) rotate(0); } }
 @keyframes shakeX { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); } }
@@ -9571,10 +9501,10 @@ input, textarea, select, [contenteditable="true"],
 }
 </style>
 <link rel="stylesheet" href="/assets/interactions.css?v=5">
-<link rel="stylesheet" href="/assets/replay.css?v=4">
+<link rel="stylesheet" href="/assets/replay.css?v=7">
 <link rel="stylesheet" href="/assets/you.css?v=3">
 <link rel="stylesheet" href="/assets/games.css?v=5">
-<link rel="stylesheet" href="/assets/store.css?v=3">
+<link rel="stylesheet" href="/assets/store.css?v=4">
 <link rel="stylesheet" href="/assets/glow.css?v=7">
 <link rel="stylesheet" href="/assets/themes2.css?v=2">
 <link rel="stylesheet" href="/assets/play.css?v=2">
@@ -9593,6 +9523,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/liked.css?v=1">
 <link rel="stylesheet" href="/assets/crate.css?v=2">
 <link rel="stylesheet" href="/assets/polish.css?v=2">
+<link rel="stylesheet" href="/assets/albumpage.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -11694,31 +11625,41 @@ window.discAmt = function (n) {
 <!-- album page — all VINALL ratings for one album, community average, comments -->
 <div class="modal album-page-modal" id="albumpage-modal">
   <div class="modal-panel">
-    <button class="modal-close" id="albumpage-close" aria-label="Close">&times;</button>
+    <!-- The sleeve leads, on a bed of its own colours, and the close button
+         floats over it on its own layer. It used to be painted UNDER the
+         banner image (the banner came later in the markup and made its own
+         stacking context), so on a phone it was a clipped grey box. -->
+    <button class="modal-close ap-close" id="albumpage-close" aria-label="Close">&times;</button>
     <div class="ap-hero">
-      <img id="ap-hero-img" alt="">
-      <div class="ap-hero-fade"></div>
+      <div class="ap-bed" aria-hidden="true"><img id="ap-bed-img" alt=""></div>
+      <div class="ap-sleeve"><img id="ap-hero-img" alt=""></div>
       <div class="ap-hero-content">
-        <div class="ap-hero-name" id="ap-hero-name"></div>
+        <h2 class="ap-hero-name" id="ap-hero-name"></h2>
         <div class="ap-hero-artist" id="ap-hero-artist"></div>
       </div>
     </div>
     <div class="ap-avg" id="ap-avg">
-      <div>
+      <div class="ap-stat ap-stat-room">
         <div class="ap-avg-score" id="ap-avg-score" style="--score:var(--gold)">—</div>
         <div class="ap-avg-label">VINALL average</div>
       </div>
+      <div class="ap-stat ap-stat-you" id="ap-you" hidden>
+        <div class="ap-you-score" id="ap-you-score"></div>
+        <div class="ap-avg-label">You</div>
+      </div>
       <div class="ap-avg-count" id="ap-avg-count"></div>
+      <div class="ap-spread" id="ap-spread" aria-hidden="true"></div>
     </div>
-    <button class="btn-primary" id="ap-rate-btn" style="width:100%; margin-bottom:16px;">⭐ Rate this album</button>
+    <button class="btn-primary ap-rate" id="ap-rate-btn">Rate this album</button>
+    <div class="ap-section-title" id="ap-ratings-title">Ratings</div>
     <div id="ap-ratings-list" class="ap-ratings-list"></div>
     <div class="ap-comment-section">
       <div class="ap-comment-title">What people think</div>
       <div class="ap-comment-list" id="ap-comment-list"></div>
       <div class="ap-comment-input-row" id="ap-comment-input-row" style="display:none;">
         <img class="ap-comment-av" id="ap-my-avatar" alt="">
-        <input class="ap-comment-input" id="ap-comment-input" placeholder="Say something about this album…" maxlength="280">
-        <button class="ap-comment-send" id="ap-comment-send">&#9658;</button>
+        <input class="ap-comment-input" id="ap-comment-input" placeholder="Say something about this album…" maxlength="280" enterkeyhint="send">
+        <button class="ap-comment-send" id="ap-comment-send" aria-label="Post comment"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8h9M8.5 4.2 12.3 8l-3.8 3.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <div id="ap-comment-login-prompt" style="display:none;">
         <button class="btn-mini" id="ap-comment-login">Log in to comment</button>
@@ -17903,13 +17844,20 @@ const Cloud=(function(){
       return res.data||[];
     }catch(e){return[];}
   }
-  async function fetchAlbumPageRatings(albumId){
+  async function fetchAlbumPageRatings(albumId,name,artist){
     if(!sb)return[];
     try{
       /* Two reads, not an embed: ratings has no FK to profiles, so PostgREST
-         answered profiles(...) with a 400 and this list was always empty. */
-      const res=await sb.from('ratings').select('user_id,data,updated_at').eq('kind','album').eq('item_id',albumId).order('updated_at',{ascending:false});
-      const rows=res.data||[],ids=[...new Set(rows.map(function(r){return r.user_id;}))],who={};
+         answered profiles(...) with a 400 and this list was always empty.
+         By id AND by exact name + artist (ilike, wildcards escaped): a record
+         rated before the catalogue moved carries a Spotify id, and an id-only
+         read left those people off the page. One row per person. */
+      function lit(x){return String(x||'').replace(/[\\%_]/g,function(c){return '\\'+c;});}
+      const reads=[sb.from('ratings').select('user_id,item_id,data,updated_at').eq('kind','album').eq('item_id',albumId).order('updated_at',{ascending:false})];
+      if(name&&artist)reads.push(sb.from('ratings').select('user_id,item_id,data,updated_at').eq('kind','album').ilike('data->>name',lit(name)).ilike('data->>artist',lit(artist)).order('updated_at',{ascending:false}).limit(200));
+      const got=await Promise.all(reads),seen={},rows=[];
+      got.forEach(function(res){(res.data||[]).forEach(function(r){if(seen[r.user_id]||!r.data||typeof r.data.score!=='number')return;seen[r.user_id]=1;rows.push(r);});});
+      const ids=[...new Set(rows.map(function(r){return r.user_id;}))],who={};
       if(ids.length){const p=await sb.from('profiles').select('id,username,avatar_url').in('id',ids);(p.data||[]).forEach(function(x){who[x.id]=x;});}
       return rows.map(function(r){const p=who[r.user_id]||{};return Object.assign({},r.data,{user_id:r.user_id,username:p.username||'user',avatar_url:p.avatar_url||''});});
     }catch(e){return[];}
@@ -20651,14 +20599,55 @@ window.handleGrooveLink=handleGrooveLink;
     const syntheticFeedId='album:'+_currentAlbumId;
     const res=await Cloud.addComment(syntheticFeedId,body);
     commentSend.disabled=false;
+    // A refused comment keeps its words, rather than vanishing from the box.
+    if(!res||res.error){if(!commentInput.value)commentInput.value=body;if(window.toast)toast('Could not post that — try again');return;}
     if(res&&res.data){
       const list=document.getElementById('ap-comment-list');
+      const empty=list.querySelector('.ap-empty');if(empty)empty.remove();
       list.appendChild(renderCommentRow(res.data));
       list.scrollTop=list.scrollHeight;
     }
   }
   commentSend.addEventListener('click',sendAlbumComment);
   commentInput.addEventListener('keydown',function(e){if(e.key==='Enter')sendAlbumComment();});
+
+  /* Your own score for this record, by id or by folded name + artist — the
+     same fallback as myScoreFor, because a feed row and your crate can carry
+     the record under two ids. */
+  function myScoreOn(meta){
+    try{
+      const all=window.loadAlbums?loadAlbums():{};
+      const hit=all[meta.id];
+      if(hit&&typeof hit.score==='number')return hit.score;
+      const f=function(x){return String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\([^)]*\)|\[[^\]]*\]/g,'').replace(/[^a-z0-9]+/g,'');};
+      const want=f(meta.name)+'|'+f(meta.artist);
+      for(const k in all){const r=all[k];if(r&&typeof r.score==='number'&&f(r.name)+'|'+f(r.artist)===want)return r.score;}
+    }catch(e){}
+    return null;
+  }
+  function paintMine(meta){
+    const mine=myScoreOn(meta),you=document.getElementById('ap-you'),btn=document.getElementById('ap-rate-btn');
+    if(typeof mine==='number'){
+      you.hidden=false;
+      const ys=document.getElementById('ap-you-score');
+      ys.textContent=mine;ys.style.setProperty('--score',albumColor(mine));
+      btn.textContent='Open album';
+    }else{
+      you.hidden=true;
+      btn.textContent='Rate this album';
+    }
+    return mine;
+  }
+  /* The spread: one dot per score on a 0–100 line, yours ringed. Two is the
+     floor — a single dot is the post again, not a spread. */
+  function paintSpread(scores,mine){
+    const el=document.getElementById('ap-spread');
+    if(scores.length<2){el.innerHTML='';el.hidden=true;return;}
+    el.hidden=false;
+    el.innerHTML='<i class="ap-spread-track"></i>'+scores.map(function(v){
+      return '<b style="left:'+Math.max(0,Math.min(100,v))+'%;--score:'+albumColor(v)+'"></b>';
+    }).join('')+(typeof mine==='number'?'<b class="me" style="left:'+Math.max(0,Math.min(100,mine))+'%;--score:'+albumColor(mine)+'"></b>':'');
+  }
 
   window.openAlbumPage=async function(feedPost){
     _currentMeta={
@@ -20667,15 +20656,26 @@ window.handleGrooveLink=handleGrooveLink;
       art:feedPost.album_art||feedPost.art,
       artist:feedPost.album_artist||feedPost.artist
     };
-    _currentAlbumId=_currentMeta.id;
-    document.getElementById('ap-hero-img').src=_currentMeta.art||'';
-    document.getElementById('ap-hero-name').textContent=_currentMeta.name||'';
-    document.getElementById('ap-hero-artist').textContent=_currentMeta.artist||'';
-    document.getElementById('ap-avg-score').textContent='—';
+    const meta=_currentMeta;
+    _currentAlbumId=meta.id;
+    const art=meta.art||'';
+    const dpr=window.devicePixelRatio||1;
+    const sleeve=document.getElementById('ap-hero-img');
+    sleeve.src=window.thumb?thumb(art,dpr>2?750:500):art;
+    sleeve.alt=(meta.name||'')+' cover';
+    document.getElementById('ap-bed-img').src=window.thumb?thumb(art,120):art;
+    document.getElementById('ap-hero-name').textContent=meta.name||'';
+    document.getElementById('ap-hero-artist').textContent=meta.artist||'';
+    const avgEl=document.getElementById('ap-avg-score');
+    avgEl.textContent='—';avgEl.style.setProperty('--score','var(--text-faint)');
     document.getElementById('ap-avg-count').textContent='';
+    document.getElementById('ap-ratings-title').textContent='Ratings';
+    const mine=paintMine(meta);
+    paintSpread([],mine);
     document.getElementById('ap-ratings-list').innerHTML='<div class="reco-note ld-line">Loading…</div>';
     document.getElementById('ap-comment-list').innerHTML='';
     modal.classList.add('open');
+    const panel=modal.querySelector('.modal-panel');if(panel)panel.scrollTop=0;
 
     // show comment input based on auth state
     const me=window.Cloud&&Cloud.getUser&&Cloud.getUser();
@@ -20689,30 +20689,33 @@ window.handleGrooveLink=handleGrooveLink;
     // load ratings and album-level comments in parallel. loadBlocks rides
     // along because the comment filter below is a no-op until it has run, and
     // an album page is a perfectly normal first stop in a session.
-    const [ratings,comments]=await Promise.all([
-      window.Cloud?Cloud.fetchAlbumPageRatings(_currentMeta.id):[],
-      window.Cloud?Cloud.fetchComments('album:'+_currentMeta.id):[],
+    const [ratingsAll,comments]=await Promise.all([
+      window.Cloud?Cloud.fetchAlbumPageRatings(meta.id,meta.name,meta.artist):[],
+      window.Cloud?Cloud.fetchComments('album:'+meta.id):[],
       window.loadBlocks?loadBlocks():Promise.resolve()
     ]);
+    if(_currentMeta!==meta)return;   // another record was opened meanwhile
 
-    // render ratings
+    const ratings=ratingsAll.filter(function(r){return !(r.user_id&&window.isBlocked&&isBlocked(r.user_id));});
     if(!ratings.length){
-      document.getElementById('ap-ratings-list').innerHTML='<div class="reco-note">No ratings yet.</div>';
+      document.getElementById('ap-ratings-list').innerHTML='<div class="ap-empty">No ratings yet. Be the first.</div>';
     } else {
       const avg=Math.round(ratings.reduce(function(s,r){return s+(r.score||0);},0)/ratings.length);
-      const avgEl=document.getElementById('ap-avg-score');
       avgEl.textContent=avg;
       avgEl.style.setProperty('--score',albumColor(avg));
       document.getElementById('ap-avg-count').textContent=ratings.length+' rating'+(ratings.length===1?'':'s');
-      document.getElementById('ap-ratings-list').innerHTML=ratings.filter(function(r){return !(r.user_id&&window.isBlocked&&isBlocked(r.user_id));}).map(function(r){
+      document.getElementById('ap-ratings-title').textContent='Ratings · '+ratings.length;
+      const meId=me&&me.id;
+      paintSpread(ratings.filter(function(r){return r.user_id!==meId;}).map(function(r){return r.score||0;}),mine);
+      document.getElementById('ap-ratings-list').innerHTML=ratings.slice().sort(function(a,b){return (b.score||0)-(a.score||0);}).map(function(r){
         const col=albumColor(r.score||0);
-        return'<div class="ap-rating-row" style="--score:'+col+'">'+
+        return'<div class="ap-rating-row'+(r.user_id===meId?' me':'')+'" style="--score:'+col+'">'+
           '<img class="ap-rating-av" src="'+esc(r.avatar_url||DEFAULT_AV)+'" alt="" onerror="this.src=\''+DEFAULT_AV+'\'">'+
-          '<div style="flex:1;min-width:0;">'+
-            '<div style="font-weight:600;font-size:14px;">'+esc(r.username||'user')+'</div>'+
+          '<div class="ap-rating-who">'+
+            '<div class="ap-rating-name">'+esc(r.username||'user')+(r.user_id===meId?' <span>you</span>':'')+'</div>'+
             (r.note?'<div class="ap-rating-note">'+esc(r.note)+'</div>':'')+
           '</div>'+
-          '<div class="ap-rating-score">'+r.score+'<span style="font-size:11px;color:var(--text-faint);">/100</span></div>'+
+          '<div class="ap-rating-score">'+r.score+'<span>/100</span></div>'+
         '</div>';
       }).join('');
     }
@@ -20724,7 +20727,7 @@ window.handleGrooveLink=handleGrooveLink;
       return !(c.user_id && window.isBlocked && isBlocked(c.user_id));
     });
     if(!shownComments.length){
-      list.innerHTML='<div class="reco-note" style="font-size:13px;">No comments yet.</div>';
+      list.innerHTML='<div class="ap-empty">No comments yet.</div>';
     } else {
       list.innerHTML='';
       shownComments.forEach(function(c){list.appendChild(renderCommentRow(c));});
@@ -21776,7 +21779,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   'use strict';
 
   const THEMES = {
-    classic:  { name: 'Crate',    cost: 0,    desc: 'Black, gold, ember.' },
+    classic:  { name: 'Vinall',   cost: 0,    desc: 'Black, gold, ember.' },
     sundown:  { name: 'Sundown',  cost: 15000, desc: 'Plum dusk, hot orange, pink neon edge.' },
     cassette: { name: 'Cassette', cost: 15000, desc: 'Deep graphite, turquoise and tape-label coral.' },
     citrus:   { name: 'Citrus',   cost: 25000, desc: 'Espresso dark, lime and blood orange.' },
@@ -22538,6 +22541,8 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     applyTheme();
     updateShopButton();
     try { window.dispatchEvent(new Event('vinall:replay-gate')); } catch (e) {}
+    // Anything drawn against a balance (the Market's Buy buttons) redraws.
+    try { window.dispatchEvent(new Event('vinall:wallet')); } catch (e) {}
     return state;
   }
 
@@ -22585,6 +22590,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     }
     updateShopButton();
     if (typeof window.renderStats === 'function') window.renderStats();
+    try { window.dispatchEvent(new Event('vinall:wallet')); } catch (e) {}
   }
 
   async function rpc(name, args) {
@@ -22970,6 +22976,19 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     SWATCH: SWATCH, BANNER_SWATCH: BANNER_SWATCH,
     FLAIR_SWATCH: FLAIR_SWATCH, FRAME_SWATCH: FRAME_SWATCH,
   };
+
+  /* The wallet loads itself if the session got here first. onAuthed calls
+     Wallet.load() — but a session restored from storage can resolve while
+     this 1.5MB page is still being parsed, before this script has run, and
+     `window.Wallet ? … : skip` then skipped it. Nothing else loads the wallet
+     at boot, so the balance read 0 until some later action did: the Market
+     drew every Buy as "Not enough Discs" on a full wallet. Measured in WebKit
+     with a restored session. Both checks are needed: the session may already
+     be on, or may land a moment from now. */
+  if (window.Cloud && Cloud.isOn && Cloud.isOn() && !loaded) load();
+  if (window.Cloud && Cloud.ready && Cloud.ready.then) {
+    Cloud.ready.then(function () { if (Cloud.isOn && Cloud.isOn() && !loaded) load(); });
+  }
 
   // ---- Shop UI ------------------------------------------------------------
   /* `swatchHtml` replaces the old swatchText: a tag's swatch is the real chip,
@@ -29438,26 +29457,62 @@ window.renderAdminStats = renderAdminStats;
     };
   }
 
+  /* Every cache here belongs to ONE account. Signing out and in as somebody
+     else used to keep the last person's shelf in `_mine`, so the Market drew
+     their records as owned and yours as buyable. `own()` drops the lot the
+     moment the signed-in id is not the one they were fetched for. */
+  var _owner = null, _mineAt = 0, _mineOk = false, _mineP = null;
+  function own() {
+    var u = uid();
+    if (u === _owner) return;
+    _owner = u;
+    _mine = null; _market = null; _board = null; _results = null;
+    _shown = []; _ctx = null; _mineAt = 0; _mineOk = false; _mineP = null;
+    _worth = null; _worthTried = false;
+  }
+
+  /* `_mineOk` is the difference between "you own nothing" and "we could not
+     find out". A failed read used to land as an empty shelf, and an empty
+     shelf makes every record on the Market look unowned — Buy buttons on
+     records you already have. Supabase reports a failed query in `r.error`
+     rather than throwing, which is how that went unnoticed. */
   async function loadMine(force) {
+    own();
     if (_mine && !force) return _mine;
-    try {
-      var r = await sb().from('collection')
-        .select('album_id,name,artist,art,price,bought_at,via_pick')
-        .eq('user_id', uid()).order('price', { ascending: false });
-      _mine = r.data || [];
-    } catch (e) { _mine = []; }
-    return _mine;
+    if (_mineP) return _mineP;
+    var who = _owner;
+    _mineP = (async function () {
+      try {
+        var r = await sb().from('collection')
+          .select('album_id,name,artist,art,price,bought_at,via_pick')
+          .eq('user_id', who).order('price', { ascending: false });
+        if (r.error) throw r.error;
+        if (who !== uid()) return _mine;            // the account changed mid-flight
+        _mine = r.data || []; _mineOk = true; _mineAt = Date.now();
+      } catch (e) {
+        if (window.reportIssue) reportIssue('collection shelf read failed', { error: String((e && e.message) || e) });
+        if (!_mine) { _mine = []; _mineOk = false; }
+      } finally { _mineP = null; }
+      return _mine;
+    })();
+    return _mineP;
   }
 
   async function loadMarket(force) {
+    own();
     if (_market && !force) return _market;
     var t = await token();
     if (!t) return (_market = []);
     try {
       var r = await fetch(Native.api+'/api/collection-prices', { headers: { Authorization: 'Bearer ' + t } });
       var j = await r.json();
+      if (!r.ok) throw new Error((j && j.error) || r.status);
       _market = j.items || [];
-    } catch (e) { _market = []; }
+    } catch (e) {
+      if (window.reportIssue) reportIssue('collection market read failed', { error: String((e && e.message) || e) });
+      // Your own rated records are still listed below; only the pool is lost.
+      if (!_market) _market = [];
+    }
     return _market;
   }
 
@@ -29489,14 +29544,20 @@ window.renderAdminStats = renderAdminStats;
   // Mirrors BATCH in /api/collection-prices, which slices anything past it.
   // Change one and you must change the other.
   var PRICE_CHUNK = 5;
-  var _sweep = 0;
+  var _sweep = 0, _retryT = null;
 
-  async function priceSweep(items, ctx) {
+  /* `retry` is the second pass. Anything that came back "not just now" —
+     a service that failed to answer, never a real "too few tracks" — is asked
+     once more after a pause, and after that the card offers a Retry. */
+  async function priceSweep(items, ctx, retry) {
     var mine = ++_sweep;
+    clearTimeout(_retryT);
+    var byId = {};
     var todo = (items || []).filter(function (a) {
-      return a && a.album_id && a.price == null && !ctx.owned[a.album_id];
-    }).map(function (a) { return a.album_id; });
+      return a && a.album_id && a.price == null && !ctx.owned[a.album_id] && !a.unpriceable;
+    }).map(function (a) { byId[a.album_id] = a; return a.album_id; });
     if (!todo.length) return;
+    var later = [];
 
     var t = await token();
     if (!t || mine !== _sweep) return;
@@ -29508,7 +29569,10 @@ window.renderAdminStats = renderAdminStats;
         var r = await fetch(Native.api+'/api/collection-prices', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
-          body: JSON.stringify({ album_ids: chunk }),
+          // The name rides along so a legacy id nobody posted can still be found.
+          body: JSON.stringify({ albums: chunk.map(function (id) {
+            var a = byId[id] || {}; return { id: id, name: a.name || null, artist: a.artist || null };
+          }) }),
         });
         var j = await r.json();
         prices = r.ok ? (j && j.prices) : null;
@@ -29520,7 +29584,7 @@ window.renderAdminStats = renderAdminStats;
            leaving them saying "counting streams…" forever, which is the
            stale-field shape this app has already paid for once. Carry on with
            the next chunk: one bad batch is not a dead market. */
-        chunk.forEach(function (id) { applyPrice(id, null, ctx, 'later'); });
+        chunk.forEach(function (id) { applyPrice(id, null, ctx, 'later'); later.push(id); });
         continue;
       }
       chunk.forEach(function (id) {
@@ -29532,12 +29596,21 @@ window.renderAdminStats = renderAdminStats;
            a record because two constants stopped agreeing. */
         if (!Object.prototype.hasOwnProperty.call(prices, id)) {
           if (window.reportIssue) reportIssue('collection price batch came back short', { album: id, asked: chunk.length });
-          applyPrice(id, null, ctx, 'later');
+          applyPrice(id, null, ctx, 'later'); later.push(id);
           return;
         }
         var p = prices[id] || {};
-        applyPrice(id, (typeof p.price === 'number' ? p.price : null), ctx, p.reason);
+        var why = (typeof p.price === 'number') ? null
+          : (p.transient || p.reason === 'failed' || p.reason === 'lookup-failed') ? 'later' : p.reason;
+        if (why === 'later') later.push(id);
+        applyPrice(id, (typeof p.price === 'number' ? p.price : null), ctx, why);
       });
+    }
+    if (later.length && !retry && mine === _sweep) {
+      _retryT = setTimeout(function () {
+        if (mine !== _sweep || tab !== 'market' || ctx !== _ctx) return;
+        priceSweep(items.filter(function (a) { return later.indexOf(a.album_id) >= 0; }), ctx, true);
+      }, 12000);
     }
   }
 
@@ -29547,7 +29620,12 @@ window.renderAdminStats = renderAdminStats;
      and artwork, sees the same number the card is showing. */
   function applyPrice(albumId, price, ctx, reason) {
     [_market, _results, _shown].forEach(function (list) {
-      (list || []).forEach(function (x) { if (x.album_id === albumId) x.price = price; });
+      (list || []).forEach(function (x) {
+        if (x.album_id !== albumId) return;
+        x.price = price;
+        // Only a real answer is remembered; "not just now" is asked again.
+        x.unpriceable = (price == null && reason !== 'later' && reason !== 'sealed');
+      });
     });
 
     /* Found by walking the grid rather than by an attribute selector. Album
@@ -29574,20 +29652,34 @@ window.renderAdminStats = renderAdminStats;
       var msg = reason === 'later' ? 'price unavailable just now'
         : reason === 'sealed' ? 'on one of your live Bid Wars'
         : 'cannot be priced';
-      if (priceEl) { priceEl.className = 'col-price col-unpriced'; priceEl.textContent = msg; }
-      rec.querySelectorAll('.col-buy').forEach(function (x) { x.remove(); });
+      if (priceEl) {
+        priceEl.className = 'col-price col-unpriced';
+        priceEl.textContent = msg;
+        // A failure to reach a service is retryable from the card itself.
+        if (reason === 'later') priceEl.insertAdjacentHTML('beforeend', ' <button class="col-retry" data-reprice="' + esc(albumId) + '">Retry</button>');
+      }
+      rec.querySelectorAll('button.col-buy').forEach(function (x) { x.remove(); });
       var pk = rec.querySelector('.col-pick');
       if (pk) pk.remove();
       return;
     }
 
     if (priceEl) { priceEl.className = 'col-price'; priceEl.innerHTML = discAmt(price); }
+    // A record that failed once and priced on a retry had its button taken
+    // away; it gets one back, on the same rules card() draws by.
+    if (!btn && !rec.classList.contains('owned') && !ctx.owned[albumId] && ctx.mineOk) {
+      var row0 = shownRow(albumId);
+      if (isRatedForMarket(albumId, row0.name, row0.artist)) {
+        rec.insertAdjacentHTML('beforeend', '<button class="btn-mini col-buy" data-buy="' + esc(albumId) + '">Buy</button>');
+        btn = rec.querySelector('button.col-buy[data-buy]');
+      }
+    }
     if (btn) {
       var afford = ctx.admin || ctx.discs >= price;
       btn.classList.remove('col-pricing');
-      btn.className = (afford ? 'btn-primary' : 'btn-mini') + ' col-buy';
-      btn.disabled = !afford;
-      if (!afford) btn.title = 'Not enough Discs';
+      btn.className = (afford && ctx.mineOk ? 'btn-primary' : 'btn-mini') + ' col-buy';
+      btn.disabled = !afford || !ctx.mineOk;
+      btn.title = !ctx.mineOk ? 'Checking your shelf' : afford ? '' : 'Not enough Discs';
       btn.textContent = 'Buy';
     }
     /* The pick button is drawn with the card (disabled while pricing) so the
@@ -29727,6 +29819,11 @@ window.renderAdminStats = renderAdminStats;
       var rated = isRatedForMarket(a.album_id, a.name, a.artist);
       action = !rated
         ? '<span class="btn-mini col-buy" title="Rate this record first">Rate to unlock</span>'
+        /* The shelf could not be read, so whether you already own this is
+           unknown. Offering Buy on a guess is how owned records grew Buy
+           buttons; the server would refuse, but the card should not ask. */
+        : opts.unknown
+        ? '<button class="btn-mini col-buy col-pricing" data-buy="' + esc(a.album_id) + '" disabled title="Checking your shelf">Buy</button>'
         : a.price == null
         ? '<button class="btn-mini col-buy col-pricing" data-buy="' + esc(a.album_id) + '" disabled>Pricing…</button>'
         : '<button class="' + (afford === false ? 'btn-mini' : 'btn-primary') + ' col-buy" data-buy="' + esc(a.album_id) + '"' +
@@ -29756,8 +29853,17 @@ window.renderAdminStats = renderAdminStats;
       // "price on request" was true and read as a refusal — there was nothing
       // on the card saying who you were meant to ask. The price is on its way;
       // the line says that and is replaced in place when it lands.
-      (a.price != null
+      /* An owned card on the Market says what you paid. It used to wait for a
+         price that never came — the sweep skips anything you own — and read
+         "counting streams…" for good. */
+      (opts.owned && !a.bought_at && typeof opts.paid === 'number'
+        ? '<div class="col-price col-paid">' + discAmt(opts.paid) + ' <span>paid</span></div>'
+        : opts.owned && !a.bought_at
+        ? '<div class="col-price col-paid">On your shelf</div>'
+        : a.price != null
         ? '<div class="col-price">' + discAmt(a.price) + '</div>'
+        : a.unpriceable
+        ? '<div class="col-price col-unpriced">cannot be priced</div>'
         : '<div class="col-price col-unpriced">counting streams&hellip;</div>') +
       (opts.owned ? provenance(a) : '') +
       '</div>' + action +
@@ -29854,7 +29960,9 @@ window.renderAdminStats = renderAdminStats;
       if (!_results && !_market) body.innerHTML = '<p class="reco-note loading-dots">loading</p>';
       var items = _results || await loadMarket(!_market);
       if (stale()) return;
-      var mineNow = await loadMine();
+      /* The shelf is re-read when it is more than half a minute old: a record
+         bought on another device must not come back here as buyable. */
+      var mineNow = await loadMine(!_mineOk || Date.now() - _mineAt > 30000);
       if (stale()) return;
       /* /api/collection-prices' default listing is bid_war_pool — the top 40
          records by COMMUNITY rating count, not "everything buyable". A record
@@ -29923,6 +30031,7 @@ window.renderAdminStats = renderAdminStats;
           var isOwned = own.has(a);
           return card(a, {
             owned: isOwned,
+            unknown: !_mineOk,
             paid: (own.row(a) || {}).price,
             // A pick still has to go through pricing, so it is only offered on
             // a record that already has a price. The pricing sweep below puts
@@ -29933,7 +30042,8 @@ window.renderAdminStats = renderAdminStats;
         }).join('') + '</div>';
       wire(body);
       _shown = items;
-      _ctx = { owned: owned, picks: picks, discs: discs, admin: admin };
+      _ctx = { owned: owned, picks: picks, discs: discs, admin: admin, mineOk: _mineOk };
+      if (!_mineOk) body.insertAdjacentHTML('afterbegin', '<div class="col-err col-err-bar">Couldn’t read your shelf, so buying is paused. <a href="#" data-col-reload>Try again</a></div>');
       priceSweep(items, _ctx);
       return;
     }
@@ -30111,6 +30221,23 @@ window.renderAdminStats = renderAdminStats;
     body.querySelectorAll('[data-buy]').forEach(function (b) {
       b.addEventListener('click', function () { buy(b, b.dataset.buy); });
     });
+    if (!body._colWired) {
+      body._colWired = true;
+      // Delegated: the Retry link is added to a card after wire() has run.
+      body.addEventListener('click', function (ev) {
+        var rp = ev.target.closest('[data-reprice]');
+        if (rp && _ctx) {
+          ev.preventDefault(); ev.stopPropagation();
+          var row = shownRow(rp.dataset.reprice);
+          var pe = rp.parentNode;
+          if (pe) { pe.className = 'col-price col-unpriced'; pe.innerHTML = 'counting streams&hellip;'; }
+          if (row && row.album_id) priceSweep([row], _ctx, true);
+          return;
+        }
+        var rl = ev.target.closest('[data-col-reload]');
+        if (rl) { ev.preventDefault(); _mineOk = false; render(); }
+      });
+    }
     body.querySelectorAll('[data-pick]').forEach(function (b) {
       b.addEventListener('click', function () {
         var rec = (_results || []).concat(_market || [])
@@ -30156,16 +30283,22 @@ window.renderAdminStats = renderAdminStats;
         // `pick` only chooses which server function is called. Whether the
         // caller actually has a pick to spend is decided in
         // collection_claim_pick_from, never here.
+        // `expect` is the price on the card: the till refuses anything higher.
         body: JSON.stringify({ album_id: albumId, name: item.name, artist: item.artist,
-                               art: item.art, pick: !!usePick }),
+                               art: item.art, pick: !!usePick,
+                               expect: typeof item.price === 'number' ? item.price : null }),
       });
-      j = await r.json();
-      if (!r.ok) throw new Error((j && j.error) || 'Could not buy that');
+      j = await r.json().catch(function () { return null; });
+      if (!r.ok) {
+        var err = new Error((j && j.error) || 'Could not buy that');
+        err.price = j && j.price; err.status = r.status;
+        throw err;
+      }
     } catch (e) {
       busy = false;
       btn.disabled = false;
       btn.textContent = was;
-      if (window.reportIssue) reportIssue('collection buy failed', { error: String(e.message || e) });
+      if (window.reportIssue && e.status !== 409) reportIssue('collection buy failed', { error: String(e.message || e) });
       /* Raw Postgres text has no business on a card. "Could not find
          public.collection_buy_from(p_art, p_artist…) in the schema cache" is
          PostgREST telling you a migration has not been run — true, useless to
@@ -30178,7 +30311,12 @@ window.renderAdminStats = renderAdminStats;
         : /no album picks/i.test(raw) ? 'You have no album picks left.'
         : /cannot be priced|not enough of its tracks/i.test(raw)
           ? 'That record cannot be priced — too few of its tracks matched.'
-        : 'That did not go through. Try again in a moment.';
+        : /price changed|unavailable just now/i.test(raw) ? raw
+        : /rate a record/i.test(raw) ? 'Rate it first — the Market only sells records you have ranked.'
+        : 'That did not go through — nothing was charged. Try again in a moment.';
+      /* The price moved between the card and the till. Show the new number on
+         the card and let the next tap buy at it, knowingly. */
+      if (e.status === 409 && typeof e.price === 'number' && _ctx) applyPrice(albumId, e.price, _ctx, null);
       var note = document.createElement('div');
       note.className = 'col-err';
       note.textContent = msg;
@@ -30191,6 +30329,8 @@ window.renderAdminStats = renderAdminStats;
       if (/already own/i.test(raw) && host.classList) {
         host.classList.add('owned');
         host.querySelectorAll('button.col-buy, button.col-pick').forEach(function (x) { x.remove(); });
+        var pe = host.querySelector('.col-price');
+        if (pe) { pe.className = 'col-price col-paid'; pe.textContent = 'On your shelf'; }
         if (_ctx) _ctx.owned[albumId] = true;
         loadMine(true);
       }
@@ -30273,7 +30413,7 @@ window.renderAdminStats = renderAdminStats;
     body.querySelectorAll('.col-rec').forEach(function (rec) {
       var id = rec.getAttribute('data-rec'), row = shownRow(id);
       var b = rec.querySelector('button.col-buy[data-buy]');
-      if (b && !b.classList.contains('col-pricing') && typeof row.price === 'number') {
+      if (b && typeof row.price === 'number' && _ctx.mineOk) {
         var ok = _ctx.admin || _ctx.discs >= row.price;
         b.className = (ok ? 'btn-primary' : 'btn-mini') + ' col-buy';
         b.disabled = !ok; b.title = ok ? '' : 'Not enough Discs';
@@ -30377,6 +30517,18 @@ window.renderAdminStats = renderAdminStats;
     render();
   };
   window.renderCollection = render;
+  /* Drawn against the balance and picks at render time; the wallet often lands
+     after that (the Market is a common first stop), which left every Buy
+     reading "Not enough Discs" on a full wallet. Bring the grid into line
+     whenever the wallet moves. */
+  window.addEventListener('vinall:wallet', function () {
+    if (!_ctx || !window.Wallet || !Wallet.get) return;
+    var w = Wallet.get();
+    if (typeof w.discs === 'number') _ctx.discs = w.discs;
+    if (typeof w.album_picks === 'number') _ctx.picks = w.album_picks;
+    _ctx.admin = !!w.is_admin;
+    syncGrid();
+  });
   // Fetched once in the background after login rather than only when the tab
   // is opened, so the common case is an already-warm cache and no loading
   // text at all — same idea as the For You feed's warm build.
@@ -42247,7 +42399,7 @@ window.renderAdminStats = renderAdminStats;
 
 </body>
 <script src="/assets/interactions.js?v=4"></script>
-<script src="/assets/replay.js?v=7"></script>
+<script src="/assets/replay.js?v=10"></script>
 <script src="/assets/you.js?v=9"></script>
 <script src="/assets/glow.js?v=4"></script>
 <script src="/assets/comments.js?v=3" defer></script>
