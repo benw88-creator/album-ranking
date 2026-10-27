@@ -42,6 +42,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        // A call, Siri or another app can deactivate the session while VINALL
+        // is away; ambient is re-activated on the way back.
+        VinallAudio.reactivate()
         // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
     }
 
@@ -66,6 +69,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 /// selection, which @capacitor/haptics' impact() does not.
 enum VinallAudio {
     static var current = ""
+    static func reactivate() {
+        guard current == "ambient" else { return }
+        try? AVAudioSession.sharedInstance().setActive(true)
+    }
     static func apply(_ mode: String) {
         guard mode != current else { return }
         let session = AVAudioSession.sharedInstance()
@@ -74,6 +81,13 @@ enum VinallAudio {
                 try session.setCategory(.playback, mode: .default)
             } else {
                 try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+                // Ambient has to be ACTIVE for interface sounds to be heard:
+                // WebKit only activates the session for media elements, so
+                // Web Audio rendered into an inactive ambient session and was
+                // silent (measured on an iPhone 13 Pro: the engine running,
+                // nothing audible). Activating a mixable ambient session
+                // interrupts nobody, so this is safe at any time.
+                try session.setActive(true)
             }
             current = mode
         } catch {

@@ -6848,11 +6848,19 @@ self-time on load is well under a second at 4×). That is a CSS job.
   every effect bypassed silent mode. `AudioMode` (sound.js) sets
   `navigator.audioSession.type`: `ambient` at idle, `playback` from the moment a real
   `<audio>` plays (hooked `HTMLMediaElement.prototype.play`, before the first sample),
-  back to `ambient` 30s after the last stops, never while the page is hidden. The
+  back to `ambient` 2.5s after the last stops (it was 30s, which held every effect
+  back for half a minute after a preview), never while the page is hidden. The
   silent `data:audio` unlock clips never claim it (`prime()` reads `src`, not
   `currentSrc`, which lags). YouTube in Community Choice refreshes a heartbeat
   `hold('yt')` from `watchYT`. Effects are gated off while `playback` (they would
   pass the switch). Safari on iPhone honours the same API, so the website is fixed too.
+- **Ambient must be ACTIVATED natively** (`VinallAudio.apply` calls `setActive(true)`
+  for ambient, and `applicationDidBecomeActive` re-activates). WebKit only activates
+  the session for media elements, so on a real iPhone 13 Pro the Web Audio effects
+  rendered (context running, not gated) into an inactive session and were silent.
+  The simulator cannot show this — it plays no audio. Diagnosed with a Debug build
+  and `xcrun devicectl device process launch --console`, which streams the app's
+  console (Capacitor's `[log]` lines) from a plugged-in phone.
 - **Native**: `AppDelegate` starts **`.ambient` + mixWithOthers** (the first effect no
   longer stops somebody's Spotify) and `VinallNative.audioMode` mirrors JS. The plugin
   lives in `AppDelegate.swift` and is registered by `VinallViewController`, which

@@ -62,7 +62,11 @@
      track on the lock screen must still resume. `hold(key, on)` is for
      audio this hook cannot see — the YouTube player in Community Choice. */
   var AudioMode = (function () {
-    var mode = 'ambient', holds = {}, t = 0, GRACE = 30000, HOLD_TTL = 2000;
+    /* GRACE is short on purpose. It only bridges a track ending and the next
+       starting; lock-screen resume is covered separately, because nothing
+       drops back to ambient while the app is hidden. At 30s it held every
+       effect back for half a minute after any preview stopped. */
+    var mode = 'ambient', holds = {}, t = 0, GRACE = 2500, HOLD_TTL = 2000;
     function nat() { return !!(window.Native && Native.on && Native.has && Native.has('VinallNative')); }
     /* WebKit picks its own category, and picks MediaPlayback (which ignores
        the ringer switch) whenever any <audio> element exists on the page —
