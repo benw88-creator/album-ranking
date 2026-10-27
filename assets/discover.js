@@ -194,8 +194,8 @@
       if (window.track) track('tip_dismissed', { id: t.id });
     });
     document.body.appendChild(node);
-    if (window.Sfx) Sfx.play('discover');
-    if (window.buzz) buzz('tap', true);
+    // Arrives silently and without a haptic: nobody asked for it, so it must
+    // not tap them on the shoulder.
     if (window.track) track('tip_shown', { id: t.id });
     openT = setTimeout(tuck, OPEN_MS);
   }

@@ -6665,10 +6665,8 @@ self-time on load is well under a second at 4×). That is a CSS job.
   mirrors `xpStep` in the Wallet). First session ≈ 3, a week ≈ 8, a month ≈ 14. Existing
   accounts keep their level via `profiles.level_floor` and the `zz_level_floor_trg` trigger.
   `levelUp(level, from)` counts through every level gained and merges overlapping pops.
-- **Sound** is `assets/sound.js` (`window.Sfx`): synthesised Web Audio, one bell/tick voice,
-  per-sound cooldowns and a voice ceiling, ducked under any playing `<audio>`, off via
-  Settings → Sound (`vinall_sfx`). `buzz(kind)` plays the matching sound; pass
-  `buzz(kind, true)` when the caller plays its own.
+- **Sound** is `assets/sound.js` (`window.Sfx`). **Superseded 2026-10-27** — see
+  **Sound, haptics and the audio session**: `buzz()` no longer plays sound.
 - **The player keeps two albums**: `shown` (the open page) and `album` (what is playing).
   Opening a record while a song plays used to swap the bar's sleeve and next/prev.
 - **Singles** (≤3 tracks, ≤25 min — `isSingle`) open the album route as a song page
@@ -6830,3 +6828,36 @@ self-time on load is well under a second at 4×). That is a CSS job.
 - `scripts/tests/collection.spec.mjs` covers the Market, the paused shelf, Home and
   the album sheet. On this Mac run Chromium with
   `CHROME_PATH=$PWD/.browsers/chromium_headless_shell-1248/chrome-headless-shell-mac-arm64/chrome-headless-shell`.
+
+## Sound, haptics and the audio session (2026-10-27, Phase 1)
+
+- **`buzz(kind)` is haptics only.** Kinds by meaning: `select` (detents: slider
+  tenths, nav, the Draw's ticks, level counts), `tap`, `soft` (a limit), `press`
+  (slider released), `good`, `warn`, `bad`, `big`. Native goes to the local
+  **`VinallNative`** plugin (prepared UIKit generators, soft/rigid, selection), else
+  `@capacitor/haptics`, else `navigator.vibrate`. The second `silent` argument is
+  ignored now.
+- **Six sounds, each asked for by name**: `rate` (saveAlbum/saveSong), `correct`/`fail`
+  (game answers: Recall, Earworm, Drop, Higher or Lower, Cover Fire, the five-round
+  game), `discs` (claims only: `payoutFrom`, the daily ladder — never on a balance
+  change), `celebrate` (`celebrate()`, Draw Legendary/Mythic), `levelUp`. Taps,
+  ticks, sheet opens, prompts and level ticks are silent. The voices are still
+  synthesised placeholders; Phase 2 swaps in recorded foley with the same names.
+- **The silent switch.** WebKit picks its own audio category and picked
+  `MediaPlayback` (ignores the ringer) whenever any `<audio>` element existed, so
+  every effect bypassed silent mode. `AudioMode` (sound.js) sets
+  `navigator.audioSession.type`: `ambient` at idle, `playback` from the moment a real
+  `<audio>` plays (hooked `HTMLMediaElement.prototype.play`, before the first sample),
+  back to `ambient` 30s after the last stops, never while the page is hidden. The
+  silent `data:audio` unlock clips never claim it (`prime()` reads `src`, not
+  `currentSrc`, which lags). YouTube in Community Choice refreshes a heartbeat
+  `hold('yt')` from `watchYT`. Effects are gated off while `playback` (they would
+  pass the switch). Safari on iPhone honours the same API, so the website is fixed too.
+- **Native**: `AppDelegate` starts **`.ambient` + mixWithOthers** (the first effect no
+  longer stops somebody's Spotify) and `VinallNative.audioMode` mirrors JS. The plugin
+  lives in `AppDelegate.swift` and is registered by `VinallViewController`, which
+  **`SceneDelegate`** sets as root — the storyboard is not what creates the root
+  controller. Verified in the simulator's WebKit log: AmbientSound at idle,
+  MediaPlayback while playing, an album preview kept playing on the lock screen with
+  Now Playing info. For You pausing on lock is its own JS (pre-existing), not this.
+- Tests: `polish.spec.mjs` (no haptic sounds; prime vs music session).

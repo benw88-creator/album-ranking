@@ -8,25 +8,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // VINALL owns an <audio> element and puts real controls on the lock
-        // screen, and a WKWebView gets neither for free. Without .playback the
-        // session is ambient: the audio is silenced by the ringer switch and
-        // stops dead the moment the screen locks, which is the one moment
-        // lock-screen controls are for.
+        // AMBIENT by default (2026-10-27). It follows the ringer switch and
+        // mixes with whatever the person is already listening to, which is
+        // right for interface sounds. It used to be .playback from launch,
+        // which made every interface sound ignore the silent switch and let
+        // the first one stop somebody's Spotify.
         //
-        // The session is deliberately NOT activated here. Activating it at
-        // launch would interrupt whatever the person is already listening to
-        // just because they opened the app; the system activates it by itself
-        // when something actually starts playing. Paired with the `audio`
-        // entry in UIBackgroundModes — the category alone does not survive
-        // backgrounding.
-        do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-        } catch {
-            // Not fatal and not worth a crash: audio still plays in the
-            // foreground, it just will not outlive the lock screen.
-            CAPLog.print("VINALL: could not set the audio session category — \(error)")
-        }
+        // Music still gets .playback: the page asks for it the moment a
+        // preview starts (VinallNativePlugin.audioMode, driven by AudioMode in
+        // assets/sound.js) and keeps it through a grace period and while the
+        // app is in the background, so lock-screen controls and resume still
+        // work. That plus the `audio` entry in UIBackgroundModes is what keeps
+        // a preview playing behind the lock screen.
+        //
+        // Not activated here: activating at launch would interrupt whatever is
+        // already playing just because the app opened.
+        VinallAudio.apply("ambient")
         return true
     }
 
@@ -59,5 +56,86 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                                           sessionRole: connectingSceneSession.role)
         config.delegateClass = SceneDelegate.self
         return config
+    }
+}
+
+
+/// Interface feel and the audio session, in one small plugin registered by
+/// VinallViewController. Haptics keep PREPARED generators, so a slider detent
+/// lands on the frame rather than a beat late, and offer soft/rigid and
+/// selection, which @capacitor/haptics' impact() does not.
+enum VinallAudio {
+    static var current = ""
+    static func apply(_ mode: String) {
+        guard mode != current else { return }
+        let session = AVAudioSession.sharedInstance()
+        do {
+            if mode == "playback" {
+                try session.setCategory(.playback, mode: .default)
+            } else {
+                try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+            }
+            current = mode
+        } catch {
+            CAPLog.print("VINALL: could not set the audio session to \(mode) — \(error)")
+        }
+    }
+}
+
+@objc(VinallNativePlugin)
+public class VinallNativePlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "VinallNativePlugin"
+    public let jsName = "VinallNative"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "haptic", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "audioMode", returnType: CAPPluginReturnPromise)
+    ]
+
+    private lazy var selection = UISelectionFeedbackGenerator()
+    private lazy var notify = UINotificationFeedbackGenerator()
+    private lazy var light = UIImpactFeedbackGenerator(style: .light)
+    private lazy var soft = UIImpactFeedbackGenerator(style: .soft)
+    private lazy var medium = UIImpactFeedbackGenerator(style: .medium)
+    private lazy var heavy = UIImpactFeedbackGenerator(style: .heavy)
+    private lazy var rigid = UIImpactFeedbackGenerator(style: .rigid)
+
+    @objc func haptic(_ call: CAPPluginCall) {
+        let kind = call.getString("kind") ?? "tap"
+        DispatchQueue.main.async {
+            switch kind {
+            case "select":
+                self.selection.selectionChanged(); self.selection.prepare()
+            case "soft":
+                self.soft.impactOccurred(intensity: 0.6); self.soft.prepare()
+            case "press":
+                self.medium.impactOccurred(intensity: 0.8); self.medium.prepare()
+            case "good":
+                self.notify.notificationOccurred(.success); self.notify.prepare()
+            case "warn":
+                self.notify.notificationOccurred(.warning); self.notify.prepare()
+            case "bad":
+                self.notify.notificationOccurred(.error); self.notify.prepare()
+            case "big":
+                self.heavy.impactOccurred()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) { self.rigid.impactOccurred(intensity: 0.7) }
+            default:
+                self.light.impactOccurred(intensity: 0.75); self.light.prepare()
+            }
+        }
+        call.resolve()
+    }
+
+    @objc func audioMode(_ call: CAPPluginCall) {
+        let mode = call.getString("mode") == "playback" ? "playback" : "ambient"
+        DispatchQueue.main.async { VinallAudio.apply(mode) }
+        call.resolve(["mode": mode])
+    }
+}
+
+/// The app's root view controller (Main.storyboard). It exists only to
+/// register the plugin above, which is local code rather than an npm package.
+class VinallViewController: CAPBridgeViewController {
+    override open func capacitorDidLoad() {
+        bridge?.registerPluginInstance(VinallNativePlugin())
     }
 }

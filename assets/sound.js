@@ -1,23 +1,18 @@
 /* ================================================================
-   SFX — VINALL's sound. Synthesised, not sampled: no files to load, no
-   licences, nothing to cache, and every sound can be pitched to what caused
-   it (a 9 rings higher than a 4).
+   SFX — VINALL's sound, and the audio session it plays in.
 
-   ONE IDENTITY. Everything is built from the same two voices — a soft bell
-   (sine plus a quiet inharmonic partial) and a felt "tick" (a few ms of
-   filtered noise) — tuned to one scale (E major pentatonic), through one
-   small room. So a rating, a level-up and a right answer sound like the same
-   instrument doing different things, not three sample packs.
+   PHASE 1 (2026-10-27): FEW SOUNDS, AND NONE ON ORDINARY TAPS. Sound used to
+   ride every buzz(), so a tab change, a heart and a dialog all made a noise.
+   buzz() is haptic only now (index.html), and a sound plays only where a caller
+   asks for one by name: a saved rating, a game answer, a Disc claim, a real
+   win, a level-up. The voices below are still synthesised placeholders; Phase 2
+   replaces them with recorded foley and keeps this vocabulary.
 
-   IT CANNOT STACK. Each sound has a cooldown, the engine refuses new voices
-   past a ceiling (low-priority sounds first), and a celebration ducks the
-   small sounds under it. buzz() calls through here, so the ninety-odd places
-   that already give haptic feedback sound without each being wired.
-
-   IT BEHAVES. Off in Settings means off (vinall_sfx = 'off'). Nothing plays
-   in a hidden tab. While a music preview is playing every effect drops to
-   about a third again, so a rating never talks over the record. The context is
-   only created inside a real gesture, which is what iOS requires.
+   IT BEHAVES. Off in Settings means off (vinall_sfx = 'off'). Nothing plays in
+   a hidden tab. On the web, a playing preview turns effects down to a third.
+   On iPhone (the app, and Safari) effects play only while the audio session
+   is AMBIENT — which follows the silent switch — and never while music holds
+   the session (see AudioMode below), so the ringer switch silences them.
    ================================================================ */
 (function () {
   'use strict';
@@ -30,27 +25,92 @@
   function enabled() { try { return localStorage.getItem(KEY) !== 'off'; } catch (e) { return true; } }
   function setEnabled(on) {
     try { localStorage.setItem(KEY, on ? 'on' : 'off'); } catch (e) {}
-    if (on) { unlock(); setTimeout(function () { play('success'); }, 60); }
+    if (on) { unlock(); setTimeout(function () { play('rate', { v: 0.8 }); }, 60); }
   }
 
   /* ---- music awareness: every <audio>, in the DOM or not ---------------- */
   var media = new Set();
+  // `src` first: currentSrc is updated asynchronously, so straight after
+  // `a.src = url; a.play()` it still names the silent unlock clip.
+  function prime(m) { var s = m.src || m.currentSrc || ''; return s.indexOf('data:audio') === 0; }
   try {
     var orig = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function () {
       var m = this;
       if (!m._sfxHooked) {
         m._sfxHooked = true;
-        ['pause', 'ended', 'emptied'].forEach(function (ev) { m.addEventListener(ev, function () { media.delete(m); }); });
-        m.addEventListener('playing', function () { media.add(m); });
+        ['pause', 'ended', 'emptied'].forEach(function (ev) { m.addEventListener(ev, function () { media.delete(m); AudioMode.settle(); }); });
+        m.addEventListener('playing', function () { media.add(m); if (!prime(m)) AudioMode.claim(); });
       }
       media.add(m);
+      // Before play(), so the session is already playback when the first
+      // sample arrives (and in the background, where ambient cannot play).
+      // Not for the silent clips that unlock an element inside a gesture:
+      // claiming .playback for those would stop the person's own music on
+      // their first tap, for a sound nobody can hear.
+      if (!prime(m)) AudioMode.claim();
       return orig.apply(this, arguments);
     };
   } catch (e) {}
+  /* ---- the audio session (native only) ---------------------------------
+     .playback ignores the ringer switch and is what keeps a preview playing
+     on the lock screen; .ambient follows the switch and mixes with whatever
+     the person was already listening to. The app starts ambient
+     (AppDelegate) and holds playback only while music is playing, plus a
+     grace period after it stops, so lock-screen resume and the next track
+     keep working. It never drops back while the app is hidden: a paused
+     track on the lock screen must still resume. `hold(key, on)` is for
+     audio this hook cannot see — the YouTube player in Community Choice. */
+  var AudioMode = (function () {
+    var mode = 'ambient', holds = {}, t = 0, GRACE = 30000, HOLD_TTL = 2000;
+    function nat() { return !!(window.Native && Native.on && Native.has && Native.has('VinallNative')); }
+    /* WebKit picks its own category, and picks MediaPlayback (which ignores
+       the ringer switch) whenever any <audio> element exists on the page —
+       playing or not — so every interface sound bypassed the silent switch.
+       Measured in the simulator's WebKit log: "setting category =
+       MediaPlayback" with nothing playing. The Audio Session API is how a page
+       tells WebKit otherwise: 'ambient' follows the switch and mixes with the
+       person's own music, 'playback' is for ours. Safari on iPhone honours it
+       too, so this fixes the website, not only the app. The native category
+       is set alongside for the app's own session. */
+    var AS = (typeof navigator !== 'undefined' && navigator.audioSession) || null;
+    function set(m, force) {
+      if (m === mode && !force) return;
+      mode = m;
+      try { if (AS) AS.type = (m === 'playback' ? 'playback' : 'ambient'); } catch (e) {}
+      if (nat()) Native.call('VinallNative', 'audioMode', { mode: m });
+    }
+    // A hold is a heartbeat, not a flag: its owner refreshes it while the
+    // sound plays, so one that is never released (a poll cleared from
+    // somewhere else) lapses by itself instead of pinning the session.
+    function held() {
+      var now = Date.now();
+      for (var k in holds) { if (now - holds[k] < HOLD_TTL) return true; delete holds[k]; }
+      return false;
+    }
+    function busy() { return musicOn() || held(); }
+    // Checks again until it is genuinely quiet, then waits the grace out.
+    function settle() {
+      clearTimeout(t);
+      t = setTimeout(function again() {
+        if (busy() || document.hidden) { t = setTimeout(again, GRACE); return; }
+        set('ambient');
+      }, GRACE);
+    }
+    function claim() { set('playback'); settle(); }
+    function hold(key, on) { if (on) { holds[key] = Date.now(); claim(); } else { delete holds[key]; } }
+    set('ambient', true);
+    // Effects are held back while music owns the session wherever the
+    // session can be chosen (the app, and WebKit browsers): .playback would
+    // carry them past the silent switch. Elsewhere they duck under the music.
+    function gated() { return (nat() || !!AS) && mode !== 'ambient'; }
+    return { claim: claim, settle: settle, hold: hold, mode: function () { return mode; }, native: nat, gated: gated };
+  })();
+  window.AudioMode = AudioMode;
+
   function musicOn() {
     var on = false;
-    media.forEach(function (m) { if (!m.paused && !m.muted && m.volume > 0.05) on = true; else if (m.paused) media.delete(m); });
+    media.forEach(function (m) { if (!m.paused && !m.muted && m.volume > 0.05 && !prime(m)) on = true; else if (m.paused) media.delete(m); });
     return on;
   }
 
@@ -131,31 +191,6 @@
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     osc.connect(lp); lp.connect(g); g.connect(o); osc.start(t); osc.stop(t + dur + 0.05);
   }
-  var _noise = null;
-  function noise() {
-    if (_noise) return _noise;
-    var len = ctx.sampleRate, b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
-    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    return (_noise = b);
-  }
-  // The felt tick: a few ms of band-passed noise. What a detent sounds like.
-  function tick(t, freq, gain, dur) {
-    voice(0.05);
-    var src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain(), o = out(gain, 0.05);
-    src.buffer = noise(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = 2.2;
-    dur = dur || 0.018;
-    g.gain.setValueAtTime(1, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(bp); bp.connect(g); g.connect(o); src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.01);
-  }
-  function whoosh(t, from, to, dur, gain) {
-    voice(dur);
-    var src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain(), o = out(gain, 0.4);
-    src.buffer = noise(); src.loop = true;
-    bp.type = 'bandpass'; bp.Q.value = 1.4;
-    bp.frequency.setValueAtTime(from, t); bp.frequency.exponentialRampToValueAtTime(to, t + dur);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1, t + dur * 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(bp); bp.connect(g); g.connect(o); src.start(t); src.stop(t + dur + 0.02);
-  }
   function thump(t, gain) {
     voice(0.3);
     var osc = ctx.createOscillator(), g = ctx.createGain(), o = out(gain, 0.1);
@@ -177,48 +212,42 @@
 
   /* ---- the vocabulary ---------------------------------------------------
      [cooldown ms, priority (higher survives the voice ceiling), render]. `o`
-     carries what the sound is about: v (0..1, a score), n (a count). */
+     carries what the sound is about: v (0..1, a score).
+
+     SIX, each tied to a moment that matters. Taps, slider detents, sheets
+     opening, prompts appearing and level ticks were removed: those are
+     haptics or nothing. Every one of these is called by name; nothing plays a
+     sound by side effect. */
   var S = {
-    tap:      [45, 0, function (t) { tick(t, 2600, 0.5, 0.014); }],
-    tick:     [32, 0, function (t, o) { tick(t, 1500 + 2200 * (o.v || 0), 0.42, 0.012); }],
-    release:  [90, 1, function (t, o) { pluck(t, note(Math.round((o.v || 0) * 7) + 2), 0.22, 0.32); }],
     rate:     [160, 2, function (t, o) {
       var v = o.v || 0, d = Math.round(v * 6);
       bell(t, note(d), 0.9, 0.34, 0.5);
       bell(t + 0.07, note(d + (v >= 0.8 ? 4 : v >= 0.5 ? 2 : 1)), 1.1, 0.26, 0.7, v);
     }],
-    success:  [140, 2, function (t) { bell(t, note(3), 0.6, 0.26); bell(t + 0.075, note(5), 0.9, 0.24, 0.7); }],
     correct:  [140, 2, function (t) { bell(t, note(5), 0.5, 0.28); bell(t + 0.06, note(7), 0.6, 0.24); bell(t + 0.12, note(10), 1.1, 0.22, 0.8, 1.4); }],
     fail:     [200, 2, function (t) { pluck(t, note(2) / 2, 0.24, 0.3); pluck(t + 0.11, note(0) / 2, 0.38, 0.28); }],
     discs:    [260, 2, function (t) {
       for (var i = 0; i < 4; i++) bell(t + i * 0.042, note(8 + i * 2), 0.45 - i * 0.05, 0.13, 0.8, 1.6);
-      tick(t, 6200, 0.2, 0.02);
-    }],
-    unlock:   [600, 3, function (t) {
-      whoosh(t, 500, 3200, 0.38, 0.12);
-      [0, 2, 4, 7].forEach(function (d, i) { bell(t + 0.16 + i * 0.07, note(5 + d), 1.4, 0.2, 0.9, 1.2); });
     }],
     celebrate:[700, 3, function (t) {
       thump(t, 0.35);
       [0, 2, 4, 5, 7].forEach(function (d, i) { bell(t + 0.05 + i * 0.06, note(5 + d), 1.3, 0.18, 0.9, 1.3); });
     }],
-    levelTick:[80, 3, function (t, o) { bell(t, note(4 + Math.min(o.n || 0, 6)), 0.4, 0.2, 0.5); }],
     levelUp:  [900, 4, function (t, o) {
       var b = 4 + Math.min(o.n || 0, 6);
       pad(t, [note(0) / 2, note(3) / 2, note(5) / 2], 2.2, 0.16);
       thump(t, 0.3);
-      whoosh(t, 300, 4200, 0.6, 0.1);
       [0, 2, 4, 7, 9].forEach(function (d, i) { bell(t + 0.12 + i * 0.075, note(b + d), 1.6, 0.17, 0.95, 1.4); });
-    }],
-    whoosh:   [140, 0, function (t) { whoosh(t, 900, 2600, 0.2, 0.07); }],
-    open:     [300, 1, function (t) { thump(t, 0.22); whoosh(t, 400, 2200, 0.32, 0.09); }],
-    round:    [200, 1, function (t) { bell(t, note(7), 0.35, 0.16, 0.4); }],
-    discover: [800, 1, function (t) { bell(t, note(5), 0.7, 0.14, 0.7); bell(t + 0.11, note(8), 0.9, 0.12, 0.8); }]
+    }]
   };
 
   function play(name, o) {
     var s = S[name];
     if (!s || !enabled() || document.hidden) return;
+    // Native: only while the session is ambient, which the ringer switch
+    // silences. While music holds the session (.playback ignores the switch)
+    // an effect would sound with the phone on silent, so it does not play.
+    if (AudioMode.gated()) return;
     if (!ctx) unlock();
     if (!ctx || ctx.state !== 'running') { if (ctx) ctx.resume().catch(function () {}); return; }
     var now = performance.now();
@@ -235,34 +264,19 @@
     } catch (e) {}
   }
 
-  // buzz() kinds → sounds. Kept here so the mapping is one table.
-  var FROM_BUZZ = { tap: 'tap', good: 'success', bad: 'fail', big: 'celebrate' };
   function wireSetting() {
     var cb = document.getElementById('set-sfx-on');
     if (cb) {
       cb.checked = enabled();
       cb.addEventListener('change', function () { setEnabled(cb.checked); });
     }
-    /* Entering a game is a moment: one low thump and a lift as the sheet
-       arrives. Watched on the sheets' own class, so no game has to know. */
-    var GAMES = /^(game|drop-modal|blitz-modal|hl-modal|recall-modal|ew-modal|war-modal|tourney-modal|charades)$/;
-    try {
-      var mo = new MutationObserver(function (list) {
-        list.forEach(function (m) {
-          var t = m.target, open = t.classList.contains('open');
-          if (open && !t._sfxOpen) play('open');
-          t._sfxOpen = open;
-        });
-      });
-      Array.prototype.forEach.call(document.querySelectorAll('[id]'), function (n) {
-        if (GAMES.test(n.id)) { n._sfxOpen = n.classList.contains('open'); mo.observe(n, { attributes: true, attributeFilter: ['class'] }); }
-      });
-    } catch (e) {}
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireSetting); else wireSetting();
 
   window.Sfx = {
     play: play, enabled: enabled, setEnabled: setEnabled, unlock: unlock,
-    fromBuzz: function (kind) { play(FROM_BUZZ[kind] || 'tap'); }
+    // Kept so a stale caller is a no-op rather than a TypeError. buzz() no
+    // longer sounds; a sound is asked for by name.
+    fromBuzz: function () {}
   };
 })();

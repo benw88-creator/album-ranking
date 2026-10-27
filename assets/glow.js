@@ -55,12 +55,11 @@
       if (+input.value === v) return v;
       input.value = v;
       if (fire !== false) input.dispatchEvent(new Event('input', { bubbles: true }));
-      // A tick every tenth of the range: felt, not buzzing.
+      // A detent every tenth of the range, felt and never heard: iOS's
+      // selection tick, the one a picker wheel makes. Reaching either end is
+      // a soft bump instead, so the limit is felt as a limit.
       var bucket = Math.floor(frac(v) * 10);
-      if (lastTick !== null && bucket !== lastTick) {
-        if (window.buzz) buzz('tap', true);
-        if (window.Sfx) Sfx.play('tick', { v: frac(v) });
-      }
+      if (lastTick !== null && bucket !== lastTick && window.buzz) buzz(v <= min || v >= max ? 'soft' : 'select');
       lastTick = bucket;
       return v;
     }
@@ -143,8 +142,9 @@
         wrap.classList.remove('gs-bloom'); void wrap.offsetWidth; wrap.classList.add('gs-bloom');
       }
       setTimeout(function () { wrap.classList.remove('gs-release'); }, 520);
-      if (!cancelled && window.buzz) buzz('good', true);
-      if (!cancelled && window.Sfx) Sfx.play('release', { v: frac(+input.value) });
+      // Letting go settles the value: one firm press, no sound. The sound,
+      // if any, belongs to saving the rating, not to lifting a finger.
+      if (!cancelled && window.buzz) buzz('press');
       if (opts.onRelease && !cancelled) opts.onRelease(+input.value);
     }
     wrap.addEventListener('pointerup', function (e) {
@@ -208,11 +208,10 @@
     var hold = 0, holdN = 0;
     function nudge(d) {
       var v = Math.max(+rs.min || 1, Math.min(+rs.max || 100, +rs.value + d));
-      if (v === +rs.value) { if (window.buzz) buzz('bad', true); stopHold(); return; }
+      if (v === +rs.value) { if (window.buzz) buzz('soft'); stopHold(); return; }
       rs.value = v;
       rs.dispatchEvent(new Event('input', { bubbles: true }));
-      if (window.buzz) buzz('tap', true);
-      if (window.Sfx) Sfx.play('tick', { v: (v - 1) / 99 });
+      if (window.buzz) buzz('select');
       var sc = document.getElementById('rate-score');
       if (sc) { sc.classList.remove('pop'); void sc.offsetWidth; sc.classList.add('pop'); }
     }

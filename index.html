@@ -14580,7 +14580,8 @@ document.getElementById('modes').addEventListener('click', function (e) {
   // Moving between the five places is the most repeated gesture in the app and
   // it was the only one with no feedback at all. On iPhone this is the Taptic
   // engine; on the web it is nothing, which is what it always was.
-  if (window.buzz && b.dataset.mode !== currentMode) buzz('tap');
+  // A selection detent, the feel of a tab bar or segmented control. No sound.
+  if (window.buzz && b.dataset.mode !== currentMode) buzz('select');
   // The tab you are already on: back to the top. Any other: where you left it.
   var again = b.dataset.mode === currentMode;
   setMode(b.dataset.mode);
@@ -15511,6 +15512,7 @@ function renderAuthArea(connected){
     if(gameType==='tracklist'){coverWrap.style.display='block';coverImg.src=r.art;}
     coverImg.classList.remove('zoomed');
     circle.innerHTML=ok?'\u2713':'\u2717';
+    if(window.buzz)buzz(ok?'good':'bad');if(window.Sfx)Sfx.play(ok?'correct':'fail');
     badge.className='result-badge show '+(ok?'correct':'wrong');
     coverWrap.classList.remove('correct','wrong');void coverWrap.offsetWidth;coverWrap.classList.add(ok?'correct':'wrong');
     if(ok){burst();scoreDisp.classList.add('bump');setTimeout(function(){scoreDisp.classList.remove('bump');},220);}
@@ -15655,8 +15657,9 @@ function setClaimed(k){const o=loadClaimed();o[k]=true;try{localStorage.setItem(
 
    `burst(el)`    — particles out of an element's centre. Wins, milestones.
    `ripple(el,e)` — a circle from the tap point. Every tap worth confirming.
-   `buzz(kind)`   — haptics where the platform has them. Silent where it
-                    doesn't, which is iOS Safari, so nothing may depend on it. */
+   `buzz(kind)`   — haptics only, where the platform has them. Silent where it
+                    doesn't, which is iOS Safari, so nothing may depend on it.
+                    Sound is separate: Sfx.play(name), assets/sound.js. */
 var _reduceMotion = false;
 try { _reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
 
@@ -15710,43 +15713,50 @@ function ripple(el, ev) {
 }
 window.ripple = ripple;
 
-// Patterns rather than raw durations, so "right" and "wrong" feel like
-// different events rather than the same nudge at different lengths.
-var BUZZ = { tap: [7], good: [10, 40, 16], bad: [26, 60, 26], big: [12, 40, 12, 40, 26] };
+/* buzz(kind) is HAPTICS ONLY (2026-10-27). It used to play a sound too, which
+   is how a tab change, a heart and a dialog all made a noise; a sound is now
+   asked for by name through Sfx.play() at the few moments that earn one.
 
-/* iOS Safari has no vibration API at all, so for the whole life of this app
-   every one of the thirty-odd call sites below did nothing on an iPhone — the
-   frequent small moments this file argues are the point of having feedback at
-   all were silent on the platform most people were holding.
-
-   In the native app they go to the Taptic engine instead. The mapping is by
-   MEANING rather than by duration: iOS owns its own vocabulary for these and a
-   success there is a double thump whatever milliseconds the web pattern
-   happened to use. 'big' is three impacts rather than one, because it is the
-   word this app reserves for a win and a single knock is what 'tap' already
-   gets. */
-var HAPTIC = {
-  tap:  [['impact', { style: 'LIGHT' }, 0]],
-  good: [['notification', { type: 'SUCCESS' }, 0]],
-  bad:  [['notification', { type: 'ERROR' }, 0]],
-  big:  [['impact', { style: 'HEAVY' }, 0],
-         ['impact', { style: 'HEAVY' }, 70],
-         ['impact', { style: 'MEDIUM' }, 140]]
+   The vocabulary is iOS's own, by MEANING:
+     select — a detent: slider tenths, a tab or segment, the Draw's ticks
+     tap    — a light confirmation of a press
+     soft   — a gentle bump: a limit reached, a sheet settling
+     press  — a committed action: a slider released on its value, a Buy
+     good   — something completed (notification success)
+     warn   — refused but harmless (notification warning)
+     bad    — wrong (notification error)
+     big    — a real win: heavy, then a rigid echo
+   In the app they go to the VinallNative plugin, which keeps prepared
+   generators so a detent lands on the frame rather than a beat late, and has
+   soft/rigid and intensity, which @capacitor/haptics does not. Without it they
+   fall back to @capacitor/haptics; on the web, Android's vibrate(). */
+var BUZZ = { select: [3], tap: [7], soft: [5], press: [10], good: [10, 40, 16], warn: [18, 50, 18], bad: [26, 60, 26], big: [12, 40, 12, 40, 26] };
+var HAPTIC_FALLBACK = {
+  select: [['impact', { style: 'LIGHT' }, 0]],
+  tap:    [['impact', { style: 'LIGHT' }, 0]],
+  soft:   [['impact', { style: 'LIGHT' }, 0]],
+  press:  [['impact', { style: 'MEDIUM' }, 0]],
+  good:   [['notification', { type: 'SUCCESS' }, 0]],
+  warn:   [['notification', { type: 'WARNING' }, 0]],
+  bad:    [['notification', { type: 'ERROR' }, 0]],
+  big:    [['impact', { style: 'HEAVY' }, 0], ['impact', { style: 'MEDIUM' }, 90]]
 };
-/* Every buzz also SOUNDS (assets/sound.js), which is how ninety call sites got
-   a voice without being touched. `silent` is for a caller that plays its own,
-   more specific sound and wants only the haptic. */
-function buzz(kind, silent) {
-  if (!silent && window.Sfx) Sfx.fromBuzz(kind);
-  if (window.Native && Native.on && Native.has('Haptics')) {
-    (HAPTIC[kind] || HAPTIC.tap).forEach(function (step) {
-      if (!step[2]) Native.call('Haptics', step[0], step[1]);
-      else setTimeout(function () { Native.call('Haptics', step[0], step[1]); }, step[2]);
-    });
-    return;
+// iOS applies the person's own System Haptics setting to every generator, so
+// there is no separate switch here.
+function buzz(kind) {
+  kind = BUZZ[kind] ? kind : 'tap';
+  if (window.Native && Native.on) {
+    if (Native.has('VinallNative')) { Native.call('VinallNative', 'haptic', { kind: kind }); return; }
+    if (Native.has('Haptics')) {
+      HAPTIC_FALLBACK[kind].forEach(function (step) {
+        if (!step[2]) Native.call('Haptics', step[0], step[1]);
+        else setTimeout(function () { Native.call('Haptics', step[0], step[1]); }, step[2]);
+      });
+      return;
+    }
   }
   if (!navigator.vibrate) return;
-  try { navigator.vibrate(BUZZ[kind] || BUZZ.tap); } catch (e) {}
+  try { navigator.vibrate(BUZZ[kind]); } catch (e) {}
 }
 window.buzz = buzz;
 
@@ -22111,12 +22121,13 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
         cur++;
         num.textContent = cur;
         num.classList.remove('hit'); void num.offsetWidth; num.classList.add('hit');
-        if (window.Sfx) Sfx.play(cur < target ? 'levelTick' : 'levelUp', { n: cur - from });
-        if (cur < target) { if (window.buzz) buzz('tap', true); t = setTimeout(stepUp, 260); return; }
+        // The count is felt, not heard: a detent per level, one sound at the top.
+        if (cur < target) { if (window.buzz) buzz('select'); t = setTimeout(stepUp, 260); return; }
+        if (window.Sfx) Sfx.play('levelUp', { n: cur - from });
         var jumped = Math.max(gained, target - from);
         sub.textContent = jumped > 1 ? jumped + ' levels' : '';
         if (window.burst) burst(num, { count: 40 + Math.min(40, jumped * 8), spread: 240 });
-        if (window.buzz) buzz('big', true);
+        if (window.buzz) buzz('big');
         clearTimeout(pop._leave); pop._leave = setTimeout(leave, 2600);
       }
       pop._to = function (lv) {
@@ -22355,6 +22366,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      identical — the same argument as burst/ripple/buzz being global. */
   async function payoutFrom(fromEl, amount, w) {
     if (!(amount > 0)) { if (w) applyWallet(w); return; }
+    if (window.Sfx) Sfx.play('discs');
     // Said out loud as well as thrown: the discs flying to the header are a
     // lovely animation and not a number anybody can read.
     discEarned(amount);
@@ -22553,7 +22565,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   function applyWallet(w) {
     if (!w) return;
     // Discs landing is the one sound every earning path shares.
-    if (w.discs != null && loaded && w.discs > state.discs && window.Sfx) Sfx.play('discs');
+    /* No sound here any more. A balance moves for many reasons — a rating, a
+       background award, a refund — and a chime on each was noise. The Disc
+       sound belongs to the claims you press: payoutFrom and the daily ladder. */
     if (w.discs != null) state.discs = w.discs;
     if (w.streak_current != null) state.streak_current = w.streak_current;
     if (w.streak_best != null) state.streak_best = w.streak_best;
@@ -22709,6 +22723,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (w.claimed_already) return w;
 
     if (w.earned > 0) {
+      if (window.Sfx) Sfx.play('discs');
       discEarned(w.earned, 'day ' + w.login_streak);
       /* Thrown from the ladder tile you pressed, when there is one. The claim
          is the single most rewarding second in the app and it used to be a
@@ -24715,6 +24730,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     ewCardStatus();
 
     if (window.buzz) buzz(won ? 'big' : 'bad');
+    if (window.Sfx) Sfx.play(won ? 'correct' : 'fail');
 
     if (mode === 'daily') {
       if (window.notePlay) notePlay('earworm');
@@ -25792,6 +25808,7 @@ function playDismissAnimation(gateEl, callback) {
 
     // Six guesses is six moments, and five of them used to be silent.
     if (window.buzz) buzz(won ? 'big' : 'bad');
+    if (window.Sfx) Sfx.play(won ? 'correct' : 'fail');
 
     if (st.done) {
       elInput.disabled = true;
@@ -27666,24 +27683,35 @@ window.renderAdminStats = renderAdminStats;
      shows as a player that has still not played after 12s. */
   function watchYT(player, tok, endAt, h) {
     var asked = Date.now(), seen = false, waited = false, last = -2, id;
+    /* The YouTube player's sound is music too, but it plays inside an iframe
+       the audio-session hook cannot see — so it holds the session itself,
+       or the ringer switch would silence it in the app. */
+    var AM = window.AudioMode;
+    if (AM) AM.hold('yt', true);
+    var stop = function () { clearInterval(id); if (AM) AM.hold('yt', false); };
     id = setInterval(function () {
-      if (tok !== pl.tok || !player) { clearInterval(id); return; }
+      if (tok !== pl.tok || !player) { stop(); return; }
       if (!player.getPlayerState) return;                  // not ready yet: its methods arrive with onReady
       var stt = player.getPlayerState();
       if (stt === 1) {
+        if (AM) AM.hold('yt', true);
         if (last !== 1) { seen = true; h.playing(); }
         last = 1;
         var t = player.getCurrentTime();
         onTick(t);
-        if (t >= endAt - 0.04) { try { player.pauseVideo(); } catch (e) {} clearInterval(id); h.done(); }
+        if (t >= endAt - 0.04) { try { player.pauseVideo(); } catch (e) {} stop(); h.done(); }
         return;
       }
-      if (seen) { if (stt === 2 && last === 1 && h.paused) h.paused(); last = stt; return; }
+      if (seen) {
+        if (stt === 2 && last === 1 && h.paused) h.paused();
+        if (AM) AM.hold('yt', stt === 1 || stt === 3);
+        last = stt; return;
+      }
       last = stt;
       if (stt === 3) return;                               // buffering is progress
       var gone = Date.now() - asked;
       if (!waited && gone > 2500) { waited = true; h.waiting(); }
-      if (gone > 12000) { clearInterval(id); h.failed(); }
+      if (gone > 12000) { stop(); h.failed(); }
     }, 150);
     return id;
   }
@@ -28926,7 +28954,7 @@ window.renderAdminStats = renderAdminStats;
       if (ed.startMs !== before) {
         paintSel(); selChanged();
         var now = Date.now();
-        if (now - lastBuzz > 45 && window.buzz) { lastBuzz = now; buzz('tap'); }
+        if (now - lastBuzz > 45 && window.buzz) { lastBuzz = now; buzz('select'); }
       }
       fineSettle();
     }, true);
@@ -30372,7 +30400,8 @@ window.renderAdminStats = renderAdminStats;
       var pickBtn = rec.querySelector('[data-pick]');
       if (pickBtn) pickBtn.remove();
     }
-    if (window.buzz) buzz('big');
+    // A purchase clearing, not a win: the success notification, no confetti sound.
+    if (window.buzz) buzz('good');
     /* Every other card was drawn against the balance and picks you had BEFORE
        this purchase, so a Buy you could no longer afford, or a pick you no
        longer held, stayed live and failed on the server. Bring the grid into
@@ -30965,7 +30994,7 @@ window.renderAdminStats = renderAdminStats;
         if (m && m !== 'none') { var p = m.match(/matrix\(([^)]+)\)/); if (p) x = parseFloat(p[1].split(',')[4]) || 0; }
         var idx = Math.floor((windowW / 2 - x) / TILE);
         if (lastIdx !== null && idx !== lastIdx) {
-          if (now - lastBuzz > 120 && now - t0 > SPIN_MS * 0.45 && window.buzz) { buzz('tap'); lastBuzz = now; }
+          if (now - lastBuzz > 120 && now - t0 > SPIN_MS * 0.45 && window.buzz) { buzz('select'); lastBuzz = now; }
         }
         lastIdx = idx;
         _tickRaf = now - t0 < SPIN_MS ? requestAnimationFrame(tick) : 0;
@@ -31102,6 +31131,8 @@ window.renderAdminStats = renderAdminStats;
   function applyFeedback(won) {
     var tier = won.tier || 'common';
     if (window.buzz) buzz(tier === 'common' ? 'tap' : tier === 'rare' ? 'good' : 'big');
+    // Heard only at the top of the ladder; the rest land on the haptic alone.
+    if ((tier === 'legendary' || tier === 'mythic') && window.Sfx) Sfx.play('celebrate');
     if (calm() || !window.burst) return;
     // Particles leave the prize itself, in its own colours.
     var from = el('draw-strip').children[WIN_INDEX] || el('draw-window');
@@ -31988,6 +32019,7 @@ window.renderAdminStats = renderAdminStats;
         if (window.burst) burst(side, { count: 12, spread: 80 });
         if (window.buzz) buzz('good');
       }
+      if (window.Sfx) Sfx.play('correct');
       paintScore();
       after(620, advance);
     } else {
@@ -31995,6 +32027,7 @@ window.renderAdminStats = renderAdminStats;
       verdict.textContent = 'No — that’s ' + fmt(right.v) + ' against ' + fmt(left.v);
       verdict.className = 'hl-verdict bad';
       if (window.buzz) buzz('bad');
+      if (window.Sfx) Sfx.play('fail');
       after(1250, function () { over(false); });
     }
   }
@@ -32837,6 +32870,7 @@ window.renderAdminStats = renderAdminStats;
       f.className = 'bl-float in';
       setTimeout(function () { f.className = 'bl-float'; }, 700);
       if (window.buzz) buzz(risked || Blitz.multFor(streak) > mult ? 'big' : 'good');
+      if (window.Sfx) Sfx.play('correct');
       if (window.burst && (risked || Blitz.multFor(streak) > mult)) burst(btns[k], { count: risked ? 40 : 22, spread: 130 });
     } else {
       if (risked) {
@@ -32850,6 +32884,7 @@ window.renderAdminStats = renderAdminStats;
       }
       streak = 0;
       if (window.buzz) buzz('bad');
+      if (window.Sfx) Sfx.play('fail');
     }
     riskArmed = false;
     paintHud();
@@ -42401,7 +42436,7 @@ window.renderAdminStats = renderAdminStats;
 <script src="/assets/interactions.js?v=4"></script>
 <script src="/assets/replay.js?v=10"></script>
 <script src="/assets/you.js?v=9"></script>
-<script src="/assets/glow.js?v=4"></script>
+<script src="/assets/glow.js?v=5"></script>
 <script src="/assets/comments.js?v=3" defer></script>
 <script src="/assets/boards.js?v=2"></script>
 <script src="/assets/play.js?v=2"></script>
@@ -42409,7 +42444,7 @@ window.renderAdminStats = renderAdminStats;
 <script src="/assets/passport-core.js?v=1"></script>
 <script src="/assets/passport.js?v=2"></script>
 <script src="/assets/safety.js?v=2"></script>
-<script src="/assets/discover.js?v=2"></script>
+<script src="/assets/discover.js?v=3"></script>
 <script src="/assets/liked.js?v=1"></script>
-<script src="/assets/sound.js?v=3"></script>
+<script src="/assets/sound.js?v=7"></script>
 </html>

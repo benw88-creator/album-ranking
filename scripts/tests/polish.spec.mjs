@@ -18,11 +18,37 @@ test('sound: every named effect renders without throwing, and Off means silent',
   page.on('pageerror', e => errors.push(String(e)));
   await start(page);
   await page.mouse.click(5, 5);   // a gesture, so the context can start
-  await page.evaluate(() => ['tap', 'tick', 'release', 'rate', 'success', 'correct', 'fail', 'discs', 'unlock',
-    'celebrate', 'levelTick', 'levelUp', 'whoosh', 'open', 'round', 'discover'].forEach(n => Sfx.play(n, { v: .8, n: 2 })));
+  await page.evaluate(() => ['rate', 'correct', 'fail', 'discs', 'celebrate', 'levelUp',
+    // removed in Phase 1: must be harmless no-ops
+    'tap', 'tick', 'release', 'success', 'open', 'discover', 'levelTick'].forEach(n => Sfx.play(n, { v: .8, n: 2 })));
   await page.evaluate(() => Sfx.setEnabled(false));
   expect(await page.evaluate(() => Sfx.enabled())).toBe(false);
   expect(errors).toEqual([]);
+});
+
+test('haptics never sound, and the audio session follows music', async ({ page }) => {
+  await start(page);
+  await page.mouse.click(5, 5);
+  const r = await page.evaluate(() => {
+    const played = [];
+    const orig = Sfx.play; Sfx.play = function (n) { played.push(n); };
+    ['select', 'tap', 'soft', 'press', 'good', 'warn', 'bad', 'big', 'nonsense'].forEach(k => buzz(k));
+    Sfx.play = orig;
+    const out = { played, m0: AudioMode.mode() };
+    const a = new Audio();
+    a.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+    a.play().catch(() => {});
+    out.afterPrime = AudioMode.mode();
+    a.src = '/test-preview.wav'; a.play().catch(() => {});
+    out.afterMusic = AudioMode.mode();
+    out.gated = AudioMode.gated();
+    a.pause();
+    return out;
+  });
+  expect(r.played).toEqual([]);
+  expect(r.m0).toBe('ambient');
+  expect(r.afterPrime).toBe('ambient');     // the silent unlock clip never takes the session
+  expect(r.afterMusic).toBe('playback');
 });
 
 test('discovery: a prompt docks to the side, tucks into a tab, and the × retires it', async ({ page }) => {
