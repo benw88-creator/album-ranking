@@ -31,7 +31,7 @@ const KWORB = {
   [SP.C]: [['Hit', 900000000]],
   [SP.D]: ALBUMS[404].tracks.map((t) => [t, 50000000]),
 };
-let mbDown = false, kworbDown = false, rpcCalls = 0;
+let mbDown = false, kworbDown = false, rpcCalls = 0, sealedIds = [], sealedDown = false;
 const db = { plays: {}, owned: {}, discs: 10000000, rated: new Set(['101', '202', '303', '404', 'legacyLegacyLegacy0001']) };
 const USER = 'u-1';
 
@@ -39,7 +39,7 @@ globalThis.fetch = async (url, opts = {}) => {
   const u = new URL(url);
   const body = opts.body ? JSON.parse(opts.body) : null;
   if (u.pathname === '/auth/v1/user') return (opts.headers.Authorization === 'Bearer good') ? J({ id: USER }) : J({}, 401);
-  if (u.pathname === '/rest/v1/rpc/my_sealed_albums') return J([]);
+  if (u.pathname === '/rest/v1/rpc/my_sealed_albums') return sealedDown ? J({}, 500) : J(sealedIds.map((id) => ({ album_id: id })));
   if (u.pathname === '/rest/v1/crate_feed') return J([]);   // never posted: a private rating
   if (u.pathname === '/rest/v1/album_plays') {
     if (opts.method === 'POST') { body.forEach((r) => { db.plays[r.album_id] = r; }); return J({}, 201); }
@@ -182,6 +182,22 @@ await check('signed-out callers are refused before anything is priced', async ()
   const r2 = res();
   await prices({ method: 'POST', headers: { authorization: 'Bearer bad' }, body: { albums: [{ id: '101' }] } }, r2);
   assert.equal(r2.code, 401);
+});
+
+await check('a record on a live Bid War board is neither priced nor sold by the till, and the seal fails closed', async () => {
+  const before = db.discs, calls = rpcCalls;
+  sealedIds = ['202'];
+  const r = await buyReq({ album_id: '202', name: 'B', artist: 'B', expect: 1 });
+  assert.equal(r.code, 409);
+  assert.equal(r.body.reason, 'sealed');
+  assert.equal(r.body.price, undefined, 'a sealed record must not leak its price');
+  assert.ok(!/[0-9]{3}/.test(r.body.error), 'no number in the message either');
+  sealedIds = []; sealedDown = true;
+  const r2 = await buyReq({ album_id: '202', name: 'B', artist: 'B', expect: 1 });
+  assert.equal(r2.code, 503);
+  assert.equal(r2.body.price, undefined);
+  sealedDown = false;
+  assert.equal(rpcCalls, calls); assert.equal(db.discs, before);
 });
 
 console.log('collection selfcheck: ' + groups + ' groups passed');

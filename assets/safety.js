@@ -31,7 +31,7 @@
     return el;
   }
   async function refuse(c) {
-    try { if (window.Cloud && Cloud.logout) await Cloud.logout(); else await c.auth.signOut(); } catch (e) {}
+    try { if (window.Cloud && Cloud.logout) await Cloud.logout({ force: true }); else await c.auth.signOut({ scope: "local" }); } catch (e) {}
     if (window.say) say('VINALL is for 13 and over', 'Sorry, you need to be 13 or older to use VINALL. If you made this account by mistake, email vinall.support@gmail.com and we will delete it.');
   }
   var busy = null;

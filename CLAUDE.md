@@ -6908,3 +6908,37 @@ self-time on load is well under a second at 4×). That is a CSS job.
   as `game_board`, under Recall → **Tutorial** in the leaderboard sheet. No write
   policies (guarded). The tutorial no longer files on the Endless board.
 - Tests: `scripts/tests/onboarding.spec.mjs`.
+
+## Audit fixes (2026-10-29)
+
+`..._20261029180000_audit_fixes.sql` — **NOT APPLIED** (tested against production
+inside a rolled-back transaction). Until it lands, items 4, 10 (expiry half),
+11 (re-post half), 12 and 13 are client-only or not yet in effect.
+
+- **The daily login claims itself** (`Wallet.autoClaim`), once the splash, the age
+  question and the tutorial are gone and the page is visible; re-armed on
+  `visibilitychange` and `vinall:onboarded`. Supersedes "The ladder is the claim,
+  and it is the only one" — the ladder still works and still claims. 7 of 11
+  accounts active in October had used the app on a day they never claimed.
+- **Logout is this device only** (`signOut({scope:'local'})`), and asks before
+  wiping anything that did not reach the cloud (`unsyncedKeys`). The under-13
+  refusal passes `{force:true}`.
+- **Albums pay only for a first rating**, like songs.
+- **Feed posts use the crate's key** and drop same-name/artist twins after a
+  successful upsert (`dropFeedTwins`); `removeFromFeed` takes name + artist.
+- **Imports count what landed**; feed posts over the daily cap wait in
+  `crate_feed_pending_v1` and go up via `VinallImport.flushFeedPending()` on login.
+- **Recall Endless keeps its board run across a reload** (`Boards.snapshot/adopt`,
+  stored in `crate_recall_live.board`); the migration lets an Endless run finish
+  up to 12.5h after it starts.
+- **Tutorial Recall start is retried** (0.5s, 1.5s), and once more at submit with
+  a 1.1s wait so the server's one-second floor holds.
+- **`/api/collection-buy` checks `my_sealed_albums`** before pricing (fails closed).
+- **The Draw's odds note** now says duplicates pay HALF their shop price — the
+  live `wallet_spin` pays `cost * 0.5`. The quarter-payout and 20% figures in
+  The Draw section above are stale; the payouts themselves were not changed.
+- Migration: `milestone_comp_items` (each rating pays toward one Completionist
+  claim, back-filled from existing claims), `unpost_deleted_album` trigger plus a
+  feed delete in `rating_delete`, `daily_row_cap` passes feed re-posts,
+  `guard_rating_state` merges the ratings blob per item instead of replacing it.
+- Tests: `scripts/tests/auditfixes.spec.mjs`, `collection.selfcheck.mjs` (sealed).

@@ -78,6 +78,22 @@
     return run;
   }
   function live(game) { var r = runs[game]; return r && !r.done ? r : null; }
+  /* A run that has to outlive the page (Recall's paused Endless run) is
+     written down by its owner and handed back here, rather than started again:
+     a new game_start voids the open run and restarts the server's clock, so a
+     run resumed after a reload was refused as "too fast" for the songs it had
+     already played. Only a run the server actually issued is worth keeping. */
+  function snapshot(game) {
+    var r = live(game);
+    return r && r.id && !r.local ? { id: r.id, mode: r.mode, day: r.day == null ? null : r.day, t0: r.t0 } : null;
+  }
+  function adopt(game, o) {
+    if (!o || !o.id) return null;
+    var run = { game: game, mode: o.mode, day: o.day, artistKey: null, artistLabel: '',
+                t0: o.t0 || Date.now(), id: o.id, err: null, done: false };
+    runs[game] = run;
+    return run;
+  }
 
   function finish(game, result) {
     var run = runs[game];
@@ -407,5 +423,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
 
   window.Boards = { start: start, finish: finish, live: live, clock: clock, result: result, paint: paint, slot: slot,
-                    open: open, day: day, fmt: fmtMs, preview: preview, GAMES: GAMES };
+                    open: open, day: day, fmt: fmtMs, preview: preview, GAMES: GAMES, snapshot: snapshot, adopt: adopt };
 })();

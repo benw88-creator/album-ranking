@@ -9864,9 +9864,9 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
          to schedule nothing, and the person who played today and did not open
          the app tomorrow was exactly the one the reminder was for. */
       notifs.push(claimedToday
-        ? { id: STREAK_ID, title: 'Day ' + ((st.login_streak || 0) + 1) + ' is ready', body: 'Claim it to keep your streak going.', schedule: { at: atLocal(20, 0, 1) } }
+        ? { id: STREAK_ID, title: 'Day ' + ((st.login_streak || 0) + 1) + ' is ready', body: 'Open VINALL to keep your streak going.', schedule: { at: atLocal(20, 0, 1) } }
         : { id: STREAK_ID, title: 'Your streak is waiting',
-            body: (st.login_streak > 0 ? 'Day ' + (st.login_streak + 1) + ' is still there.' : 'Come back and claim today.'),
+            body: (st.login_streak > 0 ? 'Day ' + (st.login_streak + 1) + ' is still there.' : 'Open VINALL to claim today.'),
             schedule: { at: atLocal(20, 0) } });
     }
     try {
@@ -12839,9 +12839,15 @@ function saveAlbum(meta, score) {
   // You have heard it now, so it stops being something to hear.
   if (shortlistHas(meta.id)) shortlistRemove(meta.id);
   if (window.Cloud) Cloud.syncRating('album', albKey, albums[albKey]);
-  if (window.Cloud) Cloud.postToFeed(meta, score, albums[albKey].note);
+  // Posted under the crate's key, not the catalogue's: a record rated before
+  // the Deezer switch keeps its Spotify id, and posting under the new one
+  // gave it a second public row with the old score still on it.
+  if (window.Cloud) Cloud.postToFeed(Object.assign({}, meta, { id: albKey }), score, albums[albKey].note);
   if (window.Reviews) try { if (!prev) Reviews.tellFollowers(meta, score); Reviews.refresh(); } catch (e) {}
-  if (window.Wallet) Wallet.recordRating();
+  /* Paid for a NEW rating only, the rule saveSong already keeps: re-rating
+     (or "Still 82" on a Second Thoughts card) is not a new opinion, and paying
+     each time made the album slider a Disc faucet up to the daily cap. */
+  if (window.Wallet && !prev) Wallet.recordRating();
   /* A referral pays on the tenth album, and the person who earned it is
      not thinking about referrals by then — so it settles here rather than
      waiting for the next cold load. noteRating() is a local count and a
@@ -12895,7 +12901,7 @@ function saveSong(track, score, albumMeta) {
   renderSongs();
   if (window.CertPanel && albumMeta) try { CertPanel.refresh(albumMeta.id); } catch (e) {}
 }
-function removeAlbum(id) { const a = loadAlbums(), old = a[id]; delete a[id]; persist(ALBUMS_KEY, a); if (window.Cloud) Cloud.deleteRating('album', id, old); if (window.Cloud) Cloud.removeFromFeed(id); _recsDirty = true; renderAlbums(); }
+function removeAlbum(id) { const a = loadAlbums(), old = a[id]; delete a[id]; persist(ALBUMS_KEY, a); if (window.Cloud) Cloud.deleteRating('album', id, old); if (window.Cloud) Cloud.removeFromFeed(id, old && old.name, old && old.artist); _recsDirty = true; renderAlbums(); }
 function removeSong(id)  { const s = loadSongs(), old = s[id]; delete s[id]; persist(SONGS_KEY, s); if (window.Cloud) Cloud.deleteRating('song', id, old); _recsDirty = true; renderSongs(); }
 window.removeAlbum = removeAlbum;
 window.removeSong = removeSong;
@@ -17048,15 +17054,20 @@ const Cloud=(function(){
     }catch(e){}
     // Not awaited: a slow diff must never hold up the rest of the login.
     reconcileRatings();
+    // Imported records that hit yesterday's public-post limit go up now.
+    if(window.VinallImport&&VinallImport.flushFeedPending)try{VinallImport.flushFeedPending();}catch(e){}
     /* Same rule: not awaited. A referral code claims itself and settles in
        the background — nothing on screen is waiting on it, and a referral
        server that is slow or a migration that is not applied yet must not be
        able to hold up somebody's login. */
     if(window.Reach)Reach.onAuthed();
-    // The day's reward is NOT claimed automatically. Discs that arrive while
-    // you are looking elsewhere are Discs you never saw arrive — the press is
-    // the whole moment. Rewards shows the button; this only lights the nav.
+    /* The day's reward claims itself once the app is actually on screen
+       (Wallet.autoClaim waits out the splash, the age question and the
+       tutorial). It used to wait for a press on the Shop ladder, and 7 of the
+       11 accounts active in October had used the app on a day they never
+       claimed — opening VINALL is what a daily login reward is for. */
     if(window.markRewardsDot)markRewardsDot();
+    if(window.Wallet&&Wallet.autoClaim)Wallet.autoClaim();
     /* AFTER the merge, which is what makes the flag per-account rather than
        per-device: before it, this browser's localStorage may still belong to
        the last person who signed in here. */
@@ -17158,13 +17169,39 @@ const Cloud=(function(){
      out first would make pushAll a no-op (isOn() is false once `user` is
      null), so the flush has to sit in front of both. A failed push is not a
      reason to keep somebody signed in, hence the catch. */
-  async function logout(){
+  /* What this device holds that the cloud does not: a key whose last push
+     failed (pushKey swallows errors, so "pushAll finished" proves nothing) or
+     a rating deletion still queued. Logging out wipes local state, so these
+     would be gone for good. */
+  function unsyncedKeys(){
+    const out=[];
+    SYNC_KEYS.forEach(function(k){
+      const v=lsGet(k);if(v===null)return;
+      let j;try{j=JSON.stringify(v);}catch(e){return;}
+      if(j!==_cloudJson[k])out.push(k);
+    });
+    try{if(Object.keys(lsGet(RATING_PENDING_KEY)||{}).length)out.push(RATING_PENDING_KEY);}catch(e){}
+    return out;
+  }
+  async function logout(opts){
     try{ if(isOn()) await pushAll(); }catch(e){}
+    /* Never wipe work that did not reach the cloud without saying so. `force`
+       is for exits that cannot be argued with (the under-13 refusal). */
+    if(!(opts&&opts.force===true)&&isOn()&&unsyncedKeys().length&&typeof window.ask==='function'){
+      const go=await window.ask({title:'Some changes haven\u2019t synced',
+        body:'Ratings or progress on this device haven\u2019t reached your account yet \u2014 usually a lost connection. Logging out now deletes them from this device.',
+        confirm:'Log out anyway',cancel:'Stay signed in',danger:true});
+      if(!go)return false;
+    }
     try{ if(window.track&&track.flush) track.flush(); }catch(e){}
     // This device stops receiving the last account's pushes before it stops
     // being that account — the rpc needs the session.
     try{ if(window.PushCtl) await PushCtl.forget(); }catch(e){}
-    try{await sb.auth.signOut();}catch(e){}
+    /* THIS DEVICE ONLY. supabase-js defaults to scope 'global', which revokes
+       every session for the account: the phone you are not holding then hits
+       SIGNED_OUT on its next refresh and wipes local work it never got to
+       upload. Signing out here says nothing about the other devices. */
+    try{await sb.auth.signOut({scope:'local'});}catch(e){}
     user=null;
     ratingsSyncReady=false;
     try{window._profCache={};}catch(e){}
@@ -17697,11 +17734,28 @@ const Cloud=(function(){
         note:note||'',
         created_at:new Date().toISOString()
       },{onConflict:'user_id,album_id'});
+      /* One post per person per RECORD, not per id. The same record can sit
+         under a Spotify id and a Deezer id (trap 4); once this one is written,
+         any other post of yours for the same name and artist is the stale
+         copy. Only after a successful upsert, so a failure never leaves the
+         record with no post at all. */
+      await dropFeedTwins(albumMeta.id,albumMeta.name,albumMeta.artist);
     }catch(e){}
   }
-  async function removeFromFeed(albumId){
+  // ilike with every wildcard escaped is an exact, case-insensitive match.
+  function likeExact(s){return String(s||'').replace(/[\\%_]/g,function(c){return '\\'+c;});}
+  async function dropFeedTwins(keepId,name,artist){
+    if(!isOn()||!name||!artist)return;
+    let q=sb.from('crate_feed').delete().eq('user_id',user.id)
+      .ilike('album_name',likeExact(name)).ilike('album_artist',likeExact(artist));
+    if(keepId)q=q.neq('album_id',keepId);
+    try{await q;}catch(e){}
+  }
+  async function removeFromFeed(albumId,name,artist){
     if(!isOn())return;
     try{await sb.from('crate_feed').delete().eq('user_id',user.id).eq('album_id',albumId);}catch(e){}
+    // And the same record's post under its other id, if it has one.
+    if(name&&artist)await dropFeedTwins(null,name,artist);
   }
   /* Every score the room has given these records, in one round trip. crate_feed
      already holds exactly one row per person per album, so the spread on a card
@@ -22869,6 +22923,44 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     return w;
   }
 
+  /* THE DAILY CLAIM, WHEN THE APP OPENS. Not under the splash, the age
+     question or the tutorial: a reward that lands behind something is one
+     nobody saw arrive, so it waits until none of them is up and the page is
+     visible, then claims through dailyLogin(), which already plays the Disc
+     flight and the day-five / day-seven celebrations. The server is
+     idempotent per UTC day (claimed_already), so a second tab or a retry is
+     harmless; this only avoids asking needlessly. Re-armed whenever the page
+     comes back to the front, which covers an app left open across midnight. */
+  var _autoT = 0, _autoBusy = false;
+  function claimedToday() {
+    return !!state.login_last_date && String(state.login_last_date).slice(0, 10) === new Date().toISOString().slice(0, 10);
+  }
+  function autoClaimReady() {
+    if (document.hidden) return false;
+    if (document.getElementById('splash-gate') || document.getElementById('age-gate')) return false;
+    var o = document.getElementById('onb');
+    return !(o && o.classList.contains('open'));
+  }
+  function autoClaim(tries) {
+    clearTimeout(_autoT); _autoT = 0;
+    tries = tries || 0;
+    if (_autoBusy || !window.Cloud || !Cloud.isOn || !Cloud.isOn()) return;
+    if (loaded && claimedToday()) return;
+    if (!loaded || !autoClaimReady()) {
+      if (tries < 120) _autoT = setTimeout(function () { autoClaim(tries + 1); }, 1500);
+      return;
+    }
+    _autoBusy = true;
+    dailyLogin().then(function (w) {
+      if (!w || w.claimed_already) return;
+      if (typeof window.renderRewards === 'function' && document.getElementById('view-rewards') &&
+          document.getElementById('view-rewards').style.display !== 'none') window.renderRewards();
+      if (window.Reminders) Reminders.sync();
+    }).catch(function () {}).then(function () { _autoBusy = false; });
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) autoClaim(); });
+  window.addEventListener('vinall:onboarded', function () { autoClaim(); });
+
   /* For rewards Postgres has already granted by trigger — lore answers, and
      any future trigger award. Nothing is asked for; the wallet is re-read and
      the toast reports the difference that actually landed. So when the daily
@@ -23090,7 +23182,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     load: load, get: get, recordRating: recordRating,
     awardGame: awardGame, syncAward: syncAward, levelUp: levelUp, awardDiscs: awardDiscs,
     abbrevDiscs: abbrevDiscs,
-    dailyLogin: dailyLogin, spin: spin,
+    dailyLogin: dailyLogin, autoClaim: autoClaim, spin: spin,
     loadClaims: loadClaims, claimedMilestone: claimedMilestone, claimMilestone: claimMilestone,
     claims: function () { return _claims || {}; },
     levelInfo: levelInfo,
@@ -30965,7 +31057,8 @@ window.renderAdminStats = renderAdminStats;
        whether a rare tier is worth landing on once you own things. */
     html += '<p class="reco-note odds-note">Every spin is independent — the odds are the ' +
       'same on the first and the hundredth, and nothing you have already won changes them. ' +
-      'Winning something you already own pays its shop price back in Discs instead.</p>' +
+      'Winning a theme, banner, flair or frame you already own pays half its shop price back in Discs instead; ' +
+      'a producer tag, once you own every one, pays its tier\u2019s Discs.</p>' +
       '<p class="reco-note">Discs cannot be bought with money, only earned.</p>';
 
     host.innerHTML = html;
@@ -34049,7 +34142,7 @@ window.renderAdminStats = renderAdminStats;
        recall_tutorial_submit never scores a round faster than the time it saw
        pass since this call. Once per round, and kept by the server on a retry. */
     if (sess && sess.mode === 'tutorial' && !sess.tutStart && window.Cloud && Cloud.recallTutorialStart) {
-      sess.tutStart = Cloud.recallTutorialStart();
+      sess.tutStart = tutorialStart(2);
     }
     if (!clockTick) clockTick = setInterval(paintTimer, 100);
     paintTimer();
@@ -34084,6 +34177,7 @@ window.renderAdminStats = renderAdminStats;
     try {
       localStorage.setItem(LIVE_KEY, JSON.stringify({
         v: 1, mode: s.mode, day: Recall.dayNo(), at: Date.now(), song: song.i,
+        board: (window.Boards && Boards.snapshot) ? Boards.snapshot('recall') : null,
         step: step, attempts: attempts, clockMs: elapsed(), between: revealed,
         sess: { score: s.score, streak: s.streak, bestStreak: s.bestStreak, correct: s.correct,
                 played: s.played, used: s.used, rounds: s.rounds, startedAt: s.startedAt, bestAtStart: s.bestAtStart }
@@ -34107,11 +34201,17 @@ window.renderAdminStats = renderAdminStats;
     sess = Recall.session(live.mode);
     Object.keys(live.sess || {}).forEach(function (k) { sess[k] = live.sess[k]; });
     if (window.Boards && live.mode !== 'tutorial') {
-      if (!Boards.live('recall')) Boards.start('recall', boardMode(live.mode), { day: Recall.dayNo(), local: boardMode(live.mode) !== 'daily' && boardMode(live.mode) !== 'endless' });
+      // The run the server already issued, when there is one: starting another
+      // would void it and restart its clock under songs already played.
+      var kept = live.board && live.board.mode === boardMode(live.mode) && Boards.adopt;
+      if (!Boards.live('recall')) {
+        if (kept) Boards.adopt('recall', live.board);
+        else Boards.start('recall', boardMode(live.mode), { day: Recall.dayNo(), local: boardMode(live.mode) !== 'daily' && boardMode(live.mode) !== 'endless' });
+      }
       Boards.clock(el('recall-clock'), 'recall');
     }
     // The server stamped the tutorial's start when its first clip played.
-    if (live.mode === 'tutorial' && live.clockMs) sess.tutStart = Promise.resolve(null);
+    if (live.mode === 'tutorial' && live.clockMs) sess.tutStart = Promise.resolve({ resumed: true });
     if (live.between) { nextRound(); return true; }
     nextRound(t, live);
     return true;
@@ -34399,10 +34499,33 @@ window.renderAdminStats = renderAdminStats;
      included — the board is everybody's first go, not only the good ones. What
      goes up is the canonical title when it was named (as the daily sends) and
      never a score: recall_tutorial_submit judges and times it. */
+  /* The start is what lets the board time the round, so a dropped request is
+     retried (twice, 0.5s then 1.5s) instead of costing somebody their place.
+     Resolves the server's answer, or null when it never got one. */
+  function tutorialStart(retries) {
+    return Promise.resolve(Cloud.recallTutorialStart()).then(function (r) {
+      if (r && !r.error) return r;
+      if ((r && r.error === 'not_signed_in') || !(retries > 0)) return null;
+      return new Promise(function (ok) { setTimeout(ok, retries > 1 ? 500 : 1500); })
+        .then(function () { return tutorialStart(retries - 1); });
+    }).catch(function () { return null; });
+  }
   function submitTutorial(correct) {
     if (!sess || sess.tutRes) return;
     var s = sess, step0 = step, att = attempts, ms = lastElapsedMs;
-    s.tutRes = Promise.resolve(s.tutStart).then(function () {
+    s.tutRes = Promise.resolve(s.tutStart).then(function (started) {
+      if (!(window.Cloud && Cloud.recallTutorialSubmit)) return null;
+      /* Still no start (every try failed, or the round never played): ask once
+         more now and give the server its one-second floor before submitting.
+         The round is scored on the client's own time — the server only ever
+         refuses a claim FASTER than it saw — so this costs nothing honest. */
+      if (!started && s.tutStart !== undefined) {
+        return tutorialStart(1).then(function (again) {
+          if (!again) return null;
+          return new Promise(function (ok) { setTimeout(ok, 1100); });
+        });
+      }
+    }).then(function () {
       if (!(window.Cloud && Cloud.recallTutorialSubmit)) return null;
       return Cloud.recallTutorialSubmit({ guess: correct ? Recall.TUTORIAL.title : '', step: step0, attempts: att, elapsedMs: ms });
     }).then(function (r) {
@@ -41909,7 +42032,7 @@ window.renderAdminStats = renderAdminStats;
       return { artist: artist.trim(), album: album.replace(/^["“]|["”]$/g, '').trim(), raw: parseFloat(m[2]), outOf: m[3] ? +m[3] : 0, note: '' };
     }).filter(Boolean), true);
   }
-  window.VinallImport = { parse: parseImport };   // for the console, and for checking a file somebody sends
+  window.VinallImport = { parse: parseImport, flushFeedPending: function () { return flushFeedPending(); } };   // for the console, and for checking a file somebody sends
 
   var I = { items: [], tok: 0, busy: false };
   function stripEd(s) { return fold(String(s || '').replace(/\s*[\(\[][^)\]]*(deluxe|remaster|edition|expanded|anniversary|version|explicit)[^)\]]*[\)\]]/gi, '')); }
@@ -42015,21 +42138,67 @@ window.renderAdminStats = renderAdminStats;
         score: x.score, note: albums[key].note || '', created_at: '2000-01-01T00:00:00Z' });
     });
     persist(ALBUMS_KEY, albums);
-    var c = sb(), failed = 0;
+    /* The server holds new rows to a daily limit (150 albums, 600 feed posts)
+       and SKIPS the rest without an error — so success is counted from the
+       rows that came back, never assumed. Ratings that did not land are
+       re-sent by reconcileRatings on later logins; feed posts that did not
+       land wait in FEED_PENDING and go up with flushFeedPending(). The
+       ratings are already in the crate either way: only who else can see
+       them is deferred, and the message says so. */
+    var c = sb(), failed = 0, landed = {}, posted = {};
     for (var i = 0; i < ratingRows.length; i += 200) {
-      var a = await c.from('ratings').upsert(ratingRows.slice(i, i + 200), { onConflict: 'user_id,kind,item_id' });
-      var b = await c.from('crate_feed').upsert(feedRows.slice(i, i + 200), { onConflict: 'user_id,album_id' });
+      var a = await c.from('ratings').upsert(ratingRows.slice(i, i + 200), { onConflict: 'user_id,kind,item_id' }).select('item_id');
+      var b = await c.from('crate_feed').upsert(feedRows.slice(i, i + 200), { onConflict: 'user_id,album_id' }).select('album_id');
       if ((a && a.error) || (b && b.error)) failed++;
+      ((a && a.data) || []).forEach(function (r) { landed[r.item_id] = 1; });
+      ((b && b.data) || []).forEach(function (r) { posted[r.album_id] = 1; });
     }
     if (failed) report('Import: some chunks failed to sync', { failed: failed });
+    var waitFeed = feedRows.filter(function (r) { return !posted[r.album_id]; });
+    var waiting = ratingRows.filter(function (r) { return !landed[r.item_id] || !posted[r.item_id]; }).length;
+    if (waitFeed.length) queueFeed(waitFeed);
     I.busy = false;
     if (window.renderAlbums) renderAlbums();
     if (window.renderStats) renderStats();
     if (window.track) track('ratings_imported', { n: picked.length });
     if (window.buzz) buzz('big');
     $('imp-modal').classList.remove('open');
-    say('Imported ' + plural(picked.length, 'rating'));
+    say('Imported ' + plural(picked.length, 'rating'),
+      waiting ? waiting.toLocaleString('en-GB') + ' of them will show on your public profile over the next few days \u2014 there is a daily limit on how many go up at once.' : undefined);
     K.html = '';
+  }
+
+  /* Feed posts an import could not put up today. Under crate_, so an account
+     switch wipes the queue with everything else of the last person's. */
+  var FEED_PENDING = 'crate_feed_pending_v1';
+  function readFeedQueue() { try { return JSON.parse(localStorage.getItem(FEED_PENDING) || '[]') || []; } catch (e) { return []; } }
+  function writeFeedQueue(q) { try { if (q.length) localStorage.setItem(FEED_PENDING, JSON.stringify(q)); else localStorage.removeItem(FEED_PENDING); } catch (e) {} }
+  function queueFeed(rows) {
+    var q = readFeedQueue(), have = {};
+    q.forEach(function (r) { have[r.album_id] = 1; });
+    rows.forEach(function (r) { if (!have[r.album_id]) q.push(r); });
+    writeFeedQueue(q);
+  }
+  var _flushing = false;
+  async function flushFeedPending() {
+    var q = readFeedQueue(), who = me();
+    if (_flushing || !q.length || !who || !sb()) return;
+    _flushing = true;
+    try {
+      // Only this account's rows; anything else is a leftover and is dropped.
+      q = q.filter(function (r) { return r.user_id === who.id; });
+      var albums = loadAlbums(), posted = {};
+      // A record deleted or re-rated since the import is not posted from here.
+      q = q.filter(function (r) { var a = albums[r.album_id]; return a && a.imported && a.score === r.score; });
+      for (var i = 0; i < q.length; i += 200) {
+        var b = await sb().from('crate_feed').upsert(q.slice(i, i + 200), { onConflict: 'user_id,album_id' }).select('album_id');
+        if (b && b.error) break;
+        var got = (b && b.data) || [];
+        got.forEach(function (r) { posted[r.album_id] = 1; });
+        if (got.length < Math.min(200, q.length - i)) break;   // today's limit reached
+      }
+      writeFeedQueue(q.filter(function (r) { return !posted[r.album_id]; }));
+    } catch (e) {} finally { _flushing = false; }
   }
 
   function wireSettingsAndImport() {
@@ -42775,12 +42944,12 @@ window.renderAdminStats = renderAdminStats;
 <script src="/assets/you.js?v=9"></script>
 <script src="/assets/glow.js?v=5"></script>
 <script src="/assets/comments.js?v=3" defer></script>
-<script src="/assets/boards.js?v=3"></script>
+<script src="/assets/boards.js?v=4"></script>
 <script src="/assets/play.js?v=2"></script>
 <script src="/assets/charades.js?v=4"></script>
 <script src="/assets/passport-core.js?v=1"></script>
 <script src="/assets/passport.js?v=2"></script>
-<script src="/assets/safety.js?v=2"></script>
+<script src="/assets/safety.js?v=3"></script>
 <script src="/assets/discover.js?v=3"></script>
 <script src="/assets/liked.js?v=1"></script>
 <script src="/assets/sound.js?v=8"></script>

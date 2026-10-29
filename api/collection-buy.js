@@ -21,6 +21,28 @@ import { valueAlbum } from './_streams.js';
 import { cors } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
+// my_sealed_albums() is called AS THE USER, so it needs the anon key and the
+// caller's JWT, never the service role (which would see nobody's wars).
+const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZnh5ZWJlanBreWhzd29scndpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMDI0MTYsImV4cCI6MjA5Njc3ODQxNn0.x9zL_qKAt465D-5Vw6bu8IIn-RxgUdfVbUoe1i4rsZs';
+
+/* Is this record on one of the caller's own live Bid War boards? This route
+   prices before it charges, and both the "price changed" refusal and a
+   successful buy say the number — exactly what a war hides. Same seal and
+   same function as /api/collection-prices and /api/album-streams. Fails
+   CLOSED: null means the check could not run, and nothing is priced. */
+async function isSealed(jwt, albumId) {
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/my_sealed_albums', {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + jwt, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return (Array.isArray(rows) ? rows : []).some((x) => (typeof x === 'string' ? x : (x && x.album_id)) === String(albumId));
+  } catch (e) { return null; }
+}
 const STALE_DAYS = 14;
 
 /* Streams to Discs.
@@ -140,6 +162,10 @@ export default async function handler(req, res) {
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
   const albumId = body && body.album_id;
   if (!albumId) { res.status(400).json({ error: 'No album given' }); return; }
+
+  const sealed = await isSealed(jwt, albumId);
+  if (sealed === null) { res.status(503).json({ error: 'Could not check your live Bid Wars — nothing was charged. Try again in a moment.' }); return; }
+  if (sealed) { res.status(409).json({ error: 'That record is on one of your live Bid Wars. It can be bought once the war is over.', reason: 'sealed' }); return; }
 
   try {
     const pr = await priceAlbum(albumId, SERVICE, { hint: { name: body.name, artist: body.artist } });
