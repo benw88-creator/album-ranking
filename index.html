@@ -12901,7 +12901,17 @@ function saveSong(track, score, albumMeta) {
   renderSongs();
   if (window.CertPanel && albumMeta) try { CertPanel.refresh(albumMeta.id); } catch (e) {}
 }
-function removeAlbum(id) { const a = loadAlbums(), old = a[id]; delete a[id]; persist(ALBUMS_KEY, a); if (window.Cloud) Cloud.deleteRating('album', id, old); if (window.Cloud) Cloud.removeFromFeed(id, old && old.name, old && old.artist); _recsDirty = true; renderAlbums(); }
+function removeAlbum(id) {
+  const a = loadAlbums(), old = a[id]; delete a[id]; persist(ALBUMS_KEY, a);
+  if (window.Cloud) Cloud.deleteRating('album', id, old);
+  /* A second crate entry for the same record (one key from before the Deezer
+     switch, one after) keeps its rating, so it keeps its public post: only this
+     key's post goes. With no survivor, every post of this record goes,
+     whichever id it was under. */
+  const survivor = old ? findAlbumRec(a, old) : null;
+  if (window.Cloud) Cloud.removeFromFeed(id, survivor ? null : old && old.name, survivor ? null : old && old.artist);
+  _recsDirty = true; renderAlbums();
+}
 function removeSong(id)  { const s = loadSongs(), old = s[id]; delete s[id]; persist(SONGS_KEY, s); if (window.Cloud) Cloud.deleteRating('song', id, old); _recsDirty = true; renderSongs(); }
 window.removeAlbum = removeAlbum;
 window.removeSong = removeSong;
@@ -14972,7 +14982,14 @@ function renderSongs(){
       row.style.setProperty('--score',songColor(v));
       row.querySelector('.song-score').textContent=v;
       const all2=loadSongs();const rec=all2[sl.dataset.song];
-      if(rec){if(v<=0){delete all2[sl.dataset.song];}else{rec.score=v;}persist(SONGS_KEY,all2);}
+      if(rec&&v>0){rec.score=v;persist(SONGS_KEY,all2);}
+    });
+    /* Zero removes the rating, on RELEASE and through removeSong, which records
+       the deletion. Deleting the key mid-drag left no tombstone, so the
+       server's per-item merge (guard_rating_state) put the song back on the
+       next sync — and a drag that only passed through 0 lost the rating. */
+    sl.addEventListener('change',function(){
+      if(parseInt(sl.value,10)<=0&&loadSongs()[sl.dataset.song])removeSong(sl.dataset.song);
     });
   });
   host.querySelectorAll('[data-delsong]').forEach(function(b){b.addEventListener('click',async function(){

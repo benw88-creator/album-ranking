@@ -5,6 +5,7 @@ import { pushEndpoint } from '../api/_push-endpoint.js';
 import { sendPush, generateVapidKeys, b64u } from '../api/_webpush.js';
 import { spotifyMatch } from '../api/_spotify-match.js';
 import deleteAccount from '../api/delete-account.js';
+import { safeArt } from '../api/share.js';
 const originalFetch = globalThis.fetch, originalKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'isolated-test-service-key';
 const response = (data, status=200) => new Response(JSON.stringify(data), { status });
@@ -103,6 +104,12 @@ try {
       assert.equal(r.code,admin?200:403);assert.equal(files.length,admin?0:1);
       assert.ok(!calls.some(p=>p.includes('delete_my_data')||p.includes('/admin/')));
     }
+  });
+  await check('share pages draw sleeves only from the catalogue CDNs, never CSS or a foreign host',async()=>{
+    for(const ok of ['https://cdn-images.dzcdn.net/images/cover/abc/1000x1000-000000-80-0-0.jpg','https://i.scdn.co/image/ab67616d0000b273abc','https://is1-ssl.mzstatic.com/image/thumb/x/600x600bb.jpg'])
+      assert.equal(safeArt(ok),ok);
+    for(const bad of ['https://evil.example/x.jpg','http://cdn-images.dzcdn.net/x.jpg',"https://i.scdn.co/x');background:url(https://evil.example/",'javascript:alert(1)','https://cdn-images.dzcdn.net.evil.example/x.jpg','',null])
+      assert.equal(safeArt(bad),'');
   });
   console.log(`launch API selfcheck: ${groups} groups passed (mocked network)`);
 } finally {

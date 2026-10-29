@@ -6942,3 +6942,36 @@ inside a rolled-back transaction). Until it lands, items 4, 10 (expiry half),
   feed delete in `rating_delete`, `daily_row_cap` passes feed re-posts,
   `guard_rating_state` merges the ratings blob per item instead of replacing it.
 - Tests: `scripts/tests/auditfixes.spec.mjs`, `collection.selfcheck.mjs` (sealed).
+
+## Outage and second sweep (2026-10-29)
+
+- **OUTAGE, ~16:00 UTC to the hotfix the same evening.** 20261029180000 made the
+  SHARED `daily_row_cap()` read `new.album_id`. PL/pgSQL resolves a record field
+  when it plans the expression — the `tg_table_name = 'crate_feed'` guard beside
+  it short-circuits nothing — so every direct client insert on follows,
+  lore_answers, analytics_events, liked_songs, listening_plays, grooves, lists
+  and leaderboard_times failed ("record new has no field album_id"). Same
+  mechanism as push_fanout (20261016110000). Fixed by 20261029200000:
+  `daily_row_cap()` back to its pre-audit body, feed re-posts handled by
+  `crate_feed_row_cap()` on crate_feed alone, with a guard that refuses a
+  table-specific column in the shared function. **A trigger function attached to
+  more than one table must only read columns through `to_jsonb(new)`.**
+- `scripts/sql-checks/*.sql` run against production inside a transaction that is
+  rolled back (persist nothing): `daily-caps.sql` inserts into EVERY capped table,
+  `smoke.sql` covers daily reward, ratings, sync, deletion, Recall and purchases,
+  `moderation-and-feed.sql` the sweep below. Run all three after any change to a
+  trigger or shared function: `supabase db query --linked -f <file>`.
+- 20261029210000 (applied): a duplicate crate entry's delete keeps the
+  survivor's post (`unpost_deleted_album` checks for a remaining rating; the
+  client only name-matches when no survivor is left in the crate); a report's
+  `target_user_id` is derived on the server (`report_derive_target`), never the
+  client's word, and open reports were corrected; avatars bucket limited to
+  JPEG/PNG/WebP at 2MB; `crate_feed_guard` refuses abusive album names/artists
+  and keeps sleeves only from the catalogue CDNs (dzcdn, i.scdn.co, mzstatic),
+  the same list `safeArt` applies in api/share.js, whose /a/ page now takes the
+  record from Deezer, else the majority of posts.
+- The songs slider removes a rating at zero on RELEASE via `removeSong`, which
+  records the deletion; deleting the key mid-drag let the per-item merge restore it.
+- Rollbacks: supabase/rollback/. Pre-change copies of every replaced function and
+  the affected tables: ~/VINALL-db-backups/ (outside the repo; Supabase has no
+  managed backups or PITR on this project).

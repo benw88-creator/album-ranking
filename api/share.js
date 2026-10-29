@@ -57,10 +57,17 @@ export function bigArt(u) {
     // Spotify-era sleeves: 00001e02 is the 300px rendition, 0000b273 the 640px.
     .replace(/(i\.scdn\.co\/image\/ab67616d)00001e02/, '$10000b273');
 }
+/* Sleeve urls on these pages come from crate_feed, which a client writes.
+   Only the catalogue CDNs the app itself uses are drawn — anything else is
+   dropped, so a post cannot put an arbitrary image (or, through the style
+   attribute, arbitrary CSS) on a VINALL card. Mirrors crate_feed_guard. */
+const ART_OK = /^https:\/\/(cdn-images\.dzcdn\.net|e-cdns-images\.dzcdn\.net|i\.scdn\.co|is[0-9]+-ssl\.mzstatic\.com)\/[^\s'"()\\<>]*$/;
+export function safeArt(u) { u = String(u || ''); return ART_OK.test(u) ? u : ''; }
 const appLinkAlbum = (a, extra) => '/?album=' + encodeURIComponent(a.id) + '&n=' + encodeURIComponent(a.name || '') + '&ar=' + encodeURIComponent(a.artist || '') + (extra || '');
 const words = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s; };
 
 function page({ title, desc, image, url, body, cta }) {
+  image = safeArt(image);
   return `<!doctype html><html lang="en-GB"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${title === 'VINALL' ? 'VINALL' : 'VINALL — ' + esc(title)}</title>
@@ -130,10 +137,20 @@ ${note ? `<blockquote style="--c:${col}">${esc(words(note, 600))}</blockquote>` 
 
     if (t === 'a' && k) {
       const rows = await sb('crate_feed?select=user_id,username,score,note,album_name,album_artist,album_art&album_id=eq.' + encodeURIComponent(k) + '&limit=500');
-      let a = rows[0] ? { id: k, name: rows[0].album_name, artist: rows[0].album_artist, art: rows[0].album_art } : null;
-      if (!a && /^\d+$/.test(k)) {
+      /* What the record IS comes from the catalogue when the id is Deezer's,
+         and otherwise from what most posters agree on — never from whichever
+         single post the query happened to return first, which any account can
+         write with any title. */
+      let a = null;
+      if (/^\d+$/.test(k)) {
         const d = await dz('/album/' + k);
-        if (d) a = { id: k, name: d.title, artist: d.artist && d.artist.name, art: d.cover_xl };
+        if (d && d.title) a = { id: k, name: d.title, artist: d.artist && d.artist.name, art: d.cover_xl };
+      }
+      if (!a && rows.length) {
+        const votes = {};
+        rows.forEach((r) => { const key = [r.album_name, r.album_artist].join('\u0000'); (votes[key] = votes[key] || { n: 0, r }).n++; });
+        const top = Object.values(votes).sort((x, y) => y.n - x.n)[0].r;
+        a = { id: k, name: top.album_name, artist: top.album_artist, art: top.album_art };
       }
       if (!a) return notFound(res);
       const scored = rows.filter((r) => r.score != null);

@@ -224,3 +224,42 @@ test('#11 import posts that hit the daily limit wait, and go up when the limit a
   await page.evaluate(() => VinallImport.flushFeedPending());
   expect(await page.evaluate(() => localStorage.getItem('crate_feed_pending_v1'))).toBeNull();
 });
+
+test('sweep #2 deleting one of two crate entries for a record keeps the survivor\'s post', async ({ page }) => {
+  const seen = await signedIn(page, { local: { crate_albums_v1: {
+    legacyL: { id: 'legacyL', name: 'Views', artist: 'Drake', score: 92, savedAt: 1, ratedAt: 1 },
+    '13775099': { id: '13775099', name: 'Views', artist: 'Drake', score: 95, savedAt: 2, ratedAt: 2 } } } });
+  await page.evaluate(() => removeAlbum('legacyL'));
+  await expect.poll(() => seen.feed.filter(f => f.method === 'DELETE').length, { timeout: 8000 }).toBe(1);
+  await page.waitForTimeout(600);
+  const dels = seen.feed.filter(f => f.method === 'DELETE').map(f => decodeURIComponent(f.url));
+  expect(dels.length).toBe(1);
+  expect(dels[0]).toContain('album_id=eq.legacyL');
+  expect(dels[0]).not.toContain('album_name');
+});
+
+test('sweep #2 deleting the only entry removes every post of the record', async ({ page }) => {
+  const seen = await signedIn(page, { local: { crate_albums_v1: {
+    only1: { id: 'only1', name: 'Solo Record', artist: 'Solo', score: 60, savedAt: 1, ratedAt: 1 } } } });
+  await page.evaluate(() => removeAlbum('only1'));
+  await expect.poll(() => seen.feed.filter(f => f.method === 'DELETE').length, { timeout: 8000 }).toBe(2);
+  const dels = seen.feed.filter(f => f.method === 'DELETE').map(f => decodeURIComponent(f.url));
+  expect(dels.some(u => u.replace(/\+/g, ' ').includes('album_name=ilike.Solo Record'))).toBe(true);
+});
+
+test('sweep #3 the songs slider at zero deletes through removeSong, with a tombstone, only on release', async ({ page }) => {
+  await start(page);
+  await page.evaluate(() => {
+    localStorage.setItem('crate_songs_v1', JSON.stringify({ s1: { id: 's1', name: 'Song One', artist: 'A', albumId: 'x', albumName: 'X', art: '', score: 7, savedAt: 1, ratedAt: 1 } }));
+    renderSongs(); goToView('songs');
+  });
+  const slider = page.locator('.song-slider[data-song="s1"]');
+  await expect(slider).toHaveCount(1);
+  // Passing through zero mid-drag deletes nothing.
+  await slider.evaluate(el => { el.value = '0'; el.dispatchEvent(new Event('input', { bubbles: true })); el.value = '4'; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); });
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('crate_songs_v1')).s1.score)).toBe(4);
+  // Releasing at zero removes it and records the deletion, so a sync cannot bring it back.
+  await page.locator('.song-slider[data-song="s1"]').evaluate(el => { el.value = '0'; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); });
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('crate_songs_v1')).s1)).toBeUndefined();
+  expect(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('crate_rating_deletions_v1') || '{}')))).toContain('song|s1');
+});
