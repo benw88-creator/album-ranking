@@ -58,10 +58,11 @@ export function bigArt(u) {
     .replace(/(i\.scdn\.co\/image\/ab67616d)00001e02/, '$10000b273');
 }
 /* Sleeve urls on these pages come from crate_feed, which a client writes.
-   Only the catalogue CDNs the app itself uses are drawn — anything else is
+   Only the catalogue CDNs the app itself uses (and VINALL's own avatars
+   bucket, for a profile's picture) are drawn — anything else is
    dropped, so a post cannot put an arbitrary image (or, through the style
    attribute, arbitrary CSS) on a VINALL card. Mirrors crate_feed_guard. */
-const ART_OK = /^https:\/\/(cdn-images\.dzcdn\.net|e-cdns-images\.dzcdn\.net|i\.scdn\.co|is[0-9]+-ssl\.mzstatic\.com)\/[^\s'"()\\<>]*$/;
+const ART_OK = /^https:\/\/(cdn-images\.dzcdn\.net|e-cdns-images\.dzcdn\.net|i\.scdn\.co|is[0-9]+-ssl\.mzstatic\.com|cqfxyebejpkyhswolrwi\.supabase\.co\/storage\/v1\/object\/public\/avatars)\/[^\s'"()\\<>]*$/;
 export function safeArt(u) { u = String(u || ''); return ART_OK.test(u) ? u : ''; }
 const appLinkAlbum = (a, extra) => '/?album=' + encodeURIComponent(a.id) + '&n=' + encodeURIComponent(a.name || '') + '&ar=' + encodeURIComponent(a.artist || '') + (extra || '');
 const words = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s; };
@@ -126,8 +127,8 @@ export default async function handler(req, res) {
       return res.status(200).send(page({
         title, image: art, url: '/r/' + k,
         desc: note ? '“' + words(note, 180) + '”' : row.album_artist + ' · rated on VINALL',
-        body: `<img class="cover" src="${esc(art)}" alt="">
-<div class="who">${row.avatar_url ? `<img src="${esc(row.avatar_url)}" alt="">` : ''}<span>${esc(row.username)} rated</span></div>
+        body: `<img class="cover" src="${esc(safeArt(art))}" alt="">
+<div class="who">${safeArt(row.avatar_url) ? `<img src="${esc(safeArt(row.avatar_url))}" alt="">` : ''}<span>${esc(row.username)} rated</span></div>
 <h1>${esc(row.album_name)}</h1><div class="artist">${esc(row.album_artist)}</div>
 <div class="score" style="color:${col}">${row.score}<small>/100</small></div>
 ${note ? `<blockquote style="--c:${col}">${esc(words(note, 600))}</blockquote>` : ''}`,
@@ -161,7 +162,7 @@ ${note ? `<blockquote style="--c:${col}">${esc(words(note, 600))}</blockquote>` 
       return res.status(200).send(page({
         title: a.name + ' — ' + a.artist, image: art, url: '/a/' + k,
         desc: avg != null ? 'Scored ' + avg + '/100 across ' + scored.length + ' rating' + (scored.length === 1 ? '' : 's') + ' on VINALL' : 'Be the first to rate it on VINALL',
-        body: `<img class="cover" src="${esc(art)}" alt="">
+        body: `<img class="cover" src="${esc(safeArt(art))}" alt="">
 <h1 style="margin-top:22px">${esc(a.name)}</h1><div class="artist">${esc(a.artist)}</div>
 ${avg != null ? `<div class="score" style="color:${scoreColor(avg)}">${avg}<small>/100</small></div><div class="meta">${scored.length} RATING${scored.length === 1 ? '' : 'S'}</div>` : ''}
 ${best ? `<blockquote style="--c:${scoreColor(best.score)}">${esc(words(best.note, 400))}<div class="meta" style="margin-top:8px">— ${esc(best.username)}, ${best.score}</div></blockquote>` : ''}`,
@@ -184,11 +185,11 @@ ${best ? `<blockquote style="--c:${scoreColor(best.score)}">${esc(words(best.not
       return res.status(200).send(page({
         title: p.username + ' on VINALL', image, url: '/u/' + p.username,
         desc: top.length ? 'Top 3: ' + top.map((x) => x.name).join(' · ') + (n ? ' — ' + n + ' records rated' : '') : (p.bio || 'Their taste, scored out of 100.'),
-        body: `${p.avatar_url ? `<img class="av" src="${esc(p.avatar_url)}" alt="">` : ''}
+        body: `${safeArt(p.avatar_url) ? `<img class="av" src="${esc(safeArt(p.avatar_url))}" alt="">` : ''}
 <h1 style="margin-top:16px">${esc(p.username)}</h1>
 ${p.bio ? `<div class="artist">${esc(words(p.bio, 160))}</div>` : ''}
 ${n ? `<div class="meta" style="margin-top:10px">${n} RECORDS RATED</div>` : ''}
-${top.length ? `<div class="tops">${top.map((x) => `<img src="${esc(bigArt(x.art))}" alt="${esc(x.name)}">`).join('')}</div>` : ''}`,
+${top.length ? `<div class="tops">${top.filter((x) => safeArt(bigArt(x.art))).map((x) => `<img src="${esc(bigArt(x.art))}" alt="${esc(x.name)}">`).join('')}</div>` : ''}`,
         cta: { href: '/?u=' + encodeURIComponent(p.id), label: 'How close is your taste?' },
       }));
     }

@@ -47,8 +47,9 @@ insert into _m select 'C_avatars_bucket', file_size_limit::text||' '||array_to_s
 -- D: feed metadata
 set local role authenticated;
 do $$ declare a uuid := current_setting('m.a')::uuid; n int; begin
-  insert into public.crate_feed(user_id,username,kind,album_id,album_name,album_artist,album_art,score) values (a,'x','album_rating','badname','faggot hits','Smoke','',50);
-  get diagnostics n = row_count; insert into _m values ('D_abusive_title_rows', n::text);
+  -- A real record whose title trips the word filter (Ol' Dirty Bastard) still posts.
+  insert into public.crate_feed(user_id,username,kind,album_id,album_name,album_artist,album_art,score) values (a,'x','album_rating','realtitle','Nigga Please','Ol'' Dirty Bastard','',50);
+  get diagnostics n = row_count; insert into _m values ('D_real_title_posted_rows', n::text);
   insert into public.crate_feed(user_id,username,kind,album_id,album_name,album_artist,album_art,score) values (a,'x','album_rating','badart','Fine','Smoke','https://evil.example/x.jpg',50);
   insert into public.crate_feed(user_id,username,kind,album_id,album_name,album_artist,album_art,score) values (a,'x','album_rating','goodart','Fine2','Smoke','https://cdn-images.dzcdn.net/images/cover/abc/500x500-000000-80-0-0.jpg',50);
 end $$;

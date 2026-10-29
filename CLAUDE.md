@@ -6966,8 +6966,7 @@ inside a rolled-back transaction). Until it lands, items 4, 10 (expiry half),
   client only name-matches when no survivor is left in the crate); a report's
   `target_user_id` is derived on the server (`report_derive_target`), never the
   client's word, and open reports were corrected; avatars bucket limited to
-  JPEG/PNG/WebP at 2MB; `crate_feed_guard` refuses abusive album names/artists
-  and keeps sleeves only from the catalogue CDNs (dzcdn, i.scdn.co, mzstatic),
+  JPEG/PNG/WebP at 2MB; `crate_feed_guard` keeps sleeves only from the catalogue CDNs (dzcdn, i.scdn.co, mzstatic),
   the same list `safeArt` applies in api/share.js, whose /a/ page now takes the
   record from Deezer, else the majority of posts.
 - The songs slider removes a rating at zero on RELEASE via `removeSong`, which
@@ -6975,3 +6974,8 @@ inside a rolled-back transaction). Until it lands, items 4, 10 (expiry half),
 - Rollbacks: supabase/rollback/. Pre-change copies of every replaced function and
   the affected tables: ~/VINALL-db-backups/ (outside the repo; Supabase has no
   managed backups or PITR on this project).
+- 20261029220000: album names/artists are NOT word-filtered — real titles trip
+  `is_abusive_text` ("Nigga Please", the "Kill Yourself" EPs) and the refusal was
+  silent. Share cards stay safe through Deezer metadata, the majority vote and
+  the sleeve allowlist. `safeArt` also allows VINALL's own avatars bucket, which
+  `/u/` previews use.

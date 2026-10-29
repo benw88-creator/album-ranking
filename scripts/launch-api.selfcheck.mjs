@@ -106,9 +106,9 @@ try {
     }
   });
   await check('share pages draw sleeves only from the catalogue CDNs, never CSS or a foreign host',async()=>{
-    for(const ok of ['https://cdn-images.dzcdn.net/images/cover/abc/1000x1000-000000-80-0-0.jpg','https://i.scdn.co/image/ab67616d0000b273abc','https://is1-ssl.mzstatic.com/image/thumb/x/600x600bb.jpg'])
+    for(const ok of ['https://cdn-images.dzcdn.net/images/cover/abc/1000x1000-000000-80-0-0.jpg','https://i.scdn.co/image/ab67616d0000b273abc','https://is1-ssl.mzstatic.com/image/thumb/x/600x600bb.jpg','https://cqfxyebejpkyhswolrwi.supabase.co/storage/v1/object/public/avatars/u1/avatar.jpg?t=1'])
       assert.equal(safeArt(ok),ok);
-    for(const bad of ['https://evil.example/x.jpg','http://cdn-images.dzcdn.net/x.jpg',"https://i.scdn.co/x');background:url(https://evil.example/",'javascript:alert(1)','https://cdn-images.dzcdn.net.evil.example/x.jpg','',null])
+    for(const bad of ['https://evil.example/x.jpg','http://cdn-images.dzcdn.net/x.jpg',"https://i.scdn.co/x');background:url(https://evil.example/",'javascript:alert(1)','https://cdn-images.dzcdn.net.evil.example/x.jpg','https://cqfxyebejpkyhswolrwi.supabase.co/storage/v1/object/public/other/x.jpg','https://evil.supabase.co/storage/v1/object/public/avatars/x.jpg','',null])
       assert.equal(safeArt(bad),'');
   });
   console.log(`launch API selfcheck: ${groups} groups passed (mocked network)`);
