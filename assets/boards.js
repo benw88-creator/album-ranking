@@ -22,7 +22,7 @@
     { g: 'tracklist',   name: 'Guess from Tracklist', short: 'Tracklist', hue: 'var(--hue-1)', artist: true, modes: [['artist', '']] },
     { g: 'year',        name: 'Guess the Year',   short: 'Year',      hue: 'var(--hue-4)', artist: true, modes: [['artist', '']] },
     { g: 'blitz',       name: 'Cover Fire',       short: 'Cover Fire', hue: 'var(--hue-6)', modes: [['daily', 'Today’s Ten', 1], ['solo', 'Solo']] },
-    { g: 'recall',      name: 'Recall',           short: 'Recall',    hue: 'var(--hue-recall, var(--hue-3))', modes: [['daily', 'Daily', 1], ['endless', 'Endless']] },
+    { g: 'recall',      name: 'Recall',           short: 'Recall',    hue: 'var(--hue-recall, var(--hue-3))', modes: [['daily', 'Daily', 1], ['endless', 'Endless'], ['tutorial', 'Tutorial']] },
     { g: 'drop',        name: 'Daily Drop',       short: 'Daily Drop', hue: 'var(--hue-5)', modes: [['album', 'Album', 1], ['song', 'Song', 1]] },
     { g: 'earworm',     name: 'Earworm',          short: 'Earworm',   hue: 'var(--hue-2)', modes: [['daily', 'Daily', 1]] },
     { g: 'higherlower', name: 'Higher or Lower',  short: 'Higher/Lower', hue: 'var(--hue-7)', modes: [['streams', 'Streams']] }
@@ -254,7 +254,8 @@
         : '<label class="gb-search"><input type="search" id="gb-q" placeholder="All artists — search one" autocomplete="off" aria-label="Filter by artist"><div class="gb-sugg" id="gb-sugg" hidden></div></label>') : '<span class="gb-scope-all">Everyone</span>') +
       '<button type="button" class="gb-friends' + (st.friends ? ' on' : '') + '" data-friends aria-pressed="' + st.friends + '">Friends</button>';
     elSub.textContent = gm.name + (gm.artist ? (st.artist === '*' ? ' · all artists, scored for pool size' : '') : '') +
-      (daily ? (st.period === 'today' ? ' · today' : ' · best single day') : '');
+      (daily ? (st.period === 'today' ? ' · today' : ' · best single day') : '') +
+      (isTutorial() ? ' · everyone’s first song, Memories' : '');
   }
 
   async function load() {
@@ -266,7 +267,11 @@
     if (!c) { elList.innerHTML = '<div class="gb-empty">Leaderboards need a connection.</div>'; elMe.innerHTML = ''; return; }
     if (st.friends && !signedIn()) { elList.innerHTML = '<div class="gb-empty">Sign in to see how you rank against people you follow.</div>'; elMe.innerHTML = ''; return; }
     try {
-      var r = await c.rpc('game_board', { p_game: st.game, p_mode: st.mode, p_artist: st.artist, p_day: periodDay(), p_friends: st.friends, p_limit: 50 });
+      // The tutorial's round has its own table (recall_tutorial): everybody's
+      // first go at the same song, misses included. Same answer shape.
+      var r = isTutorial()
+        ? await c.rpc('recall_tutorial_board', { p_friends: st.friends, p_limit: 50 })
+        : await c.rpc('game_board', { p_game: st.game, p_mode: st.mode, p_artist: st.artist, p_day: periodDay(), p_friends: st.friends, p_limit: 50 });
       if (tok !== loadTok) return;
       if (r.error) {
         report('game_board', r.error);
@@ -288,8 +293,10 @@
       ? '<img src="' + E(r.avatar_url) + '" alt="" loading="lazy" decoding="async" onerror="this.remove()">'
       : '') + '<span>' + E(nm.charAt(0).toUpperCase()) + '</span></span>';
   }
+  function isTutorial() { return st.game === 'recall' && st.mode === 'tutorial'; }
   function subLine(r) {
     var gm = gameOf(st.game);
+    if (isTutorial()) return r.correct ? 'Heard ' + (r.heard || '') + 's' : 'Missed';
     if (gm.artist && st.artist === '*' && r.artist_label) return E(r.artist_label);
     if (!r.achieved_at) return '';
     var d = new Date(r.achieved_at);
@@ -310,7 +317,7 @@
     lastKey = key;
 
     if (!rows.length) {
-      elList.innerHTML = '<div class="gb-empty"><b>Nobody here yet.</b>' + (st.friends ? 'Nobody you follow has a run on this board.' : 'Play a run and the top spot is yours.') + '</div>';
+      elList.innerHTML = '<div class="gb-empty"><b>Nobody here yet.</b>' + (st.friends ? 'Nobody you follow has a run on this board.' : isTutorial() ? 'Every new account’s first Recall lands here.' : 'Play a run and the top spot is yours.') + '</div>';
     } else {
       var top = rows.slice(0, 3), rest = rows.slice(3);
       var order = top.length === 3 ? [top[1], top[0], top[2]] : top;

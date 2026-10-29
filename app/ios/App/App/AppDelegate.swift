@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import AVFoundation
+import AuthenticationServices
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -102,7 +103,8 @@ public class VinallNativePlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "VinallNative"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "haptic", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "audioMode", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "audioMode", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "webAuth", returnType: CAPPluginReturnPromise)
     ]
 
     private lazy var selection = UISelectionFeedbackGenerator()
@@ -143,6 +145,47 @@ public class VinallNativePlugin: CAPPlugin, CAPBridgedPlugin {
         let mode = call.getString("mode") == "playback" ? "playback" : "ambient"
         DispatchQueue.main.async { VinallAudio.apply(mode) }
         call.resolve(["mode": mode])
+    }
+
+    /// Sign in with Apple / Google from inside the app. supabase-js builds the
+    /// provider URL (skipBrowserRedirect) and this opens it in the system's
+    /// authentication sheet — not the webview, which Google refuses
+    /// (`disallowed_useragent`), and not Safari, which has no way back. The
+    /// sheet closes itself when Supabase redirects to `<scheme>://…` and the
+    /// callback URL, tokens and all, comes back to the page. A scheme used
+    /// only here needs no CFBundleURLTypes entry.
+    private var authSession: ASWebAuthenticationSession?
+
+    @objc func webAuth(_ call: CAPPluginCall) {
+        guard let raw = call.getString("url"), let url = URL(string: raw),
+              let scheme = call.getString("scheme"), !scheme.isEmpty else {
+            call.reject("url and scheme are required"); return
+        }
+        DispatchQueue.main.async {
+            let session = ASWebAuthenticationSession(url: url, callbackURLScheme: scheme) { cb, err in
+                self.authSession = nil
+                if let cb = cb { call.resolve(["url": cb.absoluteString]); return }
+                if let e = err as? ASWebAuthenticationSessionError, e.code == .canceledLogin {
+                    call.resolve(["cancelled": true]); return
+                }
+                call.resolve(["error": err?.localizedDescription ?? "sign-in failed"])
+            }
+            session.presentationContextProvider = self
+            // Shares Safari's cookies, so somebody already signed in to Google
+            // or Apple there is one tap from done.
+            session.prefersEphemeralWebBrowserSession = false
+            self.authSession = session
+            if !session.start() {
+                self.authSession = nil
+                call.resolve(["error": "could not open the sign-in sheet"])
+            }
+        }
+    }
+}
+
+extension VinallNativePlugin: ASWebAuthenticationPresentationContextProviding {
+    public func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        return bridge?.viewController?.view.window ?? ASPresentationAnchor()
     }
 }
 

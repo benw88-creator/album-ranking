@@ -3165,7 +3165,7 @@ html[data-motion="none"] .gc-emoji svg * { animation: none !important; }
   position: absolute; inset: 0; width: 100%; height: 100%;
   pointer-events: none;
 }
-/* Sign in with Apple / Google — web only, see wireSocialAuth(). Stacked
+/* Sign in with Apple / Google — see wireSocialAuth(). Stacked
    full-width pills above the email form, not styled as the app's own
    btn-primary: these are identity buttons and read as more trustworthy kept
    close to each provider's own neutral black/white convention. */
@@ -9519,7 +9519,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/charades.css?v=3">
 <link rel="stylesheet" href="/assets/passport.css?v=1">
 <link rel="stylesheet" href="/assets/artist.css?v=1">
-<link rel="stylesheet" href="/assets/discover.css?v=2">
+<link rel="stylesheet" href="/assets/discover.css?v=3">
 <link rel="stylesheet" href="/assets/liked.css?v=1">
 <link rel="stylesheet" href="/assets/crate.css?v=2">
 <link rel="stylesheet" href="/assets/polish.css?v=2">
@@ -11464,9 +11464,9 @@ window.discAmt = function (n) {
     <div id="auth-view-main">
       <div class="modal-head"><span class="mh-emoji" data-icon="person"></span>
         <div><h2 id="auth-title">Log in to VINALL</h2><p id="auth-sub"></p></div></div>
-      <!-- Web only — see the comment beside wireSocialAuth() for why these
-           are hidden inside the app. Apple sits first per Apple's own
-           guidance for an iOS-adjacent product, Google beside it. -->
+      <!-- Drawn by wireSocialAuth() only for providers Supabase reports as
+           enabled; in the iOS app through the system sign-in sheet. Apple
+           sits first per Apple's own guidance, Google beside it. -->
       <div id="auth-social" style="display:none;">
         <button class="btn-social" id="auth-apple" type="button" data-provider="apple">
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor"><path d="M11.2 2.4c.5-.6.8-1.4.7-2.2-.7 0-1.6.5-2.1 1.1-.5.5-.9 1.3-.8 2.1.8.1 1.6-.4 2.2-1zM13.4 11.2c-.3.7-.5 1-.9 1.6-.5.8-1.3 1.9-2.2 1.9-.8 0-1-.5-2.1-.5s-1.4.5-2.2.5c-.9 0-1.6-1-2.1-1.8-1.5-2.2-1.6-4.8-.7-6.2.6-1 1.6-1.6 2.6-1.6.9 0 1.5.6 2.2.6.7 0 1.1-.6 2.2-.6.8 0 1.7.5 2.3 1.3-2 1.1-1.7 4 .1 4.8z"/></svg>
@@ -17238,46 +17238,120 @@ const Cloud=(function(){
     btn.disabled=false;btn.textContent=(mode==='login'?'Log in':'Sign up');
   }
 
-  /* Sign in with Apple / Google — WEB ONLY, and deliberately so.
-     supabase.auth.signInWithOAuth() redirects the current page to the
-     provider and back; that is a real browser navigation, which is exactly
-     what the native app cannot offer a way back from. There is no deep-link
-     handling anywhere in this app (a decision already made and stated
-     elsewhere in this file) — without it, finishing the OAuth flow would
-     hand the person back to Safari, not to the app they started in. Google
-     additionally refuses to complete OAuth inside an embedded webview at
-     all (it answers `disallowed_useragent`), so even ignoring the deep-link
-     gap, Google's button would simply fail inside Capacitor's WKWebView.
-     So: shown on the web, hidden in the app, rather than shipped broken.
-     Wiring the native side properly needs a Capacitor plugin for each
-     provider's real native sign-in flow, plus a registered URL scheme and an
-     appUrlOpen listener — a native project change, not a page change, and
-     out of reach without Xcode/Android Studio in front of it. */
-  function wireSocialAuth(){
-    if(window.Native && Native.on)return;      // stay hidden; see above
+  /* Sign in with Apple / Google.
+
+     WHY IT FAILED (2026-10-29): both providers are DISABLED on the Supabase
+     project — /auth/v1/settings reports external.apple and external.google
+     false — so the redirect landed on Supabase's raw JSON, "Unsupported
+     provider: provider is not enabled". That half is dashboard config (a
+     Services ID and key from Apple, an OAuth client from Google), not code.
+     What the code does about it: it ASKS that same public endpoint before
+     drawing a button, and draws only the providers that are switched on. A
+     button that can only lead to an error page is worse than no button.
+
+     WEB: signInWithOAuth() navigates to the provider and back. A pending
+     marker in sessionStorage lets the return tell an OAuth failure (somebody
+     cancelled Apple) from a dead password-reset link — they arrive in the
+     same #error= shape, and the reset branch used to claim both.
+
+     iOS APP: the same provider URL (skipBrowserRedirect), opened by the native
+     VinallNative.webAuth in ASWebAuthenticationSession — the system sign-in
+     sheet. Not the webview (Google refuses it: disallowed_useragent) and not
+     Safari (no way back). The sheet closes on the redirect to
+     xyz.wildcrate.vinall://auth, and the tokens in that URL are set on this
+     client. Needs that URL on Supabase's Redirect URLs allow-list, or
+     Supabase falls back to the Site URL and the sheet never closes by itself.
+     Shown only when the installed binary has webAuth (older builds do not),
+     and never on Android, which has no equivalent wired yet. */
+  var OAUTH_PENDING='vinall_oauth_pending';
+  var NATIVE_SCHEME='xyz.wildcrate.vinall';
+  function nativeAuthOK(){
+    if(!(window.Native&&Native.on&&Native.platform==='ios'))return false;
+    try{
+      var hs=(window.Capacitor&&Capacitor.PluginHeaders)||[];
+      for(var i=0;i<hs.length;i++){
+        if(hs[i]&&hs[i].name==='VinallNative')return (hs[i].methods||[]).some(function(m){return m&&m.name==='webAuth';});
+      }
+    }catch(e){}
+    return false;
+  }
+  async function enabledProviders(){
+    try{
+      var ac=window.AbortController?new AbortController():null;
+      var tm=ac?setTimeout(function(){ac.abort();},6000):0;
+      var r=await fetch(SUPABASE_URL+'/auth/v1/settings',{headers:{apikey:SUPABASE_ANON},signal:ac?ac.signal:undefined});
+      clearTimeout(tm);
+      if(!r.ok)return {};
+      var j=await r.json();
+      return (j&&j.external)||{};
+    }catch(e){return {};}
+  }
+  function socialError(msg){
+    var errEl=document.getElementById('auth-error');
+    if(errEl){errEl.style.color='var(--red)';errEl.textContent=msg;}
+  }
+  /* Tokens off a callback URL, whichever flow answered: the implicit flow puts
+     them in the fragment, PKCE sends ?code=. An error is named, not guessed. */
+  async function sessionFromCallback(raw){
+    var u;try{u=new URL(raw);}catch(e){return {error:'The sign-in came back unreadable.'};}
+    var h=new URLSearchParams((u.hash||'').replace(/^#/,'')),q=u.searchParams;
+    var err=h.get('error_description')||q.get('error_description')||h.get('error')||q.get('error');
+    if(err)return {error:String(err).replace(/\+/g,' ')};
+    if(h.get('access_token')&&h.get('refresh_token')){
+      var r=await sb.auth.setSession({access_token:h.get('access_token'),refresh_token:h.get('refresh_token')});
+      return r.error?{error:r.error.message}:{user:r.data&&r.data.user};
+    }
+    if(q.get('code')){
+      var c=await sb.auth.exchangeCodeForSession(q.get('code'));
+      return c.error?{error:c.error.message}:{user:c.data&&c.data.user};
+    }
+    return {error:'No session came back from the sign-in.'};
+  }
+  async function signInNative(p,btn){
+    var res=await sb.auth.signInWithOAuth({provider:p,options:{redirectTo:NATIVE_SCHEME+'://auth',skipBrowserRedirect:true}});
+    if(res.error||!res.data||!res.data.url){socialError((res.error&&res.error.message)||'Could not start that sign-in.');return;}
+    var out=await Native.call('VinallNative','webAuth',{url:res.data.url,scheme:NATIVE_SCHEME});
+    if(!out){socialError('Could not open the sign-in sheet.');return;}
+    if(out.cancelled)return;                         // a change of mind, not an error
+    if(out.error){socialError(out.error);return;}
+    var got=await sessionFromCallback(out.url||'');
+    if(got.error||!got.user){socialError(got.error||'Sign-in did not finish. Try again.');return;}
+    closeAuth();
+    await onAuthed(got.user);
+  }
+  async function wireSocialAuth(){
     var wrap=document.getElementById('auth-social');
     var divider=document.getElementById('auth-social-divider');
     if(!wrap)return;
-    wrap.style.display='';
-    if(divider)divider.style.display='';
-    function redirectTo(){
-      return location.origin+location.pathname;   // web only reaches here
-    }
+    var native=!!(window.Native&&Native.on);
+    if(native&&!nativeAuthOK())return;               // stay hidden; see above
+    var ext=await enabledProviders();
+    var any=false;
     ['apple','google'].forEach(function(p){
       var btn=document.getElementById('auth-'+p);
       if(!btn)return;
+      var live=!!ext[p];
+      btn.style.display=live?'':'none';
+      if(!live)return;
+      any=true;
+      if(btn._wired)return; btn._wired=true;
       btn.addEventListener('click',async function(){
+        if(btn.disabled)return;
         btn.disabled=true;
         var errEl=document.getElementById('auth-error');
-        if(errEl)errEl.textContent='';
+        if(errEl){errEl.textContent='';errEl.style.color='';}
         try{
-          var res=await sb.auth.signInWithOAuth({provider:p,options:{redirectTo:redirectTo()}});
+          if(native){await signInNative(p,btn);btn.disabled=false;return;}
+          try{sessionStorage.setItem(OAUTH_PENDING,p);}catch(e){}
+          var res=await sb.auth.signInWithOAuth({provider:p,options:{redirectTo:location.origin+location.pathname}});
           // A successful call navigates the page away — nothing left to do.
           // Only a rejection or an inline error means it never left.
-          if(res && res.error){ if(errEl)errEl.textContent=res.error.message; btn.disabled=false; }
-        }catch(e){ if(errEl)errEl.textContent='Could not start that sign-in.'; btn.disabled=false; }
+          if(res&&res.error){try{sessionStorage.removeItem(OAUTH_PENDING);}catch(e){}socialError(res.error.message);btn.disabled=false;}
+        }catch(e){try{sessionStorage.removeItem(OAUTH_PENDING);}catch(x){}socialError('Could not start that sign-in.');btn.disabled=false;}
       });
     });
+    wrap.style.display=any?'':'none';
+    if(divider)divider.style.display=any?'':'none';
   }
 
   /* WHEN IS THE APP ACTUALLY LOGGED IN.
@@ -17433,8 +17507,29 @@ const Cloud=(function(){
        the old link shapes, so this is safe to ship first. */
     const tokenHash = query.get('token_hash') || hash.get('token_hash');
     const otpType = query.get('type') || hash.get('type');
+    let oauthPending = null;
+    try { oauthPending = sessionStorage.getItem(OAUTH_PENDING); sessionStorage.removeItem(OAUTH_PENDING); } catch (e) {}
 
-    if (tokenHash && !authErr) {
+    if (oauthPending && authErr) {
+      /* Back from Apple or Google with an error — most often somebody pressing
+         Cancel. That is a login problem and gets the login screen, not the
+         password-reset one this branch below would have shown. */
+      history.replaceState(null, '', location.pathname);
+      if (window.dismissSplash) try { dismissSplash(); } catch (e) {}
+      setTimeout(function () {
+        document.getElementById('auth-modal').classList.add('open');
+        showAuthView('main');
+        const msg = String(authErr).replace(/\+/g, ' ');
+        socialError(/denied|cancel/i.test(msg) ? 'Sign-in was cancelled.' : 'That sign-in did not finish: ' + msg);
+      }, 300);
+    } else if (oauthPending) {
+      // A provider return. supabase-js reads the tokens itself; the session
+      // check below calls onAuthed, and onAuthed starts the tutorial for a new
+      // account. Nothing here should treat a ?code= as a password reset.
+      if (query.get('code') || hash.get('access_token')) {
+        setTimeout(function () { try { history.replaceState(null, '', location.pathname); } catch (e) {} }, 1500);
+      }
+    } else if (tokenHash && !authErr) {
       history.replaceState(null, '', location.pathname);
       if (window.dismissSplash) try { dismissSplash(); } catch (e) {}
       setTimeout(async function () {
@@ -17654,6 +17749,20 @@ const Cloud=(function(){
     try{
       const r=await sb.rpc('recall_submit',{p_day:o.day,p_mode:o.mode||'daily',p_guess:o.guess||'',
         p_step:o.step,p_attempts:o.attempts,p_claim:o.claim||'',p_correct:!!o.correct,
+        p_elapsed_ms:(o.elapsedMs==null?null:Math.round(o.elapsedMs))});
+      return r.error?null:r.data;
+    }catch(e){return null;}
+  }
+  /* The tutorial round's own board. Start stamps the server's clock at the
+     first clip; submit sends the claimed title and the step, never a score. */
+  async function recallTutorialStart(){
+    if(!isOn())return null;
+    try{const r=await sb.rpc('recall_tutorial_start');return r.error?null:r.data;}catch(e){return null;}
+  }
+  async function recallTutorialSubmit(o){
+    if(!isOn())return null;
+    try{
+      const r=await sb.rpc('recall_tutorial_submit',{p_guess:o.guess||'',p_step:o.step,p_attempts:o.attempts,
         p_elapsed_ms:(o.elapsedMs==null?null:Math.round(o.elapsedMs))});
       return r.error?null:r.data;
     }catch(e){return null;}
@@ -17977,6 +18086,7 @@ const Cloud=(function(){
          blitzCreate:blitzCreate,blitzStart:blitzStart,blitzSubmit:blitzSubmit,
          blitzRecord:blitzRecord,blitzList:blitzList,
          recallSubmit:recallSubmit,recallSession:recallSession,recallState:recallState,
+         recallTutorialStart:recallTutorialStart,recallTutorialSubmit:recallTutorialSubmit,
          suggestionList:suggestionList,suggestionAdd:suggestionAdd,suggestionRemove:suggestionRemove,
          setGrooveRole:setGrooveRole,removeGrooveMember:removeGrooveMember,
          acceptGrooveInvite:acceptGrooveInvite,leaveGroove:leaveGroove,fetchGroove:fetchGroove,
@@ -33176,6 +33286,18 @@ window.renderAdminStats = renderAdminStats;
         if (!hit || !hit.preview) return null;
         return { url: hit.preview, cover: j.cover || null, link: j.link || null, source: 'Deezer', ms: hit.ms || 30000 };
       }
+      /* A track pinned to a Deezer id (the tutorial's) is asked for by that id
+         and nothing else: falling back to a name search is exactly how the
+         wrong edition gets played. */
+      if (t.dzId) {
+        return get(apiBase() + '/api/catalogue?path=track&id=' + encodeURIComponent(t.dzId) + bust).then(function (j) {
+          if (j && j.__err) return { error: true };
+          if (!j || !j.preview_url) return null;
+          var img = j.album && j.album.images && j.album.images[0];
+          return { url: j.preview_url, cover: (img && img.url) || null,
+                   link: 'https://www.deezer.com/track/' + encodeURIComponent(t.dzId), source: 'Deezer', ms: 30000 };
+        });
+      }
       // No title (an album asked for its opening track) goes straight to the album.
       var first = t.title ? get(base + '&track=' + encodeURIComponent(t.title) + bust) : Promise.resolve(null);
       return first.then(function (j) {
@@ -33612,10 +33734,10 @@ window.renderAdminStats = renderAdminStats;
      key with a search box on it. Titles rank above artists so typing three
      letters of a song does not fill the list with everything by somebody whose
      name happens to contain them. */
-  function suggest(q, limit) {
+  function suggest(q, limit, extra) {
     var n = norm(q);
     if (n.length < 2) return [];
-    var out = [], p = pool(), i, r, t, a, rank;
+    var out = [], p = (extra || []).concat(pool()), i, r, t, a, rank;
     for (i = 0; i < p.length; i++) {
       r = p[i]; t = norm(r.title); a = norm(r.artist);
       rank = t.indexOf(n) === 0 ? 0 : t.indexOf(n) > 0 ? 1 : a.indexOf(n) === 0 ? 2 : a.indexOf(n) > 0 ? 3 : -1;
@@ -33734,6 +33856,23 @@ window.renderAdminStats = renderAdminStats;
   // head is a scoring system nobody feels.
   function streakBonus(streak) { return Math.min(Math.max(streak - 1, 0), STREAK_MAX / STREAK_STEP) * STREAK_STEP; }
 
+  /* ---- the tutorial's song -------------------------------------------
+     NOT A POOL ROW, deliberately: SONG_ROWS feeds the daily schedule (760
+     literal rows in recall_daily) and Cover Fire's seeds, and one more entry
+     re-deals every day of both. So it lives here, outside the pool, with an
+     index nothing in the pool can have.
+
+     Pinned to Deezer track 5594020, the original single. Asked for by name,
+     /api/preview answers with the "Continuous Mix" off the deluxe album — a
+     different first second, which on a board where everybody hears the same
+     clip is a different question. The title is the answer
+     recall_tutorial_answer() holds in SQL; change one, change both. */
+  var TUTORIAL = {
+    i: 'tut', title: 'Memories', artist: 'David Guetta', feat: 'Kid Cudi',
+    year: 2009, genre: 'Electronic', album: 'Memories (feat. Kid Cudi)', dzId: '5594020',
+    art: 'https://cdn-images.dzcdn.net/images/cover/cadee1e42f92abf85b07dff16f7fc195/1000x1000-000000-80-0-0.jpg'
+  };
+
   /* ---- the modes ----------------------------------------------------- */
   var MODES = {
     daily: {
@@ -33742,10 +33881,10 @@ window.renderAdminStats = renderAdminStats;
       oneGo: true, endless: false, bonus: false,
       candidates: function () { return dayCandidates(dayNo()); }
     },
-    /* THE TUTORIAL'S ROUND, AND IT IS THE SAME RECORD FOR EVERYBODY.
-       Mr. Brightside because it is the most recognisable thing in the pool at
-       one second, which is what a first round has to be — Recall teaches
-       itself, and it cannot do that on a record nobody knows.
+    /* THE TUTORIAL'S ROUND, AND IT IS THE SAME RECORD FOR EVERYBODY:
+       "Memories", David Guetta feat. Kid Cudi (see TUTORIAL below). One fixed
+       song is what makes the tutorial board comparable — every new account is
+       asked the identical question.
 
        A MODE RATHER THAN A BRANCH, which is what the registry is for: `mode`
        is plain text on recall_results with no check constraint, so a third one
@@ -33761,15 +33900,7 @@ window.renderAdminStats = renderAdminStats;
       key: 'tutorial', label: 'Recall', short: 'Recall',
       blurb: 'One song.',
       oneGo: false, endless: true, bonus: false, oneRound: true,
-      candidates: function () {
-        var hit = pool().filter(function (t) {
-          return /^mr\.?\s*brightside$/i.test(String(t.title || '').trim())
-              && /killers/i.test(String(t.artist || ''));
-        });
-        // If it ever leaves the pool, one round of something is better than a
-        // tutorial that cannot start.
-        return hit.length ? hit : pool().slice(0, 1);
-      }
+      candidates: function () { return [TUTORIAL]; }
     },
     endless: {
       key: 'endless', label: 'Endless Recall', short: 'Endless',
@@ -33870,7 +34001,7 @@ window.renderAdminStats = renderAdminStats;
   window.Recall = {
     STEPS: STEPS, SCORES: SCORES, MODES: MODES,
     DAILY_KEY: DAILY_KEY, BEST_KEY: BEST_KEY,
-    norm: norm, matches: matches, isArtistOnly: isArtistOnly, suggest: suggest,
+    norm: norm, matches: matches, isArtistOnly: isArtistOnly, suggest: suggest, TUTORIAL: TUTORIAL,
     pool: pool, dayNo: dayNo, msToNextDay: msToNextDay, dayCandidates: dayCandidates,
     dailyDone: dailyDone, saveDaily: saveDaily, best: best, setBest: setBest,
     points: points, streakBonus: streakBonus,
@@ -33914,6 +34045,12 @@ window.renderAdminStats = renderAdminStats;
   function startClock() {
     if (revealed || !song || clockAt) return;
     clockAt = Date.now();
+    /* The tutorial board is timed by the SERVER, from the first press of play:
+       recall_tutorial_submit never scores a round faster than the time it saw
+       pass since this call. Once per round, and kept by the server on a retry. */
+    if (sess && sess.mode === 'tutorial' && !sess.tutStart && window.Cloud && Cloud.recallTutorialStart) {
+      sess.tutStart = Cloud.recallTutorialStart();
+    }
     if (!clockTick) clockTick = setInterval(paintTimer, 100);
     paintTimer();
   }
@@ -33962,16 +34099,19 @@ window.renderAdminStats = renderAdminStats;
     if (window.notePlay) notePlay('recall');
   }
   function resume(live) {
-    var m = live && Recall.MODES[live.mode], t = live && Recall.pool()[live.song];
+    var m = live && Recall.MODES[live.mode];
+    var t = live && (live.song === Recall.TUTORIAL.i ? Recall.TUTORIAL : Recall.pool()[live.song]);
     if (!m || !t || live.v !== 1) { clearLive(); return false; }
     if (live.mode === 'daily' && (live.day !== Recall.dayNo() || Recall.dailyDone())) { clearLive(); return false; }
     if (Date.now() - (live.at || 0) > LIVE_TTL) { fileAbandoned(Object.assign({ mode: live.mode }, live.sess || {})); clearLive(); return false; }
     sess = Recall.session(live.mode);
     Object.keys(live.sess || {}).forEach(function (k) { sess[k] = live.sess[k]; });
-    if (window.Boards) {
+    if (window.Boards && live.mode !== 'tutorial') {
       if (!Boards.live('recall')) Boards.start('recall', boardMode(live.mode), { day: Recall.dayNo(), local: boardMode(live.mode) !== 'daily' && boardMode(live.mode) !== 'endless' });
       Boards.clock(el('recall-clock'), 'recall');
     }
+    // The server stamped the tutorial's start when its first clip played.
+    if (live.mode === 'tutorial' && live.clockMs) sess.tutStart = Promise.resolve(null);
     if (live.between) { nextRound(); return true; }
     nextRound(t, live);
     return true;
@@ -34253,6 +34393,26 @@ window.renderAdminStats = renderAdminStats;
     reveal(correct, got);
     track2('recall_round', { mode: sess.mode, correct: !!correct, step: step });
     if (sess.mode === 'daily') finishDaily(correct, got);
+    if (sess.mode === 'tutorial') submitTutorial(correct);
+  }
+  /* The tutorial round goes to its own board the moment it is decided, a miss
+     included — the board is everybody's first go, not only the good ones. What
+     goes up is the canonical title when it was named (as the daily sends) and
+     never a score: recall_tutorial_submit judges and times it. */
+  function submitTutorial(correct) {
+    if (!sess || sess.tutRes) return;
+    var s = sess, step0 = step, att = attempts, ms = lastElapsedMs;
+    s.tutRes = Promise.resolve(s.tutStart).then(function () {
+      if (!(window.Cloud && Cloud.recallTutorialSubmit)) return null;
+      return Cloud.recallTutorialSubmit({ guess: correct ? Recall.TUTORIAL.title : '', step: step0, attempts: att, elapsedMs: ms });
+    }).then(function (r) {
+      // The score may differ by the round trip (the server times it); the
+      // verdict must not.
+      if (r && !r.error && !r.already && r.correct !== !!correct && window.reportIssue) {
+        reportIssue('recall_tutorial_submit disagreed about the answer', { local: !!correct, server: r.correct, verified: r.verified });
+      }
+      return r;
+    }).catch(function () { return null; });
   }
   function track2(nm, props) { try { if (window.track) window.track(nm, props); } catch (e) {} }
 
@@ -34292,11 +34452,16 @@ window.renderAdminStats = renderAdminStats;
 
     var acts = el('recall-rev-actions');
     if (sess.m.oneRound) {
-      // One round, so there is nothing to go on to — and Done has to reach
-      // finishSession rather than the lobby, because that is what pays.
-      acts.innerHTML = '<button class="btn-primary" id="recall-stop">Done</button>';
-      el('recall-stop').addEventListener('click', function () { finishSession(); });
+      /* The tutorial's round: the reveal stays up long enough to read, then the
+         sheet goes and the tutorial carries on with its own payoff. No summary,
+         no Go again, no board — the tutorial shows the score and the rank, and
+         a second round from here would be a second attempt at a one-go board. */
+      acts.innerHTML = '<button class="btn-primary" id="recall-stop">Continue</button>';
+      var mine = sess;
+      el('recall-stop').addEventListener('click', function () { endTutorial(mine); });
       setTimeout(function () { var b = el('recall-stop'); if (b) b.focus(); }, 40);
+      clearTimeout(tutT);
+      tutT = setTimeout(function () { endTutorial(mine); }, correct ? 2600 : 2200);
     } else if (sess.over) {
       acts.innerHTML = '<button class="btn-primary" id="recall-stop">See your score</button>';
       el('recall-stop').addEventListener('click', function () { finishSession(); });
@@ -34316,6 +34481,16 @@ window.renderAdminStats = renderAdminStats;
       if (window.buzz) buzz('good');
       if (window.burst && art) burst(art, { count: step === 0 ? 34 : 18, spread: 150 });
     }
+  }
+
+  var tutT = 0;
+  function endTutorial(s) {
+    clearTimeout(tutT); tutT = 0;
+    if (!s || s !== sess || s.done) return;
+    VinalAudio.stop(); hearTok++;
+    s.done = true;
+    fileRun();
+    close();
   }
 
   /* ---------- the daily ---------- */
@@ -34414,7 +34589,8 @@ window.renderAdminStats = renderAdminStats;
     if (window.notePlay) notePlay('recall');
     if (window.Wallet && Wallet.awardGame && st.songs > 0) Wallet.awardGame('recall', { reason: 'Recall' });
     track2('recall_session', { songs: st.songs, score: st.score, streak: st.bestStreak });
-    _boardRes = window.Boards ? Boards.finish('recall', { score: st.score, played: st.played, songs: st.songs }) : null;
+    _boardRes = sess.mode === 'tutorial' ? (sess.tutRes || Promise.resolve(null))
+      : window.Boards ? Boards.finish('recall', { score: st.score, played: st.played, songs: st.songs }) : null;
     // Read by onboarding, which follows the first round with its own payoff.
     window.RecallLast = { mode: sess.mode, score: st.score, songs: st.songs, played: st.played, avgReveal: st.avgReveal, ms: lastElapsedMs, board: _boardRes };
     if (on()) { try { Cloud.recallSession(st.score, st.songs, st.bestStreak, Math.round(st.avgReveal)); } catch (e) {} }
@@ -34470,7 +34646,7 @@ window.renderAdminStats = renderAdminStats;
   function paintSuggest() {
     var i = el('recall-input'), host = el('recall-sugg');
     if (!i || !host) return;
-    var list = revealed ? [] : Recall.suggest(i.value, 6);
+    var list = revealed ? [] : Recall.suggest(i.value, 6, sess && sess.mode === 'tutorial' ? [Recall.TUTORIAL] : null);
     if (!list.length) { closeSuggest(); return; }
     sugIdx = -1;
     host.innerHTML = list.map(function (t, k) {
@@ -34603,15 +34779,16 @@ window.renderAdminStats = renderAdminStats;
     } catch (e) {}
   }
 
-  /* The onboarding round is an Endless run that stops after one song, so it is
-     ranked on the Endless board: a new account's first score has a real place. */
-  function boardMode(key) { return key === 'tutorial' ? 'endless' : key; }
+  /* The onboarding round has a board of its own (recall_tutorial), so it never
+     starts a game_runs row. It used to be filed on Endless, which put one song
+     beside fifty-song runs. */
+  function boardMode(key) { return key; }
   function startMode(key) {
     if (key === 'daily' && Recall.dailyDone()) { paintLobby(); return; }
     if (sess && !sess.done && !sess.filed) fileAbandoned(sess);
     sess = Recall.session(key);
     _boardRes = null;
-    if (window.Boards) {
+    if (window.Boards && key !== 'tutorial') {
       Boards.start('recall', boardMode(key), { day: Recall.dayNo(), local: boardMode(key) !== 'daily' && boardMode(key) !== 'endless' });
       Boards.clock(el('recall-clock'), 'recall');
     }
@@ -34640,6 +34817,19 @@ window.renderAdminStats = renderAdminStats;
     VinalAudio.stop(); hearTok++;
     stopCountdown();
     if (!sess) { paintCard(); return; }
+    clearTimeout(tutT); tutT = 0;
+    /* THE TUTORIAL DOES NOT PAUSE. It is one go at a one-go board, so closing it
+       after the first clip has played files a miss and the tutorial moves on;
+       closing it before then records nothing. Either way nothing is left open
+       to be resumed into a second attempt, and nobody is stuck. */
+    if (sess.mode === 'tutorial' && !sess.done) {
+      if (song && !revealed && (clockAt || clockMs)) { finishRound(false); }
+      sess.done = true;
+      if (sess.played) fileRun(); else clearLive();
+      sess = null; song = null;
+      paintCard();
+      return;
+    }
     // Closing PAUSES a run: the round, the reveal step and the time left are
     // kept and come back on the next open. Only a run already over is filed.
     pauseClock();
@@ -40597,8 +40787,128 @@ window.renderAdminStats = renderAdminStats;
       rateCard(meta, '', '', function () { next(); },
         { label: 'Don\u2019t know it.',
           fn: function () { if (n === 0) { n = 1; card(); } else { next(); } } });
+      addFindLink(function () { card(); }, function () { next(); });
     }
     await card();
+  }
+
+  /* ---- rate anything — OPTIONAL, never a step -----------------------------
+     A door off the first record and off the finale into the real catalogue:
+     search, pick, score, and back to exactly where you were. It is not in
+     STEPS, so it cannot add a beat or hold the rail; leaving it costs nothing.
+     Ratings go through saveAlbum / saveSong like every other one — same keys,
+     same score history, same Discs, same profile — because a tutorial rating
+     that lived anywhere else would be a second rating model to reconcile.
+
+     `back` returns to the caller; `rated(n)` is told when something was saved,
+     so the first-record beat can treat a searched album as its album. */
+  function addFindLink(back, rated) {
+    var f = foot && foot.querySelector('#onb-alt');
+    var b = document.createElement('button');
+    b.className = 'onb-alt onb-find-link'; b.type = 'button';
+    b.textContent = 'Or rate one you love';
+    b.addEventListener('click', function () { findAny(back, rated); });
+    if (f && f.parentNode) f.parentNode.insertBefore(b, f.nextSibling); else if (foot) foot.appendChild(b);
+  }
+  function findAny(back, rated) {
+    var kind = 'album', q = '', hits = [], tok = 0, count = 0, timer = 0;
+    function paint() {
+      show(
+        '<div class="onb-find">' +
+          '<h2 class="onb-h">Rate anything.</h2>' +
+          '<div class="onb-seg" role="tablist">' +
+            '<button type="button" data-k="album" class="' + (kind === 'album' ? 'on' : '') + '">Albums</button>' +
+            '<button type="button" data-k="song" class="' + (kind === 'song' ? 'on' : '') + '">Songs</button>' +
+          '</div>' +
+          '<input class="g-input onb-find-q" id="onb-q" type="search" enterkeyhint="search" autocomplete="off" ' +
+            'autocapitalize="none" spellcheck="false" placeholder="' + (kind === 'album' ? 'Search albums' : 'Search songs') + '">' +
+          '<div class="onb-find-list" id="onb-fl"></div>' +
+        '</div>',
+        cta(count ? 'Done \u00b7 ' + count + ' rated' : 'Back'));
+      var inp = el('onb-q'); inp.value = q;
+      inp.addEventListener('input', function () { q = inp.value; clearTimeout(timer); timer = setTimeout(run, 260); });
+      inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { clearTimeout(timer); run(); try { inp.blur(); } catch (x) {} } });
+      host.querySelectorAll('.onb-seg button').forEach(function (b) {
+        b.addEventListener('click', function () { if (b.dataset.k === kind) return; kind = b.dataset.k; hits = []; paint(); if (q.trim().length >= 2) run(); });
+      });
+      onCta(function () { clearTimeout(timer); tok++; if (count && rated) rated(count); else back(); });
+      list();
+      if (matchMedia('(hover: hover)').matches) setTimeout(function () { try { inp.focus(); } catch (e) {} }, 300);
+    }
+    function list(msg) {
+      var box = el('onb-fl'); if (!box) return;
+      if (msg) { box.innerHTML = '<p class="onb-find-msg">' + esc(msg) + '</p>'; return; }
+      if (!hits.length) { box.innerHTML = q.trim().length >= 2 ? '' : '<p class="onb-find-msg">Any record or song in the catalogue.</p>'; return; }
+      box.innerHTML = hits.slice(0, 12).map(function (h, i) {
+        var mine = kind === 'album' ? albumScore(h) : 0;
+        return '<button type="button" class="onb-hit" data-i="' + i + '" style="--i:' + i + '">' +
+          '<img src="' + esc(window.thumb ? thumb(h.art || '', 160) : (h.art || '')) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
+          '<span><b>' + esc(h.name) + '</b><small>' + esc(h.artist || '') + (kind === 'song' && h.album ? ' \u00b7 ' + esc(h.album) : (h.year ? ' \u00b7 ' + esc(h.year) : '')) + '</small></span>' +
+          (mine ? '<i class="onb-hit-sc">' + mine + '</i>' : '') + '</button>';
+      }).join('');
+      box.querySelectorAll('.onb-hit').forEach(function (b) {
+        b.addEventListener('click', function () { var h = hits[+b.dataset.i]; if (h) rate(h); });
+      });
+    }
+    function albumScore(h) {
+      try { var r = window.findAlbumRec ? findAlbumRec(loadAlbums(), h) : null; return r && r.score ? r.score : 0; } catch (e) { return 0; }
+    }
+    async function run() {
+      var mine = ++tok, query = q.trim();
+      if (query.length < 2) { hits = []; list(); return; }
+      list('Searching\u2026');
+      var got = [];
+      try { got = await searchItems(query, kind); } catch (e) { got = null; }
+      if (mine !== tok) return;
+      if (got === null) { list('Could not reach the catalogue. Try again.'); return; }
+      hits = got || [];
+      if (!hits.length) { list('Nothing found for \u201c' + query + '\u201d.'); return; }
+      list();
+    }
+    function rate(h) {
+      tok++;
+      var isAlbum = kind === 'album';
+      show(
+        '<img class="onb-cover" src="' + esc(h.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+        '<div class="onb-alb"><h3>' + esc(h.name) + '</h3><p>' + esc(h.artist || '') + (h.year ? ' \u00b7 ' + esc(h.year) : '') + '</p></div>' +
+        '<div class="onb-slider' + (isAlbum ? '' : ' onb-slider-song') + '">' +
+          (isAlbum ? '<div class="onb-score" id="onb-rs">72<span>/100</span></div>' : '') +
+          '<input type="range" id="onb-r" min="1" max="' + (isAlbum ? 100 : 10) + '" step="1" value="' + (isAlbum ? 72 : 7) + '" aria-label="Your score">' +
+        '</div>',
+        cta(isAlbum ? 'Save it' : 'Rate 7') + '<button class="onb-alt" id="onb-alt">Back to search</button>');
+      var sl = el('onb-r'), out = el('onb-rs'), btn = el('onb-go'), step = host.querySelector('.onb-step');
+      if (window.GlowSlider) GlowSlider.enhance(sl, { className: isAlbum ? 'gs-alb' : 'gs-fy' });
+      function tint() {
+        var v = +sl.value;
+        if (out) out.innerHTML = v + '<span>/100</span>';
+        if (!isAlbum) btn.textContent = 'Rate ' + v;
+        step.style.setProperty('--onb-tint', isAlbum ? (window.albumColor ? albumColor(v) : 'var(--gold)') : (window.songColor ? songColor(v) : 'var(--gold)'));
+      }
+      sl.addEventListener('input', tint); tint();
+      el('onb-alt').addEventListener('click', paint);
+      onCta(function () {
+        var v = +sl.value, before = discs();
+        btn.disabled = true;
+        if (isAlbum) {
+          var meta = { id: h.id, name: h.name, artist: h.artist, art: h.art, year: h.year || '', artistId: h.artistId || '' };
+          try { saveAlbum(meta, v); } catch (e) {}
+          try { logActivity(ICONS.star, 'Rated', h.name, v); } catch (e) {}
+          try { playAlbumReveal(meta, v); } catch (e) {}
+        } else {
+          var track = { id: h.id, name: h.name, artists: String(h.artist || '').split(', ').map(function (a) { return { name: a }; }) };
+          try { saveSong(track, v, { id: 'x' + _norm(h.artist + h.album), name: h.album || '', art: h.art }); } catch (e) {}
+          try { logActivity(ICONS.star, 'Rated', h.name, v); } catch (e) {}
+          step.classList.add('onb-rated');
+          if (window.burst) try { burst(host.querySelector('.onb-cover'), { count: 18 + v * 3, spread: 120 }); } catch (e) {}
+        }
+        count++;
+        setTimeout(function () {
+          var got = Math.max(0, discs() - before); if (got) discPop(got);
+          paint();
+        }, isAlbum ? 2500 : 900);
+      });
+    }
+    paint();
   }
 
   /* ---- 3. one song ------------------------------------------------------
@@ -40678,13 +40988,18 @@ window.renderAdminStats = renderAdminStats;
      which is exactly why it is the right first game — so nothing is granted
      here either; it opens the one that was already open.
 
-     ITS OWN MODE, so every new account gets the SAME record — Mr. Brightside,
-     the most recognisable thing in the pool at one second. See Recall.MODES.
-     It behaves as endless underneath, which is what makes it pay: finishDaily
-     pays only `&& correct`, so a tutorial built on the daily stops being a
-     purchase the moment somebody does not get it. It also leaves today's
-     daily unplayed, which is a real one to come back to. */
+     ITS OWN MODE, so every new account gets the SAME record — "Memories",
+     David Guetta feat. Kid Cudi (Recall.TUTORIAL) — and its own board,
+     recall_tutorial, one first attempt per account. It behaves as endless
+     underneath, which is what makes it pay: finishDaily pays only `&& correct`,
+     where a run pays for playing. One round, and the sheet closes itself after
+     the reveal, so nobody lands on Go again or the normal results screen.
+
+     RESUMABLE AND ONE-GO. The outcome is written to S the moment the sheet
+     closes, so a reload at the payoff shows the payoff rather than a second
+     round; the board keeps the first attempt regardless. */
   function game() {
+    if (S.recallDone) { afterGame(null); return; }
     var before = discs();
     show(
       '<div class="onb-kicker">Recall</div>' +
@@ -40694,40 +41009,49 @@ window.renderAdminStats = renderAdminStats;
       cta('Play'));
     window.RecallLast = null;
     onCta(function () {
-      if (!window.openRecall) { afterGame(before); return; }
+      if (!window.openRecall) { done(); return; }
       var m = el('recall-modal');
       openRecall('tutorial');
-      if (!m) { afterGame(before); return; }
+      if (!m) { done(); return; }
       /* Resumed when the sheet closes, watched on its own class rather than
          wired into Recall — the game knows nothing about this and should not
          have to. */
       var obs = new MutationObserver(function () {
         if (m.classList.contains('open')) return;
         obs.disconnect();
-        afterGame(before);
+        done();
       });
       obs.observe(m, { attributes: true, attributeFilter: ['class'] });
     });
+    function done() {
+      var last = window.RecallLast || null;
+      S.recallDone = true;
+      S.recall = last ? { score: last.score || 0, songs: last.songs || 0, avgReveal: last.avgReveal || 0, ms: last.ms || 0 } : { score: 0, songs: 0 };
+      S.discsBefore = before;
+      save();
+      afterGame(last && last.board);
+    }
   }
 
   /* THE PAYOFF IS THEIR SCORE, ITS PLACE AND WHAT IT PAID — all three real.
-     The score is Recall's own (window.RecallLast, set when the run files), the
-     place is the Endless board's answer from game_finish (the tutorial round
-     is an Endless run of one song, see boardMode), and the Discs are the
-     balance read back after the award. Nothing here is computed for show. */
+     The score is Recall's own, replaced by the server's once
+     recall_tutorial_submit answers (the server times it, so it can be a few
+     points under); the place is that board's; the Discs are the balance read
+     back after the award. Nothing here is computed for show. */
   // Keyed by how much they needed to hear; the time is printed as the evidence.
   var VERDICT = { 1: 'One second. Big ears.', 3: 'Three seconds. Sharp.', 5: 'Five seconds. Nice.', 10: 'Got there.' };
-  async function afterGame(before) {
-    var last = window.RecallLast || null, sc = (last && last.score) || 0, got = !!(last && last.songs);
-    var heard = last && last.avgReveal ? Math.round(last.avgReveal) : 0;
+  async function afterGame(boardP) {
+    var last = S.recall || {}, sc = last.score || 0, got = !!last.songs;
+    var heard = last.avgReveal ? Math.round(last.avgReveal) : 0;
+    var before = S.discsBefore == null ? discs() : S.discsBefore;
     var v = got ? [VERDICT[heard] || 'Nailed it.', last.ms ? 'Named in ' + (last.ms / 1000).toFixed(1) + 's' : '']
-                : ['Not this time.', 'Today\u2019s Recall is waiting in the Arcade.'];
+                : ['Not this time.', 'Today’s Recall is waiting in the Arcade.'];
     show(
       '<div class="onb-result' + (got ? ' won' : '') + '">' +
         '<div class="onb-kicker">Your first Recall</div>' +
         '<div class="onb-big"><b id="onb-sc">0</b><small>points</small></div>' +
         '<h2 class="onb-h">' + esc(v[0]) + '</h2>' + (v[1] ? '<p class="onb-sub">' + esc(v[1]) + '</p>' : '') +
-        '<div class="onb-rank" id="onb-rank"><span class="onb-rank-t ld-line">Finding your place on the board\u2026</span></div>' +
+        '<div class="onb-rank" id="onb-rank"><span class="onb-rank-t ld-line">Finding your place on the board…</span></div>' +
         '<div class="onb-wallet onb-wallet-sm"><b id="onb-tick">' + discs().toLocaleString('en-GB') + '</b><span>' + ICONS.coin + ' Discs</span></div>' +
       '</div>',
       cta('Continue'));
@@ -40740,23 +41064,34 @@ window.renderAdminStats = renderAdminStats;
     try { if (window.Wallet && Wallet.refresh) await Wallet.refresh(); } catch (e) {}
     var now = discs(), gained = Math.max(0, now - before);
     tick(el('onb-tick'), Math.max(0, now - gained), now, 1100);
-    // The board answers when game_finish does; a dead network just says so.
+    /* The board answers when recall_tutorial_submit does. After a reload there
+       is no promise left, so the board itself is asked where this account
+       stands — the same row, read back. A dead network just says so. */
     var res = null;
-    try { res = await Promise.race([Promise.resolve(last && last.board), new Promise(function (r) { setTimeout(r, 5000); })]); } catch (e) {}
+    try {
+      if (!boardP && window.Cloud && Cloud.client && Cloud.isOn && Cloud.isOn()) {
+        boardP = Promise.resolve(Cloud.client().rpc('recall_tutorial_board', { p_friends: false, p_limit: 1 }))
+          .then(function (r) { var d = r && r.data; return d && d.me ? { rank: d.me.rank, total: d.total, score: d.me.score } : null; });
+      }
+      res = await Promise.race([Promise.resolve(boardP), new Promise(function (r) { setTimeout(r, 6000); })]);
+    } catch (e) {}
     var rk = el('onb-rank'); if (!rk) return;
+    if (res && !res.error && res.score != null && res.score !== sc && scEl) {
+      if (window.Play && Play.count) Play.count(scEl, sc, res.score, 500); else scEl.textContent = Number(res.score).toLocaleString('en-GB');
+      sc = res.score;
+    }
     if (res && res.rank && !res.error) {
       var pct = res.total ? Math.max(1, Math.round(100 * res.rank / res.total)) : 0;
       rk.innerHTML = '<span class="onb-rank-n">#' + Number(res.rank).toLocaleString('en-GB') + '</span>' +
-        '<span class="onb-rank-t">of ' + Number(res.total).toLocaleString('en-GB') + ' on the Recall board' +
-        (pct && pct <= 50 ? ' \u00b7 top ' + pct + '%' : '') + '</span>';
+        '<span class="onb-rank-t">of ' + Number(res.total).toLocaleString('en-GB') + ' who started on this song' +
+        (got && pct && pct <= 50 ? ' · top ' + pct + '%' : '') + '</span>';
       rk.classList.add('in');
       if (window.buzz) buzz('good');
-      S.recall = { score: sc, rank: res.rank, total: res.total }; save();
+      S.recall.score = sc; S.recall.rank = res.rank; S.recall.total = res.total; save();
     } else if (got) {
       rk.innerHTML = '<span class="onb-rank-t">Your score is in. The board will catch up.</span>';
-      S.recall = { score: sc }; save();
     } else {
-      rk.innerHTML = '<span class="onb-rank-t">No score to rank this time.</span>';
+      rk.innerHTML = '<span class="onb-rank-t">The song was Memories, David Guetta feat. Kid Cudi.</span>';
     }
   }
 
@@ -40797,7 +41132,9 @@ window.renderAdminStats = renderAdminStats;
           '<button class="onb-door" data-door="games" style="--d:var(--c-violet)"><b>Arcade</b><span>Eleven games</span></button>' +
           '<button class="onb-door" data-door="rewards" style="--d:var(--gold)"><b>Shop</b><span>Spend your Discs</span></button>' +
         '</div>' +
-      '</div>', cta('Start using VINALL'));
+      '</div>', cta('Start using VINALL') + '<button class="onb-alt" id="onb-more">Rate a few more first</button>');
+    var more = el('onb-more');
+    if (more) more.addEventListener('click', function () { findAny(finale, finale); });
     host.querySelectorAll('[data-to]').forEach(function (b, i) { setTimeout(function () { tick(b, 0, +b.dataset.to || 0, 800); }, 200 + i * 160); });
     if (window.buzz) buzz('big');
     var fin = host.querySelector('.onb-fin');
@@ -42438,7 +42775,7 @@ window.renderAdminStats = renderAdminStats;
 <script src="/assets/you.js?v=9"></script>
 <script src="/assets/glow.js?v=5"></script>
 <script src="/assets/comments.js?v=3" defer></script>
-<script src="/assets/boards.js?v=2"></script>
+<script src="/assets/boards.js?v=3"></script>
 <script src="/assets/play.js?v=2"></script>
 <script src="/assets/charades.js?v=4"></script>
 <script src="/assets/passport-core.js?v=1"></script>

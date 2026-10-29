@@ -145,3 +145,34 @@ body.layer-open .vx-tip { display: none; }
 @keyframes achFlare { from { opacity: 1; scale: .4; } to { opacity: 0; scale: 1.6; } }
 .ach.claimable { animation: achReady 2.2s var(--ease) infinite; }
 @keyframes achReady { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 0%, transparent); } 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 30%, transparent), 0 0 26px color-mix(in srgb, var(--gold) 25%, transparent); } }
+
+/* ---- onboarding: rate anything (optional, off the first record and the finale) */
+.onb-find { text-align: left; }
+.onb-find .onb-h { text-align: center; }
+.onb-seg {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px;
+  margin: 4px 0 12px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border);
+}
+.onb-seg button {
+  min-height: 40px; border: 0; border-radius: 10px; background: none; color: var(--text-dim);
+  font: 700 14px var(--font-body); cursor: pointer; transition: background .2s var(--ease), color .2s var(--ease);
+}
+.onb-seg button.on { background: var(--surface-3); color: var(--text); }
+.onb-find-q { font-size: 16px; }   /* 16px exactly: smaller and iOS zooms on focus */
+.onb-find-list { display: grid; gap: 6px; margin-top: 12px; min-height: 120px; }
+.onb-find-msg { color: var(--text-faint); font-size: 13.5px; text-align: center; margin: 22px 0; }
+.onb-hit {
+  display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  min-height: 60px; padding: 6px 10px 6px 6px; border-radius: 14px; cursor: pointer; text-align: left;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text); font: inherit;
+  animation: onbIn .32s var(--ease) both; animation-delay: calc(var(--i, 0) * 25ms);
+}
+.onb-hit img { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: var(--surface-3); }
+.onb-hit span { min-width: 0; display: grid; gap: 2px; }
+.onb-hit b, .onb-hit small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.onb-hit b { font-size: 14.5px; }
+.onb-hit small { font-size: 12.5px; color: var(--text-dim); }
+.onb-hit-sc { font: 800 15px var(--font-display); font-style: normal; color: var(--gold); }
+.onb-hit:active { scale: .985; }
+.onb-find-link { margin-top: 0; padding-top: 2px; }
+@media (prefers-reduced-motion: reduce) { .onb-hit { animation: none; } }

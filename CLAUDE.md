@@ -6869,3 +6869,42 @@ self-time on load is well under a second at 4×). That is a CSS job.
   MediaPlayback while playing, an album preview kept playing on the lock screen with
   Now Playing info. For You pausing on lock is its own JS (pre-existing), not this.
 - Tests: `polish.spec.mjs` (no haptic sounds; prime vs music session).
+
+## Tutorial and sign-in pass (2026-10-29)
+
+- **Apple / Google login failed because both providers are DISABLED in Supabase**
+  (`/auth/v1/settings` → `external.apple: false, google: false`), so the redirect
+  landed on raw JSON "Unsupported provider". Enabling them is dashboard work
+  (Authentication → Providers: Apple needs a Services ID, Team ID, Key ID and .p8;
+  Google an OAuth web client ID + secret, callback
+  `https://cqfxyebejpkyhswolrwi.supabase.co/auth/v1/callback`). Add
+  `xyz.wildcrate.vinall://auth` to Redirect URLs for the app. Note the same
+  settings report `mailer_autoconfirm: true` — email confirmation is OFF, which
+  weakens the Reach referral gate (see Reach).
+- `wireSocialAuth()` asks that public endpoint and draws only enabled providers.
+  The web flow sets `vinall_oauth_pending` in sessionStorage so a `#error=` return
+  (Cancel) gets the login view, not the password-reset "expired link" screen, and
+  a provider `?code=` is never read as a recovery.
+- **iOS app**: `VinallNative.webAuth({url, scheme})` (AppDelegate.swift) opens the
+  supabase-js provider URL (`skipBrowserRedirect`) in ASWebAuthenticationSession;
+  the callback's tokens (fragment or `?code=`) are set on the client. Shown only on
+  iOS when the installed binary lists `webAuth` in PluginHeaders. Android: hidden.
+- **Onboarding**: one album (Thriller → Graduation on "Don't know it" → skip).
+  "Or rate one you love" and, on the finale, "Rate a few more first" open
+  `findAny()` — real catalogue search, saveAlbum/saveSong, not a STEP. A searched
+  album counts as the album beat.
+- **Tutorial Recall is "Memories" (David Guetta feat. Kid Cudi)**, `Recall.TUTORIAL`,
+  pinned to Deezer track 5594020 via `t.dzId` (by name, `/api/preview` returns the
+  Continuous Mix). It is NOT a SONG_ROWS row — adding one re-deals the daily
+  schedule and Cover Fire. One round; the sheet closes itself ~2.5s after the
+  reveal (`endTutorial`), never shows the summary or Go again, and does not pause:
+  closing after the first clip files a miss, before it records nothing.
+  Onboarding stores `S.recallDone` so a reload shows the payoff, not a second round.
+- **`recall_tutorial`** (`..._20261029120000_recall_tutorial_board.sql`): one row per
+  account, first attempt kept, misses included. `recall_tutorial_start` stamps the
+  first clip; `recall_tutorial_submit` judges against `recall_tutorial_answer()`
+  and scores with `recall_points` on `greatest(client ms, server ms − 400)`, so a
+  client can claim slower, never faster. Board: `recall_tutorial_board`, same shape
+  as `game_board`, under Recall → **Tutorial** in the leaderboard sheet. No write
+  policies (guarded). The tutorial no longer files on the Endless board.
+- Tests: `scripts/tests/onboarding.spec.mjs`.
