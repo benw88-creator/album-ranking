@@ -55,6 +55,10 @@
 #view-games .arc-title { font: 800 clamp(46px, 8vw, 78px)/.86 var(--font-display); letter-spacing: -.055em; margin: 0; }
 #view-games .arc-title > span {
   display: inline-flex;
+  /* background-clip: text only paints inside the box, and the negative
+     letter-spacing ends that box before the last glyph's ink: the e lost
+     its right edge. Pad the box, give the space back with the margin. */
+  padding: .08em .14em .12em 0; margin: -.08em -.14em -.12em 0;
   background: linear-gradient(90deg, var(--c-violet), var(--hue-recall) 55%, var(--c-cyan));
   -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 0 22px color-mix(in srgb, var(--c-violet) 38%, transparent));
