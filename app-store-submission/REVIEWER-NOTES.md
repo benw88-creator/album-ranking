@@ -13,9 +13,10 @@ Not generated here — the account doesn't exist yet, and credentials for one th
 VINALL is a music rating and journalling app. Five notes.
 
 1. Sign-in is required for most of the app, so please use the demo account in
-the fields above. Accounts are email and password, handled by Supabase. There
-is no third-party sign-in of any kind and no OAuth flow, so no other
-credentials are needed.
+the fields above. Accounts are email and password, or Sign in with Apple, both
+handled by Supabase. Sign in with Apple opens Apple's own system sheet
+(ASWebAuthenticationSession) and returns to the app. No other third-party
+sign-in is offered, so no other credentials are needed.
 
 2. Catalogue and audio. Album names, artwork, tracklists and search results
 come from Deezer's public API, credited with the Deezer logo in the footer, in

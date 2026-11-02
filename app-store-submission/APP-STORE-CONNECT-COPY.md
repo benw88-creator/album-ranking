@@ -99,7 +99,7 @@ https://vinall.xyz/privacy.html
 | Alcohol, tobacco, drug references | None (user content is filtered/reportable) |
 | Violence, horror, sexual content | None |
 
-Expected outcome: **12+**. Do not set 4+; the privacy policy states 13+ as the minimum age, which must be consistent with this answer.
+Expected outcome: **12+** on the old scale, which is **13+** on Apple's current age tiers. Do not set 4+; the privacy policy states 13+ as the minimum age, which must be consistent with this answer.
 
 ---
 
@@ -110,12 +110,13 @@ No tracking of any kind — answer **No** to "Used for Tracking" on every data t
 | Data type | Collected | Linked to you | Purpose |
 |---|---|---|---|
 | Email address | Yes | Yes | App Functionality |
+| Name | Yes (only what Sign in with Apple shares) | Yes | App Functionality |
 | Photos/videos | Yes (if avatar uploaded) | Yes | App Functionality |
 | User content — other | Yes | Yes | App Functionality (ratings, notes, lore answers, comments, reports, imported listening history) |
 | User ID | Yes | Yes | App Functionality |
 | Product interaction | Yes | Yes | **Both** Analytics and App Functionality — declare both, don't pick one |
 | Crash data | Yes | **No** | Analytics (anonymous crashes accepted by design) |
-| Name, phone, address, location, search/browsing history, device ID, performance data, purchases, financial info, contacts, health, sensitive info | No | — | — |
+| Phone, address, location, search/browsing history, device ID, performance data, purchases, financial info, contacts, health, sensitive info | No | — | — |
 
 Notes:
 - Photos only applies if avatar upload is still live — it is (`Cloud.uploadAvatar`).
