@@ -2,7 +2,7 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["TEAMID.xyz.wildcrate.vinall"],
+        "appIDs": ["9BS9SUW9B3.xyz.wildcrate.vinall"],
         "components": [
           { "/": "/*", "?": { "token_hash": "?*" } }
         ]

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Universal Links: confirmation and reset emails open the app. www only,
+	     because the apex 308s and Apple will not follow a redirect for the
+	     apple-app-site-association file. See app-store-submission/UNIVERSAL-LINKS-SETUP.md. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:www.vinall.xyz</string>
+	</array>
+</dict>
+</plist>
