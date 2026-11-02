@@ -480,11 +480,11 @@ body[data-section="replay"] { --section: var(--c-pink); --section-dim: var(--c-p
 /* ---- scene: albums (shelf) ---- */
 .rp-shelf { position: relative; width: 100%; justify-self: stretch; height: clamp(190px, 34vh, 330px); perspective: 1200px; margin: clamp(10px, 3vh, 30px) 0 10px; }
 .rp-shelf figure { position: absolute; left: 50%; top: 0; margin: 0; width: clamp(160px, 28vh, 290px); transform-style: preserve-3d; opacity: 0;
-  transform: translate3d(calc(-50% + var(--x)), 0, var(--z)) rotateY(var(--ry)); }
+  transform: translate3d(calc(-50% + var(--x) * var(--spread, 1)), 0, var(--z)) rotateY(var(--ry)); }
 .rp-shelf figure img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 16px; display: block; box-shadow: 0 34px 70px -18px rgba(0,0,0,.85); background: rgba(255,255,255,.06); }
 .rp-shelf figure figcaption { position: absolute; left: 10px; bottom: 10px; font: 700 clamp(22px, 3vw, 34px)/1 var(--font-mono); letter-spacing: -.04em; color: var(--sc, #fff); text-shadow: 0 2px 14px rgba(0,0,0,.8); }
 .is-in .rp-shelf figure { animation: rpShelf 1.2s var(--rp-ease-out) calc(var(--d) * 1ms) both; }
-@keyframes rpShelf { from { opacity: 0; transform: translate3d(calc(-50% + var(--x) * .4), 40px, calc(var(--z) - 200px)) rotateY(var(--ry)); } to { opacity: var(--o, 1); transform: translate3d(calc(-50% + var(--x)), 0, var(--z)) rotateY(var(--ry)); } }
+@keyframes rpShelf { from { opacity: 0; transform: translate3d(calc(-50% + var(--x) * var(--spread, 1) * .4), 40px, calc(var(--z) - 200px)) rotateY(var(--ry)); } to { opacity: var(--o, 1); transform: translate3d(calc(-50% + var(--x) * var(--spread, 1)), 0, var(--z)) rotateY(var(--ry)); } }
 .rp-center { text-align: center; justify-items: center; }
 .rp-center .rp-sub { margin-left: auto; margin-right: auto; }
 
@@ -616,6 +616,12 @@ body[data-section="replay"] { --section: var(--c-pink); --section-dim: var(--c-p
 @media (max-width: 699px) {
   .rp-scene { padding-left: 22px; padding-right: 22px; }
   .rp-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* Three columns of ~100px: a six- or seven-digit play count at 30px ran
+     past its column and the scene's clip cut it off. */
+  .rp-stat b { font-size: min(30px, 6.4vw); }
+  /* The fan's back sleeves sat past the screen edge with their scores cut. */
+  .rp-shelf { --spread: .66; }
+  .rp-shelf figure { width: min(28vh, 46vw); }
   .rp-orbit img { width: 76px; }
   .rp-disc-hero { grid-template-columns: 1fr; }
   .rp-row { grid-template-columns: 26px 42px minmax(0, 1fr) auto; gap: 10px; }
