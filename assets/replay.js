@@ -975,21 +975,6 @@
   }
   function heroStat(v, label) { return '<div class="rp-hstat"><b>' + count(v) + '</b><span>' + esc(label) + '</span></div>'; }
 
-  /* The teaser. Not a button: there is nowhere for it to go yet, and a
-     control that names one action and performs none is the worst shape a
-     control can have. It sits under every Replay entry. */
-  function teaserHtml() {
-    return '<div class="rp-teaser" role="note" aria-label="New games coming soon">' +
-      '<span class="rp-teaser-sheen" aria-hidden="true"></span>' +
-      '<span class="rp-teaser-tiles" aria-hidden="true">' +
-        '<i style="--t:var(--c-cyan)"><svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm0 6.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8z"/></svg></i>' +
-        '<i style="--t:var(--c-violet)"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6" opacity=".45"/></svg></i>' +
-        '<i style="--t:var(--c-pink)"><svg viewBox="0 0 24 24"><text x="12" y="18.5" text-anchor="middle" font-size="17" font-weight="800" font-family="sans-serif">?</text></svg></i>' +
-      '</span>' +
-      '<span class="rp-teaser-t"><b>New games coming soon</b><small>More on the way</small></span>' +
-      '<em class="rp-soon">Soon</em></div>';
-  }
-
   /* Locked. Says the rule exactly, shows how far along you are, and points at
      the one thing worth doing while you wait: bringing your listening in,
      because Replay is built from it. The demo stays open as a taste. */
@@ -1015,7 +1000,6 @@
         (spotifyImported()
           ? '<li class="done"><span class="rp-need-ico sp" aria-hidden="true">✓</span><span class="rp-need-t"><b>Spotify data imported</b><small>It is ready for Replay. Import a newer export any time.</small></span><button class="rp-need-btn ghost" data-rp-act="import">Update</button></li>'
           : '<li><span class="rp-need-ico sp" aria-hidden="true">♫</span><span class="rp-need-t"><b>Built from your Spotify data</b><small>Import your Spotify listening so it is ready when Replay opens.</small></span><button class="rp-need-btn" data-rp-act="import">Import</button></li>') +
-        '<li><span class="rp-need-ico" aria-hidden="true">+</span><span class="rp-need-t"><b>Other music services</b><small>Coming soon.</small></span><em class="rp-soon">Soon</em></li>' +
       '</ul>' +
       '<div class="rp-hero-row"><button class="rp-ghost rp-demo-btn" data-rp-act="demo"><i aria-hidden="true">▶</i>Preview a demo Replay</button></div></div>';
   }
@@ -1031,7 +1015,7 @@
   async function renderHome() {
     var h = $('rp-home'); if (!h) return;
     var g = gate();
-    if (!g.open) { h.innerHTML = lockedHtml(g, false) + teaserHtml(); wireHome(h); paintPals(h); return; }
+    if (!g.open) { h.innerHTML = lockedHtml(g, false); wireHome(h); paintPals(h); return; }
     var input = crateInput(), first = activitySpan(input);
     var idx = await listeningIndex();
     var lFrom = idx && idx.data_from ? R.dayStart(idx.data_from) : null;
@@ -1055,7 +1039,7 @@
     var noDays = !idx || !idx.data_from;
     var seen = opened();
     h.innerHTML =
-      (feat ? heroHtml(feat) : '') + teaserHtml() +
+      (feat ? heroHtml(feat) : '') +
       '<div class="rp-seg" role="group" aria-label="Replay length">' + ['week', 'month', 'year'].map(function (k) { return '<button data-rp-kind="' + k + '" aria-pressed="' + (k === _kind) + '">' + { week: 'Weekly', month: 'Monthly', year: 'Yearly' }[k] + '</button>'; }).join('') + '</div>' +
       (list.length ? '<div class="rp-timeline">' + list.map(function (x, i) { return cardHtml(x, i, seen); }).join('') + '</div>'
         : '<div class="rp-empty"><h3>No ' + { week: 'weeks', month: 'months', year: 'years' }[_kind] + ' to replay yet</h3><p>A Replay needs ratings or listening inside the period. Rate a few records this ' + _kind + ' and it appears here.</p></div>') +
@@ -1087,7 +1071,7 @@
   }
   function emptyHome() {
     return '<div class="rp-hero" style="min-height:300px"><div class="rp-hero-record" aria-hidden="true"></div><span class="rp-kicker">VINALL Replay</span><h2 class="rp-hero-word">Replay</h2>' +
-      '<p class="rp-hero-sub">Your weeks, months and year in music.</p></div>' + teaserHtml() +
+      '<p class="rp-hero-sub">Your weeks, months and year in music.</p></div>' +
       '<div class="rp-empty"><h3>Nothing to replay yet</h3><p>Rate a few records or import Spotify.</p>' +
       '<div class="rp-hero-row"><button class="btn-primary" data-rp-act="rate">Rate a record</button>' + (on() ? '<button class="btn-ghost" data-rp-act="import">Add Spotify data</button>' : '') +
       '<button class="btn-ghost" data-rp-act="demo">See a demo</button></div></div>';
@@ -1150,13 +1134,13 @@
         sub: pr ? (left > 0 ? (left === 1 ? 'One more day to unlock' : left + ' more days to unlock') : 'Unlocking…') : 'Unlocks on a 5 day login streak',
         pips: pr ? '<span class="rp-door-pips" aria-hidden="true">' + pips + '</span>' : '',
         go: 'View'
-      }) + teaserHtml() + '</div>';
+      }) + '</div>';
       return;
     }
     var input = crateInput(), yr = R.period('year'), c = R.crateStats(input, yr);
     if (c.albums + c.songs < 3) {
       if (h._sig === 'T') return; h._sig = 'T';
-      h.innerHTML = '<div class="rp-home-card rp-home">' + teaserHtml() + '</div>'; return;
+      h.innerHTML = ''; return;
     }
     var fresh = _fresh, cover = c.covers[0] || '';
     var sig = yr.key + c.albums + '/' + c.songs + cover + (fresh ? '!' : '');
@@ -1169,7 +1153,7 @@
       title: (fresh ? 'Unlocked · ' : '') + 'Your ' + esc(yr.label) + ' Replay',
       sub: esc(bits.join(' · ')) + ' so far',
       go: '<i aria-hidden="true">▶</i>Play'
-    }) + teaserHtml() + '</div>';
+    }) + '</div>';
     if (fresh && window.burst) { var bar = h.querySelector('.rp-door'); setTimeout(function () { if (bar.isConnected) burst(bar, { count: 24, spread: 140 }); }, 300); }
   }
   // The gate changed (a login extended the streak, or the backend arrived):

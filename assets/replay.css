@@ -361,6 +361,9 @@ body[data-section="replay"] { --section: var(--c-pink); --section-dim: var(--c-p
 
 .rp-scene {
   position: absolute; inset: 0; z-index: 2; display: grid; align-content: center;
+  /* minmax(0) or a wide child (the three stats at 150px each) widens the
+     column past the screen and the clip hides the right of every line. */
+  grid-template-columns: minmax(0, 1fr);
   padding: calc(max(12px, env(safe-area-inset-top)) + 84px) clamp(22px, 7vw, 120px) calc(max(14px, env(safe-area-inset-bottom)) + 60px);
   overflow: hidden; overflow: clip;
 }
@@ -612,6 +615,7 @@ body[data-section="replay"] { --section: var(--c-pink); --section-dim: var(--c-p
 
 @media (max-width: 699px) {
   .rp-scene { padding-left: 22px; padding-right: 22px; }
+  .rp-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .rp-orbit img { width: 76px; }
   .rp-disc-hero { grid-template-columns: 1fr; }
   .rp-row { grid-template-columns: 26px 42px minmax(0, 1fr) auto; gap: 10px; }

@@ -85,5 +85,6 @@ test('locked until a five-day login streak, with the Spotify import and a demo o
   await page.evaluate(() => goToView('replay'));
   await expect(page.locator('#view-replay')).toContainText('Unlock on 5 day login streak');
   await expect(page.locator('#view-replay')).toContainText(/Spotify/);
-  await expect(page.locator('#view-replay')).toContainText(/coming soon/i);
+  // No placeholder rows in a store build (App Review 2.1).
+  await expect(page.locator('#view-replay')).not.toContainText(/coming soon/i);
 });

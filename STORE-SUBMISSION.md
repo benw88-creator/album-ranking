@@ -356,10 +356,14 @@ homework rather than a feature.
 
 ## App Review notes
 
-Paste this into **App Store Connect → App Review Information → Notes**.
+**Superseded 2026-11-02.** The text to paste is now
+`VINALL-Launch-Assets/02-App-Store-Submission/06-Review-and-Compliance/app-review-notes.txt`
+(OneDrive desktop). It replaced this draft and a second, conflicting one.
+Keep one copy. The old draft below is history only: it predates Replay,
+YouTube in Community Choice and local reminders.
 
 ```
-VINALL is a music rating and journalling app. Four notes.
+(OLD — DO NOT PASTE) VINALL is a music rating and journalling app. Four notes.
 
 1. Sign-in is required for most of the app, so please use the demo account in
 the fields above. Accounts are email and password, handled by Supabase. There
