@@ -78,8 +78,7 @@ async function toFirstRecord(page) {
     localStorage.removeItem('crate_onboard_v1');
     Onboard.restart();
   });
-  await page.locator('#onb-go').click();           // drop the needle
-  await page.locator('#onb-go').click();           // let's go
+  await page.locator('#onb-go').click();           // get started
   await page.locator('#onb-u').fill('tester_1');
   await page.locator('#onb-go').click();
   await page.locator('#onb-foot #onb-go').click({ timeout: 4000 });

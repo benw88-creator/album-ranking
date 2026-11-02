@@ -113,18 +113,23 @@ test('Daily Drop gives a clue after each wrong guess, building towards the title
   await expect(page.locator('#drop-left')).toContainText('1');
 });
 
-test('Earworm: one guess a round, a skip ends the Endless run, and streaks show', async ({ page }) => {
+test('Earworm: three guesses a round, a skip ends the Endless run, and streaks show', async ({ page }) => {
   await start(page);
   await page.evaluate(() => { localStorage.removeItem('crate_earworm_v2'); window.openEarworm(); });
   await expect(page.locator('#ew-modal')).toHaveClass(/open/);
-  await expect(page.locator('#ew-board .ew-row')).toHaveCount(1);
+  // The row being typed and two spare rows: three guesses in hand.
+  await expect(page.locator('#ew-board .ew-row')).toHaveCount(3);
+  await expect(page.locator('#ew-board .ew-row.ew-spare')).toHaveCount(2);
   await expect(page.locator('#ew-skip')).toBeVisible();
 
-  // A wrong daily guess: one row, the answer set out under it, no second go.
-  const len = await page.locator('#ew-board .ew-row .ew-cell').count();
-  for (let i = 0; i < len; i++) await page.keyboard.press('Q');
-  await page.keyboard.press('Enter');
+  // Three wrong daily guesses: three rows, the answer set out under them, no fourth go.
+  const len = await page.locator('#ew-board .ew-row').first().locator('.ew-cell').count();
+  for (let g = 0; g < 3; g++) {
+    for (let i = 0; i < len; i++) await page.keyboard.press('Q');
+    await page.keyboard.press('Enter');
+  }
   await expect(page.locator('#ew-board .ew-row.ew-answer')).toHaveCount(1);
+  await expect(page.locator('#ew-board .ew-row:not(.ew-answer)')).toHaveCount(3);
   await expect(page.locator('#ew-skip')).toBeHidden();
   await page.keyboard.press('Q');
   await page.keyboard.press('Enter');

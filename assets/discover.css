@@ -7,24 +7,110 @@
 /* ---- onboarding: the deck ------------------------------------------------- */
 .onb-rail i:nth-child(8) { --onb-c: var(--c-cyan); }
 .onb-deck {
-  position: relative; display: block; margin: 0 auto 22px; padding: 0;
-  width: min(210px, 52vw); aspect-ratio: 1; border: 0; background: none; cursor: pointer;
+  position: relative; display: block; margin: 0 auto 14px; padding: 0;
+  width: min(232px, 58vw); aspect-ratio: 1; border: 0; border-radius: 50%; background: none;
+  cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 30px 70px -10px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.05);
+  transition: scale .18s var(--ease), box-shadow .5s var(--ease);
+  animation: onbDeckIn .7s var(--ease) both;
 }
-.onb-deck .onb-disc { width: 100%; margin: 0; }
-.onb-hero2:not(.playing) .onb-disc { animation-play-state: paused; }
-.onb-hero2:not(.playing) .onb-deck { animation: onbBreathe 2.4s var(--ease) infinite; }
-@keyframes onbBreathe { 0%, 100% { scale: 1; } 50% { scale: 1.035; } }
-.onb-arm {
-  position: absolute; top: -6%; right: -4%; width: 10px; height: 62%;
-  border-radius: 6px; transform-origin: 50% 8%; rotate: -28deg;
-  background: linear-gradient(180deg, #d9d4cc, #8a847b);
-  box-shadow: 0 6px 18px rgba(0,0,0,.5);
-  transition: rotate .7s cubic-bezier(.3,1.4,.5,1);
+.onb-deck:focus-visible { outline: 2px solid var(--gold); outline-offset: 6px; }
+/* A hand on the platter presses it down a fraction. */
+.onb-deck.is-held { cursor: grabbing; scale: .985; }
+.onb-deck.is-live { box-shadow: 0 30px 70px -10px rgba(0,0,0,.7), 0 0 0 1px color-mix(in srgb, var(--gold) 22%, transparent); }
+@keyframes onbDeckIn { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+
+/* What turns: grooves, body and the printed label. The splash record's
+   own stack (fine grooves, a wider band every so often, a dark body) minus
+   its sheen, which lives on .onb-glint and stays still. */
+.onb-vinyl {
+  position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center;
+  will-change: transform;
+  background:
+    repeating-radial-gradient(circle at 50% 50%,
+      rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 0.5px,
+      rgba(0,0,0,0.55) 1.5px, rgba(0,0,0,0) 3px),
+    repeating-radial-gradient(circle at 50% 50%,
+      rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px,
+      transparent 1px, transparent 23px),
+    radial-gradient(circle at 50% 50%, #1b1916 0%, #121010 40%, #0a0908 76%, #050404 100%);
 }
-.onb-arm::after { content: ''; position: absolute; bottom: -6px; left: -4px; width: 18px; height: 14px; border-radius: 4px; background: var(--gold); }
-.onb-hero2.playing .onb-arm { rotate: -6deg; }
-.onb-hero2.playing .onb-deck { filter: drop-shadow(0 0 32px color-mix(in srgb, var(--gold) 35%, transparent)); transition: filter .8s var(--ease); }
+.onb-vlabel {
+  width: 36%; aspect-ratio: 1; border-radius: 50%; display: block;
+  background: radial-gradient(circle at 38% 32%, #2b2620 0%, #17130f 52%, #0d0b09 100%);
+  box-shadow: 0 0 0 3px #060505, inset 0 0 0 1.5px color-mix(in srgb, var(--gold) 45%, transparent);
+  transition: box-shadow .8s var(--ease);
+}
+.onb-vlabel svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.onb-vlabel text { font: 700 6.4px var(--font-mono); letter-spacing: 1.15px; fill: color-mix(in srgb, var(--gold) 62%, #fff 6%); }
+.onb-vring { fill: none; stroke: color-mix(in srgb, var(--gold) 30%, transparent); stroke-width: .6; }
+.onb-spindle { fill: #c9c2b6; stroke: #060505; stroke-width: 1.6; }
+.onb-deck.is-live .onb-vlabel { box-shadow: 0 0 0 3px #060505, inset 0 0 0 1.5px color-mix(in srgb, var(--gold) 80%, transparent); }
+
+/* The room's light on the vinyl. Fixed, so the record turns UNDER it. */
+.onb-glint {
+  position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background:
+    conic-gradient(from 300deg at 50% 50%,
+      rgba(255,255,255,0) 0deg, rgba(255,255,255,0.09) 24deg, rgba(255,255,255,0.02) 58deg,
+      rgba(255,255,255,0) 100deg, rgba(255,255,255,0) 180deg, rgba(255,255,255,0.05) 204deg,
+      rgba(255,255,255,0.01) 240deg, rgba(255,255,255,0) 280deg, rgba(255,255,255,0) 360deg),
+    radial-gradient(circle at 50% 50%, transparent 0 17.5%, rgba(255,255,255,.025) 18%, transparent 19%, transparent 60%, rgba(0,0,0,.25) 100%);
+  -webkit-mask: radial-gradient(circle, transparent 0 17.8%, #000 18.2%);
+          mask: radial-gradient(circle, transparent 0 17.8%, #000 18.2%);
+}
+
+/* What your hand just did, quietly. */
+.onb-rpm {
+  display: flex; align-items: baseline; justify-content: center; gap: 5px; margin: 0 0 14px;
+  font-family: var(--font-mono); color: var(--text-faint); font-variant-numeric: tabular-nums;
+  animation: onbIn .5s var(--ease) .25s both;
+}
+.onb-rpm b { font-size: 13px; font-weight: 600; color: var(--text-dim); min-width: 3ch; text-align: right; transition: color .4s; }
+.onb-rpm span { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; }
+.onb-hero2.playing .onb-rpm b { color: var(--gold); }
+/* ---- onboarding: sleeves ------------------------------------------------- */
+/* The cover sits in its own light: a blurred copy of the art behind it. It
+   arrives tipped back and settles flat, once; saving presses it down a hair.
+   `backwards`, not `both`, so nothing is pinned after the entrance (trap 12). */
+.onb-sleeve { position: relative; isolation: isolate; width: min(230px, 56vw); margin: 0 auto 18px; }
+.onb-sleeve .onb-cover { width: 100%; margin: 0; animation: onbSleeveIn .7s var(--ease) backwards; }
+.onb-sleeve-bed {
+  position: absolute; inset: 6%; z-index: -1; width: 88%; height: 88%; object-fit: cover; border-radius: 30%;
+  filter: blur(30px) saturate(1.35); opacity: .42; scale: 1.25; pointer-events: none;
+  animation: onbBedIn 1.2s var(--ease) .12s backwards;
+}
+.onb-saved .onb-sleeve .onb-cover { animation: onbSleevePress .5s var(--ease); }
+.onb-saved .onb-sleeve-bed { opacity: .6; transition: opacity .6s var(--ease); }
+@keyframes onbSleeveIn {
+  from { opacity: 0; transform: perspective(760px) translateY(18px) rotateX(16deg) scale(.95); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes onbBedIn { from { opacity: 0; scale: .9; } }
+@keyframes onbSleevePress { 0% { scale: 1; } 35% { scale: .965; } 100% { scale: 1; } }
+/* The song beat's sleeve is round and lands like a record set on a platter. */
+.onb-sleeve-round { width: min(220px, 58vw); margin: 4px auto 18px; }
+.onb-sleeve-round .onb-spin { margin: 0; width: 100%; animation: onbRecordIn .8s var(--ease) backwards; }
+.onb-sleeve-round .onb-sleeve-bed { border-radius: 50%; }
+@keyframes onbRecordIn { from { opacity: 0; transform: translateY(14px) rotate(-38deg) scale(.92); } to { opacity: 1; transform: none; } }
+
+/* ---- onboarding: the finale's fan --------------------------------------- */
+.onb-fan { position: relative; height: 92px; margin: 0 auto 18px; width: 180px; }
+.onb-fan img {
+  position: absolute; left: 50%; bottom: 0; width: 76px; height: 76px; margin-left: -38px;
+  border-radius: 10px; object-fit: cover; background: var(--surface-3);
+  box-shadow: 0 14px 30px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06);
+  transform-origin: 50% 120%; transform: translateX(var(--x, 0)) rotate(var(--r, 0deg));
+  animation: onbDeal .62s var(--ease) calc(.08s + var(--i) * .11s) backwards;
+}
+.onb-fan.n2 img:nth-child(1) { --x: -22px; --r: -7deg; }
+.onb-fan.n2 img:nth-child(2) { --x: 22px;  --r: 7deg; }
+.onb-fan.n3 img:nth-child(1) { --x: -40px; --r: -11deg; }
+.onb-fan.n3 img:nth-child(2) { --x: 0px;   --r: 0deg; z-index: 1; }
+.onb-fan.n3 img:nth-child(3) { --x: 40px;  --r: 11deg; }
+@keyframes onbDeal { from { opacity: 0; transform: translateY(22px) rotate(0deg) scale(.9); } }
+
 .onb-tag { color: var(--text-dim); font-size: 15px; line-height: 1.45; margin-top: 12px; min-height: 44px; }
 .onb-hero2.playing .onb-tag { animation: onbIn .5s var(--ease) both; color: var(--text); }
 .onb-sub { color: var(--text-dim); font-size: 14.5px; line-height: 1.45; margin-top: 8px; text-align: center; }

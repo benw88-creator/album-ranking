@@ -6979,3 +6979,37 @@ inside a rolled-back transaction). Until it lands, items 4, 10 (expiry half),
   silent. Share cards stay safe through Deezer metadata, the majority vote and
   the sleeve allowlist. `safeArt` also allows VINALL's own avatars bucket, which
   `/u/` previews use.
+
+## Final polish (2026-11-02)
+
+- **The tutorial's welcome is a record you spin** (`spinDeck` in the Onboard
+  module, styles in `assets/discover.css`). The needle drop is gone entirely.
+  The record starts still; it follows a finger or mouse exactly, keeps the speed
+  it was released at and coasts down on friction; one real spin (a release over
+  0.45°/ms, 300° of drag, or a tap/Enter) starts the motor, which pulls it to
+  33⅓ and back there after any fling. A press held still stops it and pushes
+  nothing. The light (`.onb-glint`) does not turn — the printed label is what
+  shows the rotation. Haptics only (`select` per 30°, `good` when the motor
+  catches), no sound. Reduced motion: no motor spin and no coast.
+- Sleeves in the tutorial arrive tipped back and settle (`.onb-sleeve`, with a
+  blurred bed of the same art); the finale deals the records just rated into a
+  fan and says **Let’s go!**. Its 70-particle burst is gone.
+- **Level-ups are held while onboarding is open** (`Onboard.active()`, true
+  from `maybeStart` deciding to open until `finish`). They merge into one queue
+  (lowest start, highest finish) and play once, 1.1s after `vinall:onboarded`.
+  The level itself is the server's and is unaffected.
+- **Earworm is three guesses** (`EW_GUESSES`). Each guess is its own row;
+  solving within three wins, three misses or Skip loses. The day stores every
+  guess (`gs`, with `g` kept as the first for older builds), and a half-played
+  daily is kept on the device in `vinal_earworm2_live_<date>` (account-wiped by
+  prefix, not synced). The board is sent `guesses: rows.length`; `game_score`
+  already accepts 1–6, so no migration.
+- **No numeral in an Earworm or Daily Drop answer.** Any `\p{N}` in the TITLE
+  rules a record out as an answer (artist and metadata do not matter). Both
+  dailies keep their cycle over the whole pool and walk forward to the next
+  answerable record, so no day that was already fine changed. Drop records with
+  numerals stay guessable but are not counted in "still fit". A Drop game is
+  stamped with its answer (`a`); an unstamped one saved against a numeral pick
+  starts fresh. `scripts/tests/polish2.spec.mjs` checks 1,500 days.
+- **Splash record on desktop**: `min(90vh, 132vw)` (was `132vh`), so a landscape
+  window shows the whole disc. A portrait phone is unchanged.

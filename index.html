@@ -1763,7 +1763,7 @@ html[data-motion="none"] .view.enter { animation: none; }
 .ew-result h3 { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
 .ew-result p { color: var(--text-dim); font-size: 14px; margin-top: 2px; }
 .ew-result-actions { margin-top: 14px; }
-/* One guess a round: the streak line above the keys, the answer under a miss. */
+/* Three guesses a round: the streak line above the keys, the answer under a miss. */
 .ew-tally { display: flex; align-items: center; gap: 14px; min-height: 30px; margin: -6px 0 10px; }
 .ew-stat { display: inline-flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--text-faint); }
 .ew-stat i { font-style: normal; letter-spacing: .06em; text-transform: uppercase; font-size: 10.5px; }
@@ -1773,6 +1773,7 @@ html[data-motion="none"] .view.enter { animation: none; }
   background: transparent; color: var(--text-dim); font: 600 12.5px/1 var(--font-body); cursor: pointer; }
 .ew-skip:hover { color: var(--text); border-color: var(--text-faint); }
 .ew-skip[hidden] { display: none; }
+.ew-row.ew-spare .ew-cell { opacity: .38; }
 .ew-row.ew-answer .ew-cell { border-color: var(--green); color: var(--green); background: transparent; animation: ewAnswerIn .45s var(--ease) .3s both; }
 @keyframes ewAnswerIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 /* An answered round has nothing to type: the keys step aside so the result
@@ -1786,7 +1787,9 @@ html[data-motion="none"] .view.enter { animation: none; }
      gives back the side padding and the gaps tighten, because the letter has
      to stay readable and it is the cells that were paying for the breaks. */
   .ew-modal .modal-panel { padding: 24px 12px; }
-  .ew-row { max-width: 100%; gap: 3px; --ew-wordgap: 7px; }
+  /* Three guess rows plus the answer have to leave the keyboard on screen,
+     so a short title's cells stop at 46px rather than filling the width. */
+  .ew-row { max-width: min(100%, calc(var(--ew-cols, 5) * 46px + var(--ew-wordgap) * 2)); gap: 3px; --ew-wordgap: 7px; }
   .ew-board { gap: 3px; }
 }
 
@@ -4728,17 +4731,25 @@ html[data-motion="none"] .splash-cta.waiting { animation: none; }
      * the label and spindle in the middle, which the old close-up did not
        have in frame at all — and a record with no label is a black circle.
 
-   Sized past the viewport on purpose, so it bleeds off every edge the way the
-   clip did. It is a true circle rotating about its own centre, so there are no
+   On a phone it is 132% of the width: it bleeds off both sides and the whole
+   rim stays on screen above and below, which is what makes it read as a
+   record. It is a true circle rotating about its own centre, so there are no
    corners to swing into frame — the exact problem that stopped the old version
-   being rotated directly. */
+   being rotated directly.
+
+   ON A DESKTOP the same rule made it 132% of the HEIGHT: rim cut off top and
+   bottom, label hidden behind the wordmark, nothing left in frame to read
+   the turning against — a dark field, not a record. The 90vh cap keeps the
+   whole disc in a landscape window. A portrait phone never reaches it
+   (132vw is under 90vh whenever the screen is taller than 1.47:1), so the
+   phone is unchanged. */
 /* Centred by transform rather than by the grid. An item larger than its track
    does not reliably overflow both edges of a centred grid area — it ends up
    pinned toward one side, which is exactly what it did: a record sitting
    bottom-right of the screen reads as a bad crop rather than a design. */
 .splash-disc {
   position: absolute; top: 50%; left: 50%;
-  width: min(132vh, 132vw); height: min(132vh, 132vw);
+  width: min(90vh, 132vw); height: min(90vh, 132vw);
   transform: translate(-50%, -50%);
   display: grid; place-items: center;
 }
@@ -9519,7 +9530,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/charades.css?v=3">
 <link rel="stylesheet" href="/assets/passport.css?v=1">
 <link rel="stylesheet" href="/assets/artist.css?v=1">
-<link rel="stylesheet" href="/assets/discover.css?v=3">
+<link rel="stylesheet" href="/assets/discover.css?v=4">
 <link rel="stylesheet" href="/assets/liked.css?v=1">
 <link rel="stylesheet" href="/assets/crate.css?v=2">
 <link rel="stylesheet" href="/assets/polish.css?v=2">
@@ -10629,7 +10640,7 @@ window.discAmt = function (n) {
         <div class="gc-art" aria-hidden="true"><i>E</i><i>A</i><i>R</i></div>
         <div class="gc-emoji" data-icon="mic"></div>
         <h3>Earworm</h3>
-        <p>Spell the record. One guess, keep the streak.</p>
+        <p>Spell the record. Three guesses, keep the streak.</p>
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" id="ew-card-status"></div>
       </div>
@@ -11311,7 +11322,7 @@ window.discAmt = function (n) {
   <div class="modal-panel">
     <button class="modal-close" id="ew-close" aria-label="Close">&times;</button>
     <div class="modal-head"><span class="mh-emoji" data-icon="mic"></span>
-      <div><h2>Earworm</h2><p>Spell the record. One guess.</p></div></div>
+      <div><h2>Earworm</h2><p>Spell the record. Three guesses.</p></div></div>
 
     <div class="ew-head-row">
       <div class="ew-mode" id="ew-mode">
@@ -18644,7 +18655,7 @@ async function drawProfile(host,prof,isOwner,profileTok){
         tiles.push({v:log.favourite.label,k:'Favourite arcade game',
                     sub:log.favourite.n+' round'+(log.favourite.n===1?'':'s')+' played',small:true});
       }
-      // One guess a round now, so the best is a streak rather than a row count.
+      // A round is a few guesses at most, so the best is a streak rather than a row count.
       var ewBest=window.EarwormStats?EarwormStats.best():null;
       if(ewBest&&(ewBest.streak||ewBest.daily)){
         tiles.push({v:Math.max(ewBest.streak||0,ewBest.daily||0),k:'Best Earworm streak',hot:Math.max(ewBest.streak||0,ewBest.daily||0)>=10});
@@ -22277,7 +22288,27 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      level-ups landing while one is still on screen MERGE into it rather than
      stacking a second overlay on top. */
   var _lvlPop = null;
+  /* NOT DURING THE TUTORIAL. Onboarding pays real ratings and a real Recall
+     round, so levels are gained mid-flow, and a pop over each beat is the app
+     talking over its own introduction. They are held here — lowest start,
+     highest finish — and shown ONCE, as a single count, after the tutorial
+     closes and the main page is up. The level itself is the server's and is
+     already awarded; this only decides when it is announced. */
+  var _lvlQ = null;
+  function onboarding() { try { return !!(window.Onboard && Onboard.active && Onboard.active()); } catch (e) { return false; } }
+  window.addEventListener('vinall:onboarded', function () {
+    setTimeout(function () {
+      if (!_lvlQ || onboarding()) return;
+      var q = _lvlQ; _lvlQ = null;
+      levelUp(q.to, q.from);
+    }, 1100);
+  });
   function levelUp(level, from) {
+    if (onboarding()) {
+      var f = Math.max(1, Math.min(from || level - 1, level - 1));
+      _lvlQ = _lvlQ ? { from: Math.min(_lvlQ.from, f), to: Math.max(_lvlQ.to, level) } : { from: f, to: level };
+      return;
+    }
     try {
       from = Math.max(1, Math.min(from || level - 1, level - 1));
       // A big jump counts through its last few levels only; the sub-line
@@ -24449,7 +24480,14 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       .map(function (w) { return ewLetters(w).length; })
       .filter(function (n) { return n > 0; });
   }
+  /* NO DIGITS IN AN ANSWER. The keyboard is A–Z, and stripping "7 rings" to
+     RINGS made a title nobody would spell that way. Any numeral anywhere in
+     the title (Unicode \p{N}, so ½ and ² too) rules the record out as an
+     answer; numbers in the artist or the metadata are never typed and do
+     not matter. */
+  function ewNumeric(title) { return /\p{N}/u.test(String(title || '')); }
   function ewPlayable(title) {
+    if (ewNumeric(title)) return false;
     var L = ewLetters(title).length;
     return L >= MIN_LEN && L <= MAX_LEN;
   }
@@ -24484,13 +24522,22 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     ewOrder = a;
     return a;
   }
-  function ewDailyPick() {
+  /* The cycle is still over the WHOLE pool, so every day that was already
+     playable keeps its record. A day that lands on a title with a numeral
+     walks forward through the same cycle to the next one that can be typed
+     — deterministic, so every device still agrees. */
+  function ewDailyPick(day) {
     if (!EW_POOL.length) return null;
-    var n = EW_POOL.length;
-    return EW_POOL[ewCycle()[((ewDayNumber() % n) + n) % n]];
+    var n = EW_POOL.length, order = ewCycle(), d = day == null ? ewDayNumber() : day, at = ((d % n) + n) % n;
+    for (var k = 0; k < n; k++) {
+      var r = EW_POOL[order[(at + k) % n]];
+      if (ewPlayable(r.title)) return r;
+    }
+    return null;
   }
   function ewRandomPick() {
-    return EW_POOL.length ? EW_POOL[Math.floor(Math.random() * EW_POOL.length)] : null;
+    var ok = EW_POOL.filter(function (r) { return ewPlayable(r.title); });
+    return ok.length ? ok[Math.floor(Math.random() * ok.length)] : null;
   }
 
   function ewLibraryPick() {
@@ -24523,12 +24570,12 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     return out[Math.floor(Math.random() * out.length)];
   }
 
-  /* ONE GUESS A ROUND (2026-10-24). Earworm stopped being six tries at one
-     word. You get a single guess at each record, typed on the same board, or
-     you skip it. A right answer extends your streak; a wrong one or a skip
-     ends it. That turns the game from "eventually" into "do you know it".
+  /* THREE GUESSES A ROUND (2026-11-02; it was one from 2026-10-24, six
+     before that). Each guess is typed on its own row and scored green/amber
+     as it always was. Solving within three extends your streak; three misses
+     or a skip ends it.
 
-     - Daily is today's record, one go, shared by everybody. The streak is
+     - Daily is today's record, three guesses, shared by everybody. The streak is
        days in a row solved, kept in crate_earworm_v2 (SYNC_KEYS) so it is the
        same on every device — and so is the day, which is what stops a second
        device from being a second guess.
@@ -24538,6 +24585,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
        eleventh on. Best streak and best score are kept.
      - The board, keyboard and tile colours are unchanged. After a guess the
        row flips as it always did and the answer is set out under it. */
+  var EW_GUESSES = 3;
   var EW_STORE = 'crate_earworm_v2';
   function ewStore() {
     var s = null;
@@ -24579,7 +24627,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     mode: 'daily',          // 'daily' | 'unlimited' (shown as Endless)
     rec: null,              // the record being guessed
     fromPool: false,        // endless fell back to the famous list
-    rows: [],               // the one guess, as [{letters, marks}]
+    rows: [],               // the guesses so far, as [{letters, marks}]
     current: '',
     done: false,            // this round is answered
     won: false,
@@ -24630,7 +24678,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       else {
         Boards.start('earworm', 'daily', { day: Boards.day() });
         Boards.clock(ewck, 'earworm', { score: function (ms) {
-          return ewState.done ? '' : Boards.preview.earworm(0, ms, ewLen(), false);
+          return ewState.done ? '' : Boards.preview.earworm(ewState.rows.length, ms, ewLen(), false);
         } });
       }
     }
@@ -24653,14 +24701,35 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      played before the store existed. A day half-played under the old six
      guesses has already had a guess, so it counts as answered. */
   function ewKey() { return 'vinal_earworm2_' + ewToday(); }
+  /* A daily half-played (one or two misses) is kept on this device so a
+     reload or closing the sheet is not a fresh three. The finished result
+     still goes in the synced store; this only holds the guesses in between.
+     The vinal_earworm2_ prefix puts it in the account wipe. */
+  function ewLiveKey() { return 'vinal_earworm2_live_' + ewToday(); }
+  function ewSaveLive() {
+    if (ewState.mode !== 'daily' || !ewState.rec) return;
+    try {
+      if (ewState.done) localStorage.removeItem(ewLiveKey());
+      else localStorage.setItem(ewLiveKey(), JSON.stringify({ a: ewState.rec.answer,
+        gs: ewState.rows.map(function (r) { return r.letters.join(''); }) }));
+    } catch (e) {}
+  }
   function ewRestoreDaily() {
     if (!ewState.rec) return;
     var d = ewStore().days[ewToday()];
     if (d && d.a === ewState.rec.answer) {
-      if (d.g) ewState.rows.push(ewScore(d.g));
+      var gs = Array.isArray(d.gs) ? d.gs : (d.g ? [d.g] : []);
+      gs.slice(0, EW_GUESSES).forEach(function (g) { if (g && g.length === ewLen()) ewState.rows.push(ewScore(g)); });
       ewState.done = true; ewState.won = d.r === 'W'; ewState.skipped = d.r === 'S';
       return;
     }
+    try {
+      var lv = JSON.parse(localStorage.getItem(ewLiveKey()));
+      if (lv && lv.a === ewState.rec.answer && Array.isArray(lv.gs)) {
+        lv.gs.slice(0, EW_GUESSES - 1).forEach(function (g) { if (g && g.length === ewLen()) ewState.rows.push(ewScore(g)); });
+        if (ewState.rows.length) return;
+      }
+    } catch (e) {}
     try {
       var st = JSON.parse(localStorage.getItem(ewKey()));
       if (!st || st.answer !== ewState.rec.answer || !(st.guesses || []).length) return;
@@ -24672,8 +24741,10 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   function ewSaveDaily() {
     if (ewState.mode !== 'daily' || !ewState.rec) return;
     var s = ewStore();
+    var gs = ewState.rows.map(function (r) { return r.letters.join(''); });
+    // `g` stays the first guess, for a build that predates `gs`.
     s.days[ewToday()] = { r: ewState.won ? 'W' : (ewState.skipped ? 'S' : 'L'),
-      g: ewState.rows.length ? ewState.rows[0].letters.join('') : '', a: ewState.rec.answer, at: Date.now() };
+      g: gs[0] || '', gs: gs, a: ewState.rec.answer, at: Date.now() };
     var streak = ewDailyStreak(s);
     if (streak > (s.best.daily || 0)) s.best.daily = streak;
     ewStoreWrite(s);
@@ -24746,20 +24817,23 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     // The grid is as wide as the title, so the cell size has to come down
     // as titles get longer or eleven columns won't fit a phone.
     el.board.style.setProperty('--ew-cols', rec.answer.length);
-    var tpl = ewTemplate(rec.shape), row = ewState.rows[0], html;
-    if (row) {
-      // Only a guess just submitted flips; a restored one sits still.
-      var fresh = ewState.fresh === 0;
-      html = ewRowHtml(rec, tpl, (fresh ? ' fresh' : '') + (ewState.won && fresh ? ' ew-win' : ''), function (c) {
+    var tpl = ewTemplate(rec.shape), html = '';
+    ewState.rows.forEach(function (row, ri) {
+      // Only the guess just submitted flips; earlier and restored rows sit still.
+      var fresh = ewState.fresh === ri, win = ewState.won && ri === ewState.rows.length - 1;
+      html += ewRowHtml(rec, tpl, (fresh ? ' fresh' : '') + (win && fresh ? ' ew-win' : ''), function (c) {
         return '<div class="ew-cell ' + row.marks[c] + '" style="' + (fresh ? 'animation-delay:' + (c * 0.07) + 's' : 'animation:none') + '">' + row.letters[c] + '</div>';
       });
-    } else if (ewState.skipped) {
-      html = '';
-    } else {
-      html = ewRowHtml(rec, tpl, '', function (c) {
-        var ch = ewState.done ? '' : (ewState.current[c] || '');
+    });
+    if (!ewState.done) {
+      // The row being typed, then the guesses still in hand, drawn faint.
+      html += ewRowHtml(rec, tpl, '', function (c) {
+        var ch = ewState.current[c] || '';
         return '<div class="ew-cell' + (ch ? ' filled' : '') + (ch && c === ewState.typed ? ' typed' : '') + '">' + ch + '</div>';
       });
+      for (var left = EW_GUESSES - ewState.rows.length - 1; left > 0; left--) {
+        html += ewRowHtml(rec, tpl, ' ew-spare', function () { return '<div class="ew-cell"></div>'; });
+      }
     }
     // A miss or a skip sets the answer out under the guess, in the same cells.
     if (ewState.done && !ewState.won) {
@@ -24805,6 +24879,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     el.clues.innerHTML = bits.join('');
     if (ewState.mode === 'unlimited' && ewState.fromPool && !ewState.done) {
       ewRenderStatus('Rate a few more records and these come from your own library.');
+    } else if (!ewState.done && ewState.rows.length) {
+      var left = EW_GUESSES - ewState.rows.length;
+      ewRenderStatus(left === 1 ? 'Last guess' : left + ' guesses left');
     } else {
       ewRenderStatus('');
     }
@@ -24869,7 +24946,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     var st = ewDailyStreak();
     var head = 'VINALL Earworm — ' + ewToday() + '\n';
     var body = ewState.rows.length
-      ? ewState.rows[0].marks.map(function (m) { return m === 'exact' ? '🟩' : (m === 'present' ? '🟨' : '⬛'); }).join('')
+      ? ewState.rows.map(function (r) {
+          return r.marks.map(function (m) { return m === 'exact' ? '🟩' : (m === 'present' ? '🟨' : '⬛'); }).join('');
+        }).join('\n') + (ewState.skipped ? '\nSkipped' : '')
       : 'Skipped';
     return head + body + (ewState.won ? '\nStreak ' + st : '');
   }
@@ -24916,14 +24995,23 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       return;
     }
     var guess = ewState.current;
-    ewState.rows = [ewScore(guess)];
-    ewState.fresh = 0; ewState.typed = -1;
+    ewState.rows.push(ewScore(guess));
+    ewState.fresh = ewState.rows.length - 1; ewState.typed = -1;
     ewState.current = '';
-    ewSettle(guess === ewState.rec.answer, false);
+    var won = guess === ewState.rec.answer;
+    if (won || ewState.rows.length >= EW_GUESSES) { ewSettle(won, false); return; }
+    // A miss with guesses left: the row flips, the keys learn, play on.
+    ewSaveLive();
+    ewRenderBoard(); ewRenderKeyboard();
+    var left = EW_GUESSES - ewState.rows.length;
+    ewRenderStatus(left === 1 ? 'Last guess' : left + ' guesses left');
+    if (window.buzz) buzz('warn');
   }
+  /* Skip gives the round up. Guesses already made stay on the board, so the
+     answer is set out under what you tried. */
   function ewSkip() {
     if (!ewState.rec || ewState.done) return;
-    ewState.rows = []; ewState.current = ''; ewState.fresh = -1;
+    ewState.current = ''; ewState.fresh = -1;
     ewSettle(false, true);
   }
 
@@ -24945,6 +25033,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
       if (better) ewStoreWrite(s);
     }
     ewSaveDaily();
+    ewSaveLive();
     ewRenderAll();
     ewCardStatus();
 
@@ -24954,7 +25043,7 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     if (mode === 'daily') {
       if (window.notePlay) notePlay('earworm');
       if (window.Boards) {
-        Boards.finish('earworm', { guesses: 1, solved: won, letters: ewLen(), hinted: false }).then(function (res) {
+        Boards.finish('earworm', { guesses: Math.max(1, ewState.rows.length), solved: won, letters: ewLen(), hinted: false }).then(function (res) {
           var ck = document.getElementById('ew-clock'); if (ck) ck.innerHTML = '';
           var gs = document.getElementById('ew-gb');
           if (gs && res && ewState.mode === 'daily') Boards.result(gs, res);
@@ -25068,7 +25157,11 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
     ewCardStatus();
     window.openEarworm = ewOpen;
     window.paintEarwormCard = ewCardStatus;
-    if (window.__vinallTest) window.__ewAnswer = function () { return ewState.rec && ewState.rec.answer; };
+    if (window.__vinallTest) {
+      window.__ewAnswer = function () { return ewState.rec && ewState.rec.answer; };
+      window.__ewDailyTitle = function (day) { var r = ewDailyPick(day); return r && r.title; };
+      window.__ewRandomTitle = function () { var r = ewRandomPick(); return r && r.title; };
+    }
     window.EarwormStats = { best: function () { return ewStore().best; }, dailyStreak: function () { return ewDailyStreak(); } };
   }
 
@@ -25727,11 +25820,33 @@ function playDismissAnimation(gateEl, callback) {
     orderCache[mode] = a;
     return a;
   }
-  function answerFor(mode) {
+  /* NO NUMERALS IN AN ANSWER. A title with a digit anywhere in it (Unicode
+     \p{N}: "1989", "good 4 u", "8 Mile") is never today's record. Only the
+     NAME counts — a year, a runtime or an album with a number in it is
+     metadata nobody has to type. Such records stay in the list as guesses,
+     because a wrong guess still teaches the board something.
+
+     The cycle is still over the whole list, so every day that was already
+     fine keeps its record; a day that lands on a numeral walks forward
+     through the same cycle to the next answerable one. Deterministic, so
+     every device still agrees. */
+  function answerable(r) { return !!r && !/\p{N}/u.test(String(r.name || '')); }
+  function rawAnswerFor(mode) {
     var pool = POOL[mode];
     if (!pool.length) return null;
     return pool[cycleOrder(mode)[((dayNumber() % pool.length) + pool.length) % pool.length]];
   }
+  function answerFor(mode, day) {
+    var pool = POOL[mode], n = pool.length;
+    if (!n) return null;
+    var order = cycleOrder(mode), d = day == null ? dayNumber() : day, at = ((d % n) + n) % n;
+    for (var k = 0; k < n; k++) {
+      var r = pool[order[(at + k) % n]];
+      if (answerable(r)) return r;
+    }
+    return null;
+  }
+  function answerableCount(mode) { return POOL[mode].filter(answerable).length; }
 
   /* --- scoring -----------------------------------------------------------
      `dir` is empty exactly when the tile is a hit, so a bare value always
@@ -25809,6 +25924,7 @@ function playDismissAnimation(gateEl, callback) {
     var sigs = guesses.map(function (gi) { return signature(scoreGuess(pool[gi], answer, mode)); });
     var n = 0;
     for (var i = 0; i < pool.length; i++) {
+      if (!answerable(pool[i])) continue;   // can never be the answer
       var ok = true;
       for (var k = 0; k < guesses.length; k++) {
         if (signature(scoreGuess(pool[guesses[k]], pool[i], mode)) !== sigs[k]) { ok = false; break; }
@@ -25828,6 +25944,14 @@ function playDismissAnimation(gateEl, callback) {
     if (!st || !Array.isArray(st.g)) st = { g: [], done: false, won: false };
     // A pool edit must never leave a saved game pointing off the end of it.
     st.g = st.g.filter(function (i) { return typeof i === 'number' && POOL[m][i]; });
+    /* A saved game is only good against the record it was played on. `a`
+       stamps that; a game saved before the stamp existed was played on the
+       raw cycle pick, so if that pick was a numeral (and today's answer has
+       moved on) its guesses were scored against a different record and the
+       board would contradict itself. Start today's fresh instead. */
+    var ans = answerFor(m);
+    var playedOn = typeof st.a === 'number' ? st.a : (st.g.length ? (rawAnswerFor(m) || {}).i : undefined);
+    if (ans && playedOn !== undefined && playedOn !== ans.i) st = { g: [], done: false, won: false };
     return st;
   }
   function saveState(m, st) { try { localStorage.setItem(stateKey(m), JSON.stringify(st)); } catch (e) {} }
@@ -25888,7 +26012,7 @@ function playDismissAnimation(gateEl, callback) {
 
   function refreshStatus() {
     var st = loadState(mode);
-    var total = POOL[mode].length;
+    var total = answerableCount(mode);
     if (st.done) {
       elLeft.innerHTML = st.won
         ? 'Solved in <b>' + st.g.length + '</b>. Back tomorrow.'
@@ -25955,7 +26079,7 @@ function playDismissAnimation(gateEl, callback) {
     // Always available, so a board that has already answered most of the
     // above still gets a clue for every miss: two steps towards the title.
     var letters = String(answer.name).replace(/[^A-Za-z0-9]/g, '');
-    ladder.push('The title has ' + letters.length + ' letters and numbers in it.');
+    ladder.push('The title has ' + letters.length + ' letters in it.');
     ladder.push('The title ends with “' + letters.charAt(letters.length - 1).toUpperCase() + '”.');
     var first = String(answer.name).replace(/[^A-Za-z0-9]/g, '').charAt(0).toUpperCase();
     var words = String(answer.name).trim().split(/\s+/).length;
@@ -26021,6 +26145,7 @@ function playDismissAnimation(gateEl, callback) {
 
     var won = sameRecord(guess, answer);
     if (won || st.g.length >= GUESS_LIMIT) { st.done = true; st.won = won; }
+    st.a = answer.i;
     saveState(mode, st);
     refreshStatus();
     updateCardStatus();
@@ -26227,7 +26352,12 @@ function playDismissAnimation(gateEl, callback) {
     updateCardStatus();
     window.openDailyDrop = openDrop;
     // The local test suite only (scripts/tests/fixtures.mjs sets the flag).
-    if (window.__vinallTest) window.__dropAnswer = function () { return answer && answer.name; };
+    if (window.__vinallTest) {
+      window.__dropAnswer = function () { return answer && answer.name; };
+      window.__dropAnswerOn = function (m, day) { var r = answerFor(m, day); return r && r.name; };
+      window.__dropRaw = function (m) { var r = rawAnswerFor(m); return r && r.i; };
+      window.__dropPool = function (m) { return POOL[m].map(function (r) { return r.name; }); };
+    }
     window.paintDropCard = updateCardStatus;
   }
 
@@ -40756,6 +40886,17 @@ window.renderAdminStats = renderAdminStats;
              art: pick.art, year: pick.year, artistId: '' };
   }
 
+  /* The sleeve, with its own colours bleeding out behind it: a blurred copy
+     of the same art, so the card sits in the record's light rather than on
+     flat black. It arrives tipped back a few degrees and settles flat, the
+     way a record is pulled from a crate and set down — once, on arrival. */
+  function sleeve(art) {
+    var a = esc(art || '');
+    return '<div class="onb-sleeve">' +
+      (a ? '<img class="onb-sleeve-bed" src="' + esc(window.thumb ? thumb(art, 120) : art) + '" alt="" aria-hidden="true" onerror="this.remove()">' : '') +
+      '<img class="onb-cover" src="' + a + '" alt="" onerror="this.style.visibility=\'hidden\'"></div>';
+  }
+
   /* ---- the rating card, used by both album beats ----------------------- */
   /* `alt` is an optional second action under the save button — used by the
      first record, where "not this one" swaps the album rather than making
@@ -40764,7 +40905,7 @@ window.renderAdminStats = renderAdminStats;
     show(
       (kicker ? '<div class="onb-kicker">' + esc(kicker) + '</div>' : '') +
       (head ? '<h2 class="onb-h">' + esc(head) + '</h2>' : '') +
-      '<img class="onb-cover" src="' + esc(meta.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+      sleeve(meta.art) +
       '<div class="onb-alb"><h3>' + esc(meta.name) + '</h3>' +
         '<p>' + esc(meta.artist) + (meta.year ? ' · ' + esc(meta.year) : '') + '</p></div>' +
       '<div class="onb-slider">' +
@@ -40789,6 +40930,7 @@ window.renderAdminStats = renderAdminStats;
       var b = el('onb-go'); if (b) b.disabled = true;
       try { saveAlbum(meta, v); } catch (e) {}
       try { logActivity(ICONS.star, 'Rated', meta.name, v); } catch (e) {}
+      step.classList.add('onb-saved');
       // The app's own tier reveal, so the very first action pays off with the
       // same animation every rating after it will.
       try { playAlbumReveal(meta, v); } catch (e) {}
@@ -40797,34 +40939,159 @@ window.renderAdminStats = renderAdminStats;
   }
 
   /* ---- 0. welcome ------------------------------------------------------ */
-  /* The first touch IS the app's motif: the record is the button. Pressing it
-     drops the needle, the record spins up and the first line lands — a
-     discovery, not an instruction. The CTA does the same for anybody who
-     reaches for the button instead. */
+  /* THE RECORD IS A RECORD YOU CAN SPIN. It starts still, with the motor off.
+     Grab it and it follows your finger exactly — stop your hand and it
+     stops, the way a hand on a real platter stops it. Let go and it carries
+     the speed you gave it, coasting down on friction. Spin it properly once
+     and the motor catches: it pulls up to 33⅓ and holds it, a hard fling
+     settles back down to it, a backwards one slows, stops and comes round.
+     The readout underneath tells you what your hand just did.
+
+     No sound, by design. Haptics are the only feedback beyond the picture:
+     a detent every 30° while you hold it, one firmer knock when the motor
+     catches. The light on the vinyl is a separate layer that does NOT turn,
+     because a reflection belongs to the room, not the record — the printed
+     label is what you read the rotation against. */
   function welcome() {
     show(
       '<div class="onb-hero onb-hero2">' +
-        '<button class="onb-deck" id="onb-deck" aria-label="Drop the needle">' +
-          '<span class="onb-disc" aria-hidden="true"></span>' +
-          '<span class="onb-arm" aria-hidden="true"></span>' +
+        '<button class="onb-deck" id="onb-deck" type="button" aria-label="Spin the record">' +
+          '<span class="onb-vinyl" id="onb-vinyl" aria-hidden="true">' +
+            '<span class="onb-vlabel"><svg viewBox="0 0 100 100" aria-hidden="true">' +
+              '<defs><path id="onb-arc" d="M50,50 m-35,0 a35,35 0 1,1 70,0 a35,35 0 1,1 -70,0"/></defs>' +
+              '<text><textPath href="#onb-arc" startOffset="0">VINALL · SIDE A · 33⅓ RPM · VINALL · SIDE A · 33⅓ RPM ·</textPath></text>' +
+              '<circle class="onb-vring" cx="50" cy="50" r="21"/>' +
+              '<circle class="onb-spindle" cx="50" cy="50" r="4.2"/>' +
+            '</svg></span>' +
+          '</span>' +
+          '<span class="onb-glint" aria-hidden="true"></span>' +
         '</button>' +
+        '<div class="onb-rpm" id="onb-rpm" aria-hidden="true"><b>0</b><span>rpm</span></div>' +
         '<div class="onb-word">VINALL</div>' +
-        '<p class="onb-tag" id="onb-tag">Tap the record.</p>' +
+        '<p class="onb-tag" id="onb-tag">Give it a spin.</p>' +
       '</div>',
-      cta('Drop the needle')
+      cta('Get started')
     );
-    var dropped = false;
-    function drop() {
-      if (dropped) { next(); return; }
-      dropped = true;
-      var h = host.querySelector('.onb-hero2'); if (h) h.classList.add('playing');
-      if (window.buzz) buzz('good');
-      var t = el('onb-tag'); if (t) t.innerHTML = 'Rate records. Play games.';
-      var b = el('onb-go'); if (b) b.textContent = 'Let\u2019s go';
-      var d = el('onb-deck'); if (d && window.burst) try { burst(d, { count: 18, spread: 110 }); } catch (e) {}
+    var hero = host.querySelector('.onb-hero2');
+    spinDeck(el('onb-deck'), el('onb-vinyl'), el('onb-rpm'), function () {
+      if (hero) hero.classList.add('playing');
+      var t = el('onb-tag');
+      if (t) { t.textContent = 'Rate records. Play games.'; }
+    });
+    onCta(next);
+  }
+
+  /* The physics, kept apart from the step so the step reads as markup.
+     Angles in degrees, velocities in degrees per millisecond: 33⅓ rpm is
+     0.2. Only `transform` on one element changes per frame, so it stays on
+     the compositor; the loop parks itself when nothing is moving and dies
+     with the node when the step changes. */
+  function spinDeck(deck, vinyl, rpmEl, onCatch) {
+    if (!deck || !vinyl) return;
+    var BASE = 0.2, MAXV = 3.2, COAST = 1500, MOTOR = 850;
+    var mode = document.documentElement.getAttribute('data-motion');
+    var reduced = mode === 'none' || (mode !== 'full' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    var ang = 0, vel = 0, motor = false, held = false, raf = 0, last = 0;
+    var grabA = 0, travel = 0, detent = 0, samples = [], dragged = false, shownRpm = -1, downAt = 0;
+    var rpmB = rpmEl && rpmEl.querySelector('b');
+
+    function paint() {
+      vinyl.style.transform = 'rotate(' + ang.toFixed(2) + 'deg)';
+      var r = Math.round(Math.abs(vel) * 166.667);
+      if (motor && !held && Math.abs(vel - BASE) < 0.012) r = 33;  // settled: the nominal speed
+      if (rpmB && r !== shownRpm) { shownRpm = r; rpmB.textContent = r; }
     }
-    var deck = el('onb-deck'); if (deck) deck.addEventListener('click', drop);
-    onCta(drop);
+    function frame(t) {
+      raf = 0;
+      if (!deck.isConnected) return;
+      var dt = Math.min(48, last ? t - last : 16); last = t;
+      if (!held) {
+        var target = motor && !reduced ? BASE : 0;
+        var tau = motor ? MOTOR : COAST;
+        if (reduced) tau = 120;
+        vel += (target - vel) * (1 - Math.exp(-dt / tau));
+        if (!motor && Math.abs(vel) < 0.002) vel = 0;
+        ang = (ang + vel * dt) % 360;
+      }
+      paint();
+      if (held || vel !== 0 || (motor && !reduced)) raf = requestAnimationFrame(frame);
+    }
+    function wake() { if (!raf) { last = 0; raf = requestAnimationFrame(frame); } }
+
+    function catchMotor() {
+      if (motor) return;
+      motor = true;
+      deck.classList.add('is-live');
+      if (window.buzz) buzz('good');
+      try { onCatch && onCatch(); } catch (e) {}
+      wake();
+    }
+    function angleAt(e) {
+      // The deck itself never rotates (only the vinyl inside it does), so its
+      // box is a true square and its centre is the record's centre.
+      var b = deck.getBoundingClientRect();
+      var x = e.clientX - (b.left + b.width / 2), y = e.clientY - (b.top + b.height / 2);
+      return { a: Math.atan2(y, x) * 180 / Math.PI, r: Math.hypot(x, y), R: b.width / 2 };
+    }
+
+    deck.addEventListener('pointerdown', function (e) {
+      if (e.button > 0) return;
+      var p = angleAt(e);
+      if (p.r > p.R * 1.04) return;
+      held = true; dragged = false; downAt = e.timeStamp; grabA = p.a; vel = 0; samples = [{ t: e.timeStamp, a: ang }];
+      deck.classList.add('is-held');
+      try { deck.setPointerCapture(e.pointerId); } catch (x) {}
+      wake();
+    });
+    deck.addEventListener('pointermove', function (e) {
+      if (!held) return;
+      var p = angleAt(e);
+      // Too close to the spindle the angle swings wildly for a tiny movement.
+      if (p.r < p.R * 0.12) { grabA = p.a; return; }
+      var d = p.a - grabA;
+      if (d > 180) d -= 360; else if (d < -180) d += 360;
+      grabA = p.a;
+      if (Math.abs(d) > 0.4) dragged = true;
+      ang = (ang + d) % 360;
+      travel += Math.abs(d);
+      detent += Math.abs(d);
+      if (detent >= 30) { detent = 0; if (window.buzz) buzz('select'); }
+      samples.push({ t: e.timeStamp, a: ang, d: d });
+      while (samples.length > 2 && e.timeStamp - samples[0].t > 90) samples.shift();
+      // While held, the readout follows the hand.
+      vel = handSpeed(e.timeStamp);
+    });
+    function handSpeed(now) {
+      var sum = 0, span = samples.length > 1 ? now - samples[0].t : 0;
+      for (var i = 1; i < samples.length; i++) sum += samples[i].d || 0;
+      return span > 0 ? Math.max(-MAXV, Math.min(MAXV, sum / span)) : 0;
+    }
+    function release(e) {
+      if (!held) return;
+      held = false;
+      deck.classList.remove('is-held');
+      // The speed of the last ~90ms of the drag, from summed deltas so the
+      // wrap at ±180° cannot read as a jump. A hand that stopped before
+      // letting go leaves the record stopped.
+      var now = e && e.timeStamp || performance.now();
+      var idle = samples.length ? now - samples[samples.length - 1].t : 999;
+      vel = idle < 60 ? handSpeed(now) : 0;
+      if (Math.abs(vel) > 0.45 || travel > 300) catchMotor();
+      wake();
+    }
+    deck.addEventListener('pointerup', release);
+    deck.addEventListener('pointercancel', release);
+    deck.addEventListener('lostpointercapture', release);
+    // A quick tap, Enter or Space: a firm push, so the keyboard spins it too.
+    // A press held still is a hand stopping the record, and pushes nothing.
+    deck.addEventListener('click', function (e) {
+      if (dragged) { dragged = false; return; }
+      if (e.detail && e.timeStamp - downAt > 260) return;
+      vel = Math.min(MAXV, Math.max(vel, 0) + 1.1);
+      catchMotor();
+      wake();
+    });
+    paint();
   }
 
   /* A named record out of the static pool, so the artwork is the one the
@@ -41009,7 +41276,7 @@ window.renderAdminStats = renderAdminStats;
       tok++;
       var isAlbum = kind === 'album';
       show(
-        '<img class="onb-cover" src="' + esc(h.art || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+        sleeve(h.art) +
         '<div class="onb-alb"><h3>' + esc(h.name) + '</h3><p>' + esc(h.artist || '') + (h.year ? ' \u00b7 ' + esc(h.year) : '') + '</p></div>' +
         '<div class="onb-slider' + (isAlbum ? '' : ' onb-slider-song') + '">' +
           (isAlbum ? '<div class="onb-score" id="onb-rs">72<span>/100</span></div>' : '') +
@@ -41065,8 +41332,10 @@ window.renderAdminStats = renderAdminStats;
     if (!row) { next(); return; }
     var t = { title: row[0], artist: row[1], album: row[6], art: row[7] };
     show(
+      '<div class="onb-sleeve onb-sleeve-round">' +
+      (t.art ? '<img class="onb-sleeve-bed" src="' + esc(window.thumb ? thumb(t.art, 120) : t.art) + '" alt="" aria-hidden="true" onerror="this.remove()">' : '') +
       '<button class="onb-spin" id="onb-spin" aria-label="Play a preview">' +
-        '<img src="' + esc(t.art) + '" alt="" onerror="this.style.visibility=\'hidden\'"><span class="onb-spin-ico" aria-hidden="true">&#9654;</span></button>' +
+        '<img src="' + esc(t.art) + '" alt="" onerror="this.style.visibility=\'hidden\'"><span class="onb-spin-ico" aria-hidden="true">&#9654;</span></button></div>' +
       '<div class="onb-alb"><h3>' + esc(t.title) + '</h3><p>' + esc(t.artist) + '</p></div>' +
       '<div class="onb-slider onb-slider-song"><input type="range" id="onb-r" min="1" max="10" step="1" value="7" aria-label="Your score out of 10"></div>',
       cta('Rate 7') + '<button class="onb-alt" id="onb-alt">Don\u2019t know it.</button>'
@@ -41262,8 +41531,9 @@ window.renderAdminStats = renderAdminStats;
     ];
     show(
       '<div class="onb-fin">' +
+        finaleFan() +
         '<div class="onb-kicker">You\u2019re in' + (S.username ? ', ' + esc(S.username) : '') + '</div>' +
-        '<h2 class="onb-h">Your turn.</h2>' +
+        '<h2 class="onb-h">Let\u2019s go!</h2>' +
         '<div class="onb-fin-stats">' + stats.map(function (x, i) {
           return '<div style="--i:' + i + '"><b data-to="' + x[0] + '">0</b><span>' + esc(x[1]) + '</span></div>';
         }).join('') + '</div>' +
@@ -41277,10 +41547,29 @@ window.renderAdminStats = renderAdminStats;
     if (more) more.addEventListener('click', function () { findAny(finale, finale); });
     host.querySelectorAll('[data-to]').forEach(function (b, i) { setTimeout(function () { tick(b, 0, +b.dataset.to || 0, 800); }, 200 + i * 160); });
     if (window.buzz) buzz('big');
-    var fin = host.querySelector('.onb-fin');
-    if (fin && window.burst) setTimeout(function () { try { burst(fin, { count: 70, spread: 220 }); } catch (e) {} }, 500);
     host.querySelectorAll('[data-door]').forEach(function (b) { b.addEventListener('click', function () { finish(false, b.dataset.door); }); });
     onCta(function () { finish(false); });
+  }
+
+  /* The sleeves they rated in the last few minutes, dealt into a small fan
+     over the recap: what they did, as records rather than as a number. Read
+     back from the crate, newest first; nothing is drawn if there is nothing. */
+  function finaleFan() {
+    var arts = [], seen = {};
+    try {
+      var all = [];
+      [loadAlbums() || {}, loadSongs() || {}].forEach(function (m) {
+        Object.keys(m).forEach(function (k) { var r = m[k]; if (r && r.art) all.push(r); });
+      });
+      all.sort(function (a, b) { return (b.ratedAt || b.savedAt || 0) - (a.ratedAt || a.savedAt || 0); });
+      for (var i = 0; i < all.length && arts.length < 3; i++) {
+        if (seen[all[i].art]) continue; seen[all[i].art] = 1; arts.push(all[i].art);
+      }
+    } catch (e) {}
+    if (!arts.length) return '';
+    return '<div class="onb-fan n' + arts.length + '" aria-hidden="true">' + arts.map(function (a, i) {
+      return '<img src="' + esc(window.thumb ? thumb(a, 320) : a) + '" alt="" style="--i:' + i + '" onerror="this.remove()">';
+    }).join('') + '</div>';
   }
 
   var DRAW = { welcome: welcome, username: username, first: first,
@@ -41301,7 +41590,9 @@ window.renderAdminStats = renderAdminStats;
     catch (e) { bail(e); }
   }
 
+  var _pending = false;   // maybeStart has decided to open; the frame has not run yet
   function finish(skipped, door) {
+    _pending = false;
     S.done = true; S.skipped = !!skipped; save();
     var o = el('onb');
     if (o) o.classList.remove('open');
@@ -41348,6 +41639,7 @@ window.renderAdminStats = renderAdminStats;
     if (!S.at && ratedCount() >= 3) { S.done = true; S.skipped = true; save(); return; }
     if (!(window.Cloud && Cloud.isOn && Cloud.isOn())) return;
     save();
+    _pending = true;
     // One frame, so refreshUI has painted underneath before the cover drops.
     setTimeout(open, 240);
   }
@@ -41356,7 +41648,14 @@ window.renderAdminStats = renderAdminStats;
     maybeStart: maybeStart,
     // For a second look without signing up again.
     restart: function () { S = { step: 0, done: false, v: 2 }; save(); open(); },
-    state: function () { return read(); }
+    state: function () { return read(); },
+    // Tests only: jump to a beat by name.
+    _go: window.__vinallTest ? function (name) { var i = STEPS.indexOf(name); if (i >= 0) go(i); } : undefined,
+    // True from the moment it decides to open until it closes. Level-up pops wait on it.
+    active: function () {
+      var o = el('onb');
+      return _pending || !!(o && o.classList.contains('open'));
+    }
   };
 })();
 </script>
