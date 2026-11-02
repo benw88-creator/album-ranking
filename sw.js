@@ -15,7 +15,7 @@
  * never more than one load behind, and when you are, the app says so out loud.
  */
 
-const VERSION = 'vinall-v5';
+const VERSION = 'vinall-v6';
 const SHELL = VERSION + '-shell';
 const MEDIA = VERSION + '-media';
 
@@ -29,8 +29,8 @@ const PRECACHE = [
   '/assets/icons/browser-512.png?v=official-transparent-2',
   '/assets/icons/apple-touch-icon.png?v=official-transparent-2',
   '/assets/icons/favicon.ico?v=official-transparent-2',
-  '/assets/interactions.css?v=2',
-  '/assets/interactions.js?v=2'
+  '/assets/interactions.css?v=3',
+  '/assets/interactions.js?v=3'
 ];
 
 self.addEventListener('install', (event) => {

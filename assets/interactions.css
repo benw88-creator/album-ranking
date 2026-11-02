@@ -27,19 +27,35 @@ button {
 }
 .fy-feed:focus-visible { outline-offset: -3px; }
 .fy-key-hint { display: none; }
-@media (hover: hover) and (pointer: fine) {
+@media (any-hover: hover) and (any-pointer: fine) {
   .fy-key-hint { display: block; position: absolute; bottom: 8px; left: 0; right: 0; z-index: 7; pointer-events: none; text-align: center; color: var(--text-dim); font-size: 12px; }
   .card, .game-card, .list-card, .groove-card, .t-pick, .col-rec, .rw-card, .done-tile, .bmc, .cf-card {
     transition: transform 320ms var(--ease-interaction), border-color 240ms ease, box-shadow 320ms ease;
   }
   .card:hover { transform: translateY(-3px) scale(1.018); }
   .game-card:not(.locked):hover, .list-card:hover, .groove-card:hover, .t-pick:hover, .col-rec:hover, .rw-card:hover, .done-tile:hover, .bmc:hover { transform: translateY(-2px) scale(1.012); }
-  .cf-card:hover { transform: translateY(-2px); }
+  .cf-card:hover { transform: translateY(-3px) scale(1.02); }
+  nav.modes button { transition: background-color 260ms var(--ease-interaction), color 260ms var(--ease-interaction), scale 260ms var(--ease-interaction); }
+  nav.modes button:hover:not(.active) { scale: 1.025; }
   nav.modes button:hover:not(.active) .nav-icon { transform: translateY(-1px) scale(1.08); }
   .card:active, .game-card:not(.locked):active { transform: scale(.985); transition-duration: 140ms; }
   .splash-cta { transition: transform 350ms var(--ease-interaction), border-radius 350ms var(--ease-interaction), box-shadow 350ms ease; }
   .splash-cta:hover:not(:disabled) { transform: translateY(-2px) scale(1.025); border-radius: 32px; }
 }
+/* A touchscreen laptop may report a coarse primary pointer even while its
+   mouse is in use. Follow actual pointer input, and clear sticky touch hover. */
+:where(html[data-pointer="mouse"]) :is(.card, .game-card, .list-card, .groove-card, .t-pick, .col-rec, .rw-card, .done-tile, .bmc, .cf-card) {
+  transition: transform 320ms var(--ease-interaction), border-color 240ms ease, box-shadow 320ms ease;
+}
+:where(html[data-pointer="mouse"]) .card:hover { transform: translateY(-3px) scale(1.018); }
+:where(html[data-pointer="mouse"]) :is(.game-card, .list-card, .groove-card, .t-pick, .col-rec, .rw-card, .done-tile, .bmc):hover:not(.locked) { transform: translateY(-2px) scale(1.012); }
+:where(html[data-pointer="mouse"]) .cf-card:hover { transform: translateY(-3px) scale(1.02); }
+:where(html[data-pointer="mouse"]) .card:active { transform: scale(.985); }
+:where(html[data-pointer="mouse"]) .game-card:active:not(.locked) { transform: scale(.985); }
+html[data-pointer="touch"] :is(.card, .game-card, .list-card, .groove-card, .t-pick, .col-rec, .rw-card, .done-tile, .bmc, .cf-card):hover { transform: none; }
+html[data-pointer="touch"] .card:hover .art { transform: none; }
+html[data-pointer="touch"] :is(.card, .cf-card):active { transform: scale(.985); }
+html[data-pointer="touch"] .game-card:active { transform: scale(.98); }
 /* Remove the transformed paint-containment seam at the album artwork edge.
    The card itself already clips its artwork; no extra composited clip needed. */
 .card .art-wrap { contain: none; transform: none; }
@@ -47,6 +63,7 @@ button {
 .grid .card:nth-child(n+19) { animation: none; }
 .game-card.locked:hover { transform: none; }
 .draw-strip { will-change: auto; }
+.draw-strip { position: absolute; left: 50%; top: 0; width: max-content; }
 .draw-window.spinning .draw-strip { will-change: transform; }
 /* Shimmering seventy tiles repaints the entire travelling reel every frame. */
 .draw-window.spinning .draw-tile, .draw-window.spinning .dt-chip { animation-play-state: paused; }
@@ -113,6 +130,7 @@ body.layer-open { overflow-y: hidden; }
 @media (prefers-reduced-motion: reduce) {
   html:not([data-motion="full"]) :is(.card, .game-card, .list-card, .groove-card, .t-pick, .col-rec, .rw-card, .done-tile, .bmc, .cf-card):hover,
   html:not([data-motion="full"]) .card:hover .art { transform: none; }
+  html:not([data-motion="full"]) nav.modes button:hover { scale: none; }
   html:not([data-motion="full"]) { scroll-behavior: auto; }
   html:not([data-motion="full"]) *, html:not([data-motion="full"]) *::before, html:not([data-motion="full"]) *::after {
     animation-duration: .01ms !important; animation-iteration-count: 1 !important;
@@ -122,6 +140,7 @@ body.layer-open { overflow-y: hidden; }
 html[data-motion="none"] { scroll-behavior: auto; }
 html[data-motion="none"] :is(.card, .game-card, .list-card, .groove-card, .t-pick, .col-rec, .rw-card, .done-tile, .bmc, .cf-card):hover,
 html[data-motion="none"] .card:hover .art { transform: none; }
+html[data-motion="none"] nav.modes button:hover { scale: none; }
 html[data-motion="none"] *, html[data-motion="none"] *::before, html[data-motion="none"] *::after {
   animation-duration: .01ms !important; animation-iteration-count: 1 !important;
   transition-duration: .01ms !important; scroll-behavior: auto !important;

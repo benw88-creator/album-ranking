@@ -11,6 +11,7 @@
     "assets": "node scripts/make-assets.mjs && npx @capacitor/assets generate --iconBackgroundColor \"#0a0908\" --iconBackgroundColorDark \"#0a0908\" --splashBackgroundColor \"#0a0908\" --splashBackgroundColorDark \"#0a0908\" && node scripts/trim-splash.mjs"
   },
   "dependencies": {
+    "@capacitor-community/apple-sign-in": "^8.0.0",
     "@capacitor/android": "^8.5.2",
     "@capacitor/app": "^8.1.1",
     "@capacitor/cli": "^8.5.2",

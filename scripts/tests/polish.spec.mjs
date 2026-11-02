@@ -10,7 +10,7 @@ const imported = { importedAt: Date.parse('2026-10-01'), updatedAt: Date.parse('
 
 // A tiny persistent test backend exercises the real Supabase client, auth,
 // app_state merge and listening queries. All requests remain intercepted.
-async function cloudBackend(page, { rows = [], plays = [], collection = [], lore = [], legacy = null, poolDelay = 0, spinDelay = 120, failSpin = false, profileDelay = 0, fav = false } = {}) {
+async function cloudBackend(page, { rows = [], plays = [], collection = [], lore = [], legacy = null, poolDelay = 0, pool = null, spinPrize = null, freeCheckDelay = 0, spinDelay = 120, failSpin = false, profileDelay = 0, fav = false } = {}) {
   plays=plays.map(row=>({...row}));
   let uid = userId, spins = 0, reads = 0;
   const store = new Map(rows.map(row => [row.key, row.value]));
@@ -61,14 +61,17 @@ async function cloudBackend(page, { rows = [], plays = [], collection = [], lore
     if(path.endsWith('/collection_net_worth'))return route.fulfill({json:{net_worth:collection.filter(row=>row.user_id===uid).reduce((sum,row)=>sum+row.price,0)}});
     if (path.endsWith('/spin_items')) {
       if (poolDelay) await new Promise(r => setTimeout(r, poolDelay));
-      return route.fulfill({ json: [{ key: 'test-prize', label: '400 Discs', kind: 'discs', amount: 400, tier: 'common', weight: 1000 }] });
+      return route.fulfill({ json: pool || [{ key: 'test-prize', label: '400 Discs', kind: 'discs', amount: 400, tier: 'common', weight: 1000 }] });
     }
-    if (path.endsWith('/spin_free_available')) return route.fulfill({ json: true });
+    if (path.endsWith('/spin_free_available')) {
+      if (spins && freeCheckDelay) await new Promise(r => setTimeout(r, freeCheckDelay));
+      return route.fulfill({ json: spins === 0 });
+    }
     if (path.endsWith('/wallet_spin')) {
       spins++;
       await new Promise(r => setTimeout(r, spinDelay));
       if (failSpin) return route.fulfill({ status: 400, json: { message: 'Spin temporarily unavailable', code: 'P0001' } });
-      return route.fulfill({ json: { key: 'test-prize', label: '400 Discs', kind: 'discs', tier: 'common', gained: 400, free: true, discs: 30400 } });
+      return route.fulfill({ json: spinPrize || { key: 'test-prize', label: '400 Discs', kind: 'discs', tier: 'common', gained: 400, free: spins === 1, discs: 30400 } });
     }
     return route.fallback();
   });
@@ -185,6 +188,79 @@ test('reduced-motion spin reveals the awarded prize without the reel delay', asy
   await page.locator('#draw-go').click();
   await expect(page.locator('#draw-result')).toContainText('+400 Discs',{timeout:1500});
   await expect(page.locator('#draw-go')).toBeEnabled();
+});
+
+test('mixed-prize reel finishes without a resize snap and stops advertising the spent free spin', async ({ page }) => {
+  const pool = [
+    { key: 'small', label: '400 Discs', kind: 'discs', amount: 400, tier: 'common', weight: 800 },
+    { key: 'rare', label: '800 Discs', kind: 'discs', amount: 800, tier: 'rare', weight: 150 },
+    { key: 'gold', label: '1,000 Discs', kind: 'discs', amount: 1000, tier: 'legendary', weight: 50 }
+  ];
+  await page.setViewportSize({width:1440,height:900});
+  await cloudBackend(page, {pool,freeCheckDelay:1200,spinPrize:{key:'gold',label:'1,000 Discs',kind:'discs',tier:'legendary',gained:1000,free:true,discs:31000}});
+  await start(page);await login(page);
+  await page.evaluate(()=>goToView('rewards'));
+  await expect(page.locator('#draw-go')).toContainText('Your free spin');
+  await page.locator('#draw-go').click();
+  await expect.poll(()=>page.locator('#draw-strip').evaluate(n=>n.getAnimations().length)).toBe(1);
+  await page.setViewportSize({width:900,height:750});
+  const snap=await page.locator('#draw-strip').evaluate(async n=>{
+    const animation=n.getAnimations()[0];animation.currentTime=5120;
+    const before=new DOMMatrixReadOnly(getComputedStyle(n).transform).m41;
+    await animation.finished;await new Promise(requestAnimationFrame);
+    const after=new DOMMatrixReadOnly(getComputedStyle(n).transform).m41;
+    return Math.abs(after-before);
+  });
+  expect(snap).toBeLessThan(1);
+  await expect(page.locator('#draw-result')).toContainText('+1,000 Discs');
+  await expect(page.locator('#draw-go')).not.toContainText('Your free spin');
+  const centre=await page.evaluate(()=>{
+    const tile=document.querySelector('#draw-strip').children[62].getBoundingClientRect();
+    const needle=document.querySelector('.draw-needle').getBoundingClientRect();
+    return Math.abs(tile.left+tile.width/2-needle.left-needle.width/2);
+  });
+  expect(centre).toBeLessThan(1);
+});
+
+test('leaving before the spin response preserves the correct result on return',async({page})=>{
+  await cloudBackend(page,{spinDelay:500});await start(page);await login(page);
+  await page.evaluate(()=>goToView('rewards'));await expect(page.locator('#draw-go')).toBeEnabled();
+  await page.locator('#draw-go').click();await page.evaluate(()=>goToView('home'));
+  await expect(page.locator('#draw-result')).toContainText('+400 Discs');
+  await page.evaluate(()=>goToView('rewards'));await expect(page.locator('#draw-result')).toBeVisible();
+  const centre=await page.evaluate(()=>{
+    const tile=document.querySelector('#draw-strip').children[62].getBoundingClientRect();
+    const needle=document.querySelector('.draw-needle').getBoundingClientRect();
+    return Math.abs(tile.left+tile.width/2-needle.left-needle.width/2);
+  });expect(centre).toBeLessThan(1);
+});
+
+test('an unavailable prize pool displays a retry instead of throwing',async({page})=>{
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await cloudBackend(page,{pool:[]});await start(page);await login(page);
+  await page.evaluate(()=>goToView('rewards'));
+  await expect(page.locator('#draw-result')).toContainText('Couldn’t load the prizes');
+  await expect(page.locator('#draw-go')).toBeEnabled();await page.locator('#draw-go').click();
+  await expect(page.locator('#draw-result')).toContainText('Couldn’t load the prizes');
+  expect(errors).toEqual([]);
+});
+
+test('desktop cards visibly animate on mouse hover and transitions never clip or transform a view',async({page})=>{
+  await page.setViewportSize({width:1440,height:900});await start(page,{seeded:true});
+  for(const [mode,selector] of [['albums','#albums-grid .card'],['games','.game-card:not(.locked)']]){
+    await page.evaluate(mode=>goToView(mode),mode);
+    await expect.poll(()=>page.locator('#view-'+mode).evaluate(view=>view.getAnimations({subtree:true}).some(a=>a.effect.getKeyframes().some(f=>parseFloat(f.translate)===18)))).toBe(true);
+    const motion=await page.locator('#view-'+mode).evaluate(view=>({
+      transform:getComputedStyle(view).transform,
+      frames:view.getAnimations({subtree:true}).filter(a=>a.effect.getKeyframes().some(f=>f.translate)).map(a=>a.effect.getKeyframes())
+    }));
+    expect(motion.transform).toBe('none');expect(motion.frames.length).toBeGreaterThan(0);
+    expect(motion.frames.flat().every(f=>!f.clipPath)).toBe(true);
+    const card=page.locator(selector).first();await card.hover();await page.waitForTimeout(600);
+    expect(await card.evaluate(n=>new DOMMatrixReadOnly(getComputedStyle(n).transform).a)).toBeGreaterThan(1);
+    await page.mouse.move(0,0);await page.waitForTimeout(400);
+    expect(await card.evaluate(n=>getComputedStyle(n).transform)).toBe('none');
+  }
 });
 
 test('overlapping history imports retain the richer account aggregate and clear analytics caches', async ({ page }) => {

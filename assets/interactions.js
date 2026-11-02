@@ -1,32 +1,70 @@
-/* Keep navigation synchronous and live geometry untransformed. Document
-   snapshot transitions suppress hit testing during capture, losing rapid taps
-   in WebKit. A shallow horizontal reveal gives direction without that freeze. */
+/* Animate visible content, never the shared navigation or the view containing
+   fixed sheets. Independent translate leaves existing card transforms intact. */
 (function () {
   var entrance = null;
+  function rememberPointer(event) {
+    var type = event.pointerType;
+    if (type && document.documentElement.dataset.pointer !== type) document.documentElement.dataset.pointer = type;
+  }
+  document.addEventListener('pointerover', rememberPointer, { passive: true });
+  document.addEventListener('pointerdown', rememberPointer, { passive: true });
   var order = ['home', 'albums', 'songs', 'crate', 'choice', 'foryou', 'games', 'collection', 'rewards', 'profile'];
   window.VinallTransitions = {
+    finish: function () { if (entrance) entrance.finish(); },
     enter: function (view, from, mode) {
       if (entrance) entrance.cancel();
       if (!view.animate || document.hidden || (window.motionReduced && motionReduced())) return null;
-      var frames = [{ opacity: 0 }, { opacity: 1 }];
-      var list = view.querySelector('#albums-grid, #songs-list, #crate-feed, .col-grid');
-      // Promoting a very tall list can allocate a large backing surface in
-      // WebKit. Its visible cards and shared navigation carry the motion.
-      if (list && list.children.length >= 48) return null;
-      if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
-        frames[0].clipPath = order.indexOf(mode) >= order.indexOf(from) ? 'inset(0 1.5% 0 0)' : 'inset(0 0 0 1.5%)';
-        frames[1].clipPath = 'inset(0 0 0 0)';
+      var animations = [], candidates = [];
+      var desktop = document.documentElement.dataset.pointer !== 'touch' && (document.documentElement.dataset.pointer === 'mouse' || matchMedia('(any-hover: hover) and (any-pointer: fine)').matches);
+      var direction = order.indexOf(mode) >= order.indexOf(from) ? 1 : -1;
+      var height = window.innerHeight;
+      function scanChildren(node) {
+        var children = node.children;
+        for (var i = 0; i < children.length && candidates.length < 20; i++) {
+          if (collectContent(children[i])) break;
+        }
       }
-      var animation = view.animate(frames, { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)' });
-      entrance = animation;
-      animation.finished.catch(function () {}).finally(function () { if (entrance === animation) entrance = null; });
-      return animation;
+      function collectContent(node) {
+        if (candidates.length >= 20 || node.matches('script, style, .modal, .activity, .onb')) return false;
+        var rect = node.getBoundingClientRect();
+        if (rect.top >= height && node.matches('.card, .cf-card, .game-card, .song-row, .col-card')) return true;
+        if (!rect.width || !rect.height || rect.top >= height || rect.bottom <= 0) return false;
+        // Keep fixed sheets in the document's containing block. Tall lists
+        // animate only their visible children rather than a giant surface.
+        if (rect.height > height * 1.5 || node.querySelector('.modal, .activity, .onb')) {
+          scanChildren(node);
+          return false;
+        }
+        candidates.push(node);
+        return false;
+      }
+      var pendingFrame = null;
+      var group = {
+        cancel: function () { cancelAnimationFrame(pendingFrame); pendingFrame = null; animations.forEach(function (a) { a.cancel(); }); },
+        finish: function () { cancelAnimationFrame(pendingFrame); pendingFrame = null; animations.forEach(function (a) { if (a.playState !== 'idle') a.finish(); }); }
+      };
+      entrance = group;
+      // Let navigation commit before its next paint. Rapid switching can
+      // cancel this task without forcing layout of an already obsolete view.
+      pendingFrame = requestAnimationFrame(function () {
+        pendingFrame = null;
+        // Read all geometry before any animation writes.
+        scanChildren(view);
+        candidates.forEach(function (node) {
+          var frames = [{ opacity: .35 }, { opacity: 1 }];
+          if (desktop) {
+            frames[0].translate = (direction * 18) + 'px 0';
+            frames[1].translate = '0px 0';
+          }
+          animations.push(node.animate(frames, { duration: 320, easing: 'cubic-bezier(.22,1,.36,1)' }));
+        });
+        Promise.all(animations.map(function (a) { return a.finished.catch(function () {}); })).finally(function () { if (entrance === group) entrance = null; });
+      });
+      return group;
     }
   };
-  // Interaction takes priority over decoration, including opening a sheet
-  // whose fixed contents must never remain clipped by a page entrance.
-  document.addEventListener('pointerdown', function () { if (entrance) { entrance.cancel(); entrance = null; } }, true);
-  document.addEventListener('keydown', function () { if (entrance) { entrance.cancel(); entrance = null; } }, true);
+  // No clipping or transformed view ancestor: sheets can open immediately
+  // without cancelling an entrance halfway through a mouse interaction.
 })();
 
 /* Accessibility follows the same open/close paths as pointer input, so game
@@ -75,6 +113,7 @@
     document.documentElement.classList.toggle('layer-open', !!active);
     document.body.classList.toggle('layer-open', !!active);
     if (active) {
+      if (window.VinallTransitions) VinallTransitions.finish();
       // Walk ancestors too: some sheets live inside .wrap, others are siblings.
       for (var node = active; node && node !== document.body; node = node.parentElement) {
         Array.from(node.parentElement.children).forEach(function (sibling) {

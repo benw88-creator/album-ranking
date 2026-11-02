@@ -9560,7 +9560,7 @@ input, textarea, select, [contenteditable="true"],
   .modal-panel { margin-bottom: env(safe-area-inset-bottom); }
 }
 </style>
-<link rel="stylesheet" href="/assets/interactions.css?v=2">
+<link rel="stylesheet" href="/assets/interactions.css?v=3">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -9772,6 +9772,27 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
       );
     }
   };
+
+  /* Universal Links land the user back in THIS app, not a browser tab — see
+     app-store-submission/NATIVE-AUTH-SETUP.md for the Associated Domains /
+     apple-app-site-association setup this depends on. Capacitor hands the
+     incoming https://vinall.xyz/... URL to appUrlOpen; this app is already
+     running at capacitor://localhost, so the link's own query/hash are
+     turned into an ordinary in-app navigation instead. That re-runs the
+     exact same boot-time link handling (`location.search`/`location.hash`,
+     see Cloud.init's "Coming back from the reset email") that already
+     works correctly for a web visitor — nothing about that logic is
+     duplicated or re-implemented here, it just runs once more. */
+  if (on && C.addListener) {
+    try {
+      C.addListener('App', 'appUrlOpen', function (data) {
+        try {
+          var u = new URL(data && data.url);
+          if (u.search || u.hash) location.href = location.pathname + u.search + u.hash;
+        } catch (e) {}
+      });
+    } catch (e) {}
+  }
 })();
 </script>
 
@@ -9931,8 +9952,13 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
     if (!a || !/^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
     // The sheet has only just been told its new height; let it take it before
     // measuring where the field ended up.
+    // `behavior:'auto'`, not 'smooth' — the keyboard is itself still sliding
+    // into place (and can land in a second jump, above), so stacking a
+    // second, independently-timed scroll animation on top of that one reads
+    // as a stutter/double-jump rather than one movement. An instant snap
+    // lands in sync with whichever keyboard frame triggered it.
     requestAnimationFrame(function () {
-      try { a.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+      try { a.scrollIntoView({ block: 'center', behavior: 'auto' }); } catch (e) {}
     });
   }
 
@@ -9942,6 +9968,51 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
   // already settled, so it is re-measured when its contents change too.
   document.addEventListener('input', function (e) { if (e.target && e.target.id === 'search-input') requestAnimationFrame(sizeSuggestions); }, true);
   apply();
+
+  /* Reported live, on a real device, inside the Capacitor app specifically:
+     a sheet (the login form, among others) did not resize for the keyboard
+     at all — the input sat under it, completely covered, with none of the
+     above kicking in. `visualViewport` is the right primitive on the
+     website, where it is well-supported; inside a WKWebView it has known
+     gaps — a resize event that doesn't fire, or a height that doesn't
+     settle to the post-keyboard value — and this app has no earlier record
+     of `--kb` ever having been verified against the NATIVE build specifically,
+     only reasoned about.
+     The Capacitor Keyboard plugin reports the real, native keyboard height
+     directly from iOS/Android — no viewport math, no guessing. Used here as
+     a second, independent source for the exact same `--kb`/`kb-up` state:
+     whichever of the two fires (visualViewport or the native event) keeps
+     the property correct, so this is a reinforcement, not a replacement. */
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() && window.Capacitor.addListener) {
+    var C = window.Capacitor;
+    function focusIntoView() {
+      var a = document.activeElement;
+      if (!a || !/^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
+      requestAnimationFrame(function () {
+        try { a.scrollIntoView({ block: 'center', behavior: 'auto' }); } catch (e) {}
+      });
+    }
+    try {
+      C.addListener('Keyboard', 'keyboardWillShow', function (info) {
+        var kb = Math.max(0, Math.round((info && info.keyboardHeight) || 0));
+        if (!kb) return;
+        last = kb;
+        root.style.setProperty('--kb', kb + 'px');
+        document.body.classList.add('kb-up');
+        focusIntoView();
+      });
+      C.addListener('Keyboard', 'keyboardDidShow', function (info) {
+        var kb = Math.max(0, Math.round((info && info.keyboardHeight) || 0));
+        if (kb) { last = kb; root.style.setProperty('--kb', kb + 'px'); }
+        focusIntoView();
+      });
+      C.addListener('Keyboard', 'keyboardWillHide', function () {
+        last = 0;
+        root.style.setProperty('--kb', '0px');
+        document.body.classList.remove('kb-up');
+      });
+    } catch (e) {}
+  }
 })();
 </script>
 
@@ -10289,14 +10360,6 @@ window.discAmt = function (n) {
          you go looking for; neither needs to sit under the diary every time
          somebody opens the app to answer one question. -->
 
-    <!-- Support. Web only (html.is-native hides it): Apple rejects tip links
-         to an outside payment page. Deezer's terms bar receiving money in
-         connection with their catalogue — a known, accepted risk (2026-10). -->
-    <a class="bmc" href="https://buymeacoffee.com/ben2" target="_blank" rel="noopener">
-      <span class="bmc-disc" aria-hidden="true"></span>
-      <span class="bmc-t"><b>VINALL is free, support me.</b></span>
-      <span class="bmc-go">Buy me a coffee <i aria-hidden="true">→</i></span>
-    </a>
   </section>
 
   <!-- ============================ THE CRATE ============================ -->
@@ -10757,7 +10820,6 @@ window.discAmt = function (n) {
     <a href="/terms.html">Terms</a>
     <span>&middot;</span>
     <span class="foot-note">VINALL &mdash; the place for music.</span>
-    <a class="bmc-link" href="https://buymeacoffee.com/ben2" target="_blank" rel="noopener">Support VINALL</a>
     <!-- Spotify's Developer Policy requires attribution wherever their content
          is displayed, and every piece of artwork in this app is theirs. Apple
          will not raise this; Spotify can.
@@ -11272,11 +11334,6 @@ window.discAmt = function (n) {
 
     <div class="set-group">
       <div class="shop-section-title">Offline data</div>
-      <div class="set-row bmc-link">
-        <div class="set-copy"><div class="set-name">Support VINALL</div>
-          <div class="set-note">Free, and built by one person.</div></div>
-        <a class="btn-mini" href="https://buymeacoffee.com/ben2" target="_blank" rel="noopener">Buy me a coffee</a>
-      </div>
       <div class="set-row">
         <div class="set-copy">
           <div class="set-name">Clear cached app data</div>
@@ -11864,16 +11921,6 @@ async function getAccessToken() {
   // session keeps working until it expires and nothing 404s on load.
   return null;
 }
-
-const APP_TOKEN_PATH=Native.api+'/api/app-token';
-let _appToken=null,_appTokenExp=0,_appTokenDead=0;
-async function getAppToken(){
-  if(_appToken&&Date.now()<_appTokenExp-5000)return _appToken;
-  if(_appTokenDead&&Date.now()-_appTokenDead<30000)return null;
-  try{const r=await fetch(APP_TOKEN_PATH);if(!r.ok){_appTokenDead=Date.now();return null;}const j=await r.json();if(j&&validToken(j.access_token)){_appToken=j.access_token;_appTokenExp=Date.now()+((j.expires_in||3600)*1000);_appTokenDead=0;return _appToken;}}catch(e){}
-  _appTokenDead=Date.now();return null;
-}
-async function getAnyToken(){return(await getAccessToken())||(await getAppToken());}
 
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 const _spQueue=[];let _spPumping=false,_spLast=0;const SP_GAP=150,_spotifyGetCache={};
@@ -13500,10 +13547,6 @@ async function _buildRecommendations(grid, emptyEl, status) {
     _recsDirty = false; _recsBuilt = true;
     return;
   }
-  if (!_token && !_appToken && !(await getAnyToken())) {
-    grid.innerHTML = ''; emptyEl.style.display = 'block';
-    status.textContent = 'Couldn\u2019t load suggestions right now.'; return;
-  }
   emptyEl.style.display = 'none';
   status.textContent = 'Finding albums you\u2019ll like\u2026';
   const likedGenres = {};
@@ -14493,19 +14536,8 @@ function flashSaved(){const f=document.getElementById('save-flash');f.classList.
 
 function showGate(show){document.getElementById('gate').classList.toggle('show',!!show);}
 function renderAuthArea(connected){
-  const el=document.getElementById('auth-area');
-  // Spotify access works silently in the background via the app token —
-  // no "Connect Spotify" button needed. Just show VINALL account state.
-  if(connected){
-    // personal Spotify token still present (legacy) — just treat same as app token
-    searchInput.disabled=false;searchInput.placeholder='Search albums or artists\u2026';showGate(false);
-  }else if(_appToken){
-    searchInput.disabled=false;searchInput.placeholder='Search albums or artists\u2026';showGate(false);
-  }else{
-    // neither token available — something is wrong with the backend
-    searchInput.disabled=false; // still let them try
-    searchInput.placeholder='Search albums or artists\u2026';
-  }
+  // Public Deezer catalogue access is independent of Spotify credentials.
+  searchInput.disabled=false;searchInput.placeholder='Search albums or artists\u2026';showGate(false);
   if(window.Cloud&&Cloud.syncUI)Cloud.syncUI();
 }
 // gate-connect now reloads — wired inline in HTML
@@ -16502,35 +16534,82 @@ const Cloud=(function(){
       else res=await sb.auth.signInWithPassword({email:email,password:pass});
       if(res.error){errEl.textContent=res.error.message;btn.disabled=false;btn.textContent=(mode==='login'?'Log in':'Sign up');return;}
       const u=(res.data&&res.data.user)||(res.data&&res.data.session&&res.data.session.user);
-      if(u&&res.data.session){closeAuth();await onAuthed(u);}
+      /* signUp() against an email that already has a CONFIRMED account does
+         not error \u2014 Supabase deliberately returns a fake-success user object
+         with an empty `identities` array, so a stranger can't learn which
+         emails are already registered. No confirmation email is sent in this
+         case. The old code couldn't tell this apart from a genuine new
+         signup and told both "check your email" \u2014 which, for the existing
+         account, is a lie: nothing was sent, and nothing to check. */
+      const alreadyExists=mode==='signup'&&u&&u.identities&&u.identities.length===0;
+      if(alreadyExists){
+        var loginMode='login';setMode(loginMode);   // not a literal — see traps.mjs's views-map scan, this setMode is the auth modal's own, unrelated to nav
+        document.getElementById('auth-email').value=email;
+        errEl.style.color='var(--red)';
+        errEl.textContent='An account with this email already exists \u2014 log in instead.';
+        setTimeout(function(){document.getElementById('auth-pass').focus();},0);
+      }
+      else if(u&&res.data.session){closeAuth();await onAuthed(u);}
       else if(u&&!res.data.session){errEl.style.color='var(--gold)';errEl.textContent='Check your email to confirm, then log in.';}
       else{errEl.textContent='Something went wrong, try again.';}
     }catch(e){errEl.textContent='Network error \u2014 try again.';}
     btn.disabled=false;btn.textContent=(mode==='login'?'Log in':'Sign up');
   }
 
-  /* Sign in with Apple / Google — WEB ONLY, and deliberately so.
-     supabase.auth.signInWithOAuth() redirects the current page to the
-     provider and back; that is a real browser navigation, which is exactly
-     what the native app cannot offer a way back from. There is no deep-link
-     handling anywhere in this app (a decision already made and stated
-     elsewhere in this file) — without it, finishing the OAuth flow would
-     hand the person back to Safari, not to the app they started in. Google
-     additionally refuses to complete OAuth inside an embedded webview at
-     all (it answers `disallowed_useragent`), so even ignoring the deep-link
-     gap, Google's button would simply fail inside Capacitor's WKWebView.
-     So: shown on the web, hidden in the app, rather than shipped broken.
-     Wiring the native side properly needs a Capacitor plugin for each
-     provider's real native sign-in flow, plus a registered URL scheme and an
-     appUrlOpen listener — a native project change, not a page change, and
-     out of reach without Xcode/Android Studio in front of it. */
+  // Apple's Services ID for native Sign in with Apple — set after creating
+  // it in Apple Developer (see app-store-submission/NATIVE-AUTH-SETUP.md).
+  // Wrong or missing, Apple's own sheet refuses the request; it is not a
+  // secret and is safe to leave in client code.
+  var NATIVE_APPLE_SERVICES_ID='xyz.wildcrate.vinall.signin';
+
+  /* Sign in with Apple / Google.
+     Web: supabase.auth.signInWithOAuth() redirects the current page to the
+     provider and back — a real browser navigation.
+     Native: that redirect has nowhere to come back TO (no deep-link handler
+     in this app), and Google refuses to complete OAuth inside an embedded
+     webview at all (`disallowed_useragent`). Apple goes through its own SDK
+     instead, via a Capacitor plugin, and hands Supabase the resulting ID
+     token directly with signInWithIdToken() — no redirect, no browser hop.
+     Google is NOT wired natively (deliberately skipped — real native setup
+     for comparatively little upside right now); its button is simply hidden
+     in the app, same as before this file had any native wiring at all.
+     Apple's native setup (Apple Developer + Xcode + the Supabase dashboard)
+     cannot be done from this file — see
+     app-store-submission/NATIVE-AUTH-SETUP.md for the exact steps. Until
+     that setup is done, Native.has('SignInWithApple') is false and the
+     button hides itself rather than failing silently. */
   function wireSocialAuth(){
-    if(window.Native && Native.on)return;      // stay hidden; see above
     var wrap=document.getElementById('auth-social');
     var divider=document.getElementById('auth-social-divider');
     if(!wrap)return;
     wrap.style.display='';
     if(divider)divider.style.display='';
+    var errEl=document.getElementById('auth-error');
+    function fail(btn,msg){ if(errEl)errEl.textContent=msg; btn.disabled=false; }
+
+    if(window.Native && Native.on){
+      var appleBtn=document.getElementById('auth-apple');
+      var googleBtn=document.getElementById('auth-google');
+      if(googleBtn) googleBtn.style.display='none';   // not wired natively, see above
+      if(appleBtn){
+        if(!Native.has('SignInWithApple')){ appleBtn.style.display='none'; }
+        else appleBtn.addEventListener('click',async function(){
+          appleBtn.disabled=true; if(errEl)errEl.textContent='';
+          try{
+            var r=await Native.call('SignInWithApple','authorize',{
+              clientId:NATIVE_APPLE_SERVICES_ID, scopes:'email name',
+              redirectURI:'https://vinall.xyz/'
+            });
+            var idToken=r&&r.response&&r.response.identityToken;
+            if(!idToken)throw new Error('no token');
+            var sres=await sb.auth.signInWithIdToken({provider:'apple',token:idToken});
+            if(sres&&sres.error)fail(appleBtn,sres.error.message); else appleBtn.disabled=false;
+          }catch(e){fail(appleBtn,'Could not sign in with Apple.');}
+        });
+      }
+      return;
+    }
+
     function redirectTo(){
       return location.origin+location.pathname;   // web only reaches here
     }
@@ -16539,14 +16618,13 @@ const Cloud=(function(){
       if(!btn)return;
       btn.addEventListener('click',async function(){
         btn.disabled=true;
-        var errEl=document.getElementById('auth-error');
         if(errEl)errEl.textContent='';
         try{
           var res=await sb.auth.signInWithOAuth({provider:p,options:{redirectTo:redirectTo()}});
           // A successful call navigates the page away — nothing left to do.
           // Only a rejection or an inline error means it never left.
-          if(res && res.error){ if(errEl)errEl.textContent=res.error.message; btn.disabled=false; }
-        }catch(e){ if(errEl)errEl.textContent='Could not start that sign-in.'; btn.disabled=false; }
+          if(res && res.error) fail(btn,res.error.message);
+        }catch(e){ fail(btn,'Could not start that sign-in.'); }
       });
     });
   }
@@ -19747,7 +19825,6 @@ window.handleGrooveLink=handleGrooveLink;
   else if(new URLSearchParams(location.search).get('u')){setMode('profile');}
   else{setMode('home');}
   const token=await getAccessToken();
-  if(!token)await getAppToken();
   renderAuthArea(!!token);
   renderStats();
   Cloud.init();
@@ -19793,7 +19870,7 @@ window.handleGrooveLink=handleGrooveLink;
     if (document.readyState === 'complete') reg();
     else window.addEventListener('load', reg);
   }
-  setInterval(function(){if(_token&&Date.now()>=_tokenExp-5000){_token=null;_tokenExp=0;_tokClear();getAppToken().then(function(){renderAuthArea(false);});}},30000);
+  setInterval(function(){if(_token&&Date.now()>=_tokenExp-5000){_token=null;_tokenExp=0;_tokClear();renderAuthArea(false);}},30000);
 })();
 
 </script>
@@ -28621,7 +28698,6 @@ window.renderAdminStats = renderAdminStats;
      This mirrors v_cost in wallet_spin() and is display only — the server is
      what charges. */
   var COST = 5000;
-  var TILE = 130;        // 120px wide + 2×5px margin, must match the CSS
   var STRIP_LEN = 70;
   var WIN_INDEX = 62;    // far enough in that it reads as a real run
   var SPIN_MS = 5200;
@@ -28727,10 +28803,23 @@ window.renderAdminStats = renderAdminStats;
   function resetStrip() {
     var strip = el('draw-strip');
     strip.style.transition = 'none';
-    strip.style.transform = 'translate3d(0,0,0)';
+    strip.style.transform = 'translate3d('+(-tileCentre(0))+'px,0,0)';
     el('draw-window').className = 'draw-window';
     el('draw-result').className = 'draw-result';
     el('draw-result').innerHTML = '';
+  }
+
+  // The strip's origin is the needle (left:50%). Its travel therefore does
+  // not depend on viewport width, even when resized or hidden during a spin.
+  function tileCentre(index) {
+    var tile = el('draw-strip').children[index];
+    if (tile && tile.offsetWidth) return tile.offsetLeft + tile.offsetWidth / 2;
+    var first = el('draw-strip').firstElementChild;
+    var css = first && getComputedStyle(first);
+    var width = css ? parseFloat(css.width) || 120 : 120;
+    var before = css ? parseFloat(css.marginLeft) || 0 : 5;
+    var after = css ? parseFloat(css.marginRight) || 0 : 5;
+    return (width + before + after) * index + before + width / 2;
   }
 
   /* Whether today's free spin is still there. Read from the server rather than
@@ -28857,6 +28946,10 @@ window.renderAdminStats = renderAdminStats;
     var pool = await loadItems();
     if(busy||landed||ticket!==renderToken||!Cloud.isOn())return;
     resetStrip();
+    if (!pool.length) {
+      el('draw-result').textContent = 'Couldn’t load the prizes. Please try again.';
+      paintBalance();checkFree();return;
+    }
     // A resting strip so the window is never empty before the first spin.
     el('draw-strip').innerHTML = buildStrip(pool, weightedPick(pool)).slice(0, 20).map(tileHTML).join('');
     paintOdds(pool);
@@ -28908,21 +29001,15 @@ window.renderAdminStats = renderAdminStats;
     var strip = el('draw-strip');
     strip.innerHTML = buildStrip(pool, winner).map(tileHTML).join('');
 
-    // Measure the actual tile stride instead of assuming the stylesheet never
-    // changes. Centre relative to the content box, not the outer border.
-    var jitter=(Math.random()*2-1)*TILE*.20;
-    function landing(){
-      const tile=strip.children[WIN_INDEX];
-      return tile.offsetLeft+tile.offsetWidth/2-el('draw-window').clientWidth/2+jitter;
-    }
-    strip.style.position='relative';
-    var target=landing();
-    var duration=(window.motionReduced&&motionReduced())?0:SPIN_MS;
+    var target=tileCentre(WIN_INDEX);
+    var start=tileCentre(0);
+    strip.style.transform='translate3d('+(-start)+'px,0,0)';
+    var duration=(document.hidden||!el('draw-window').clientWidth||(window.motionReduced&&motionReduced()))?0:SPIN_MS;
     let completed=false;
     function finishSpin(){
       if(completed||ticket!==spinToken)return;completed=true;
       strip.style.transition='none';
-      strip.style.transform='translate3d('+(-landing())+'px,0,0)';
+      strip.style.transform='translate3d('+(-target)+'px,0,0)';
       if(reelAnimation){reelAnimation.cancel();reelAnimation=null;}
       busy=false;landed=true;
       el('draw-result').removeAttribute('aria-busy');
@@ -28986,6 +29073,7 @@ window.renderAdminStats = renderAdminStats;
       // The free spin has just been taken, so the button has to stop offering
       // it. The server said which it was in `won.free`; asking again is one
       // cheap call and cannot disagree with the row that was actually written.
+      if(won.free)_freeSpin=false;
       checkFree();
       paintBalance();
       /* Deliberately NOT calling renderRewards() here, even though winning
@@ -28997,18 +29085,12 @@ window.renderAdminStats = renderAdminStats;
          to it, which applyWallet() has already updated. */
     }
     if(duration&&strip.animate){
-      reelAnimation=strip.animate([{transform:'translate3d(0,0,0)'},{transform:'translate3d('+(-target)+'px,0,0)'}],{duration:duration,easing:'cubic-bezier(.12,.72,.12,1)',fill:'forwards'});
+      reelAnimation=strip.animate([{transform:'translate3d('+(-start)+'px,0,0)'},{transform:'translate3d('+(-target)+'px,0,0)'}],{duration:duration,easing:'cubic-bezier(.12,.72,.12,1)',fill:'forwards'});
       reelAnimation.finished.then(finishSpin,function(){});
     }else finishSpin();
     // A background tab or unsupported animation must still display its result.
     setTimeout(finishSpin,duration+150);
   }
-  if(window.ResizeObserver)new ResizeObserver(function(){
-    if(busy||!landed)return;
-    const strip=el('draw-strip'),tile=strip.children[WIN_INDEX];if(!tile)return;
-    const target=tile.offsetLeft+tile.offsetWidth/2-el('draw-window').clientWidth/2;
-    strip.style.transform='translate3d('+(-target)+'px,0,0)';
-  }).observe(el('draw-window'));
   window.resetDraw=function(){++spinToken;++renderToken;busy=false;landed=false;items=null;_freeSpin=null;if(reelAnimation){reelAnimation.cancel();reelAnimation=null;}resetStrip();el('draw-go').disabled=true;el('draw-result').removeAttribute('aria-busy');};
 
   /* The payoff scales with the tier, so a Mythic does not land with the same
@@ -39626,5 +39708,5 @@ window.track = function (name, props) {
 </div>
 
 </body>
-<script src="/assets/interactions.js?v=2"></script>
+<script src="/assets/interactions.js?v=3"></script>
 </html>

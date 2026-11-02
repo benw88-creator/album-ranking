@@ -3,5 +3,15 @@
     { "source": "/u/:name", "destination": "/api/share?t=u&k=:name" },
     { "source": "/r/:id", "destination": "/api/share?t=r&k=:id" },
     { "source": "/a/:id", "destination": "/api/share?t=a&k=:id" }
+  ],
+  "headers": [
+    {
+      "source": "/.well-known/apple-app-site-association",
+      "headers": [{ "key": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "source": "/.well-known/assetlinks.json",
+      "headers": [{ "key": "Content-Type", "value": "application/json" }]
+    }
   ]
 }

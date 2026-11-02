@@ -1,5 +1,57 @@
 # VINALL
 
+## Sign-up and login are the one screen that must never be wrong
+
+This is the first thing anybody who isn't already a user ever does. A bug here
+doesn't cost one feature, it costs the account that was never created. The
+standard is higher than everywhere else in the app: no misleading message, no
+visible stutter, no silent dead end. Treat this as a standing requirement on
+every change that touches `#auth-modal`, `submit()`, `wireSocialAuth()`, or the
+`visualViewport`/`--kb` keyboard handling — not a one-time pass.
+
+Found and fixed on 2026-11-02, both worth not re-shipping:
+
+- **Signing up with an email that already has a confirmed account told the
+  person to "check your email to confirm."** Supabase's `signUp()` doesn't
+  error on this — it deliberately returns a fake-success user object with an
+  empty `identities` array, to stop a stranger learning which emails are
+  registered. No email is sent. The fix checks `identities.length===0` and
+  switches straight to the login view with the email prefilled and an honest
+  "an account with this email already exists" message. **Any code touching
+  `signUp()` has to keep checking this**, because the happy-path response
+  shape is indistinguishable from a real new signup unless you check it.
+- **Focusing the email/password field stuttered for a split second** —
+  visible in a screen recording as the field briefly sitting half under the
+  keyboard's QuickType/Passwords bar. The keyboard's own slide-up animation
+  and the field's `scrollIntoView({behavior:'smooth'})` were two independently
+  timed animations stacked on top of each other. Changed to
+  `behavior:'auto'` (instant) so the field snaps to its final position in
+  sync with whichever keyboard frame triggered it, rather than racing it.
+  **Stacking a second animation on top of the keyboard's own is the trap** —
+  see `--kb`'s own comment block for why the keyboard's timing can't be
+  predicted or smoothed from JS.
+- **The login sheet didn't resize for the keyboard at all on a real device,
+  inside the native app** — the email field sat under the keyboard,
+  password inaccessible, confirmed from a screenshot. `--kb` (the custom
+  property every sheet's `max-height` reads) comes from
+  `window.visualViewport`, which is correct on the website but has known
+  gaps inside a WKWebView — this app had reasoned about that boundary but
+  never actually confirmed `--kb` worked on a native build. Added the
+  `@capacitor/keyboard` plugin's own `keyboardWillShow`/`keyboardDidShow`/
+  `keyboardWillHide` events as a second, independent source for the same
+  `--kb`/`kb-up` state — the plugin reports the real native keyboard height
+  directly from iOS/Android, no viewport inference involved. **Not yet
+  confirmed fixed on an actual device** — this was diagnosed and patched
+  from a screenshot, not watched working. Check it on the next native
+  build, on the login sheet specifically and on at least one other sheet
+  (reported as happening "a lot," not just at login).
+
+Before shipping any change near sign-up: actually try signing up with an
+email that's already registered (confirmed and unconfirmed), try it with the
+wrong password, try it with the keyboard up on a phone, and watch for any
+message that could be false. "It still works" is not the bar — "nothing it
+says or does could be read as a lie, and nothing visibly stutters" is.
+
 ## Animation and account reliability follow-up (2026-10-11)
 
 See `PRELAUNCH-POLISH.md`. This follow-up is local development work; the owner
