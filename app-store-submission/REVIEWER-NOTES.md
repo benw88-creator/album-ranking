@@ -10,7 +10,7 @@ Not generated here — the account doesn't exist yet, and credentials for one th
 ## Notes (paste into App Store Connect → App Review Information → Notes)
 
 ```
-VINALL is a music rating and journalling app. Five notes.
+VINALL is a music rating and journalling app. Six notes.
 
 1. Sign-in is required for most of the app, so please use the demo account in
 the fields above. Accounts are email and password, or Sign in with Apple, both
@@ -43,6 +43,15 @@ app, and they cannot be exchanged for anything outside it.
 Spotify provides them on request under GDPR. This is the user's own copy of
 their own data, supplied by them, not obtained from any API. The per-play
 events are aggregated in the browser and only per-track totals are stored.
+
+6. Native features. VINALL's interface ships inside the app bundle (it does not
+load a remote website) and it uses iOS directly: Sign in with Apple through
+ASWebAuthenticationSession, Universal Links so confirmation emails open the app,
+lock-screen Now Playing controls for previews (AVAudioSession playback and Now
+Playing info), Taptic Engine haptics throughout, the native share sheet, local
+notification reminders for the daily game, and keyboard handling tied to the
+system keyboard. The core features (rating, the 11 Arcade games, the record
+collection) all run in-app.
 
 Account deletion is in-app: Settings -> Delete my account. It removes all
 stored rows, the uploaded avatar, any listening history, and the login itself,
