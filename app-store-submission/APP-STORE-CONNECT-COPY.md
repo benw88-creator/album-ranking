@@ -112,9 +112,10 @@ No tracking of any kind — answer **No** to "Used for Tracking" on every data t
 | Email address | Yes | Yes | App Functionality |
 | Name | Yes (only what Sign in with Apple shares) | Yes | App Functionality |
 | Photos/videos | Yes (if avatar uploaded) | Yes | App Functionality |
-| User content — other | Yes | Yes | App Functionality (ratings, notes, lore answers, comments, reports, imported listening history) |
+| Gameplay Content | Yes | Yes | App Functionality (game scores, leaderboards) |
+| User content — other | Yes | Yes | App Functionality + Product Personalization (ratings, notes, lore answers, comments, reports, imported listening history) |
 | User ID | Yes | Yes | App Functionality |
-| Product interaction | Yes | Yes | **Both** Analytics and App Functionality — declare both, don't pick one |
+| Product interaction | Yes | Yes | Analytics, App Functionality and Product Personalization |
 | Crash data | Yes | **No** | Analytics (anonymous crashes accepted by design) |
 | Phone, address, location, search/browsing history, device ID, performance data, purchases, financial info, contacts, health, sensitive info | No | — | — |
 
