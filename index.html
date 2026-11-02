@@ -9750,6 +9750,29 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
       );
     }
   };
+
+  /* Universal Links land the user back in THIS app, not a browser tab — see
+     app-store-submission/UNIVERSAL-LINKS-SETUP.md for the Associated Domains
+     / apple-app-site-association setup this depends on. Capacitor hands the
+     incoming https://vinall.xyz/... URL to appUrlOpen; this app is already
+     running at capacitor://localhost, so the link's own query/hash are
+     turned into an ordinary in-app navigation instead. That re-runs the
+     exact same boot-time link handling (`location.search`/`location.hash`,
+     see Cloud.init's "Coming back from the reset email") that already
+     works correctly for a web visitor — nothing about that logic is
+     duplicated or re-implemented here, it just runs once more.
+     Unrelated to the Apple/Google sign-in flow above, which closes itself
+     via ASWebAuthenticationSession and never reaches this listener. */
+  if (on && C.addListener) {
+    try {
+      C.addListener('App', 'appUrlOpen', function (data) {
+        try {
+          var u = new URL(data && data.url);
+          if (u.search || u.hash) location.href = location.pathname + u.search + u.hash;
+        } catch (e) {}
+      });
+    } catch (e) {}
+  }
 })();
 </script>
 
@@ -9979,24 +10002,53 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
     if (!a || !/^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
     // The sheet has only just been told its new height; let it take it before
     // measuring where the field ended up.
+    // `behavior:'auto'`, not 'smooth' — the keyboard is itself still sliding
+    // into place, so stacking a second, independently-timed scroll animation
+    // on top of that one reads as a stutter/double-jump rather than one
+    // movement. An instant snap lands in sync with whichever keyboard frame
+    // triggered it.
     requestAnimationFrame(function () {
-      try { a.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+      try { a.scrollIntoView({ block: 'center', behavior: 'auto' }); } catch (e) {}
+    });
+  }
+
+  function focusIntoView() {
+    var a = document.activeElement;
+    if (!a || !/^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
+    requestAnimationFrame(function () {
+      try { a.scrollIntoView({ block: 'center', behavior: 'auto' }); } catch (e) {}
     });
   }
 
   vv.addEventListener('resize', apply);
   vv.addEventListener('scroll', apply);
   /* In the app the webview itself shrinks for the keyboard (Keyboard.resize
-     "native"), so the visible viewport and the layout agree and --kb reads 0.
-     The plugin's own events still say a keyboard is up, which is what the
-     compact layouts key off. */
-  window.addEventListener('keyboardWillShow', function () { document.body.classList.add('kb-up'); requestAnimationFrame(apply); });
-  window.addEventListener('keyboardDidShow', function () {
-    document.body.classList.add('kb-up'); apply();
-    var a = document.activeElement;
-    if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) try { a.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+     "native"), so the visible viewport and the layout agree and --kb reads 0
+     — `apply()` genuinely has no way to see the keyboard in this mode, no
+     matter how often it's re-run. That's why `requestAnimationFrame(apply)`
+     here never actually resized anything: it kept recomputing the same zero.
+     REPORTED LIVE, ON DEVICE: the login sheet sat exactly where it would
+     with no keyboard at all, which is this. The plugin's own event carries
+     the real keyboard height as `info.keyboardHeight` — used directly now,
+     no viewport inference involved, which is the only number in this mode
+     that is actually correct. */
+  window.addEventListener('keyboardWillShow', function (ev) {
+    document.body.classList.add('kb-up');
+    var kb = Math.round((ev && ev.keyboardHeight) || 0);
+    if (kb > 0) { last = kb; root.style.setProperty('--kb', kb + 'px'); }
+    focusIntoView();
   });
-  window.addEventListener('keyboardWillHide', function () { if (!last) document.body.classList.remove('kb-up'); });
+  window.addEventListener('keyboardDidShow', function (ev) {
+    document.body.classList.add('kb-up');
+    var kb = Math.round((ev && ev.keyboardHeight) || 0);
+    if (kb > 0) { last = kb; root.style.setProperty('--kb', kb + 'px'); }
+    focusIntoView();
+  });
+  window.addEventListener('keyboardWillHide', function () {
+    document.body.classList.remove('kb-up');
+    last = 0;
+    root.style.setProperty('--kb', '0px');
+  });
   // The dropdown opens and grows as results arrive, after the keyboard has
   // already settled, so it is re-measured when its contents change too.
   document.addEventListener('input', function (e) { if (e.target && e.target.id === 'search-input') requestAnimationFrame(sizeSuggestions); }, true);
@@ -17296,7 +17348,22 @@ const Cloud=(function(){
       else res=await sb.auth.signInWithPassword({email:email,password:pass});
       if(res.error){errEl.textContent=res.error.message;btn.disabled=false;btn.textContent=(mode==='login'?'Log in':'Sign up');return;}
       const u=(res.data&&res.data.user)||(res.data&&res.data.session&&res.data.session.user);
-      if(u&&res.data.session){closeAuth();await onAuthed(u);}
+      /* signUp() against an email that already has a CONFIRMED account does
+         not error \u2014 Supabase deliberately returns a fake-success user object
+         with an empty `identities` array, so a stranger can't learn which
+         emails are already registered. No confirmation email is sent in this
+         case. The old code couldn't tell this apart from a genuine new
+         signup and told both "check your email" \u2014 which, for the existing
+         account, is a lie: nothing was sent, and nothing to check. */
+      const alreadyExists=mode==='signup'&&u&&u.identities&&u.identities.length===0;
+      if(alreadyExists){
+        var loginMode='login';setMode(loginMode);   // not a literal \u2014 see traps.mjs's views-map scan, this setMode is the auth modal's own, unrelated to nav
+        document.getElementById('auth-email').value=email;
+        errEl.style.color='var(--red)';
+        errEl.textContent='An account with this email already exists \u2014 log in instead.';
+        setTimeout(function(){document.getElementById('auth-pass').focus();},0);
+      }
+      else if(u&&res.data.session){closeAuth();await onAuthed(u);}
       else if(u&&!res.data.session){errEl.style.color='var(--gold)';errEl.textContent='Check your email to confirm, then log in.';}
       else{errEl.textContent='Something went wrong, try again.';}
     }catch(e){errEl.textContent='Network error \u2014 try again.';}

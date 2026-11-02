@@ -19,6 +19,18 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- App Links — confirmation/reset emails open this app, not a
+                 browser. android:autoVerify checks /.well-known/assetlinks.json
+                 on vinall.xyz against this app's signing cert; see
+                 app-store-submission/UNIVERSAL-LINKS-SETUP.md for the rest. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="vinall.xyz" />
+                <data android:scheme="https" android:host="www.vinall.xyz" />
+            </intent-filter>
         </activity>
 
         <provider
