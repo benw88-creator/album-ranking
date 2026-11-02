@@ -35,13 +35,24 @@
     if (window.say) say('VINALL is for 13 and over', 'Sorry, you need to be 13 or older to use VINALL. If you made this account by mistake, email vinall.support@gmail.com and we will delete it.');
   }
   var busy = null;
+  /* Who has answered, for this session. Until the question is settled for
+     the signed-in account, nothing may land on top of it: the daily claim
+     waits and a level-up is held (2026-11-02 — a new account's first claim
+     took it to level 2 a moment before this overlay appeared, and the pop
+     sat over the question). */
+  var settledFor = null;
+  function settle(u) {
+    settledFor = u.id;
+    try { window.dispatchEvent(new Event('vinall:agechecked')); } catch (e) {}
+  }
   async function ensure(u) {
     var c = sb(); if (!c || !u) return true;
     if (busy) return busy;
+    if (settledFor !== u.id) settledFor = null;
     busy = (async function () {
       var band = u.user_metadata && u.user_metadata.age_band;
       if (band === 'under13') { await refuse(c); return false; }
-      if (BANDS[band]) return true;
+      if (BANDS[band]) { settle(u); return true; }
       var el = document.getElementById('age-gate') || overlay();
       band = await new Promise(function (resolve) {
         el.addEventListener('click', function (e) {
@@ -59,11 +70,19 @@
         } catch (e) {}
         if (window.say) say('Your ratings start friends-only', 'Only people you follow who follow you back can see your ratings and notes. You can change this in Edit profile.');
       }
+      settle(u);
       return true;
     })();
     try { return await busy; } finally { busy = null; }
   }
-  window.AgeCheck = { ensure: ensure };
+  window.AgeCheck = {
+    ensure: ensure,
+    // True once the signed-in account has an answer on record this session.
+    settled: function () {
+      var u = window.Cloud && Cloud.getUser ? Cloud.getUser() : null;
+      return !!(u && settledFor === u.id);
+    }
+  };
 
   /* ---- Report and delete controls ----------------------------------------
      One delegated handler for every [data-report] button (reviews, feed posts,

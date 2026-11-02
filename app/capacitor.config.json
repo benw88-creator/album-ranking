@@ -17,7 +17,7 @@
   },
   "plugins": {
     "Keyboard": {
-      "resize": "native"
+      "resize": "none"
     },
     "StatusBar": {
       "style": "DARK",

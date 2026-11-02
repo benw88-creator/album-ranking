@@ -467,9 +467,30 @@ html[data-motion="none"] #games-grid.arcade .gc-art, html[data-motion="none"] #g
 @media (max-width: 699px) {
   #recall-modal .modal-panel { padding: 22px 20px 20px; }
   #recall-modal { --rc-w: clamp(150px, min(62vw, calc(var(--app-h, 100dvh) * .84 - 450px)), 232px); }
-  /* Keyboard up: the sleeve gives its room to the field and the buttons. */
-  body.kb-up #recall-modal { --rc-w: 96px; }
-  body.kb-up #recall-modal .rc-top { margin-bottom: 8px; }
+  /* Keyboard up: everything a round needs fits above the keys with no
+     scrolling (2026-11-02, measured at 375pt with a 308pt keyboard: the
+     stack was 569px for 481px of room). The sleeve gives way first, then
+     the air between the pieces; nothing is hidden. */
+  body.kb-up #recall-modal .modal-panel { padding: 14px 18px 12px; }
+  body.kb-up #recall-modal { --rc-w: 76px; }
+  body.kb-up #recall-modal .rc-top { margin-bottom: 4px; }
+  body.kb-up #recall-modal .rc-deck { margin-top: 0; }
+  body.kb-up #recall-modal .rc-art { border-radius: 12px; }
+  body.kb-up #recall-modal .rc-tape { width: min(100%, 260px); margin-top: 10px; }
+  body.kb-up #recall-modal .rc-wave { height: 26px; }
+  body.kb-up #recall-modal .rc-steps { margin-top: 6px; }
+  body.kb-up #recall-modal .rc-timer { width: min(100%, 260px); margin-top: 6px; }
+  body.kb-up #recall-modal .rc-hear { height: 46px; margin-top: 8px; }
+  body.kb-up #recall-modal .rc-hear .rc-play-ico { width: 32px; height: 32px; }
+  body.kb-up #recall-modal .rc-hear .rc-play-ico::after { left: 12px; top: 9px; }
+  body.kb-up #recall-modal .rc-hear.on .rc-play-ico::after { left: 10px; top: 9px; }
+  body.kb-up #recall-modal .rc-answer { margin-top: 12px; }
+  body.kb-up #recall-modal .rc-answer input { height: 50px; }
+  body.kb-up #recall-modal .rc-key { top: 25px; }
+  body.kb-up #recall-modal .rc-verdict { min-height: 0; margin-top: 6px; }
+  body.kb-up #recall-modal .rc-verdict:empty { margin-top: 0; }
+  body.kb-up #recall-modal .rc-controls { margin-top: 8px; }
+  body.kb-up #recall-modal .rc-controls .btn-primary, body.kb-up #recall-modal .rc-skip { height: 46px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

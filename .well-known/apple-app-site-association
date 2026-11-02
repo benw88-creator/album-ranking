@@ -1,10 +1,11 @@
 {
   "applinks": {
-    "apps": [],
     "details": [
       {
-        "appID": "TEAMID.xyz.wildcrate.vinall",
-        "paths": ["/*"]
+        "appIDs": ["TEAMID.xyz.wildcrate.vinall"],
+        "components": [
+          { "/": "/*", "?": { "token_hash": "?*" } }
+        ]
       }
     ]
   }

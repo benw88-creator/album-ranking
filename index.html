@@ -9511,10 +9511,10 @@ input, textarea, select, [contenteditable="true"],
   .modal-panel { margin-bottom: env(safe-area-inset-bottom); }
 }
 </style>
-<link rel="stylesheet" href="/assets/interactions.css?v=5">
+<link rel="stylesheet" href="/assets/interactions.css?v=6">
 <link rel="stylesheet" href="/assets/replay.css?v=9">
 <link rel="stylesheet" href="/assets/you.css?v=3">
-<link rel="stylesheet" href="/assets/games.css?v=6">
+<link rel="stylesheet" href="/assets/games.css?v=7">
 <link rel="stylesheet" href="/assets/store.css?v=4">
 <link rel="stylesheet" href="/assets/glow.css?v=7">
 <link rel="stylesheet" href="/assets/themes2.css?v=2">
@@ -9530,7 +9530,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/charades.css?v=3">
 <link rel="stylesheet" href="/assets/passport.css?v=1">
 <link rel="stylesheet" href="/assets/artist.css?v=1">
-<link rel="stylesheet" href="/assets/discover.css?v=4">
+<link rel="stylesheet" href="/assets/discover.css?v=5">
 <link rel="stylesheet" href="/assets/liked.css?v=1">
 <link rel="stylesheet" href="/assets/crate.css?v=2">
 <link rel="stylesheet" href="/assets/polish.css?v=2">
@@ -9594,6 +9594,9 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
    shape the email template sends. A bare ?code= is NOT forwarded: Google
    sign-in returns one too. */
 (function () {
+  /* Not in the app: reset.html is not in the bundle, and Cloud.init handles a
+     token_hash link itself (a Universal Link from the email lands here). */
+  if (document.documentElement.classList.contains('is-native')) return;
   var p = new URLSearchParams(location.search), f = new URLSearchParams(location.hash.replace(/^#/, ''));
   var type = p.get('type') || f.get('type');
   var code = p.get('error_code') || f.get('error_code') || '';
@@ -9979,7 +9982,16 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
     var room = Math.round(vv.offsetTop + vv.height - top - 12);
     root.style.setProperty('--sugg-max', Math.max(120, room) + 'px');
   }
+  /* In the app the keyboard is reported by the Keyboard plugin's own events
+     and nothing else (see below), so the viewport handler only publishes
+     --app-h there. Two sources of one number is how the login sheet ended up
+     jumping three times per tap (2026-11-02). */
+  var NATIVE = root.classList.contains('is-native');
   function apply() {
+    if (NATIVE) {
+      root.style.setProperty('--app-h', Math.round(root.clientHeight - last) + 'px');
+      return;
+    }
     // Rounded and floored at zero: sub-pixel noise on every scroll would
     // otherwise churn a custom property that half the sheets are sized from.
     var kb = Math.max(0, Math.round(root.clientHeight - (vv.height + vv.offsetTop)));
@@ -10012,43 +10024,83 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
     });
   }
 
-  function focusIntoView() {
-    var a = document.activeElement;
-    if (!a || !/^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
-    requestAnimationFrame(function () {
-      try { a.scrollIntoView({ block: 'center', behavior: 'auto' }); } catch (e) {}
-    });
-  }
-
   vv.addEventListener('resize', apply);
   vv.addEventListener('scroll', apply);
-  /* In the app the webview itself shrinks for the keyboard (Keyboard.resize
-     "native"), so the visible viewport and the layout agree and --kb reads 0
-     — `apply()` genuinely has no way to see the keyboard in this mode, no
-     matter how often it's re-run. That's why `requestAnimationFrame(apply)`
-     here never actually resized anything: it kept recomputing the same zero.
-     REPORTED LIVE, ON DEVICE: the login sheet sat exactly where it would
-     with no keyboard at all, which is this. The plugin's own event carries
-     the real keyboard height as `info.keyboardHeight` — used directly now,
-     no viewport inference involved, which is the only number in this mode
-     that is actually correct. */
-  window.addEventListener('keyboardWillShow', function (ev) {
-    document.body.classList.add('kb-up');
+  /* THE APP: ONE MOVEMENT, IN TIME WITH THE KEYBOARD (2026-11-02).
+     Measured on an iPhone 13 Pro with `Keyboard.resize: "native"`: a tap on
+     the login email field lifted the sheet off the top of the screen
+     (keyboardWillShow set --kb while the webview was still full height),
+     dropped it back (a viewport event recomputed --kb as 0), lifted it off
+     again (keyboardDidShow), and only landed ~800ms later when the webview
+     finally shrank — and the old scrollIntoView scrolled the page under it
+     as well. So the webview no longer resizes at all (`resize: "none"` in
+     capacitor.config.json) and this is the only thing that moves anything:
+     keyboardWillShow arrives before the keyboard starts to rise, --kb is set
+     once, and the sheets transition to it over the keyboard's own duration
+     (`html.is-native` rules in assets/interactions.css). keyboardDidShow only
+     corrects the height if the bar above the keys changed it. */
+  function shown(ev) {
     var kb = Math.round((ev && ev.keyboardHeight) || 0);
-    if (kb > 0) { last = kb; root.style.setProperty('--kb', kb + 'px'); }
-    focusIntoView();
-  });
-  window.addEventListener('keyboardDidShow', function (ev) {
+    if (kb <= 0 || kb === last) return;
+    last = kb;
+    root.style.setProperty('--kb', kb + 'px');
+    root.style.setProperty('--vv-top', '0px');
+    root.style.setProperty('--vv-h', Math.round(root.clientHeight - kb) + 'px');
+    root.style.setProperty('--app-h', Math.round(root.clientHeight - kb) + 'px');
     document.body.classList.add('kb-up');
-    var kb = Math.round((ev && ev.keyboardHeight) || 0);
-    if (kb > 0) { last = kb; root.style.setProperty('--kb', kb + 'px'); }
-    focusIntoView();
-  });
-  window.addEventListener('keyboardWillHide', function () {
-    document.body.classList.remove('kb-up');
-    last = 0;
-    root.style.setProperty('--kb', '0px');
-  });
+    // Once the sheet has finished rising, nudge the field into view inside
+    // its OWN scroller if it is still covered. Never scrollIntoView: that
+    // scrolls every ancestor, the page included.
+    clearTimeout(shown.t);
+    shown.t = setTimeout(revealField, 300);
+  }
+  function revealField() {
+    var a = document.activeElement;
+    if (!a || !/^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
+    var box = a.parentElement;
+    while (box && box !== document.body) {
+      var oy = getComputedStyle(box).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && box.scrollHeight > box.clientHeight) break;
+      box = box.parentElement;
+    }
+    if (!box || box === document.body) return;
+    var f = a.getBoundingClientRect(), b = box.getBoundingClientRect();
+    var bottom = Math.min(b.bottom, root.clientHeight - last) - 12, top = b.top + 12;
+    var d = f.bottom > bottom ? f.bottom - bottom : (f.top < top ? f.top - top : 0);
+    if (d) box.scrollBy({ top: d, behavior: 'smooth' });
+  }
+  /* THE PAGE BEHIND A SHEET IS PINNED WHILE THE KEYBOARD IS UP (2026-11-02).
+     With nothing resizing, WebKit "helps" by scrolling the document to show
+     the focused field — measured in Recall: 245px, which slid the sheet up
+     off the keyboard and left a dark band between them. A document that
+     cannot scroll gives it nothing to scroll. Only while a sheet or the
+     tutorial is open, and the reading position is put back on the way out. */
+  var pinned = null;
+  function pin() {
+    if (pinned || !document.querySelector('.modal.open, .onb.open')) return;
+    var b = document.body, y = window.scrollY || 0;
+    pinned = { y: y, css: b.style.cssText };
+    b.style.position = 'fixed'; b.style.top = (-y) + 'px'; b.style.left = '0'; b.style.right = '0'; b.style.width = '100%';
+  }
+  function unpin() {
+    if (!pinned) return;
+    var p = pinned; pinned = null;
+    document.body.style.cssText = p.css;
+    window.scrollTo(0, p.y);
+  }
+  if (NATIVE) {
+    window.addEventListener('keyboardWillShow', pin);
+    window.addEventListener('keyboardWillShow', shown);
+    window.addEventListener('keyboardDidShow', shown);
+    window.addEventListener('keyboardDidHide', unpin);
+    window.addEventListener('keyboardWillHide', function () {
+      clearTimeout(shown.t);
+      last = 0;
+      root.style.setProperty('--kb', '0px');
+      root.style.setProperty('--app-h', root.clientHeight + 'px');
+      document.body.classList.remove('kb-up');
+    });
+  }
   // The dropdown opens and grows as results arrive, after the keyboard has
   // already settled, so it is re-measured when its contents change too.
   document.addEventListener('input', function (e) { if (e.target && e.target.id === 'search-input') requestAnimationFrame(sizeSuggestions); }, true);
@@ -17459,10 +17511,14 @@ const Cloud=(function(){
     if(native&&!nativeAuthOK())return;               // stay hidden; see above
     var ext=await enabledProviders();
     var any=false;
+    /* Google is off everywhere, by the owner's decision (2026-11-02): only
+       Apple and email. Put 'google' back in this list to bring it back; the
+       button, the handler and the Supabase provider are all left intact. */
+    var OFF={google:true};
     ['apple','google'].forEach(function(p){
       var btn=document.getElementById('auth-'+p);
       if(!btn)return;
-      var live=!!ext[p];
+      var live=!!ext[p]&&!OFF[p];
       btn.style.display=live?'':'none';
       if(!live)return;
       any=true;
@@ -17660,6 +17716,32 @@ const Cloud=(function(){
       // account. Nothing here should treat a ?code= as a password reset.
       if (query.get('code') || hash.get('access_token')) {
         setTimeout(function () { try { history.replaceState(null, '', location.pathname); } catch (e) {} }, 1500);
+      }
+    } else if (tokenHash && !authErr && /^(signup|email|invite|magiclink)$/.test(otpType || '')) {
+      /* THE CONFIRMATION EMAIL (2026-11-02). Its link is
+         https://www.vinall.xyz/?token_hash=…&type=signup — inert until this
+         exchanges it, like the reset link — and with the app installed iOS
+         opens it in the app as a Universal Link, so somebody who signed up in
+         the app is signed in there, never on the website. Awaited here, so
+         the session check just below finds the new session and runs
+         onAuthed, which starts the tutorial. */
+      history.replaceState(null, '', location.pathname);
+      if (window.dismissSplash) try { dismissSplash(); } catch (e) {}
+      let res = null;
+      try { res = await sb.auth.verifyOtp({ type: otpType === 'signup' ? 'signup' : 'email', token_hash: tokenHash }); }
+      catch (e) { res = { error: { message: String((e && e.message) || e) } }; }
+      if (!res || res.error || !res.data || !res.data.session) {
+        let signedIn = false;
+        try { const { data } = await sb.auth.getSession(); signedIn = !!(data && data.session); } catch (e) {}
+        if (!signedIn) setTimeout(function () {
+          document.getElementById('auth-modal').classList.add('open');
+          showAuthView('main');
+          const el = document.getElementById('auth-error');
+          if (el) {
+            el.style.color = 'var(--red)';
+            el.textContent = 'That confirmation link has expired or was already used. Log in, or sign up again for a new one.';
+          }
+        }, 300);
       }
     } else if (tokenHash && !authErr) {
       history.replaceState(null, '', location.pathname);
@@ -22362,14 +22444,25 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
      closes and the main page is up. The level itself is the server's and is
      already awarded; this only decides when it is announced. */
   var _lvlQ = null;
-  function onboarding() { try { return !!(window.Onboard && Onboard.active && Onboard.active()); } catch (e) { return false; } }
-  window.addEventListener('vinall:onboarded', function () {
+  /* Held while the age question is unanswered as well: nothing may sit on
+     top of a question that must be answered (2026-11-02). Released when it
+     is, unless the tutorial has opened in the meantime, which holds it on. */
+  function onboarding() {
+    try {
+      if (document.getElementById('age-gate')) return true;
+      if (window.AgeCheck && AgeCheck.settled && window.Cloud && Cloud.getUser && Cloud.getUser() && !AgeCheck.settled()) return true;
+      return !!(window.Onboard && Onboard.active && Onboard.active());
+    } catch (e) { return false; }
+  }
+  function releaseLevels() {
     setTimeout(function () {
       if (!_lvlQ || onboarding()) return;
       var q = _lvlQ; _lvlQ = null;
       levelUp(q.to, q.from);
     }, 1100);
-  });
+  }
+  window.addEventListener('vinall:onboarded', releaseLevels);
+  window.addEventListener('vinall:agechecked', releaseLevels);
   function levelUp(level, from) {
     if (onboarding()) {
       var f = Math.max(1, Math.min(from || level - 1, level - 1));
@@ -23053,6 +23146,9 @@ document.querySelectorAll('[data-icon]').forEach(function (el) {
   function autoClaimReady() {
     if (document.hidden) return false;
     if (document.getElementById('splash-gate') || document.getElementById('age-gate')) return false;
+    // The age overlay is added a beat after sign-in, so its absence is not
+    // proof it has been answered — ask the check itself.
+    if (window.AgeCheck && AgeCheck.settled && !AgeCheck.settled()) return false;
     var o = document.getElementById('onb');
     return !(o && o.classList.contains('open'));
   }
@@ -41020,16 +41116,12 @@ window.renderAdminStats = renderAdminStats;
      because a reflection belongs to the room, not the record — the printed
      label is what you read the rotation against. */
   function welcome() {
+    try { prewarmFirst(); } catch (e) {}
     show(
       '<div class="onb-hero onb-hero2">' +
         '<button class="onb-deck" id="onb-deck" type="button" aria-label="Spin the record">' +
           '<span class="onb-vinyl" id="onb-vinyl" aria-hidden="true">' +
-            '<span class="onb-vlabel"><svg viewBox="0 0 100 100" aria-hidden="true">' +
-              '<defs><path id="onb-arc" d="M50,50 m-35,0 a35,35 0 1,1 70,0 a35,35 0 1,1 -70,0"/></defs>' +
-              '<text><textPath href="#onb-arc" startOffset="0">VINALL · SIDE A · 33⅓ RPM · VINALL · SIDE A · 33⅓ RPM ·</textPath></text>' +
-              '<circle class="onb-vring" cx="50" cy="50" r="21"/>' +
-              '<circle class="onb-spindle" cx="50" cy="50" r="4.2"/>' +
-            '</svg></span>' +
+            '<span class="onb-vlabel"><i class="onb-vmark"></i></span>' +
           '</span>' +
           '<span class="onb-glint" aria-hidden="true"></span>' +
         '</button>' +
@@ -41245,14 +41337,36 @@ window.renderAdminStats = renderAdminStats;
      one" swaps the record rather than making somebody score something they
      have never heard — a tutorial that forces a dishonest first rating has
      poisoned the one thing the app is for. */
+  /* LOOKED UP BEFORE IT IS ASKED FOR (2026-11-02). The catalogue resolve
+     used to start when this beat drew, so every new account saw an empty
+     cover for the length of a search before Thriller appeared, and then the
+     sleeve loaded a second time from the search result's own art url. Both
+     records are resolved, and their sleeves decoded, from the welcome beat
+     onwards; the card keeps the pool's art, the url that was preloaded. */
+  var FIRST_PICKS = ['Thriller', 'Graduation'];
+  var _firstPre = {};
+  function prewarmFirst() {
+    FIRST_PICKS.forEach(function (t) {
+      if (_firstPre[t]) return;
+      var row = fromPool(t); if (!row) return;
+      var e = _firstPre[t] = { row: row, meta: null };
+      if (row.art) { var im = new Image(); im.decoding = 'async'; im.src = row.art; }
+      e.p = resolve(row).then(function (m) { if (row.art) m.art = row.art; e.meta = m; return m; });
+    });
+  }
   async function first() {
-    var picks = ['Thriller', 'Graduation'];
+    var picks = FIRST_PICKS;
     var n = 0;
+    prewarmFirst();
 
     async function card() {
-      var row = fromPool(picks[n]) || famous(1)[0];
-      show('<div class="onb-cover onb-cover-wait"></div>');
-      var meta = await resolve(row);
+      var pre = _firstPre[picks[n]];
+      var row = (pre && pre.row) || fromPool(picks[n]) || famous(1)[0];
+      var meta = pre && pre.meta;
+      if (!meta) {
+        show('<div class="onb-cover onb-cover-wait"></div>');
+        meta = pre ? await pre.p : await resolve(row);
+      }
       S.first = meta.name;
       /* Thriller first because nearly everybody can score it in two seconds.
          Not knowing it swaps to Graduation; not knowing that one skips the
@@ -41409,6 +41523,12 @@ window.renderAdminStats = renderAdminStats;
     );
     var sl = el('onb-r'), btn = el('onb-go'), spin = el('onb-spin'), playing = false;
     if (window.GlowSlider) GlowSlider.enhance(sl, { className: 'gs-fy' });
+    /* The catalogue match runs while they listen, not after they press Rate:
+       awaiting it on the press left the button dead for the length of a
+       search before anything answered the tap (2026-11-02). */
+    var hitP = searchItems(t.title + ' ' + t.artist, 'song').then(function (hits) {
+      return (hits || []).filter(function (h) { return _norm(h.name) === _norm(t.title); })[0] || null;
+    }).catch(function () { return null; });
     function paint() {
       btn.textContent = 'Rate ' + sl.value;
       host.querySelector('.onb-step').style.setProperty('--onb-tint', window.songColor ? songColor(+sl.value) : 'var(--gold)');
@@ -41426,18 +41546,17 @@ window.renderAdminStats = renderAdminStats;
     var alt = el('onb-alt'); if (alt) alt.addEventListener('click', function () { stopIt(); next(); });
     onCta(async function () {
       var v = +sl.value;
+      if (btn.disabled) return;
       btn.disabled = true;
-      var hit = null;
-      try {
-        var hits = await searchItems(t.title + ' ' + t.artist, 'song');
-        hit = (hits || []).filter(function (h) { return _norm(h.name) === _norm(t.title); })[0] || null;
-      } catch (e) {}
+      // Answer the tap now; the save follows the match.
+      host.querySelector('.onb-step').classList.add('onb-rated');
+      if (window.buzz) buzz('good');
+      if (window.burst) try { burst(spin, { count: 18 + v * 3, spread: 120, colors: [window.songColor ? songColor(v) : '#f5c842', '#ffffff'] }); } catch (e) {}
+      var hit = await Promise.race([hitP, new Promise(function (r) { setTimeout(function () { r(null); }, 4000); })]);
       var track = { id: hit ? hit.id : 'x' + _norm(t.artist + t.title), name: hit ? hit.name : t.title, artists: [{ name: t.artist }] };
       var before = discs();
       try { saveSong(track, v, { id: 'x' + _norm(t.artist + t.album), name: t.album, art: t.art }); } catch (e) {}
       try { logActivity(ICONS.star, 'Rated', t.title, v); } catch (e) {}
-      host.querySelector('.onb-step').classList.add('onb-rated');
-      if (window.burst) try { burst(spin, { count: 18 + v * 3, spread: 120, colors: [window.songColor ? songColor(v) : '#f5c842', '#ffffff'] }); } catch (e) {}
       setTimeout(function () {
         var got = Math.max(0, discs() - before); if (got) discPop(got);
         stopIt();
@@ -43332,7 +43451,7 @@ window.renderAdminStats = renderAdminStats;
 <script src="/assets/charades.js?v=4"></script>
 <script src="/assets/passport-core.js?v=1"></script>
 <script src="/assets/passport.js?v=2"></script>
-<script src="/assets/safety.js?v=3"></script>
+<script src="/assets/safety.js?v=4"></script>
 <script src="/assets/discover.js?v=3"></script>
 <script src="/assets/liked.js?v=1"></script>
 <script src="/assets/sound.js?v=8"></script>

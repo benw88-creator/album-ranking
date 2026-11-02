@@ -118,6 +118,19 @@ html[data-motion="none"] *, html[data-motion="none"] *::before, html[data-motion
 @media (max-width: 699px) {
   body.kb-up .modal { top: 0; bottom: 0; height: auto; padding-bottom: var(--kb, 0px); }
 }
+/* The app (2026-11-02): the webview no longer shrinks for the keyboard, so
+   --kb is the whole story, set once from keyboardWillShow, which fires just
+   before the keyboard starts to rise. Every surface that has to clear the
+   keys follows it over the keyboard's own ~0.25s so the two move as one.
+   The transition sits on the resting rule as well, so the way down is as
+   smooth as the way up. The sheet is capped to the visible height under the
+   status bar; anything taller scrolls inside it rather than off the top. */
+html.is-native .modal { transition: padding-bottom .25s cubic-bezier(.2, .8, .25, 1); }
+html.is-native .onb { transition: padding-bottom .25s cubic-bezier(.2, .8, .25, 1); }
+html.is-native .sc-panel { transition: transform 320ms cubic-bezier(.2,.9,.25,1), margin-bottom .25s cubic-bezier(.2, .8, .25, 1); }
+html.is-native .modal-panel, html.is-native body.kb-up .modal-panel { transition: max-height .25s cubic-bezier(.2, .8, .25, 1); }
+html.is-native body.kb-up .modal-panel { max-height: calc(var(--vv-h, 100%) - max(12px, env(safe-area-inset-top, 0px)) - 6px); }
+html.is-native body.kb-up .onb { padding-bottom: calc(var(--kb, 0px) + 12px); }
 #auth-modal { background: var(--bg); backdrop-filter: none; }
 html:has(#auth-modal.open), body:has(#auth-modal.open) { overscroll-behavior: none; background: var(--bg); }
 body:has(#auth-modal.open) > :is(.wrap, #artist-hero, #player-bar, .activity, .activity-backdrop, .today-info-pop) { visibility: hidden; }

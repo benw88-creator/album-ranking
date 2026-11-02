@@ -41,10 +41,32 @@ Found and fixed on 2026-11-02, both worth not re-shipping:
   so `--kb` itself never actually moved, no matter how often it re-ran.
   Fixed to read `--kb` straight off the event's own `keyboardHeight`
   instead, which is the one number in this mode that's actually correct.
-  **Not yet confirmed fixed on an actual device** — diagnosed and patched
-  from a screenshot, not watched working. Check it on the next native
-  build, on the login sheet specifically and on at least one other sheet
-  (reported as happening "a lot," not just at login).
+  **Superseded the same night, measured on an iPhone 13 Pro**: with
+  `resize: "native"` plus that fix the sheet was lifted TWICE (webview
+  shrink + `--kb` padding) — off the top of the screen, back, off again,
+  landing ~800ms later. See the next entry.
+- **The app's keyboard is one source now (2026-11-02).** `Keyboard.resize`
+  is `"none"`: the webview never shrinks, and `keyboardWillShow` (which fires
+  before the keys rise) sets `--kb`, `--vv-h` and `kb-up` once; sheets,
+  `.onb` and `.sc-panel` transition to it over .25s so they move with the
+  keyboard (`html.is-native` rules in interactions.css). The viewport
+  handler publishes only `--app-h` in the app. While the keyboard is up and
+  a sheet is open the BODY IS PINNED (`position: fixed`, reading position
+  restored on hide), because WebKit otherwise scrolls the document to show
+  the field — 245px in Recall, which slid the sheet off the keys. Never
+  `scrollIntoView` there: it scrolls every ancestor, the page included;
+  `revealField` scrolls only the field's own scroller. Recall has a compact
+  `body.kb-up` layout in games.css so a round fits above the keys with no
+  scrolling — **a game sheet must never scroll while typing**; give any new
+  one the same treatment and measure it on a device.
+- **Google sign-in is off everywhere** by the owner's decision (`OFF` in
+  `wireSocialAuth`); Apple and email only.
+- **Confirmation emails must open the app.** `Cloud.init` verifies a
+  `?token_hash=…&type=signup` link with `verifyOtp` and signs the person in
+  where they tapped it. The AASA claims ONLY URLs carrying `token_hash`, and
+  only on **www** — the apex 308s and Apple does not follow redirects for the
+  AASA, so a template on `{{ .SiteURL }}` (the apex) can never open the app.
+  Templates and the remaining steps: app-store-submission/UNIVERSAL-LINKS-SETUP.md.
 
 Before shipping any change near sign-up: actually try signing up with an
 email that's already registered (confirmed and unconfirmed), try it with the
@@ -1061,10 +1083,9 @@ the next modal somebody adds should not have to know this. The focused field is
 scrolled into view on the *resize* and not on focus: iOS animates the keyboard
 in after focus, so scrolling on focus scrolls against the old height.
 
-The native side is unchanged (`Keyboard.resize: "native"`). That resizes the
-webview frame, which handles `position: fixed` and does nothing about a
-`vh`-sized box inside it — which is why this was still broken in the app. The two
-are complementary, not alternatives.
+The native side was `Keyboard.resize: "native"` until 2026-11-02; it is
+`"none"` now and the plugin's own keyboard events drive `--kb` — see
+**Sign-up and login are the one screen that must never be wrong**.
 
 ## GO waits for the session
 
