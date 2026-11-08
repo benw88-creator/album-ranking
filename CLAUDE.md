@@ -1,5 +1,15 @@
 # VINALL
 
+## The redesign (Lab only, 2026-11-08)
+
+Five places: **Home, Discover, Rate, Arcade, Profile**. Every old view still exists with its id and render function; `assets/shell.js` decides which place each belongs to (`NAV_GROUP`, read by setMode through `navTabFor`), draws the segmented bars (Discover: For You / Community / Moments / People; Profile: Overview / Ratings / Records / Passport, Ratings has Albums / Songs / Liked) and the back bar on pushed pages (Shop, Achievements, About you, Your music, Replay, Bid Wars, Grooves). `assets/shell.css` is the design-system layer and loads last.
+
+- **Search lives in Rate.** The `.search-block` node is moved into `#rate-search-slot` at boot, listeners intact. A result opens the rating sheet (`RateSheet`, `#rs-modal`) rather than the album page; every save is `saveAlbum()`. Keyboard Enter still opens the album page.
+- **The brand header is Home-only** (`body[data-section]`). Shop and the Discs balance are on Profile (chip + More list); Settings is Profile's gear; the avatar menu is hidden.
+- Nav hues are keyed by `data-mode`, not `nth-child`. `body[data-place]` sets `--section` per place.
+- `scripts/tests/redesign.spec.mjs` covers place mapping, bars, back bars, Rate search -> sheet -> saved rating, and a faked signed-in profile. `SHOTS=<dir>` writes screenshots.
+- `splash-flight: lands on the mark when the page scrolls mid-flight` fails on the pre-redesign Lab too; not caused by this.
+
 ## Sign-up and login are the one screen that must never be wrong
 
 This is the first thing anybody who isn't already a user ever does. A bug here

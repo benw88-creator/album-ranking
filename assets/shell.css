@@ -317,3 +317,7 @@ body[data-section="foryou"] .fy-tabs { top: 50px; }
   backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   font: 600 14px/1 var(--font-body); margin-bottom: var(--s3);
 }
+/* games.css spans these by id across a 12-column grid; on this 2-column grid
+   a span of 6 invents four phantom columns. */
+#games-grid.arcade #drop-card.arc-tile, #games-grid.arcade #ew-card.arc-tile { grid-column: span 1; }
+#view-profile.is-guest > .section-head, #view-profile.is-guest > #lore-list { display: none; }

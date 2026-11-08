@@ -132,3 +132,14 @@ test('signed-in profile, shop and settings stay reachable', async ({ page }) => 
   await page.waitForTimeout(400);
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, '65-games-full.png'), fullPage: true });
 });
+
+test('desktop screenshots', async ({ page }) => {
+  test.skip(!SHOTS, 'SHOTS not set');
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await start(page, { seeded: true });
+  for (const m of ['home', 'rate', 'games', 'albums', 'foryou']) {
+    await page.evaluate(v => goToView(v), m);
+    await page.waitForTimeout(500);
+    await shot(page, '70-desk-' + m);
+  }
+});

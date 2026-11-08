@@ -173,6 +173,9 @@
     }
     var other = viewingOther();
     tb.hidden = other;
+    // Logged out, the page is one invitation; the lore heading under it was
+    // a second empty state saying the same thing.
+    sec.classList.toggle('is-guest', !signedIn() && !other);
     var n = $('shop-open-discs'), d = $('pt-discs');
     if (d) d.style.display = signedIn() ? '' : 'none';
     if (n && $('pt-discs-n')) $('pt-discs-n').textContent = /\d|∞/.test(n.textContent) ? n.textContent : 'Shop';
