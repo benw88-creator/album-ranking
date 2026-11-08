@@ -18,7 +18,7 @@ test('liking a song puts it in the Crate\'s Liked tab, once, and unliking syncs 
 
   await page.evaluate(() => goToView('liked'));
   await expect(page.locator('#view-liked')).toBeVisible();
-  await expect(page.locator('#view-liked .crate-tabs button.active')).toHaveText('Liked');
+  await expect(page.locator('#view-liked .seg-sub button.on')).toHaveText('Liked');
   await expect(page.locator('#liked-list .lk-row')).toHaveCount(1);
   await expect(page.locator('#liked-list .song-name')).toHaveText('Nikes');
   await expect(page.locator('#liked-list .song-sub')).toHaveText('Frank Ocean');

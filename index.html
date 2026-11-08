@@ -962,19 +962,13 @@ nav.modes button .nl {
    has no identity colour. Same reason --c-cyan and the rest are not themed.
    The inactive state stays --text-faint — five lit colours at once is a
    fairground, and the point is to say which one you are on. */
-nav.modes button:nth-child(2) { --nav-c: var(--gold);     --nav-c-dim: var(--gold-dim); }      /* Home       */
-nav.modes button:nth-child(3) { --nav-c: var(--c-cyan);   --nav-c-dim: var(--c-cyan-dim); }    /* Crate      */
-nav.modes button:nth-child(4) { --nav-c: var(--c-lime);   --nav-c-dim: var(--c-lime-dim); }    /* For You    */
-nav.modes button:nth-child(5) { --nav-c: var(--c-violet); --nav-c-dim: var(--c-violet-dim); }  /* Arcade     */
-nav.modes button:nth-child(6) { --nav-c: var(--c-pink);   --nav-c-dim: var(--c-pink-dim); }    /* Records    */
-nav.modes button:nth-child(7) { --nav-c: var(--c-blue);   --nav-c-dim: var(--c-blue-dim); }    /* Shop       */
-/* nth-child(1) is .nav-indicator, which is why the buttons start at 2.
-
-   POSITIONAL, so the body[data-section] map below has to be kept in step with
-   it BY HAND. Adding For You at position three shifted every hue after it by
-   one — the bar stayed correct and unique, and the page temperature silently
-   stopped agreeing with the button that got you there. The comments name the
-   destination for exactly that reason. */
+/* Keyed by DESTINATION, not position: the old nth-child map silently
+   reassigned every hue after any button that moved. */
+nav.modes button[data-mode="home"]    { --nav-c: var(--gold);     --nav-c-dim: var(--gold-dim); }
+nav.modes button[data-mode="foryou"]  { --nav-c: var(--c-lime);   --nav-c-dim: var(--c-lime-dim); }
+nav.modes button[data-mode="rate"]    { --nav-c: var(--c-cyan);   --nav-c-dim: var(--c-cyan-dim); }
+nav.modes button[data-mode="games"]   { --nav-c: var(--c-violet); --nav-c-dim: var(--c-violet-dim); }
+nav.modes button[data-mode="profile"] { --nav-c: var(--c-pink);   --nav-c-dim: var(--c-pink-dim); }
 nav.modes button.active { color: var(--nav-c, var(--section)); }
 nav.modes button.active .nav-icon { transform: translateY(-1px); }
 nav.modes button .nav-icon { transition: transform var(--dur) var(--ease); }
@@ -9535,6 +9529,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/crate.css?v=2">
 <link rel="stylesheet" href="/assets/polish.css?v=2">
 <link rel="stylesheet" href="/assets/albumpage.css?v=2">
+<link rel="stylesheet" href="/assets/shell.css?v=1">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -10338,22 +10333,15 @@ window.discAmt = function (n) {
   <nav class="modes" id="modes">
     <span class="nav-indicator" id="nav-indicator"></span>
     <button data-mode="home" class="active"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 7.1 8 2.6l5.6 4.5v5.8a.9.9 0 0 1-.9.9H3.3a.9.9 0 0 1-.9-.9Z"/><path d="M6.4 13.8V9.5h3.2v4.3"/></svg><span class="nl">Home</span></button>
-    <!-- Albums, Songs and The Crate were three nav items for one idea: music
-         that has been rated. They are one button now with a sub-tab bar, which
-         is the single biggest thing that made the top of the app feel busy.
-         Bid Wars and The Draw both lost their tabs the same way — one into the
-         Minigames grid, one into Collection — because a nav item should be a
-         place you go, not every feature that exists. -->
-    <button data-mode="albums"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.2 5.6h11.6v7.2a1 1 0 0 1-1 1H3.2a1 1 0 0 1-1-1Z"/><path d="m2.2 5.6 1.4-3h8.8l1.4 3"/><path d="M5.7 8.4v2.8M8 8.4v2.8M10.3 8.4v2.8"/></svg><span class="nl">Crate</span></button>
-    <button data-mode="foryou"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.4S2.6 10.2 2.6 6.5a2.9 2.9 0 0 1 5.4-1.5 2.9 2.9 0 0 1 5.4 1.5c0 3.7-5.4 6.9-5.4 6.9Z"/></svg><span class="nl">For You</span></button>
+    <!-- FIVE PLACES (the redesign). Each button is a destination; the views
+         that used to be tabs of their own (Crate, Records, Shop) live under
+         one of these now, and assets/shell.js keeps the right button lit for
+         every view (NAV_GROUP). Discover's button opens For You, Profile's
+         opens your profile; their sub-pages have a segmented bar. -->
+    <button data-mode="foryou"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.9"/><path d="m10.4 5.6-1.3 3.5-3.5 1.3 1.3-3.5Z"/></svg><span class="nl">Discover</span></button>
+    <button data-mode="rate"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.9"/><circle cx="8" cy="8" r="1.6"/><path d="M8 2.1v1.6"/></svg><span class="nl">Rate</span></button>
     <button data-mode="games"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.4" y="2.4" width="11.2" height="11.2" rx="2.8"/><circle cx="5.9" cy="5.9" r=".95" fill="currentColor" stroke="none"/><circle cx="10.1" cy="10.1" r=".95" fill="currentColor" stroke="none"/></svg><span class="nl">Arcade</span></button>
-    <button data-mode="collection"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.7" y="2.6" width="8.9" height="8.9" rx="1.5"/><path d="M11.3 13.4H4a1.4 1.4 0 0 1-1.4-1.4V4.7"/></svg><span class="nl">Records</span></button>
-    <!-- The data-mode stays `rewards`, and must. It is what setMode's explicit
-         `views` map is keyed on, what positionNavIndicator measures and what
-         every `#modes button[data-mode="rewards"]` selector in the file finds.
-         This is a display rename, the same arrangement as Album Blitz becoming
-         Cover Fire with every id, RPC and award key left as `blitz`. -->
-    <button data-mode="rewards"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.7 2.3h1.8l1.5 7.2h6.7l1.5-5H4.6"/><circle cx="6.3" cy="12.5" r="1.2"/><circle cx="11.4" cy="12.5" r="1.2"/></svg><span class="nl">Shop</span></button>
+    <button data-mode="profile"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="5.6" r="2.7"/><path d="M2.9 13.6c.6-2.5 2.6-4 5.1-4s4.5 1.5 5.1 4"/></svg><span class="nl">Profile</span></button>
   </nav>
 
   <!-- connect gate -->
@@ -10515,10 +10503,23 @@ window.discAmt = function (n) {
     <div class="fy-feed" id="fy-feed" tabindex="0" role="region" aria-label="For You feed" aria-describedby="fy-key-hint"></div>
   </section>
 
+  <!-- ============================ RATE ============================
+       The shortest road from "I want to rate that" to a saved score. The
+       existing search block is MOVED in here by assets/shell.js (the node,
+       listeners and all), so search has one home instead of a bar over every
+       page. Results open the rating sheet (#rs-sheet); the album page is one
+       tap further for anybody who wants the tracklist. Below the search, a
+       queue so the page is never empty: things you said you would get to. -->
+  <section id="view-rate" class="view" style="display:none;">
+    <div class="pg-head"><h2 class="pg-title">Rate</h2><p class="pg-sub">Search any album, or pick up where you left off.</p></div>
+    <div id="rate-search-slot"></div>
+    <div id="rate-body" class="rate-body"></div>
+  </section>
+
   <section id="view-crate" class="view" style="display:none;">
     <div class="section-head">
       <div>
-        <h2 style="font-size:26px; letter-spacing:-0.025em;">The Crate</h2>
+        <h2 style="font-size:26px; letter-spacing:-0.025em;">Community</h2>
       </div>
       <button class="btn-mini" id="crate-refresh" style="margin-left:auto;">&#8635; Refresh</button>
     </div>
@@ -10650,7 +10651,7 @@ window.discAmt = function (n) {
     <header class="cc-hero">
       <div class="cc-hero-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="cc-hero-txt">
-        <h2 class="cc-hero-title">Community Choice</h2>
+        <h2 class="cc-hero-title">Moments</h2>
         <p class="cc-intro">Best moments in songs.</p>
       </div>
       <button class="btn-primary cc-hero-cta" id="cc-new">Pick a moment</button>
@@ -10680,32 +10681,14 @@ window.discAmt = function (n) {
 
   <!-- ============================ GAMES ============================ -->
   <section id="view-games" class="view" style="display:none;">
-    <!-- THE ARCADE. Three groups, not one undifferentiated grid: what is new
-         today, what you play against somebody, what you play alone. Every
-         card carries its own drawn artwork (.gc-art, styled per game in
-         assets/games.css) rather than the same icon in the same box, and the
-         hues are assigned per GAME by id, not by position, so reordering this
-         list no longer repaints every card after the one that moved.
-
-         Recall leads, big, because it is the daily one with a song in it.
-         Album Tournament's card was retired with it; the module, its modal
-         and its award case are parked, so bringing it back is a card. -->
-    <header class="arc-head">
-      <!-- One marquee, not a kicker saying "The arcade" over a title saying
-           "Arcade". Lit like a cabinet: the letters flicker on as the page
-           arrives, and a row of bulbs chases along the edge. -->
-      <div class="arc-marquee">
-        <h2 class="arc-title" aria-label="Arcade"><span aria-hidden="true"><i>A</i><i>r</i><i>c</i><i>a</i><i>d</i><i>e</i></span></h2>
-
-      </div>
-      <button class="lb-bar arc-lb" id="leaderboard-card">
-        <span class="lb-bar-icon" data-icon="stopwatch"></span>
-        <span class="lb-bar-text"><b>Leaderboards</b></span>
-        <span class="lb-bar-go">&rarr;</span>
-      </button>
-    </header>
+    <!-- THE ARCADE (redesign). Today first: the three dailies as one set, Recall
+         leading. Then two calm lists instead of a wall of posters. Card ids,
+         handlers, gates and status lines (.gc-best) are unchanged; only order
+         and presentation moved. Styles: assets/shell.css, ARCADE. -->
+    <div class="pg-head arc-pg"><h2 class="pg-title">Arcade</h2>
+      <button class="chip-btn" id="leaderboard-card"><span data-icon="stopwatch"></span><span>Leaderboards</span></button></div>
     <div class="games-grid arcade" id="games-grid">
-      <h3 class="arc-label"><span>Featured</span></h3>
+      <h3 class="arc-label"><span>Today</span></h3>
       <div class="game-card gc-feature" id="recall-card">
         <div class="gc-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="gc-emoji" data-icon="wave"></div>
@@ -10714,25 +10697,7 @@ window.discAmt = function (n) {
         <div class="gc-go">Play today&rsquo;s song &rarr;</div>
         <div class="gc-best" id="recall-card-status"></div>
       </div>
-      <div class="game-card gc-feature" id="war-card">
-        <div class="gc-art" aria-hidden="true"><span class="bw-sleeves"><i></i><i></i><i></i><i></i><i></i></span><span class="bw-bids"><i></i><i></i><i></i><i></i><i></i></span><span class="bw-bids them"><i></i><i></i><i></i><i></i><i></i></span></div>
-        <div class="gc-emoji" data-icon="trophy"></div>
-        <h3>Bid Wars</h3>
-        <p>Bid blind on five records. Most streams wins.</p>
-        <div class="gc-go">Challenge someone &rarr;</div>
-      </div>
-
-      <h3 class="arc-label"><span>Party</span></h3>
-      <div class="game-card" id="charades-card">
-        <div class="cz-art" aria-hidden="true"><span class="cz-art-name">Queen</span><i class="cz-art-ring"></i><b>60</b><span class="cz-art-team"><i></i><i></i><i></i><i></i></span></div>
-        <span class="cz-kicker">Pass the phone &middot; 4+ players</span>
-        <h3><span>Artist</span> Charades</h3>
-        <p>No words. No humming.</p>
-        <div class="gc-go" id="charades-card-go">Play &rarr;</div>
-      </div>
-
-      <h3 class="arc-label"><span>Daily</span></h3>
-      <div class="game-card" id="drop-card">
+      <div class="game-card arc-tile" id="drop-card">
         <div class="gc-art" aria-hidden="true"></div>
         <div class="gc-emoji" data-icon="disc"></div>
         <h3>Daily Drop</h3>
@@ -10740,7 +10705,7 @@ window.discAmt = function (n) {
         <div class="gc-go">Play today &rarr;</div>
         <div class="gc-best" id="drop-card-status"></div>
       </div>
-      <div class="game-card" id="ew-card">
+      <div class="game-card arc-tile" id="ew-card">
         <div class="gc-art" aria-hidden="true"><i>E</i><i>A</i><i>R</i></div>
         <div class="gc-emoji" data-icon="mic"></div>
         <h3>Earworm</h3>
@@ -10748,9 +10713,15 @@ window.discAmt = function (n) {
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" id="ew-card-status"></div>
       </div>
-
-      <h3 class="arc-label"><span>Quick play</span></h3>
-      <div class="game-card" id="blitz-card">
+      <h3 class="arc-label"><span>With friends</span></h3>
+      <div class="game-card arc-row" id="war-card">
+        <div class="gc-art" aria-hidden="true"><span class="bw-sleeves"><i></i><i></i><i></i><i></i><i></i></span><span class="bw-bids"><i></i><i></i><i></i><i></i><i></i></span><span class="bw-bids them"><i></i><i></i><i></i><i></i><i></i></span></div>
+        <div class="gc-emoji" data-icon="trophy"></div>
+        <h3>Bid Wars</h3>
+        <p>Bid blind on five records. Most streams wins.</p>
+        <div class="gc-go">Challenge someone &rarr;</div>
+      </div>
+      <div class="game-card arc-row" id="blitz-card">
         <div class="gc-art" aria-hidden="true"><i></i><i></i><i></i></div>
         <div class="gc-emoji" data-icon="pistol"></div>
         <h3>Cover Fire</h3>
@@ -10758,7 +10729,15 @@ window.discAmt = function (n) {
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" id="blitz-card-status"></div>
       </div>
-      <div class="game-card" data-game="cover" id="cover-card">
+      <div class="game-card arc-row" id="charades-card">
+        <div class="cz-art" aria-hidden="true"><span class="cz-art-name">Queen</span><i class="cz-art-ring"></i><b>60</b><span class="cz-art-team"><i></i><i></i><i></i><i></i></span></div>
+        <span class="cz-kicker">Pass the phone &middot; 4+ players</span>
+        <h3><span>Artist</span> Charades</h3>
+        <p>No words. No humming.</p>
+        <div class="gc-go" id="charades-card-go">Play &rarr;</div>
+      </div>
+      <h3 class="arc-label"><span>Solo</span></h3>
+      <div class="game-card arc-row" data-game="cover" id="cover-card">
         <div class="gc-art" aria-hidden="true"></div>
         <div class="gc-emoji" data-icon="camera"></div>
         <h3>Guess the Cover</h3>
@@ -10766,7 +10745,7 @@ window.discAmt = function (n) {
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="cover"></div>
       </div>
-      <div class="game-card" data-game="coverx" id="coverx-card">
+      <div class="game-card arc-row" data-game="coverx" id="coverx-card">
         <div class="gc-art" aria-hidden="true"></div>
         <div class="gc-emoji" data-icon="fire"></div>
         <h3>Cover EXTREME</h3>
@@ -10774,7 +10753,7 @@ window.discAmt = function (n) {
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="coverx"></div>
       </div>
-      <div class="game-card" data-game="tracklist" id="tracklist-card">
+      <div class="game-card arc-row" data-game="tracklist" id="tracklist-card">
         <div class="gc-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         <div class="gc-emoji" data-icon="note"></div>
         <h3>Guess from Tracklist</h3>
@@ -10782,7 +10761,7 @@ window.discAmt = function (n) {
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="tracklist"></div>
       </div>
-      <div class="game-card" data-game="year" id="year-card">
+      <div class="game-card arc-row" data-game="year" id="year-card">
         <div class="gc-art" aria-hidden="true"><i>&rsquo;84</i></div>
         <div class="gc-emoji" data-icon="yearreel"></div>
         <h3>Guess the Year</h3>
@@ -10790,7 +10769,7 @@ window.discAmt = function (n) {
         <div class="gc-go">Play &rarr;</div>
         <div class="gc-best" data-best="year"></div>
       </div>
-      <div class="game-card" id="hl-card">
+      <div class="game-card arc-row" id="hl-card">
         <div class="gc-art" aria-hidden="true"><i></i><i></i></div>
         <div class="gc-emoji" data-icon="updown"></div>
         <h3>Higher or Lower</h3>
@@ -11456,6 +11435,12 @@ window.discAmt = function (n) {
      whose page feels dead because of a system animation preference should not
      have to sign up to fix it. That was the one reason the Shop modal opened
      for guests at all; now it is this modal's job. -->
+<!-- THE RATING SHEET (redesign): rate an album from anywhere that is not the
+     album page. Static markup so the back button's modal observer sees it.
+     Filled by assets/shell.js; every save goes through saveAlbum(). -->
+<div class="modal" id="rs-modal" role="dialog" aria-modal="true" aria-labelledby="rs-title">
+  <div class="modal-panel rs-panel" id="rs-panel"></div>
+</div>
 <div class="modal" id="settings-modal">
   <div class="modal-panel" style="max-width:520px;">
     <button class="modal-close" id="settings-close" aria-label="Close">&times;</button>
@@ -14392,6 +14377,7 @@ const views = {
      blank page — the trap this file has carried a warning about since the
      nav was built, and this is the first new destination since. */
   foryou: document.getElementById('view-foryou'),
+  rate: document.getElementById('view-rate'),
   games: document.getElementById('view-games'),
   wars: document.getElementById('view-wars'),
   collection: document.getElementById('view-collection'),
@@ -14452,7 +14438,7 @@ function setMode(mode, fromCode) {
   var _changed = mode !== currentMode || mode === 'album-detail';
   currentMode = mode;
   window.currentMode = mode;
-  var pageNames = { albums: 'Albums', songs: 'Songs', liked: 'Liked songs', crate: 'The Crate', choice: 'Community Choice', foryou: 'For You', games: 'Arcade', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves', replay: 'Replay', about: 'About you', yourmusic: 'Your music', 'album-detail': 'Album' };
+  var pageNames = { albums: 'Albums', songs: 'Songs', liked: 'Liked songs', crate: 'Community', choice: 'Moments', foryou: 'Discover', rate: 'Rate', games: 'Arcade', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves', replay: 'Replay', about: 'About you', yourmusic: 'Your music', 'album-detail': 'Album' };
   document.title = mode === 'home' ? 'VINALL' : 'VINALL — ' + (pageNames[mode] || 'Discover');
   Object.keys(views).forEach(function (k) { views[k].style.display = (k === mode) ? 'block' : 'none'; });
   /* A fade keeps geometry and fixed descendants stable. A transformed view
@@ -14480,11 +14466,12 @@ function setMode(mode, fromCode) {
   /* One nav button can stand for several views. The Crate button covers
      albums, songs and the community feed, so it has to stay lit on all three —
      otherwise switching sub-tab visibly unselects the nav item you are inside. */
-  var CRATE_GROUP = ['albums', 'songs', 'liked', 'crate', 'choice'];
+  /* Which of the five places this view belongs to. assets/shell.js owns the
+     map (NAV_GROUP); an album page keeps lit the button you came from. */
+  var _navKey = window.navTabFor ? window.navTabFor(mode) : mode;
   document.querySelectorAll('#modes button').forEach(function (b) {
     var m = b.dataset.mode;
-    var on = m === mode ||
-      (m === 'albums' && CRATE_GROUP.indexOf(mode) !== -1);
+    var on = m === _navKey;
     b.classList.toggle('active', on);
     if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
@@ -14529,6 +14516,8 @@ function setMode(mode, fromCode) {
   if (mode === 'songs') renderSongs();
   if (mode === 'liked' && window.LikedSongs) window.LikedSongs.render();
   if (mode === 'foryou' && window.renderForYou) window.renderForYou();
+  if (mode === 'rate' && window.RateTab) window.RateTab.render();
+  if (window.Shell) window.Shell.onMode(mode);
   /* LEAVING has to silence it. setMode only changes `display`, and an <audio>
      element does not care that the card holding it is hidden — without this,
      a record carries on playing over whatever you went to look at. */
@@ -27841,58 +27830,7 @@ window.renderAdminStats = renderAdminStats;
      existing render function, id and event handler working untouched, which on
      a 700KB single file is worth more than a tidier tree.
      ================================================================ -->
-<script>
-(function () {
-  var TABS = [
-    { mode: 'albums', label: 'Albums' },
-    { mode: 'songs',  label: 'Songs' },
-    { mode: 'liked',  label: 'Liked' },
-    { mode: 'crate',  label: 'Everyone' },
-    { mode: 'choice', label: 'Choice' }
-  ];
-
-  function barHTML(active) {
-    return '<div class="crate-tabs">' + TABS.map(function (t) {
-      return '<button type="button" data-crate-tab="' + t.mode + '"' +
-        (t.mode === active ? ' class="active"' : '') + '>' + t.label + '</button>';
-    }).join('') + '</div>';
-  }
-
-  function ensureBar(mode) {
-    var sec = document.getElementById('view-' + mode);
-    if (!sec) return null;
-    var bar = sec.querySelector('.crate-tabs');
-    if (!bar) {
-      var wrap = document.createElement('div');
-      wrap.innerHTML = barHTML(mode);
-      bar = wrap.firstChild;
-      // Above the section heading, so it reads as "which of these am I looking
-      // at" rather than as a filter on the thing below.
-      sec.insertBefore(bar, sec.firstChild);
-      bar.addEventListener('click', function (e) {
-        var b = e.target.closest('button[data-crate-tab]');
-        if (b && window.goToView) goToView(b.dataset.crateTab);
-      });
-    }
-    return bar;
-  }
-
-  function paintCrateTabs(mode) {
-    TABS.forEach(function (t) {
-      var bar = ensureBar(t.mode);
-      if (!bar) return;
-      bar.querySelectorAll('button').forEach(function (b) {
-        b.classList.toggle('active', b.dataset.crateTab === mode);
-      });
-    });
-  }
-
-  window.paintCrateTabs = paintCrateTabs;
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { paintCrateTabs('albums'); });
-  } else { paintCrateTabs('albums'); }
-})();
-</script>
+<!-- Replaced by the section bars in assets/shell.js (the redesign). -->
 
 <!-- ================================================================
      HUB TABS — the same idea as the Crate's sub-tabs, for two more groups.
@@ -27901,68 +27839,7 @@ window.renderAdminStats = renderAdminStats;
      door to each. Bars are injected at the top of each view and call
      setMode, so no section moved and no render function changed.
      ================================================================ -->
-<script>
-(function () {
-  var GROUPS = [
-    { key: 'you', tabs: [
-      { mode: 'profile', label: 'Profile' }, { mode: 'replay', label: 'Replay' },
-      { mode: 'about', label: 'About you' }, { mode: 'passport', label: 'Passport' }, { mode: 'yourmusic', label: 'Your music' },
-      { mode: 'achievements', label: 'Achievements' }, { act: 'activity', label: 'Activity' } ] },
-    { key: 'social', tabs: [
-      { mode: 'people', label: 'People' }, { mode: 'grooves', label: 'Grooves' } ] }
-  ];
-  function act(name) {
-    if (name === 'activity') { var t = document.getElementById('activity-toggle'); if (t) t.click(); }
-  }
-  // Somebody else's profile is not part of YOUR hub.
-  function othersProfile() {
-    try {
-      var u = new URLSearchParams(location.search).get('u');
-      var me = window.Cloud && Cloud.getUser && Cloud.getUser();
-      return !!u && (!me || u !== me.id);
-    } catch (e) { return false; }
-  }
-  function ensure(g, mode) {
-    var sec = document.getElementById('view-' + mode);
-    if (!sec) return null;
-    var bar = sec.querySelector(':scope > .hub-tabs');
-    if (bar) return bar;
-    bar = document.createElement('nav');
-    bar.className = 'crate-tabs hub-tabs';
-    bar.setAttribute('aria-label', g.key === 'you' ? 'You' : 'People');
-    bar.innerHTML = g.tabs.map(function (t) {
-      return t.mode ? '<button type="button" data-hub-tab="' + t.mode + '">' + t.label + '</button>'
-                    : '<button type="button" class="hub-act" data-hub-act="' + t.act + '">' + t.label + '</button>';
-    }).join('');
-    sec.insertBefore(bar, sec.firstChild);
-    bar.addEventListener('click', function (e) {
-      var b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.hubAct) { act(b.dataset.hubAct); return; }
-      if (b.dataset.hubTab === 'profile' && location.search.indexOf('u=') !== -1) history.replaceState(null, '', location.pathname + location.hash);
-      if (window.goToView) goToView(b.dataset.hubTab);
-    });
-    return bar;
-  }
-  function paintHubTabs(mode) {
-    GROUPS.forEach(function (g) {
-      if (!g.tabs.some(function (t) { return t.mode === mode; })) return;
-      var bar = ensure(g, mode);
-      if (!bar) return;
-      bar.hidden = g.key === 'you' && mode === 'profile' && othersProfile();
-      bar.querySelectorAll('[data-hub-tab]').forEach(function (b) {
-        var on = b.dataset.hubTab === mode;
-        b.classList.toggle('active', on);
-        /* The scroll is a layout READ, so it waits for the frame: done here it
-           forced a synchronous layout in the middle of setMode, before the
-           view's own render had run. */
-        if (on) { b.setAttribute('aria-current', 'page'); requestAnimationFrame(function () { if (bar.scrollWidth > bar.clientWidth) bar.scrollLeft = b.offsetLeft - 16; }); }
-        else b.removeAttribute('aria-current');
-      });
-    });
-  }
-  window.paintHubTabs = paintHubTabs;
-})();
-</script>
+<!-- Replaced by the section bars in assets/shell.js (the redesign). -->
 
 <!-- ================================================================
      COMMUNITY CHOICE
@@ -43455,4 +43332,5 @@ window.renderAdminStats = renderAdminStats;
 <script src="/assets/discover.js?v=3"></script>
 <script src="/assets/liked.js?v=1"></script>
 <script src="/assets/sound.js?v=8"></script>
+<script src="/assets/shell.js?v=1"></script>
 </html>

@@ -1,5 +1,5 @@
 import { test, expect, start } from './fixtures.mjs';
-const views = { home: 'VINALL', albums: 'Albums', songs: 'Songs', crate: 'The Crate', choice: 'Community Choice', foryou: 'For You', games: 'Arcade', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves' };
+const views = { home: 'VINALL', albums: 'Albums', songs: 'Songs', crate: 'Community', choice: 'Moments', foryou: 'Discover', rate: 'Rate', games: 'Arcade', wars: 'Bid Wars', collection: 'Collection', rewards: 'Shop', achievements: 'Achievements', profile: 'Profile', people: 'Discover', grooves: 'Grooves' };
 for (const [width, height] of [[320, 568], [375, 812], [768, 1024], [1024, 768], [1440, 900], [2560, 1440]]) {
   test(`all views at ${width}×${height}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height });
@@ -41,6 +41,8 @@ test('public documents, branding and official icons', async ({ page }) => {
 });
 test('search, album tracks and browser back', async ({ page }) => {
   await start(page, { seeded: true });
+  // Search lives in the Rate tab (redesign).
+  await page.evaluate(() => goToView('rate'));
   await page.locator('#search-input').fill('Record');
   await expect(page.locator('.suggestion').first()).toBeVisible();
   await page.locator('#search-input').press('ArrowDown');
