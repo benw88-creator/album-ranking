@@ -2,13 +2,26 @@
 
 ## The redesign (Lab only, 2026-11-08)
 
-Five places: **Home, Discover, Rate, Arcade, Profile**. Every old view still exists with its id and render function; `assets/shell.js` decides which place each belongs to (`NAV_GROUP`, read by setMode through `navTabFor`), draws the segmented bars (Discover: For You / Community / Moments / People; Profile: Overview / Ratings / Records / Passport, Ratings has Albums / Songs / Liked) and the back bar on pushed pages (Shop, Achievements, About you, Your music, Replay, Bid Wars, Grooves). `assets/shell.css` is the design-system layer and loads last.
+Five places: **Home, Discover, Rate, Arcade, Profile**. Every old view still exists with its id and render function; `assets/shell.js` decides which place each belongs to (`NAV_GROUP`, read by setMode through `navTabFor`), draws the segmented bars (Discover: For You / Community / Moments / People; Profile: see the polish pass below; Ratings has Albums / Songs / Liked) and the back bar on pushed pages (Achievements, Music Passport, Your music, Replay, Bid Wars, Grooves). `assets/shell.css` is the design-system layer and loads last.
 
 - **Search lives in Rate.** The `.search-block` node is moved into `#rate-search-slot` at boot, listeners intact. A result opens the rating sheet (`RateSheet`, `#rs-modal`) rather than the album page; every save is `saveAlbum()`. Keyboard Enter still opens the album page.
 - **The brand header is Home-only** (`body[data-section]`). Shop and the Discs balance are on Profile (chip + More list); Settings is Profile's gear; the avatar menu is hidden.
 - Nav hues are keyed by `data-mode`, not `nth-child`. `body[data-place]` sets `--section` per place.
 - `scripts/tests/redesign.spec.mjs` covers place mapping, bars, back bars, Rate search -> sheet -> saved rating, and a faked signed-in profile. `SHOTS=<dir>` writes screenshots.
 - `splash-flight: lands on the mark when the page scrolls mid-flight` fails on the pre-redesign Lab too; not caused by this.
+
+## Lab polish pass (2026-11-10)
+
+- **Profile sections are Account / Ratings / Records / About You / Shop.** Shop and About You are segments, not pushed pages. Music Passport and Achievements are pushed pages under About You (rows at the foot of About You; Passport is also a row at the foot of the Shop). Extra pages live in the header's **More** menu (`#pt-menu`, `Menu` in shell.js), not a list down the page.
+- **Each nav place is a stack.** `Shell.lastIn(place)` returns the last view inside it; a tab tap goes there, tapping the current place goes to its root and the top. Somebody else's profile and album pages are never remembered.
+- **Scroll memory** saves as you scroll (`_viewScroll`) and holds the view at `min-height` on return so a late-rendering view cannot clamp the restore. For You saves its own scroller on `leave()` and only rebuilds after 15 minutes away (it was rebuilding 10s after leaving).
+- **History has one path:** `histPush` / `histReplace` stamp `idx` and queue anything written while a sheet's close is still consuming its entry. `navBack(fallback)` goes back when `idx > 0`, else to the parent. `replaceState(null, …)` is gone (it wiped the entry's view, so Back did nothing). The album page's Back used `lastListMode` (only home/albums/songs) — that was "Back goes to Home".
+- **Nav:** spring pill (`linear()` with a cubic fallback, `nav-ready` stops a slide on first paint), a glass plus for Rate, a controller for Arcade, `assets/nav.css`. **Badges** (`NavBadges` in shell.js): Home = missions done and unclaimed (from `daily_missions_status`), Arcade = today's Recall / Daily Drop (both puzzles) / Earworm / Today's Ten not yet played and unlocked, Profile = album milestones plus discographies (tracklist already cached) reached and unclaimed.
+- **Arcade is the production layout again** (marquee, Featured / Party / Daily / Quick play); shell.css no longer restyles it.
+- **Community** (`#crate-feed`) is a 3-across grid; a tap MOVES the card node into `#cf-sheet` and back on any close, so its controls keep their listeners.
+- **Favourite artist** is a ~100px strip. Covers are the artist's studio albums ordered by Deezer's per-release `fans` (now carried by `/api/catalogue` and `fetchStudioAlbums`; `vinall_studio_gen` 3 clears older cached lists), EPs last; no fan data → your top-rated of theirs.
+- Discover's controls are one stack; `fitFeed` measures it into `--fy-ceil` so the sleeve always clears it.
+- `scripts/tests/labpolish.spec.mjs` covers all of the above.
 
 ## Sign-up and login are the one screen that must never be wrong
 

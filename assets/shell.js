@@ -54,11 +54,15 @@
       { mode: 'choice', label: 'Moments' },
       { mode: 'people', label: 'People' }
     ],
+    /* Account / Ratings / Records / About You / Shop, in that order. Music
+       Passport and Achievements are pages INSIDE About You (and Passport is
+       offered from the Shop too), not destinations of their own. */
     profile: [
-      { mode: 'profile', label: 'Overview' },
+      { mode: 'profile', label: 'Account' },
       { mode: 'albums', label: 'Ratings', on: ['albums', 'songs', 'liked'] },
       { mode: 'collection', label: 'Records' },
-      { mode: 'passport', label: 'Passport' }
+      { mode: 'about', label: 'About You' },
+      { mode: 'rewards', label: 'Shop' }
     ],
     ratings: [
       { mode: 'albums', label: 'Albums' },
@@ -68,7 +72,7 @@
   };
   var BAR_FOR = {
     foryou: ['discover'], crate: ['discover'], choice: ['discover'], people: ['discover'],
-    profile: ['profile'], collection: ['profile'], passport: ['profile'],
+    profile: ['profile'], collection: ['profile'], about: ['profile'], rewards: ['profile'],
     albums: ['profile', 'ratings'], songs: ['profile', 'ratings'], liked: ['profile', 'ratings']
   };
 
@@ -76,9 +80,8 @@
      when there is no history to go back through (a deep link, a reload). */
   var PUSHED = {
     replay: { title: 'Replay', parent: 'home' },
-    rewards: { title: 'Shop', parent: 'profile' },
-    achievements: { title: 'Achievements', parent: 'passport' },
-    about: { title: 'About you', parent: 'profile' },
+    achievements: { title: 'Achievements', parent: 'about' },
+    passport: { title: 'Music Passport', parent: 'about' },
     yourmusic: { title: 'Your music', parent: 'profile' },
     wars: { title: 'Bid Wars', parent: 'games' },
     grooves: { title: 'Grooves', parent: 'people' }
@@ -127,8 +130,12 @@
         '<span class="back-title">' + PUSHED[mode].title + '</span>';
       sec.insertBefore(bb, sec.firstChild);
       bb.querySelector('.back-btn').addEventListener('click', function () {
-        var st = history.state;
-        if (st && st.vinall && history.length > 1 && Shell._pushedFrom) history.back();
+        /* history.back() only when the screen behind this one is in the same
+           place (you came here from it). Reopened from the tab bar, or from a
+           deep link, the screen behind is somewhere else entirely, and Back
+           should go up to the parent rather than across to another tab. */
+        var from = Shell._pushedFrom;
+        if (from && (NAV_GROUP[from] || from) === (NAV_GROUP[mode] || mode) && window.navBack) navBack(PUSHED[mode].parent);
         else go(PUSHED[mode].parent);
       });
     }
@@ -180,33 +187,101 @@
     if (d) d.style.display = signedIn() ? '' : 'none';
     if (n && $('pt-discs-n')) $('pt-discs-n').textContent = /\d|∞/.test(n.textContent) ? n.textContent : 'Shop';
 
-    var more = sec.querySelector(':scope > .prof-more');
-    if (!more) {
-      more = document.createElement('div');
-      more.className = 'prof-more';
-      var rows = [
-        ['about', 'About you', 'Your taste, in numbers'],
-        ['yourmusic', 'Your music', 'Everything you have rated and played'],
-        ['replay', 'Replay', 'Your week, month and year'],
-        ['achievements', 'Achievements', 'Milestones and finished discographies'],
-        ['rewards', 'Shop', 'Themes, tags, the daily spin'],
-        ['@activity', 'Recent activity', '']
-      ];
-      more.innerHTML = '<h3 class="grp-title">More</h3><div class="rx-list">' + rows.map(function (r) {
-        return '<button type="button" class="rx-row" data-more="' + r[0] + '"><span class="rx-text"><b>' + r[1] + '</b>' +
-          (r[2] ? '<small>' + r[2] + '</small>' : '') + '</span>' + ICON.chev + '</button>';
-      }).join('') + '</div>';
-      // After the profile body, before the lore list, so the identity leads.
-      var lore = sec.querySelector('.section-head');
-      sec.insertBefore(more, lore || null);
-      more.addEventListener('click', function (ev) {
+    Menu.ensure(tb);
+    var mb = $('pt-more');
+    if (mb) mb.hidden = !signedIn();
+  }
+
+  /* ---- Profile: the More menu -------------------------------------------
+     A dropdown anchored under its own button in the Profile header, so the
+     extra pages are one tap away from the top instead of a list you scroll
+     past the whole profile to find. role=menu, arrow keys move, Escape and an
+     outside tap close it, focus returns to the button. Clamped to the screen:
+     it is right-aligned to the button and never wider than the viewport. */
+  var MENU_ROWS = [
+    ['yourmusic', 'Your music', 'Rate what you brought in'],
+    ['replay', 'Replay', 'Your week, month and year'],
+    ['achievements', 'Achievements', 'Milestones and discographies'],
+    ['passport', 'Music Passport', 'Where your music comes from'],
+    ['@activity', 'Recent activity', '']
+  ];
+  var Menu = {
+    ensure: function (tb) {
+      if ($('pt-more')) return;
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'icon-btn'; btn.id = 'pt-more';
+      btn.setAttribute('aria-label', 'More options'); btn.setAttribute('aria-haspopup', 'menu'); btn.setAttribute('aria-expanded', 'false'); btn.setAttribute('aria-controls', 'pt-menu');
+      btn.innerHTML = '<svg viewBox="0 0 16 16" width="17" height="17" fill="currentColor" aria-hidden="true"><circle cx="3.6" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.4" cy="8" r="1.3"/></svg>';
+      tb.insertBefore(btn, $('pt-settings'));
+      var m = document.createElement('div');
+      m.className = 'pt-menu'; m.id = 'pt-menu'; m.setAttribute('role', 'menu'); m.hidden = true;
+      m.innerHTML = MENU_ROWS.map(function (r) {
+        return '<button type="button" role="menuitem" class="pt-mi" data-more="' + r[0] + '"><b>' + r[1] + '</b>' + (r[2] ? '<small>' + r[2] + '</small>' : '') + '</button>';
+      }).join('');
+      tb.appendChild(m);
+      btn.addEventListener('click', function (ev) { ev.stopPropagation(); Menu.toggle(); });
+      m.addEventListener('click', function (ev) {
         var b = ev.target.closest('[data-more]'); if (!b) return;
         var k = b.dataset.more;
+        Menu.close(true);
         if (k === '@activity') { var t = $('activity-toggle'); if (t) t.click(); return; }
         go(k);
       });
+      m.addEventListener('keydown', function (ev) {
+        var items = Array.prototype.slice.call(m.querySelectorAll('.pt-mi'));
+        var i = items.indexOf(document.activeElement);
+        if (ev.key === 'ArrowDown') { ev.preventDefault(); items[(i + 1) % items.length].focus(); }
+        else if (ev.key === 'ArrowUp') { ev.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+        else if (ev.key === 'Home') { ev.preventDefault(); items[0].focus(); }
+        else if (ev.key === 'End') { ev.preventDefault(); items[items.length - 1].focus(); }
+        else if (ev.key === 'Tab') Menu.close(false);
+      });
+      document.addEventListener('pointerdown', function (ev) {
+        if (!m.hidden && !m.contains(ev.target) && !btn.contains(ev.target)) Menu.close(false);
+      }, true);
+      document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && !m.hidden) { ev.stopPropagation(); Menu.close(true); } }, true);
+    },
+    toggle: function () { var m = $('pt-menu'); if (m && m.hidden) Menu.open(); else Menu.close(true); },
+    open: function () {
+      var m = $('pt-menu'), btn = $('pt-more'); if (!m || !btn) return;
+      m.hidden = false; m.classList.remove('in');
+      btn.setAttribute('aria-expanded', 'true');
+      void m.offsetWidth;
+      m.classList.add('in');
+      if (window.buzz) buzz('select');
+      var first = m.querySelector('.pt-mi');
+      if (first) first.focus({ preventScroll: true });
+    },
+    close: function (refocus) {
+      var m = $('pt-menu'), btn = $('pt-more'); if (!m || m.hidden) return;
+      m.classList.remove('in');
+      m.hidden = true;
+      if (btn) { btn.setAttribute('aria-expanded', 'false'); if (refocus) btn.focus({ preventScroll: true }); }
     }
-    more.hidden = other || !signedIn();
+  };
+
+  /* About You holds the pages that used to be tabs of their own. */
+  function linkRows(cls, rows) {
+    return '<div class="rx-list ' + cls + '">' + rows.map(function (r) {
+      return '<button type="button" class="rx-row" data-seg-go="' + r[0] + '"><span class="rx-text"><b>' + r[1] + '</b><small>' + r[2] + '</small></span>' + ICON.chev + '</button>';
+    }).join('') + '</div>';
+  }
+  function aboutChrome() {
+    var sec = $('view-about');
+    if (!sec || sec.querySelector('.about-links')) return;
+    var w = document.createElement('div');
+    w.innerHTML = linkRows('about-links', [
+      ['passport', 'Music Passport', 'Every country your music comes from'],
+      ['achievements', 'Achievements', 'Milestones and finished discographies']
+    ]);
+    sec.appendChild(w.firstChild);
+  }
+  function shopChrome() {
+    var sec = $('view-rewards');
+    if (!sec || sec.querySelector('.shop-links')) return;
+    var w = document.createElement('div');
+    w.innerHTML = linkRows('shop-links', [['passport', 'Music Passport', 'See where your stamps come from']]);
+    sec.appendChild(w.firstChild);
   }
 
   function peopleChrome() {
@@ -214,7 +289,7 @@
     if (!sec || sec.querySelector('.grooves-link')) return;
     var b = document.createElement('button');
     b.type = 'button'; b.className = 'rx-row grooves-link';
-    b.innerHTML = '<span class="rx-text"><b>Grooves</b><small>Small groups that rate together</small></span>' + ICON.chev;
+    b.innerHTML = '<span class="rx-text"><b>Grooves</b><small>Join or create a groove</small></span>' + ICON.chev;
     b.addEventListener('click', function () { go('grooves'); });
     var head = sec.querySelector('.section-head');
     if (head) head.after(b); else sec.appendChild(b);
@@ -388,16 +463,186 @@
   });
   window.addEventListener('vinall:rated', function () { if (window.currentMode === 'rate') RateTab.render(); });
 
+  /* ---- Community: tap a tile, the full card opens in a sheet -------------
+     The card node itself moves into the sheet (a placeholder holds its grid
+     cell) and moves back on close, however the sheet is closed — X, backdrop,
+     Escape, or Back via the modal history layer. Nothing is rebuilt, so the
+     spread, your answer, Not heard and the comments link work exactly as on
+     the old full-size feed. */
+  var CfSheet = (function () {
+    var modal, panel, card, ph;
+    function ensure() {
+      if (modal) return;
+      modal = document.createElement('div');
+      modal.className = 'modal'; modal.id = 'cf-sheet';
+      modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-label', 'Post');
+      modal.innerHTML = '<div class="modal-panel cf-sheet-panel"><button type="button" class="rs-x modal-close" aria-label="Close">&times;</button></div>';
+      document.body.appendChild(modal);
+      panel = modal.firstChild;
+      panel.firstChild.addEventListener('click', close);
+      modal.addEventListener('click', function (ev) {
+        if (ev.target === modal) { close(); return; }
+        // Anything on the card that leaves it (the album page, a profile)
+        // closes the sheet behind it; the card's own controls do not.
+        if (card && card.contains(ev.target) && !ev.target.closest('.cf-foot,[data-action]')) setTimeout(close, 0);
+      });
+      new MutationObserver(function () { if (!modal.classList.contains('open')) restore(); })
+        .observe(modal, { attributes: true, attributeFilter: ['class'] });
+      document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && modal.classList.contains('open')) close(); });
+      // The history layer watches .modal elements it found at load; tell it about this one.
+      if (window.__watchLayer) window.__watchLayer(modal);
+    }
+    function restore() {
+      if (!card) return;
+      if (ph && ph.parentNode) ph.parentNode.replaceChild(card, ph);
+      card = null; ph = null;
+    }
+    function open(c) {
+      ensure();
+      restore();
+      card = c;
+      ph = document.createElement('div');
+      ph.className = 'cf-ph'; ph.setAttribute('aria-hidden', 'true');
+      c.parentNode.replaceChild(ph, c);
+      panel.appendChild(c);
+      modal.classList.add('open');
+      var f = c.querySelector('.cf-foot');
+      if (f) requestAnimationFrame(function () { c.style.setProperty('--cf-foot', Math.round(f.offsetHeight) + 'px'); });
+      if (window.buzz) buzz('select');
+    }
+    function close() { if (modal) modal.classList.remove('open'); restore(); }
+    document.addEventListener('click', function (ev) {
+      var c = ev.target.closest && ev.target.closest('#crate-feed .cf-card');
+      if (!c) return;
+      ev.stopPropagation(); ev.preventDefault();
+      open(c);
+    }, true);
+    return { open: open, close: close };
+  })();
+  window.CfSheet = CfSheet;
+
+  /* ---- nav badges --------------------------------------------------------------
+     Small counts on three tabs, each read from state the app already keeps —
+     never a number held here. Zero hides the badge.
+       Home     missions finished and not yet claimed (daily_missions_status,
+                reported by the Missions module after every render)
+       Arcade   today's daily games still to play: Recall, Daily Drop (both
+                puzzles), Earworm, Cover Fire's Today's Ten — each only once its
+                unlock gate is passed
+       Profile  achievements reached and not claimed: album milestones, plus
+                discographies whose tracklist is already known locally (no
+                request is made to count one) */
+  var NavBadges = (function () {
+    var counts = {};
+    function paint(tab, n) {
+      var b = document.querySelector('#modes button[data-mode="' + tab + '"] .nav-badge');
+      if (!b) return;
+      n = Math.max(0, n | 0);
+      var was = counts[tab];
+      counts[tab] = n;
+      if (!n) { b.hidden = true; b.textContent = ''; return; }
+      b.textContent = n > 9 ? '9+' : String(n);
+      b.hidden = false;
+      var btn = b.parentNode;
+      btn.setAttribute('aria-label', (btn.querySelector('.nl') || {}).textContent + ', ' + n + ' waiting');
+      if (was !== n) { b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); }
+    }
+    function rated() {
+      try { var al = window.loadAlbums ? loadAlbums() : {}; return Object.keys(al).filter(function (k) { return al[k] && al[k].score != null; }).length; } catch (e) { return 0; }
+    }
+    function open(gate) {
+      var G = window.UnlockGates || {};
+      return !G[gate] || rated() >= (G[gate].need || 0);
+    }
+    function arcade() {
+      var n = 0;
+      try { if (window.Recall && Recall.dailyDone && !Recall.dailyDone()) n++; } catch (e) {}
+      try { if (window.DropDaily && !DropDaily.done()) n++; } catch (e) {}
+      try { if (open('ew-card') && window.EarwormDaily && !EarwormDaily.done()) n++; } catch (e) {}
+      try { if (open('blitz-card') && window.Blitz && Blitz.dailyDone && !Blitz.dailyDone()) n++; } catch (e) {}
+      return n;
+    }
+    function profile() {
+      if (!signedIn() || !window.Wallet || !Wallet.claimedMilestone || !window.__achClaimsLoaded) return 0;
+      var n = 0;
+      try {
+        var all = window.loadAlbums ? loadAlbums() : {}, count = Object.keys(all).length;
+        [1, 5, 10, 25, 50, 100, 250, 500].forEach(function (m) { if (count >= m && !Wallet.claimedMilestone('albums:' + m)) n++; });
+        var groups = {};
+        Object.keys(all).forEach(function (k) {
+          var a = all[k]; if (!a || !a.artistId) return;
+          var key = (window._artistKey ? _artistKey(a.artist) : '') || a.artistId;
+          var g = groups[key] = groups[key] || { id: a.artistId, rated: {} };
+          if (/^d+$/.test(String(a.artistId)) && !/^d+$/.test(String(g.id))) g.id = a.artistId;
+          if (window.baseAlbumTitle) g.rated[baseAlbumTitle(a.name)] = 1;
+        });
+        Object.keys(groups).forEach(function (k) {
+          var g = groups[k];
+          var list = window.studioListFor ? studioListFor(g.id) : null;
+          if (!list || !list.length) return;
+          var bases = list.map(function (x) { return baseAlbumTitle(x.name); }).filter(Boolean);
+          if (bases.length && bases.every(function (b) { return g.rated[b]; }) && !Wallet.claimedMilestone('comp:' + g.id)) n++;
+        });
+      } catch (e) {}
+      return n;
+    }
+    function refresh() {
+      paint('games', arcade());
+      paint('profile', profile());
+      if (!signedIn()) paint('home', 0);
+    }
+    var t = 0;
+    function soon() { clearTimeout(t); t = setTimeout(refresh, 120); }
+    // Claims are read from the server once a session, then kept by Wallet.
+    function loadClaims() {
+      if (!signedIn() || !window.Wallet || !Wallet.loadClaims) return;
+      Wallet.loadClaims().then(function () { window.__achClaimsLoaded = true; refresh(); }).catch(function () {});
+    }
+    var lastMissions = 0;
+    function missions(force) {
+      if (!signedIn() || !window.renderMissionsDot) return;
+      if (!force && Date.now() - lastMissions < 60000) return;
+      lastMissions = Date.now();
+      try { renderMissionsDot(); } catch (e) {}
+    }
+    // The wallet loading is also the first sign that somebody signed in.
+    window.addEventListener('vinall:wallet', function () { if (!window.__achClaimsLoaded) loadClaims(); missions(false); soon(); });
+    window.addEventListener('vinall:rated', soon);
+    window.addEventListener('vinall:badges', soon);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) { refresh(); missions(false); } });
+    // A game sheet closing is when a daily gets finished.
+    document.addEventListener('DOMContentLoaded', function () {
+      var mo = new MutationObserver(soon);
+      document.querySelectorAll('.modal').forEach(function (m) { mo.observe(m, { attributes: true, attributeFilter: ['class'] }); });
+    });
+    // The day rolls over at midnight; a minute's lag is fine for a count.
+    setInterval(function () { if (!document.hidden) refresh(); }, 60000);
+    if (window.Cloud && Cloud.ready) Cloud.ready.then(function () { loadClaims(); missions(true); refresh(); });
+    return { set: paint, refresh: refresh, missions: missions, loadClaims: loadClaims, get: function (k) { return counts[k] || 0; } };
+  })();
+  window.NavBadges = NavBadges;
+
   /* ---- per-switch hook from setMode ------------------------------------------- */
+  /* The last view you were on inside each place, so a tab-bar tap returns to
+     it. Somebody else's profile and an album page are never remembered: one
+     belongs to another person, the other needs the record it was opened for. */
+  var LAST = {};
   var Shell = {
     _pushedFrom: null,
+    lastIn: function (place) { return LAST[place] || place; },
     onMode: function (mode) {
-      document.body.dataset.place = window.navTabFor ? navTabFor(mode) : mode;
+      var place = window.navTabFor ? navTabFor(mode) : mode;
+      document.body.dataset.place = place;
+      if (mode !== 'album-detail' && !(mode === 'profile' && viewingOther())) LAST[place] = mode;
+      NavBadges.refresh();
       ensureBars(mode);
       if (PUSHED[mode]) Shell._pushedFrom = Shell._prev; else Shell._pushedFrom = null;
       Shell._prev = mode;
       if (mode === 'profile') profileChrome();
       if (mode === 'people') peopleChrome();
+      if (mode === 'about') aboutChrome();
+      if (mode === 'rewards') shopChrome();
+      if (mode !== 'profile') Menu.close(false);
       if (mode === 'home') paintGreeting();
       if (mode === 'rate') setTimeout(function () {
         // Focus only when nothing is queued: a keyboard popping over the queue
@@ -417,6 +662,9 @@
     document.body.dataset.place = window.navTabFor ? navTabFor(m) : m;
     ensureBars(m);
     if (window.positionNavIndicator) positionNavIndicator();
+    // The pill springs between tabs from now on; on first paint it just appears.
+    requestAnimationFrame(function () { requestAnimationFrame(function () { var n = $('modes'); if (n) n.classList.add('nav-ready'); }); });
+    NavBadges.refresh();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   if (window.Cloud && Cloud.ready) Cloud.ready.then(function () { paintGreeting(); if (window.currentMode === 'profile') profileChrome(); });

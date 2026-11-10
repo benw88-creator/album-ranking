@@ -1,0 +1,115 @@
+/* ================================================================
+   NAV — the bottom bar's interaction layer (Lab polish, 2026-11-10).
+   Loaded after shell.css so it wins at equal specificity (trap 1).
+
+   - The pill slides on a SPRING (a 5% overshoot, then settles), using
+     CSS linear() where the engine has it and a soft back-out curve where
+     it does not. transform + width only: compositor work, no layout.
+   - Rate is the one special button: a plus in a small glass lens that
+     fills and turns a quarter when selected. Still the same pill under it,
+     so it reads as part of the same bar rather than a floating FAB.
+   - Badges are small counts at the icon's top-right, painted by
+     NavBadges in assets/shell.js from real app state. None at zero.
+   - Reduced motion: everything moves instantly; colour still changes.
+   ================================================================ */
+:root {
+  --nav-spring: cubic-bezier(.3, 1.25, .5, 1);
+  --nav-spring-ms: 560ms;
+}
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --nav-spring: linear(0, 0.041, 0.143, 0.276, 0.419, 0.558, 0.684, 0.791, 0.877, 0.944, 0.991, 1.024, 1.043, 1.052, 1.054, 1.051, 1.046, 1.038, 1.03, 1.023, 1.016, 1.011, 1.006, 1.003, 1);
+    --nav-spring-ms: 620ms;
+  }
+}
+
+/* No slide on first paint: the pill appears where it belongs, then moves. */
+.nav-indicator { transition: none; }
+nav.modes.nav-ready .nav-indicator {
+  transition: transform var(--nav-spring-ms) var(--nav-spring),
+              width var(--nav-spring-ms) var(--nav-spring),
+              background-color .35s ease;
+}
+
+@media (max-width: 699px) {
+  nav.modes { padding: 5px; }
+  /* A calmer pill: the destination's hue, but quieter, with a hairline of
+     light on top so it reads as a raised surface rather than a tint. */
+  .nav-indicator {
+    background: color-mix(in srgb, var(--nav-ind, var(--section-dim)) 85%, rgba(255,255,255,.04));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+  }
+  nav.modes button { gap: 2px; padding-top: 6px; padding-bottom: 5px; -webkit-tap-highlight-color: transparent; }
+  nav.modes button .nl { font-size: 10px; font-weight: 600; letter-spacing: 0; }
+  nav.modes button:not(.active) .nl { color: var(--text-faint); }
+  nav.modes button .nav-icon { width: 22px; height: 22px; }
+  /* Pressing is a squeeze of the icon, not the whole hit area, so the pill
+     under it never appears to shrink. */
+  nav.modes button:active { transform: none; }
+  nav.modes button:active > .nav-icon, nav.modes button:active > .nav-lens { scale: .88; }
+  nav.modes button > .nav-icon, nav.modes button > .nav-lens { transition: scale .18s ease, transform var(--dur) var(--ease); }
+}
+
+/* ---- Rate: the liquid plus ------------------------------------------- */
+nav.modes .nav-lens {
+  position: relative;
+  display: grid; place-items: center;
+  width: 30px; height: 24px; border-radius: 9px;
+  border: 1.4px solid currentColor;
+  transition: background .35s ease, border-color .35s ease, box-shadow .35s ease, scale .18s ease;
+}
+nav.modes .nav-lens .nav-plus { width: 15px; height: 15px; transition: transform var(--nav-spring-ms) var(--nav-spring), color .25s ease; }
+nav.modes button.nav-rate.active .nav-lens {
+  border-color: transparent;
+  background:
+    radial-gradient(110% 80% at 30% 10%, rgba(255,255,255,.55), rgba(255,255,255,0) 52%),
+    linear-gradient(165deg,
+      color-mix(in srgb, var(--nav-c) 70%, #fff) 0%,
+      var(--nav-c) 48%,
+      color-mix(in srgb, var(--nav-c) 70%, #000) 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,.55),
+    inset 0 -2px 4px rgba(0,0,0,.22),
+    0 4px 12px -4px color-mix(in srgb, var(--nav-c) 70%, transparent);
+}
+nav.modes button.nav-rate.active .nav-plus { color: var(--bg); transform: rotate(90deg); }
+/* The pill under Rate is glass too, so the lens sits in something rather than
+   on a flat tint. Only on Rate; the other four keep the quiet pill. */
+nav.modes:has(.nav-rate.active) .nav-indicator {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,0) 60%),
+    color-mix(in srgb, var(--nav-ind, var(--section-dim)) 90%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 0 0 1px rgba(255,255,255,.05);
+}
+@media (min-width: 700px) {
+  nav.modes .nav-lens { width: 22px; height: 18px; border-radius: 6px; border-width: 1.2px; }
+  nav.modes .nav-lens .nav-plus { width: 11px; height: 11px; }
+}
+
+/* ---- Badges ----------------------------------------------------------- */
+nav.modes .nav-badge {
+  position: absolute; z-index: 2;
+  top: 3px; left: calc(50% + 5px);
+  min-width: 17px; height: 17px; padding: 0 5px; box-sizing: border-box;
+  border-radius: 999px;
+  display: grid; place-items: center;
+  background: #ff3d5e; color: #fff;
+  font: 700 10.5px/1 var(--font-body); font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface-2) 92%, #000);
+  pointer-events: none;
+  transform-origin: 30% 70%;
+}
+nav.modes .nav-badge[hidden] { display: none; }
+nav.modes .nav-badge.bump { animation: navBadgeBump .42s var(--nav-spring) both; }
+@keyframes navBadgeBump { from { scale: .4; opacity: 0; } }
+@media (min-width: 700px) {
+  nav.modes .nav-badge { position: static; margin-left: -2px; order: 3; height: 16px; min-width: 16px; font-size: 10px; box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) nav.modes.nav-ready .nav-indicator { transition: background-color .2s linear; }
+  html:not([data-motion="full"]) nav.modes .nav-lens .nav-plus { transition: color .2s linear; }
+  html:not([data-motion="full"]) nav.modes .nav-badge.bump { animation: none; }
+}
+html[data-motion="none"] nav.modes.nav-ready .nav-indicator { transition: background-color .2s linear; }
+html[data-motion="none"] nav.modes .nav-badge.bump { animation: none; }

@@ -14,8 +14,10 @@ for (const [width, height] of [[320, 568], [375, 812], [768, 1024], [1024, 768],
       await page.waitForTimeout(100);
       const overflow = await page.evaluate(() => {
         const root = document.querySelector('.view[style*="display: block"]');
-        return Array.from(root.querySelectorAll('button, input, select, .game-card, .card')).filter(n => {
-          if (!n.getClientRects().length || n.closest('#fy-feed, .cc-cats, .sort-grip, [hidden]')) return false;
+        // A segmented bar may scroll sideways on the narrowest phones; the bar itself must fit.
+        return Array.from(root.querySelectorAll('button, input, select, .game-card, .card, .seg')).filter(n => {
+          if (n.classList.contains('seg')) { const r = n.getBoundingClientRect(); return r.width > 0 && (r.left < -2 || r.right > innerWidth + 2); }
+          if (!n.getClientRects().length || n.closest('#fy-feed, .cc-cats, .sort-grip, [hidden], .seg')) return false;
           const r = n.getBoundingClientRect();
           return r.width > 0 && (r.left < -2 || r.right > innerWidth + 2);
         }).slice(0, 5).map(n => n.outerHTML.slice(0, 150));

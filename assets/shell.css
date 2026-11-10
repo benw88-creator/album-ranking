@@ -205,7 +205,7 @@ body:not([data-section="home"]) .view { margin-top: var(--s3); }
 /* ---- PROFILE --------------------------------------------------------------- */
 .prof-tools { display: flex; align-items: center; gap: 8px; margin: 0 0 var(--s3); }
 .prof-tools .pg-title { flex: 1; }
-.prof-more { margin-top: var(--s5); }
+
 #view-profile > .section-head { margin-top: var(--s5) !important; }
 
 /* ---- DISCOVER: the bar floats over the For You feed ------------------------- */
@@ -234,75 +234,26 @@ body:not([data-section="home"]) .view { margin-top: var(--s3); }
 
 /* ---- DISCOVER: For You's own row (For You / Suggestions, refresh, push)
    sits under the Discover bar instead of underneath it. */
-body[data-section="foryou"] .fy-tabs { top: 50px; }
+/* One floating stack over the feed: the Discover bar, then For You's own row
+   directly under it — a quieter, smaller row, so it reads as a filter on this
+   page rather than a second navigation bar. The card reserves whatever these
+   occupy (--fy-ceil, measured in fitFeed), so neither can cover the sleeve. */
+body[data-section="foryou"] .fy-tabs {
+  top: calc(max(10px, env(safe-area-inset-top, 0px)) + 46px);
+  padding: 0 var(--gutter); gap: 8px; justify-content: center;
+}
+#view-foryou .fy-seg { padding: 2px; background: rgba(10,9,8,.34); border-color: rgba(255,245,235,.1); }
+#view-foryou .fy-seg button { padding: 6px 12px; font-size: 12px; }
+#view-foryou .fy-refresh-btn { margin-left: 0; width: 30px; height: 30px; background: rgba(10,9,8,.34); border-color: rgba(255,245,235,.12); }
+#view-foryou .fy-push-btn { padding: 6px 12px 6px 10px; font-size: 12px; background: rgba(10,9,8,.34); border-color: rgba(255,245,235,.12); box-shadow: none; }
+#view-foryou .fy-card { padding-top: var(--fy-ceil, calc(var(--s5) + 96px)); }
+#view-foryou .fy-loading, #view-foryou .fy-feed > .empty { padding-top: var(--fy-ceil, calc(var(--s5) + 96px)); }
+#view-foryou > .seg-main { margin: 0; }
 
 /* ---- ARCADE ----------------------------------------------------------------
-   Today: Recall as the one hero, Daily Drop and Earworm as a pair of tiles.
-   Then With friends and Solo as quiet rows: icon well, name, one line,
-   status. The drawn per-game art stays on the three daily cards, where it
-   earns its place; on rows it was eleven posters competing. */
-#view-games .arc-pg { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-#view-games .arc-pg .chip-btn [data-icon] svg { width: 15px; height: 15px; }
-#games-grid.arcade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; max-width: 820px; }
-#games-grid.arcade .arc-label {
-  font: 600 12px/1 var(--font-body); letter-spacing: .08em; color: var(--text-dim);
-  margin: var(--s5) 0 0;
-}
-#games-grid.arcade .arc-label:first-child { margin-top: var(--s2); }
-#games-grid.arcade #recall-card { grid-column: 1 / -1; min-height: 280px; padding: 24px; }
-#games-grid.arcade #recall-card h3 { font-size: clamp(36px, 10vw, 54px); }
-#games-grid.arcade .arc-tile { grid-column: span 1; min-height: 168px; padding: 18px; border-radius: 20px; }
-#games-grid.arcade .arc-tile h3 { font-size: 19px; }
-#games-grid.arcade .arc-tile p { font-size: 13px; }
-
-#games-grid.arcade .game-card.arc-row {
-  grid-column: 1 / -1;
-  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; column-gap: 14px; row-gap: 2px;
-  align-items: center; min-height: 72px; padding: 12px 14px; border-radius: 16px;
-  background: var(--surface); border: 1px solid var(--border);
-}
-#games-grid.arcade .arc-row > .gc-art, #games-grid.arcade .arc-row > .cz-art,
-#games-grid.arcade .arc-row > .cz-kicker, #games-grid.arcade .arc-row > .gc-go { display: none; }
-#games-grid.arcade .arc-row::before { display: none; }
-#games-grid.arcade .arc-row > .gc-emoji {
-  grid-column: 1; grid-row: 1 / span 2; width: 44px; height: 44px; border-radius: 12px;
-  display: grid; place-items: center; align-self: center;
-  background: color-mix(in srgb, var(--g) 15%, transparent);
-}
-#games-grid.arcade .arc-row > h3 { grid-column: 2; margin: 0; font: 650 16px/1.2 var(--font-body); letter-spacing: -0.01em; align-self: end; }
-#games-grid.arcade .arc-row > h3 span { color: inherit; }
-#games-grid.arcade .arc-row > p { grid-column: 2; margin: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: none; align-self: start; }
-#games-grid.arcade .arc-row > .gc-best {
-  grid-column: 3; grid-row: 1 / span 2; position: static; align-self: center;
-  font-size: 12px; color: var(--text-dim); text-align: right; max-width: 96px;
-}
-#games-grid.arcade .arc-row > .gc-lock { grid-column: 2 / -1; margin-top: 6px !important; }
-#games-grid.arcade .arc-row.locked { opacity: .55; }
-/* Charades' row needs a glyph; it had drawn art and no icon. */
-#charades-card.arc-row::after {
-  content: '\266B'; display: grid; place-items: center; position: absolute; left: 14px; top: 50%;
-  width: 44px; height: 44px; margin-top: -22px; border-radius: 12px; font-size: 20px; color: var(--g, var(--c-pink));
-  background: color-mix(in srgb, var(--g, var(--c-pink)) 15%, transparent); animation: none;
-}
-#charades-card.arc-row { --g: var(--c-pink); }
-#charades-card.arc-row > h3, #charades-card.arc-row > p { grid-column: 2; }
-@media (hover: hover) and (pointer: fine) {
-  #games-grid.arcade .arc-row:not(.locked):hover { transform: none; background: var(--surface-2); box-shadow: none; }
-}
-@media (min-width: 700px) {
-  #games-grid.arcade .arc-row { grid-column: span 1; }
-  #games-grid.arcade .arc-tile { min-height: 200px; }
-}
-/* The phone rule that hides card descriptions was for 105px poster tiles;
-   on a row there is room for one line, and it is what says what the game is. */
-#games-grid.arcade .arc-row > p { display: block; -webkit-line-clamp: unset; }
-/* Charades' own stylesheet sizes it as a poster by id; as a row it needs
-   the same id weight to stand down. */
-#games-grid.arcade #charades-card.arc-row { min-height: 72px; padding: 12px 14px 12px 72px; display: grid; grid-template-columns: minmax(0, 1fr) auto; background: var(--surface); }
-#games-grid.arcade #charades-card.arc-row h3 { font: 650 16px/1.2 var(--font-body); letter-spacing: -0.01em; margin: 0; grid-column: 1; }
-#games-grid.arcade #charades-card.arc-row h3 span { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: inherit; }
-#games-grid.arcade #charades-card.arc-row p { font-size: 13px; grid-column: 1; margin: 0; }
-@media (min-width: 700px) { #games-grid.arcade #charades-card.arc-row { grid-column: span 1; } }
+   The original Arcade (marquee, Featured / Party / Daily / Quick play, drawn
+   art per card) is restored as it was in production; its styles are
+   assets/games.css and the marquee rules there. Nothing here restyles it. */
 #listening-import input[type="file"] { color: var(--text-dim); font-size: 13px; }
 #listening-import input[type="file"]::file-selector-button {
   margin-right: 10px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border-strong);
@@ -317,7 +268,87 @@ body[data-section="foryou"] .fy-tabs { top: 50px; }
   backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   font: 600 14px/1 var(--font-body); margin-bottom: var(--s3);
 }
-/* games.css spans these by id across a 12-column grid; on this 2-column grid
-   a span of 6 invents four phantom columns. */
-#games-grid.arcade #drop-card.arc-tile, #games-grid.arcade #ew-card.arc-tile { grid-column: span 1; }
 #view-profile.is-guest > .section-head, #view-profile.is-guest > #lore-list { display: none; }
+
+/* ---- COMMUNITY: a three-across grid ------------------------------------
+   Each post is a square sleeve with its score and one line of text; the full
+   card (poster, note, the room's spread, your answer, Not heard) opens in a
+   sheet on tap. The card NODE moves into the sheet and back, so every
+   listener, score and comment control it already had keeps working. Scoped to
+   #crate-feed: in the sheet the card wears its original full styling. */
+#crate-feed.crate-feed {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 8px; max-width: none;
+}
+@media (min-width: 700px) { #crate-feed.crate-feed { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px 12px; } }
+#crate-feed .cf-card, #crate-feed .cf-ph {
+  aspect-ratio: auto; border-radius: 0; overflow: visible; background: none;
+  display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+#crate-feed .cf-card .cf-art {
+  position: relative; inset: auto; display: block;
+  width: 100%; height: auto; aspect-ratio: 1; border-radius: 10px;
+  filter: none; background: var(--surface-3);
+  box-shadow: 0 6px 16px -8px rgba(0,0,0,.7), 0 0 0 1px color-mix(in srgb, var(--text) 7%, transparent);
+}
+#crate-feed .cf-card .cf-overlay, #crate-feed .cf-card .cf-user,
+#crate-feed .cf-card .cf-note-pill, #crate-feed .cf-card .cf-foot { display: none; }
+#crate-feed .cf-card .cf-score {
+  position: absolute; top: 6px; right: 6px; bottom: auto;
+  min-width: 30px; height: 22px; padding: 0 6px; box-sizing: border-box;
+  display: grid; place-items: center; border-radius: 7px;
+  font-size: 12.5px; letter-spacing: -.02em; text-shadow: none;
+  background: rgba(10,9,8,.72); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+#crate-feed .cf-card .cf-score span { display: none; }
+#crate-feed .cf-card .cf-meta { position: static; padding: 0 2px; }
+#crate-feed .cf-card .cf-album-name { font-size: 12.5px; -webkit-line-clamp: 1; }
+#crate-feed .cf-card .cf-album-artist { font-size: 11px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-dim); }
+#crate-feed .cf-card:hover { transform: none; box-shadow: none; }
+#crate-feed .cf-card:hover .cf-art { transform: none; filter: brightness(1.06); }
+#crate-feed .cf-card:active .cf-art { scale: .96; }
+#crate-feed .cf-card .cf-art { transition: scale .18s ease, filter .2s ease; }
+#crate-feed .cf-loading-card { aspect-ratio: 1; border-radius: 10px; }
+#crate-feed .cf-ph::before { content: ''; display: block; aspect-ratio: 1; border-radius: 10px; background: var(--surface-2); }
+
+#cf-sheet { align-items: flex-end; padding: 0; }
+#cf-sheet .cf-sheet-panel {
+  max-width: 520px; width: 100%; padding: 30px 14px calc(16px + env(safe-area-inset-bottom));
+  border-radius: 24px 24px 0 0; animation: rsUp .34s var(--ease-ios) both;
+}
+#cf-sheet .cf-sheet-panel .cf-card { animation: none; }
+#cf-sheet .rs-x { z-index: 5; }
+@media (min-width: 700px) { #cf-sheet { align-items: center; } #cf-sheet .cf-sheet-panel { border-radius: 24px; } }
+@media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) #cf-sheet .cf-sheet-panel { animation: none; } }
+
+/* ---- PROFILE: the More menu ------------------------------------------- */
+.prof-tools { position: relative; }
+.pt-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
+  width: min(272px, calc(100vw - var(--gutter) * 2));
+  padding: 6px; border-radius: 16px;
+  background: var(--surface-2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 18px 44px -12px rgba(0,0,0,.75);
+  transform-origin: calc(100% - 64px) 0;
+  opacity: 0; transform: translateY(-4px) scale(.97);
+  transition: opacity .16s ease, transform .22s var(--ease-ios);
+}
+.pt-menu.in { opacity: 1; transform: none; }
+.pt-menu[hidden] { display: none; }
+.pt-mi {
+  width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 10px 12px; border: 0; border-radius: 11px; background: transparent; color: var(--text); text-align: left;
+}
+.pt-mi b { font: 600 15px/1.2 var(--font-body); letter-spacing: -.01em; }
+.pt-mi small { font-size: 12.5px; color: var(--text-dim); }
+.pt-mi:hover, .pt-mi:focus-visible { background: var(--surface-3); outline: none; }
+.pt-mi:active { background: var(--surface-3); }
+@media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) .pt-menu { transition: none; } }
+.about-links, .shop-links { margin: var(--s5) 0 var(--s3); }
+/* The profile bar has five sections now: they share the width evenly and
+   scroll sideways only if a large text size makes them need to. */
+.seg[data-seg="profile"] button { flex: 1 0 auto; padding: 0 7px; font-size: 13px; }
+.seg[data-seg="profile"] button.on::before { display: none; }

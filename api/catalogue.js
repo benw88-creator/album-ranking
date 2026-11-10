@@ -107,6 +107,9 @@ function albumLite(a) {
     kind: a._kind || null,
     kind_confident: a._confident === undefined ? null : !!a._confident,
     total_tracks: a.nb_tracks || a._tracks || 0,
+    // Deezer's own fan count for the release: the popularity signal the
+    // favourite-artist strip orders by. Absent on some paths; 0 means unknown.
+    fans: a.fans || 0,
     release_date: a.release_date || '',
     images: images(a),
     artists: a.artist ? [{ id: String(a.artist.id), name: a.artist.name }] : [],
@@ -496,6 +499,7 @@ export default async function handler(req, res) {
           a._kind = c.kind;
           a._tracks = c.tracks;
           a._confident = c.confident;
+          if (d && d.fans && !a.fans) a.fans = d.fans;
           if (!countsForCompletion(c.kind)) { dropped.push(a.title + ' — ' + c.kind + ' [' + c.why.join('; ') + ']'); return false; }
           return true;
         });

@@ -115,10 +115,10 @@ test('signed-in profile, shop and settings stay reachable', async ({ page }) => 
   await page.evaluate(() => window.scrollTo(0, 99999));
   await page.waitForTimeout(300);
   await shot(page, '61-profile-bottom');
-  await page.locator('[data-more="rewards"]').click();
+  await page.locator('#view-profile .seg-main [data-seg-go="rewards"]').click();
   await expect(page.locator('#view-rewards')).toBeVisible();
   await shot(page, '62-shop-signed-in');
-  await page.locator('#view-rewards .back-btn').click();
+  await page.locator('#view-rewards .seg-main [data-seg-go="profile"]').click();
   await expect(page.locator('#view-profile')).toBeVisible();
   await page.locator('#pt-settings').click();
   await expect(page.locator('#settings-modal')).toHaveClass(/open/);
