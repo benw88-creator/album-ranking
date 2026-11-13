@@ -244,6 +244,25 @@
       return { c: c, tracks: tracks };
     });
   }
+  /* An artist's own full albums in Apple's order, which is best-known first:
+     not singles, not EPs, not records they only feature on. */
+  function ownAlbums(rs, aid) {
+    return rs.filter(function (r) {
+      return r.wrapperType === 'collection' && String(r.artistId) === String(aid) && kindOf(r) === 'album' &&
+        r.collectionType !== 'Compilation' && !NOT_STUDIO.test(r.collectionName || '');
+    });
+  }
+  /* Apple has no artist photographs. Where an artist needs a picture (search
+     results, the pickers, Replay), it gets the sleeve of its best-known album:
+     one batch lookup for a whole list. */
+  function leadAlbums(ids) {
+    if (!ids.length) return Promise.resolve({});
+    return itunes('lookup', { id: ids.join(','), entity: 'album', limit: '25' }).then(function (j) {
+      var rs = (j && j.results) || [], out = {};
+      ids.forEach(function (id) { var a = ownAlbums(rs, id)[0]; if (a) out[id] = a.artworkUrl100; });
+      return out;
+    }, function () { return {}; });
+  }
   function resolveArtist(id, name) {
     var n = amId(id); if (n) return Promise.resolve(n);
     if (!name) return Promise.resolve(null);
@@ -300,9 +319,13 @@
           var l = loose(a.artistName);
           return { a: a, r: (l === want ? 0 : l.indexOf(want) === 0 ? 1 : l.indexOf(want) >= 0 ? 2 : 3) * 100 + i };
         }).sort(function (x, y) { return x.r - y.r; });
-        out.artists = { items: rs.slice(0, limit).map(function (x) {
-          return { id: 'am' + x.a.artistId, name: x.a.artistName, source: 'apple', fans: 0, images: [], external_urls: { spotify: x.a.artistLinkUrl || '' } };
-        }), total: rs.length };
+        rs = rs.slice(0, limit);
+        return leadAlbums(rs.map(function (x) { return String(x.a.artistId); })).then(function (lead) {
+          out.artists = { items: rs.map(function (x) {
+            return { id: 'am' + x.a.artistId, name: x.a.artistName, source: 'apple', fans: 0,
+              images: lead[x.a.artistId] ? images(lead[x.a.artistId]) : [], image_kind: 'album', external_urls: { spotify: x.a.artistLinkUrl || '' } };
+          }), total: rs.length };
+        });
       }));
       return Promise.all(jobs).then(function () { return [200, out]; });
     }
@@ -322,12 +345,12 @@
     if (path === 'artist') {
       return resolveArtist(p.get('id'), p.get('name')).then(function (aid) {
         if (!aid) return [200, { id: p.get('id'), name: p.get('name') || '', source: 'apple', images: [], external_urls: { spotify: '' } }];
-        return itunes('lookup', { id: aid }).then(function (j) {
-          var a = ((j && j.results) || [])[0] || {};
-          // The Search API carries no artist photographs. "No picture" is an
-          // answer every caller already handles; the artist hero falls back to
-          // your own sleeves of theirs.
-          return [200, { id: 'am' + aid, name: a.artistName || p.get('name') || '', source: 'apple', images: [], external_urls: { spotify: a.artistLinkUrl || '' } }];
+        return itunes('lookup', { id: aid, entity: 'album', limit: '25' }).then(function (j) {
+          var rs = (j && j.results) || [];
+          var a = rs.filter(function (r) { return r.wrapperType === 'artist'; })[0] || {};
+          var lead = ownAlbums(rs, aid)[0];
+          return [200, { id: 'am' + aid, name: a.artistName || p.get('name') || '', source: 'apple',
+            images: lead ? images(lead.artworkUrl100) : [], image_kind: 'album', external_urls: { spotify: a.artistLinkUrl || '' } }];
         });
       });
     }
@@ -336,6 +359,10 @@
         if (!aid) return [200, { items: [], total: 0 }];
         return itunes('lookup', { id: aid, entity: 'album', limit: '200' }).then(function (j) {
           var items = ((j && j.results) || []).filter(function (r) { return r.wrapperType === 'collection' && String(r.artistId) === aid; }).map(albumLite);
+          // Apple lists an artist's records best-known first (Blonde before
+          // channel ORANGE). That order is carried as `fans`, a rank, so the
+          // hero's "most popular records" ordering works on Apple too.
+          items.forEach(function (a, i) { a.fans = 1000 - i; a._ord = i; });
           if ((p.get('include_groups') || 'album') === 'album') {
             items = items.filter(function (a) { return (a.kind === 'album' || a.kind === 'ep') && a.album_type !== 'compilation' && !NOT_STUDIO.test(a.name); });
             // Editions fold into the plain record, earliest release kept.
@@ -343,7 +370,7 @@
             items.sort(function (a, b) { return a.release_date < b.release_date ? -1 : 1; }).forEach(function (a) {
               var k = loose(a.name.replace(EDITION, '')); if (!by[k]) by[k] = a;
             });
-            items = Object.keys(by).map(function (k) { return by[k]; });
+            items = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return a._ord - b._ord; });
           }
           return [200, { items: items, total: items.length }];
         });

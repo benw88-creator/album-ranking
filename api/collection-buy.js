@@ -47,35 +47,47 @@ const STALE_DAYS = 14;
 
 /* VINALL Value to Discs (api/_streams.js says what the value is).
  *
- * Linear, as the stream price was: a famous record is a target and an obscure
- * one affordable. The divisor is ANCHORED on Views, which cost 51,240 under
- * the stream price and has ~234,000 Wikipedia readers a year, so the record
- * people most often quote kept its price. Measured (readers a year → Discs):
+ * A curve, not a straight line. Wikipedia readership is far flatter than
+ * streams (Thriller has ~250x the readers of a record with a small article,
+ * where its streams were thousands of times more), and the first straight-line
+ * version pushed nine of 43 sampled albums onto its 100,000 ceiling, where they
+ * all cost the same. This rises steeply at the bottom, so obscure, cult and
+ * popular records separate, and bends over smoothly at the top, so iconic
+ * records stay ordered among themselves instead of tying at a cap:
  *
- *     Views (Drake)          233,763  -> 51,947
- *     Blonde                 284,642  -> 63,254
- *     Utopia (Travis Scott)  117,066  -> 26,015
- *     The Money Store         64,637  -> 14,364
- *     French Exit (TV Girl)   32,015  ->  7,114
- *     Sweet Boy (M. Todd)     26,577  ->  5,906
- *     Thriller             2,050,995  -> 100,000 (the ceiling)
+ *     price = MAX * x / (1 + x),   x = (value / K) ^ P
  *
- * Wikipedia favours classics where streams favoured the last decade, so the
- * CEILING is what stops Thriller costing a fortnight of play. Stored
- * collection.price rows are what somebody paid and are never re-priced.
+ * Measured on 43 real albums (readers a year -> Discs):
  *
- * **This divisor moves with the economy and nothing enforces it**, as the
- * stream divisor did (5,000,000 → 1,250,000 → 250,000 across two inflation
- * passes). Change the rates without it and every record goes free or unbuyable.
+ *     no article (Demos Before Prom, Bliss Release)  ->     200
+ *     Bon Iver, Bon Iver    8,312 ->     960   Process (Sampha)  12,106 ->  1,570
+ *     Sweet Boy            26,578 ->   4,320   French Exit       32,012 ->  5,490
+ *     The Money Store      64,640 ->  13,410   Ctrl              93,721 -> 21,290
+ *     Currents            113,831 ->  27,000   SOS              162,076 -> 41,120
+ *     Views               233,763 ->  62,290   Blonde           284,642 -> 76,970
+ *     To Pimp a Butterfly 335,564 ->  91,140   Purple Rain      449,036 -> 120,470
+ *     Nevermind           645,657 -> 163,450   Rumours          880,907 -> 203,420
+ *     Abbey Road        1,277,215 -> 250,600   Thriller       2,050,995 -> 302,550
+ *
+ * Against a realistic week of ~70,000 Discs: a cult record is an afternoon,
+ * a modern classic a week, an all-time one a month. Stored collection.price
+ * rows are what somebody paid and are never re-priced; sales refund 70% of
+ * that, so no balance or shelf moves when this changes.
+ *
+ * **These constants move with the economy and nothing enforces it**, as the
+ * stream divisor did across two inflation passes. Change the earning rates
+ * without them and every record goes free or unbuyable.
  */
-const VALUE_DIVISOR = 4.5;
+const PRICE_MAX = 400000;   // the asymptote; no record reaches it
+const PRICE_K = 858000;     // the value at which a record costs half of MAX
+const PRICE_P = 1.3;        // steepness at the bottom
 const MIN_PRICE = 200;
-const MAX_PRICE = 100000;
 
 export function priceFromValue(value) {
   const n = Number(value) || 0;
   if (n <= 0) return null;
-  return Math.min(MAX_PRICE, Math.max(MIN_PRICE, Math.round(n / VALUE_DIVISOR)));
+  const x = Math.pow(n / PRICE_K, PRICE_P);
+  return Math.max(MIN_PRICE, Math.round(PRICE_MAX * x / (1 + x) / 10) * 10);
 }
 
 function svcHeaders(key, extra) {

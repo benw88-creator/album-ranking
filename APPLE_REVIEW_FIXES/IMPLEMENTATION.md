@@ -22,21 +22,20 @@ Branch `lab` in `vinal-lab`, deployed to vinall-lab.vercel.app. Nothing on produ
 
 ## VINALL Value (replaces kworb, for both builds)
 
-Value = readers of the album's Wikipedia article over the last 12 months (Wikimedia pageviews, CC0) × (1 + up to 20% for people on VINALL who rated it). No article: a floor of 1,000. Price = value ÷ 4.5, minimum 200, ceiling 100,000, anchored so Views keeps its price.
+Value = readers of the album's Wikipedia article over the last 12 months (Wikimedia pageviews, CC0) × (1 + up to 20% for people on VINALL who rated it). No article: a floor of 1,000.
 
-| Record | Readers a year | Discs |
-|---|---|---|
-| Views (Drake) | 233,763 | 51,947 (was 51,240) |
-| Blonde | 284,642 | 63,254 |
-| In Rainbows | 316,283 | 70,285 |
-| IGOR | 189,586 | 42,130 |
-| SOS | 162,078 | 36,017 |
-| Utopia | 117,066 | 26,015 |
-| The Money Store | 64,637 | 14,364 |
-| French Exit | 32,015 | 7,114 |
-| Sweet Boy | 26,577 | 5,906 |
-| Thriller, Rumours | 2.05M, 0.88M | 100,000 (ceiling) |
-| Demos Before Prom (no article) | — | 222 |
+Price is a curve, not a straight line (`priceFromValue`): MAX · x / (1 + x) with x = (value / 858,000)^1.3 and MAX = 400,000, minimum 200. It rises steeply at the bottom so obscure, cult and popular records separate, and bends over smoothly at the top so iconic records stay ordered instead of tying at a cap. The first straight-line version put 9 of 43 sampled albums on its 100,000 ceiling. Measured on 43 real albums:
+
+| Tier | Record (readers a year → Discs) |
+|---|---|
+| No article | Demos Before Prom, Bliss Release → 200 |
+| Obscure | Bon Iver, Bon Iver 8,312 → 960 · Process 12,106 → 1,570 |
+| Cult | Sweet Boy 26,578 → 4,320 · French Exit 32,012 → 5,490 · The Money Store 64,640 → 13,410 |
+| Popular | Ctrl 93,721 → 21,290 · Currents 113,831 → 27,000 · SOS 162,076 → 41,120 · Views 233,763 → 62,290 · Blonde 284,642 → 76,970 |
+| Classic | To Pimp a Butterfly 335,564 → 91,140 · Purple Rain 449,036 → 120,470 · Nevermind 645,657 → 163,450 · Rumours 880,907 → 203,420 |
+| Iconic | Abbey Road 1,277,215 → 250,600 · Thriller 2,050,995 → 302,550 |
+
+Against a realistic week of ~70,000 Discs: a cult record is an afternoon, a modern classic a week, an all-time one a month. Stored collection prices and every balance are untouched (a sale refunds 70% of what was paid).
 
 No kworb, Deezer, Wikidata or MusicBrainz call is left in valuation. Records are named from the caller's own crate, the public feed, or Apple for `am` ids. Wording changed throughout: "Highest VINALL Value wins", Higher or Lower's "Value" mode, the admin "VINALL Value health" check, terms and privacy. Code: `api/_streams.js`, `priceFromValue` in `api/collection-buy.js`. Stored collection prices are untouched.
 
@@ -45,16 +44,19 @@ No kworb, Deezer, Wikidata or MusicBrainz call is left in valuation. Records are
 - `20261113120000_moments_apple_ids.sql` and `20261113140000_vinall_value.sql` applied to the lab project and verified. The lab database has no migration-history table, so there was nothing to record.
 - `scripts/backfill-apple-art.mjs --ref <ref> [--apply]` rewrites stored Deezer sleeves to Apple's, in every column that holds one, plain or JSON, in one transaction. The dry run applies everything inside a rolled-back transaction and reports what would remain. Run on lab: 4 sleeves, 14 rows, 0 left. The sync merge now keeps the Apple sleeve when a device's older copy ties with the cloud's, so a phone cannot push the Deezer URL back.
 
+## Artist photos
+
+Apple has none, so nothing pretends otherwise. The favourite-artist hero is led by the artist's best-known record, sliding out of its sleeve (a drawn record, never an altered copy of the art), with their next albums fanned beside it; ordered by Apple's own best-known-first listing. Artist search results and pickers show the sleeve of the artist's best-known album (one batch lookup). The game's Popular picker, where no sleeve may appear, is set as a numbered UK chart. A row with no picture has no picture slot. The website keeps real photos and gains the same album-led hero if one fails to load.
+
 ## Checks
 
 `npm run check` (12 Collection selfcheck groups on the new valuation), the lab leak check, the traps script, and `scripts/tests/rights.spec.mjs` (4 tests: catalogue shapes, held-back games and no Deezer requests, the website untouched, Spotify matching through Apple).
 
 ## Still open
 
-1. **Artist photos.** Apple's Search API has none; artist pages and the Popular picker show a placeholder.
-2. **Apple's chart feed is sometimes slow** (one timeout in three on the first test). A success is cached at the edge for a day; a failure shows "Couldn't load the chart" and For You uses its other sources.
-3. **Native build and device run** (Mac).
-4. **Production:** the two migrations and the artwork backfill, with a backup first and the owner's approval; then the cherry-pick promotion in `LAB-ONLY.md`.
+1. **Apple's chart feed is sometimes slow** (one timeout in three on the first test). A success is cached at the edge for a day; a failure shows "Couldn't load the chart" and For You uses its other sources.
+2. **Native build and device run** (Mac).
+3. **Production:** the two migrations and the artwork backfill, with a backup first and the owner's approval; then the cherry-pick promotion in `LAB-ONLY.md`.
 
 ## Open questions only Apple can answer
 

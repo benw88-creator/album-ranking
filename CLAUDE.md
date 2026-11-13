@@ -26,7 +26,7 @@ App Review rejected 1.0 (5.2.3, 5.2.1, 2.5.4). Status and the open items are in
 - `scripts/tests/rights.spec.mjs` covers it.
 - **VINALL Value replaced kworb for both builds** (`api/_streams.js`): Wikipedia
   readers of the album's article over 12 months (CC0) plus up to +20% for
-  raters here; `priceFromValue` (÷4.5, 200–100,000) is anchored on Views. It is
+  raters here; `priceFromValue` (a curve: 200 up to ~300,000 for Thriller, no cap to tie at). It is
   not streams and the UI must never call it streams. `album_plays.source` is
   `vinall-value`; a `kworb` row is never read. The Spotify-import matcher lives
   in `assets/match.js` (the app runs it against Apple; `api/_match.js`

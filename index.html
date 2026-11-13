@@ -9508,7 +9508,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/interactions.css?v=6">
 <link rel="stylesheet" href="/assets/replay.css?v=9">
 <link rel="stylesheet" href="/assets/you.css?v=3">
-<link rel="stylesheet" href="/assets/games.css?v=7">
+<link rel="stylesheet" href="/assets/games.css?v=8">
 <link rel="stylesheet" href="/assets/store.css?v=4">
 <link rel="stylesheet" href="/assets/glow.css?v=7">
 <link rel="stylesheet" href="/assets/themes2.css?v=2">
@@ -9523,7 +9523,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/home2.css?v=1">
 <link rel="stylesheet" href="/assets/charades.css?v=3">
 <link rel="stylesheet" href="/assets/passport.css?v=1">
-<link rel="stylesheet" href="/assets/artist.css?v=2">
+<link rel="stylesheet" href="/assets/artist.css?v=4">
 <link rel="stylesheet" href="/assets/discover.css?v=5">
 <link rel="stylesheet" href="/assets/liked.css?v=1">
 <link rel="stylesheet" href="/assets/crate.css?v=2">
@@ -9775,7 +9775,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
 })();
 </script>
 
-<script src="/assets/apple.js?v=2"></script>
+<script src="/assets/apple.js?v=3"></script>
 
 <!-- ================================================================
      MINIMUM APP VERSION — the only lever over builds already installed.
@@ -10280,6 +10280,12 @@ window.discAmt = function (n) {
       <figure class="ah-portrait" id="artist-hero-portrait">
         <img class="artist-hero-bg" id="artist-hero-bg" alt="" referrerpolicy="no-referrer" crossorigin="anonymous" fetchpriority="high">
       </figure>
+      <!-- With no artist photo (the Apple build has none) the artist's best-known
+           record leads instead, sliding out of its sleeve. -->
+      <button type="button" class="ah-lead" id="artist-hero-lead" data-ah-open="0" hidden>
+        <span class="ah-lead-disc" aria-hidden="true"></span>
+        <span class="ah-lead-sleeve"><img alt="" decoding="async" referrerpolicy="no-referrer"></span>
+      </button>
       <div class="ah-stack" id="artist-hero-stack"></div>
     </div>
     <div class="artist-hero-words">
@@ -14124,8 +14130,11 @@ async function renderArtistHero() {
 
   // Prefer the image already saved on the profile (avoids an extra API call);
   // only hit Spotify if we don't have one cached on the favourite itself.
-  const img = fav.image || await fetchArtistImage(fav.id, fav.name);
-  if (!img) { hideArtistHero(hero); return; }
+  /* No photo is not a reason to hide: the records lead instead (ah-albums).
+     The Apple build never uses one — Apple supplies no artist photographs, and
+     an older saved one is Deezer's. */
+  const amBuild = !!(window.Rights && Rights.ON);
+  const img = amBuild ? null : (fav.image || await fetchArtistImage(fav.id, fav.name));
 
   paintArtistHero(hero, { id: fav.id, name: fav.name, image: img });
   _heroArtistKey = fav.id;
@@ -14136,7 +14145,7 @@ async function renderArtistHero() {
   // and still, unlike the ambient login-screen use of this same engine).
   // Falls back to the plain photo + CSS duotone filter if this fails for
   // any reason (see the catch inside mountArtistHero itself).
-  if (window.VinalDither) window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
+  if (img && window.VinalDither) window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
 }
 
 /* ---- The favourite-artist feature: portrait, stack, light, and a line about you.
@@ -14219,12 +14228,36 @@ function _ahPaintStack(hero, items) {
   var stack = document.getElementById('artist-hero-stack');
   var glows = document.getElementById('artist-hero-glows');
   if (!stack) return;
-  var key = items.map(function (x) { return x.id + ':' + (x.score || ''); }).join('|');
+  /* With no artist photo (ah-albums) the first record LEADS, in the frame the
+     photo would have had, and the rest fan out as usual. */
+  var led = hero.classList.contains('ah-albums');
+  var key = (led ? 'L|' : '') + items.map(function (x) { return x.id + ':' + (x.score || ''); }).join('|');
   hero._ahItems = items;
   if (hero._ahStackKey === key) return;
   hero._ahStackKey = key;
-  hero.style.setProperty('--ah-n', items.length);
-  hero.classList.toggle('ah-has-stack', items.length > 0);
+  var lead = document.getElementById('artist-hero-lead');
+  var off = led ? 1 : 0, rest = items.slice(off);
+  if (lead) {
+    var first = led && items[0];
+    lead.hidden = !first;
+    hero.classList.toggle('ah-has-lead', !!first);
+    if (first) {
+      var li = lead.querySelector('img'), lsrc = thumb(first.art, 320);
+      lead.title = first.name || '';
+      lead.setAttribute('aria-label', 'Open ' + (first.name || 'record'));
+      if (li.getAttribute('src') !== lsrc) {
+        lead.classList.remove('is-in');
+        // A sleeve that fails hides the lead (words only), never removes it:
+        // the next paint may bring a record that loads.
+        li.onload = function () { lead.classList.add('is-in'); };
+        li.onerror = function () { lead.hidden = true; hero.classList.remove('ah-has-lead'); };
+        li.src = lsrc;
+        if (li.complete && li.naturalWidth) lead.classList.add('is-in');
+      }
+    }
+  }
+  hero.style.setProperty('--ah-n', rest.length);
+  hero.classList.toggle('ah-has-stack', rest.length > 0);
   // Nodes are REUSED by src, never rebuilt wholesale: the discography lands a
   // moment after the crate's own records, and rebuilding would blank the
   // sleeves already on screen and deal them in a second time.
@@ -14236,7 +14269,7 @@ function _ahPaintStack(hero, items) {
       var n = old[k];
       if (n) delete old[k]; else n = make(it);
       n.style.setProperty('--i', i);
-      if (n.hasAttribute('data-ah-open')) n.setAttribute('data-ah-open', i);
+      if (n.hasAttribute('data-ah-open')) n.setAttribute('data-ah-open', i + off);
       // Only touch the DOM when a node is out of place: a moved node is a
       // removed-and-reinserted node, and that restarts its entrance.
       if (host.children[i] !== n) host.insertBefore(n, host.children[i] || null);
@@ -14244,7 +14277,7 @@ function _ahPaintStack(hero, items) {
     Object.keys(old).forEach(function (k) { old[k].remove(); });
   }
   // Keyed by record AND sleeve: two records can share artwork.
-  sync(stack, items.map(function (it) { var src = thumb(it.art, 320); return { src: src, key: it.id + '@' + src, it: it }; }), function (x) {
+  sync(stack, rest.map(function (it) { var src = thumb(it.art, 320); return { src: src, key: it.id + '@' + src, it: it }; }), function (x) {
     var b = document.createElement('button');
     b.type = 'button'; b.className = 'ah-sleeve';
     b.setAttribute('data-src', x.key); b.setAttribute('data-ah-open', '0');
@@ -14254,7 +14287,10 @@ function _ahPaintStack(hero, items) {
     _ahReveal(img, b, 'is-in');
     return b;
   });
-  if (glows) {
+  // The Apple build draws no blurred copies of a sleeve (Apple's artwork may
+  // not be altered); the band takes its light from the theme instead.
+  if (glows && window.Rights && Rights.ON) glows.innerHTML = '';
+  else if (glows) {
     // Three is enough light; more is mud. Tiny files — a blur needs no detail.
     sync(glows, items.slice(0, 3).map(function (it) { return { src: thumb(it.art, 120) }; }), function (x) {
       var g = new Image(); g.className = 'ah-glow'; g.alt = ''; g.decoding = 'async'; g.referrerPolicy = 'no-referrer';
@@ -14316,12 +14352,15 @@ function paintArtistHero(hero, fav) {
     hero._ahStackKey = null; hero._ahDisco = null; hero._ahDiscoAsked = null;
   }
   hero.dataset.artistId = String(fav.id || '');
-  if (bg && bg.getAttribute('src') !== fav.image) {
+  hero.classList.toggle('ah-albums', !fav.image);
+  if (!fav.image) { if (bg) bg.removeAttribute('src'); if (bed) { bed.removeAttribute('src'); bed.classList.remove('is-in'); } }
+  else if (bg && bg.getAttribute('src') !== fav.image) {
     if (portrait) {
       portrait.classList.remove('is-loaded', 'is-empty');
       // A photo that never arrives leaves a monogram, not an empty grey frame.
       portrait.setAttribute('data-initial', String(fav.name || '?').trim().replace(/^the\s+/i, '').charAt(0).toUpperCase());
-      bg.onerror = function () { portrait.classList.add('is-empty'); };
+      // A photo that fails hands the frame to the records, when there are any.
+      bg.onerror = function () { portrait.classList.add('is-empty'); if (hero._ahItems && hero._ahItems.length) { hero.classList.add('ah-albums'); hero._ahStackKey = null; _ahPaintStack(hero, hero._ahItems); } };
     }
     bg.alt = fav.name || '';
     bg.src = fav.image;
@@ -14329,8 +14368,8 @@ function paintArtistHero(hero, fav) {
   }
   // Same file, second use: the blurred bed. One request — served from cache.
   // A small copy is plenty for something blurred past recognition.
-  var bedSrc = thumb(fav.image, 250);
-  if (bed && bed.getAttribute('src') !== bedSrc) { bed.classList.remove('is-in'); bed.src = bedSrc; _ahReveal(bed, bed, 'is-in'); }
+  var bedSrc = fav.image ? thumb(fav.image, 250) : '';
+  if (bedSrc && bed && bed.getAttribute('src') !== bedSrc) { bed.classList.remove('is-in'); bed.src = bedSrc; _ahReveal(bed, bed, 'is-in'); }
   if (nameEl) {
     nameEl.textContent = fav.name || '';
     var len = String(fav.name || '').length;
@@ -15619,10 +15658,16 @@ function renderAuthArea(connected){
     const host=document.getElementById('g-popular');
     if(!host)return;
     if(!list.length){host.innerHTML='<div class="g-pop-note">Nothing in the chart just now.</div>';return;}
-    host.innerHTML=list.map(function(a){
+    /* With no faces (the Apple build has no artist photographs, and a game
+       screen shows no sleeves) the chart is drawn as a chart: its position and
+       the name, set large. Never a grey circle standing in for a face. */
+    const faces=!(window.Rights&&Rights.ON)&&list.some(function(a){return a.images&&a.images[0]&&a.images[0].url;});
+    host.classList.toggle('g-pop-chart',!faces);
+    host.innerHTML=list.map(function(a,i){
       const img=(a.images&&a.images[0]&&a.images[0].url)||'';
+      if(!faces)return '<button class="g-pop-a g-pop-t" data-popid="'+esc(a.id)+'" data-popname="'+esc(a.name)+'"><span class="g-pop-rank">'+(i+1)+'</span><span class="g-pop-n">'+esc(a.name)+'</span></button>';
       return '<button class="g-pop-a" data-popid="'+esc(a.id)+'" data-popname="'+esc(a.name)+'">'+
-        (img?'<img src="'+esc(thumb(img,200))+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">':'<span class="g-pop-ph"></span>')+
+        (img?'<img src="'+esc(thumb(img,200))+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">':'')+
         '<span class="g-pop-n">'+esc(a.name)+'</span></button>';
     }).join('');
   }
@@ -19500,7 +19545,8 @@ async function runPickerSearch(q){
   host.innerHTML='<p class="reco-note">Searching\u2026</p>';
   const results=await searchItems(q,_pickerKind);
   if(!results.length){host.innerHTML='<p class="reco-note">No results.</p>';return;}
-  host.innerHTML=results.map(function(r,i){return'<div class="ptop-row" data-i="'+i+'"><img src="'+thumb(esc(r.art||''),320)+'" alt="" decoding="async" onerror="this.style.visibility=\'hidden\'"><div><div class="nm">'+esc(r.name)+'</div><div class="ar">'+esc(r.artist||'')+(r.year?' \u00b7 '+r.year:'')+'</div></div></div>';}).join('');
+  // No picture, no picture slot: a row is never an empty grey square.
+  host.innerHTML=results.map(function(r,i){return'<div class="ptop-row" data-i="'+i+'">'+(r.art?'<img src="'+thumb(esc(r.art),320)+'" alt="" decoding="async" onerror="this.remove()">':'')+'<div><div class="nm">'+esc(r.name)+'</div><div class="ar">'+esc(r.artist||'')+(r.year?' \u00b7 '+r.year:'')+'</div></div></div>';}).join('');
   host.querySelectorAll('[data-i]').forEach(function(el){el.addEventListener('click',function(){const item=results[+el.dataset.i];if(_pickerCb)_pickerCb(item);closePicker();});});
 }
 
@@ -21233,9 +21279,11 @@ window.handleGrooveLink=handleGrooveLink;
     // the real one layer by layer. &debugArtistId= lets the stack fall back to
     // that artist's discography exactly as a real favourite does.
     const hero=document.getElementById('artist-hero');
-    paintArtistHero(hero,{id:qp.get('debugArtistId')||'',name:qp.get('debugArtistName')||'Test Artist',image:img});
+    // debugArtist=none (and the Apple build, always) paints the album-led hero.
+    const useImg=(img==='none'||(window.Rights&&Rights.ON))?null:img;
+    paintArtistHero(hero,{id:qp.get('debugArtistId')||'',name:qp.get('debugArtistName')||'Test Artist',image:useImg});
     showArtistHero(hero);
-    if(window.VinalDither)window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
+    if(useImg&&window.VinalDither)window.VinalDither.mountArtistHero(document.getElementById('artist-hero-bg'), document.getElementById('artist-hero-canvas'));
   }, 1000);
   if(new URLSearchParams(location.search).get('groove')){}
   else if(new URLSearchParams(location.search).get('u')){setMode('profile');}

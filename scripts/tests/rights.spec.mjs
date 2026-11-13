@@ -1,6 +1,7 @@
 // The Apple build (assets/apple.js): catalogue and previews from Apple's
 // iTunes Search API, held-back games, no Deezer artwork. Apple is mocked here.
 import { test, expect } from './fixtures.mjs';
+import { fileURLToPath } from 'node:url';
 
 const ART = 'https://is1-ssl.mzstatic.com/image/thumb/Music/v4/aa/bb/x.jpg/100x100bb.jpg';
 const song = (n, coll, name, extra = {}) => ({
@@ -12,13 +13,15 @@ const song = (n, coll, name, extra = {}) => ({
 });
 
 test.beforeEach(async ({ page }) => {
+  // Apple's sleeves load as a real image, so the hero can show them.
+  await page.route('https://is1-ssl.mzstatic.com/**', (route) => route.fulfill({ path: fileURLToPath(new URL('../../assets/icons/icon-512.png', import.meta.url)) }));
   await page.route('https://itunes.apple.com/**', route => {
     const u = new URL(route.request().url());
     const e = u.searchParams.get('entity');
     if (u.pathname === '/lookup') {
       return route.fulfill({ json: { resultCount: 3, results: [
         { wrapperType: 'collection', collectionType: 'Album', collectionId: 111, collectionName: 'Blonde', artistId: 7, artistName: 'Frank Ocean',
-          artworkUrl100: ART, trackCount: 2, releaseDate: '2016-08-20T07:00:00Z', collectionViewUrl: 'https://music.apple.com/gb/album/blonde/111' },
+          artworkUrl100: ART, trackCount: 17, releaseDate: '2016-08-20T07:00:00Z', collectionViewUrl: 'https://music.apple.com/gb/album/blonde/111' },
         song(1, 111, 'Blonde'), song(2, 111, 'Blonde')] } });
     }
     // Apple's album index misses the album; its song index finds it.
@@ -80,4 +83,15 @@ test('a Spotify export is matched against Apple on the device, through the album
   });
   expect(r.results[0]).toMatchObject({ u: 'spotify:track:aaaaaaaaaaaaaaaaaaaaaa', status: 'ok', m: { id: 'am9002', name: 'Track 2', album: 'Blonde' } });
   expect(r.results[1].status).toBe('none');
+});
+
+test('with no artist photo the favourite-artist hero is led by the records, never a placeholder', async ({ page }) => {
+  await page.goto('/?rights=apple&debugArtist=none&debugArtistName=Frank%20Ocean&debugArtistId=am7');
+  await page.waitForFunction(() => window.Rights && Rights.ON);
+  const hero = page.locator('#artist-hero');
+  await expect(hero).toHaveClass(/ah-albums/);
+  await expect(page.locator('#artist-hero-lead')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#artist-hero-lead img')).toHaveAttribute('src', /mzstatic\.com/);
+  expect(await page.evaluate(() => getComputedStyle(document.getElementById('artist-hero-portrait')).display)).toBe('none');
+  expect(await page.evaluate(() => document.querySelectorAll('.ah-glow').length)).toBe(0);   // no blurred copies of Apple art
 });

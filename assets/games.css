@@ -599,3 +599,28 @@ html[data-motion="none"] #recall-modal .rc-wave i, html[data-motion="none"] #rec
 #war-modal .war-rev { border-radius: 16px; background: rgba(255,255,255,.03); }
 #war-modal .war-rev.won { border-color: color-mix(in srgb, var(--gh) 60%, transparent); background: linear-gradient(100deg, color-mix(in srgb, var(--gh) 14%, transparent), rgba(255,255,255,.02) 70%); }
 #war-modal .war-verdict { font: 800 clamp(28px, 7vw, 40px)/1.05 var(--font-display); letter-spacing: -.04em; text-align: center; margin-top: 18px; }
+
+/* ---- Popular, without faces (2026-11-13) -------------------------------
+   The Apple build has no artist photographs and shows no sleeves in a game,
+   so the chart is set as a chart: two columns of positions and names, the
+   number in the display face and the section's colour. Reads as the UK
+   chart it is, not as a grid of missing pictures. */
+.g-pop.g-pop-chart { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.g-pop-a.g-pop-t {
+  flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px;
+  min-height: 46px; padding: 8px 12px 8px 10px;
+  border-radius: 12px; border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  color: var(--text); font-size: 13px; text-align: left;
+}
+.g-pop-t .g-pop-rank {
+  flex-shrink: 0; min-width: 22px; text-align: right;
+  font-family: var(--font-display); font-weight: 800; font-size: 17px; letter-spacing: -.03em;
+  color: var(--section, var(--gold)); font-variant-numeric: tabular-nums;
+}
+.g-pop-t:nth-child(-n+3) .g-pop-rank { color: var(--gold); }
+.g-pop-t .g-pop-n { min-width: 0; font-weight: 700; }
+.g-pop-a.g-pop-t:hover { border-color: var(--border-strong); background: var(--surface-2); }
+.g-pop-a.g-pop-t.sel { border-color: var(--gold); }
+/* Artist suggestions in a game sheet: no picture slot in the Apple build. */
+.rights-apple .g-sugg-item img { display: none; }

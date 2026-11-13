@@ -84,15 +84,19 @@ globalThis.fetch = async (url, opts = {}) => {
 const priceReq = async (albums) => { const r = res(); await prices({ method: 'POST', headers: { authorization: 'Bearer good' }, body: { albums } }, r); return r; };
 const buyReq = async (b) => { const r = res(); await buy({ method: 'POST', headers: { authorization: 'Bearer good' }, body: b }, r); return r; };
 
-await check('VINALL Value takes the album article, never a same-named page, and keeps Views at its old price', async () => {
+await check('VINALL Value takes the album article, never a same-named page, and prices on a curve', async () => {
   assert.equal(normTitle('When Doves Cry - 2015 Paisley Park Remaster'), normTitle('When Doves Cry'));   // _discogs.js still uses it
   const v = await valueAlbum('606', 'unused', {});
   assert.equal(v.ok, true);
   assert.equal(v.article, 'Views (album)', 'the disambiguation page is skipped');
   assert.equal(v.total, 233763);
-  assert.equal(priceFromValue(v.total), 51947);
-  assert.equal(priceFromValue(2050995), 100000, 'the ceiling holds Thriller');
-  assert.equal(priceFromValue(1000), 222);
+  assert.equal(priceFromValue(v.total), 62290);
+  assert.equal(priceFromValue(2050995), 302550, 'iconic records stay below the asymptote');
+  assert.equal(priceFromValue(1000), 200, 'no article: the floor');
+  // Every step up in readers is a step up in price: no ties anywhere, no cap.
+  const ladder = [8312, 26578, 64640, 113831, 233763, 449036, 880907, 1277215, 2050995].map(priceFromValue);
+  ladder.forEach((p, i) => { if (i) assert.ok(p > ladder[i - 1] * 1.2, 'each rung clearly dearer: ' + ladder.join(', ')); });
+  assert.ok(ladder[ladder.length - 1] / ladder[0] > 250, 'iconic is hundreds of times an obscure record');
   assert.equal(priceFromValue(0), null);
   assert.equal(v.source, SOURCE);
 });
@@ -107,7 +111,7 @@ await check('people here who rated a record lift its value, capped at +20%', asy
 
 await check('a record with no article is priced at the floor, not refused', async () => {
   const r = await priceReq([{ id: '303' }]);
-  assert.equal(r.body.prices['303'].price, 222);
+  assert.equal(r.body.prices['303'].price, 200);
 });
 
 await check('a Wikipedia outage is "not just now", is not remembered, and prices once it answers', async () => {
@@ -118,7 +122,7 @@ await check('a Wikipedia outage is "not just now", is not remembered, and prices
   assert.equal(db.plays['202'], undefined, 'nothing cached for a failure');
   wikiDown = false;
   const r2 = await priceReq([{ id: '202' }]);
-  assert.equal(r2.body.prices['202'].price, 2000);
+  assert.equal(r2.body.prices['202'].price, priceFromValue(9000));
   assert.equal(db.plays['202'].source, SOURCE);
 });
 
@@ -126,7 +130,7 @@ await check('an outage falls back to the last valuation, at the same price at th
   db.plays['404'] = { album_id: '404', plays: 300000, source: SOURCE, fetched_at: new Date(Date.now() - 40 * 86400000).toISOString() };
   wikiDown = true;
   const card = (await priceReq([{ id: '404' }])).body.prices['404'].price;
-  assert.equal(card, 66667);
+  assert.equal(card, priceFromValue(300000));
   const before = db.discs;
   const r = await buyReq({ album_id: '404', name: 'Stale One', artist: 'Old Hand', expect: card });
   assert.equal(r.code, 200);
@@ -138,7 +142,7 @@ await check('an outage falls back to the last valuation, at the same price at th
 await check('a kworb-era cache row is never used as a price', async () => {
   db.plays['606'] = { album_id: '606', plays: 12810000000, source: 'kworb', fetched_at: new Date().toISOString() };
   const r = await priceReq([{ id: '606' }]);
-  assert.equal(r.body.prices['606'].price, 51947);
+  assert.equal(r.body.prices['606'].price, 62290);
 });
 
 await check('the till charges nothing when pricing fails, and says why', async () => {
