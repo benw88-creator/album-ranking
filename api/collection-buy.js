@@ -17,7 +17,7 @@
 //   checked server-side in collection_claim_pick_from; this route only decides
 //   which function to call, never whether the caller has a pick.
 
-import { valueAlbum } from './_streams.js';
+import { valueAlbum, SOURCE } from './_streams.js';
 import { cors } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
@@ -45,36 +45,37 @@ async function isSealed(jwt, albumId) {
 }
 const STALE_DAYS = 14;
 
-/* Streams to Discs.
+/* VINALL Value to Discs (api/_streams.js says what the value is).
  *
- * Raw totals are unusable as a price: Views is 12.81 billion streams, and at
- * one-to-one nobody buys anything ever. Divided by 250,000 it becomes a ladder
- * that fits what people actually earn — roughly 9,000 a day from the login
- * ladder plus up to 16,100 from games:
+ * Linear, as the stream price was: a famous record is a target and an obscure
+ * one affordable. The divisor is ANCHORED on Views, which cost 51,240 under
+ * the stream price and has ~234,000 Wikipedia readers a year, so the record
+ * people most often quote kept its price. Measured (readers a year → Discs):
  *
- *     Views (Drake)    12.81B  -> 51,240    about two days of everything
- *     Blonde            9.39B  -> 37,560
- *     In Rainbows       2.32B  ->  9,280    one good session
- *     The Money Store    180M  ->    720    minutes
+ *     Views (Drake)          233,763  -> 51,947
+ *     Blonde                 284,642  -> 63,254
+ *     Utopia (Travis Scott)  117,066  -> 26,015
+ *     The Money Store         64,637  -> 14,364
+ *     French Exit (TV Girl)   32,015  ->  7,114
+ *     Sweet Boy (M. Todd)     26,577  ->  5,906
+ *     Thriller             2,050,995  -> 100,000 (the ceiling)
  *
- * Linear rather than compressed, deliberately: the hundred-to-one spread is
- * what makes a famous record feel like a target and an obscure one feel
- * affordable. A square-root curve would flatten exactly the thing that gives
- * the collection a shape.
+ * Wikipedia favours classics where streams favoured the last decade, so the
+ * CEILING is what stops Thriller costing a fortnight of play. Stored
+ * collection.price rows are what somebody paid and are never re-priced.
  *
- * **This divisor moves with the economy and nothing enforces it.** It went from
- * 5,000,000 to 1,250,000 with the 4x pass and to 250,000 with the 5x one, each
- * time in lockstep with ..._rarities_and_inflation and
- * ..._doubling_login_and_inflation. Change the rates without changing this and
- * every record becomes either free or unbuyable.
+ * **This divisor moves with the economy and nothing enforces it**, as the
+ * stream divisor did (5,000,000 → 1,250,000 → 250,000 across two inflation
+ * passes). Change the rates without it and every record goes free or unbuyable.
  */
-const DISCS_PER_STREAM_DIVISOR = 250000;
+const VALUE_DIVISOR = 4.5;
 const MIN_PRICE = 200;
+const MAX_PRICE = 100000;
 
-export function priceFromStreams(streams) {
-  const n = Number(streams) || 0;
+export function priceFromValue(value) {
+  const n = Number(value) || 0;
   if (n <= 0) return null;
-  return Math.max(MIN_PRICE, Math.round(n / DISCS_PER_STREAM_DIVISOR));
+  return Math.min(MAX_PRICE, Math.max(MIN_PRICE, Math.round(n / VALUE_DIVISOR)));
 }
 
 function svcHeaders(key, extra) {
@@ -90,12 +91,11 @@ function svcHeaders(key, extra) {
    valuation, the till from a fresh row or ANOTHER valuation, and a failure in
    either was reported as "cannot be priced". Now both call this:
 
-     1. a cached kworb valuation under 14 days old;
+     1. a cached valuation under 14 days old;
      2. otherwise value the record now and cache it;
-     3. if that valuation could not RUN (MusicBrainz, Wikidata, Deezer or
-        kworb failed to answer), the last valuation we ever made, however old
-        — the record was priceable then and a stream total only goes up, so
-        it is a conservative price, never an inflated one;
+     3. if that valuation could not RUN (Wikipedia or Apple failed to
+        answer), the last valuation we ever made, however old — the record was
+        priceable then, and an old price beats a dead Buy button;
      4. otherwise no price, with `transient` saying whether that is "not just
         now" or a real "too few tracks matched".
 
@@ -109,10 +109,10 @@ export async function priceAlbum(albumId, SERVICE, opts) {
       { headers: svcHeaders(SERVICE) });
     const rows = await c.json();
     const row = Array.isArray(rows) && rows[0];
-    if (row && row.plays > 0 && row.source === 'kworb') cached = row;
+    if (row && row.plays > 0 && row.source === SOURCE) cached = row;
   } catch (e) { /* a cold cache is slow, not broken */ }
   if (cached && new Date(cached.fetched_at).getTime() > Date.now() - STALE_DAYS * 86400000) {
-    return { price: priceFromStreams(cached.plays), streams: cached.plays, reason: null };
+    return { price: priceFromValue(cached.plays), streams: cached.plays, reason: null };
   }
   const v = await valueAlbum(albumId, 'unused', opts.cache || {}, opts.hint);
   if (v.ok && v.total > 0) {
@@ -123,14 +123,14 @@ export async function priceAlbum(albumId, SERVICE, opts) {
         body: JSON.stringify([{
           album_id: albumId, name: v.album || (opts.hint && opts.hint.name) || null,
           artist: v.artist || (opts.hint && opts.hint.artist) || null,
-          plays: v.total, source: 'kworb', fetched_at: new Date().toISOString(),
+          plays: v.total, source: SOURCE, fetched_at: new Date().toISOString(),
         }]),
       });
     } catch (e) { /* the price is still right for this request */ }
-    return { price: priceFromStreams(v.total), streams: v.total, reason: null };
+    return { price: priceFromValue(v.total), streams: v.total, reason: null };
   }
   if (v.transient && cached) {
-    return { price: priceFromStreams(cached.plays), streams: cached.plays, reason: null, stale: true };
+    return { price: priceFromValue(cached.plays), streams: cached.plays, reason: null, stale: true };
   }
   return { price: null, streams: null, reason: v.reason || 'unpriceable', transient: !!v.transient };
 }

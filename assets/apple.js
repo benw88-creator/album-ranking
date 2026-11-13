@@ -433,11 +433,68 @@
     }
     if (method === 'GET' && /\/api\/preview$/.test(u.pathname)) return preview(u.searchParams).then(respond, fail);
     if (/\/api\/catalogue$/.test(u.pathname) && u.searchParams.get('path') === 'spotify-match') {
-      // Matching an import runs against Deezer on the server. Not in this build.
-      return Promise.resolve(respond([503, { error: 'Matching against Apple Music is not available yet' }]));
+      var body = {}; try { body = JSON.parse((init && init.body) || '{}'); } catch (e) {}
+      return spotifyMatch(body).then(respond, fail);
     }
     return _fetch(input, init);
   };
+
+  /* ---- a Spotify export, matched against Apple ------------------------ */
+  /* The server matches against Deezer, which this build does not use, so the
+     same rules (assets/match.js, which api/_match.js re-exports: one copy) run
+     here against Apple's search, through the same limiter. Apple's results are
+     put in the candidate shape those rules read. Slower than the server for a
+     big library (the limit is ~20 searches a minute); the import job already
+     survives closing the sheet. */
+  var matchLib = null;
+  function lib() { return matchLib || (matchLib = import('/assets/match.js')); }
+  function asTrack(t) {
+    return { id: 'am' + t.trackId, title: t.trackName, artist: { name: t.artistName },
+      album: { id: 'am' + t.collectionId, title: cleanName(t.collectionName), cover_medium: art(t.artworkUrl100, 300) } };
+  }
+  function asAlbum(c) {
+    return { id: 'am' + c.collectionId, title: cleanName(c.collectionName), artist: { name: c.artistName }, cover_medium: art(c.artworkUrl100, 300) };
+  }
+  /* A song: the ALBUM's own tracklist first when the export names one.
+     Apple's song search can miss the obvious ("Frank Ocean Nikes" returns
+     eight other Frank Ocean songs and a piano tribute), while its album lookup
+     is reliable — and is cached, so every track on one record costs one
+     lookup between them. Song search is the fallback. */
+  function matchTrack(M, want) {
+    var best = { status: 'none', best: null, alts: [] };
+    function take(cands) {
+      var d = M.decide(cands.map(function (c) { return { c: c, s: M.scoreTrack(want, c) }; }));
+      if (d.status === 'ok' || (best.status === 'none' && d.status === 'check')) best = d;
+      return best.status === 'ok';
+    }
+    var viaAlbum = want.b ? pickAlbum(M.base(want.b), want.a).then(function (c) {
+      return c ? albumWithTracks(c.collectionId).then(function (x) { return x ? take(x.tracks.map(asTrack)) : false; }) : false;
+    }) : Promise.resolve(false);
+    return viaAlbum.then(function (done) {
+      if (done) return;
+      return itunes('search', { media: 'music', entity: 'song', limit: '50', term: (want.a + ' ' + M.base(want.t)).trim() })
+        .then(function (j) { take(((j && j.results) || []).filter(function (t) { return t.trackId; }).map(asTrack)); });
+    }).then(function () {
+      return { status: best.status, m: M.trackOut(best.best), alts: best.status === 'check' ? best.alts.map(M.trackOut) : [] };
+    });
+  }
+  function spotifyMatch(body) {
+    var kind = body.kind === 'album' ? 'album' : 'track';
+    var items = (Array.isArray(body.items) ? body.items : []).slice(0, 10);
+    return lib().then(function (M) {
+      return Promise.all(items.map(function (it) {
+        var want = { a: String(it.a || ''), t: String(it.t || ''), b: String(it.b || '') };
+        var job = kind === 'album'
+          ? albumSearch((want.a + ' ' + M.base(want.b)).trim()).then(function (rs) {
+              var d = M.decide(rs.map(asAlbum).map(function (c) { return { c: c, s: M.scoreAlbum(want, c) }; }));
+              return { status: d.status, m: M.albumOut(d.best), alts: d.status === 'check' ? d.alts.map(M.albumOut) : [] };
+            })
+          : matchTrack(M, want);
+        return job.then(function (r) { r.u = it.u; return r; },
+                        function () { return { u: it.u, status: 'retry', m: null, alts: [] }; });
+      }));
+    }).then(function (results) { return [200, { results: results }]; });
+  }
 
   /* ---- artwork that is not Apple's ------------------------------------ */
   /* Ratings, feed posts and game pools made before this carry Deezer sleeve

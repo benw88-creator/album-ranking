@@ -1,37 +1,61 @@
 # Strategy B — what is built in Lab (13 Nov 2026)
 
-Uncommitted in `vinal-lab` (branch `lab`). Nothing pushed, deployed or sent.
+Branch `lab` in `vinal-lab`, deployed to vinall-lab.vercel.app. Nothing on production, nothing sent to Apple.
 
 ## The switch
 
-`assets/apple.js` defines `window.Rights`. `Rights.ON` is **true in the native app, false on the website**, so the website is unchanged until you decide otherwise. To test the Apple build in a browser: open `/?rights=apple` (remembered on that device; `?rights=deezer` switches back).
+`assets/apple.js` defines `window.Rights`. `Rights.ON` is **true in the native app, false on the website**. To see the Apple build in a browser: `/?rights=apple` (remembered on that device; `?rights=deezer` switches back).
 
-## Done
+## What the Apple build does
 
-| Gameplan item | What the Apple build now does | Where |
+| Area | Behaviour | Where |
 |---|---|---|
-| 1. Apple catalogue | Search, album pages, tracklists, discographies, artist lookups and 30-second previews come from Apple's iTunes Search API, called **from the device** (Apple limits it to ~20 calls a minute per IP, held by a rolling limiter; metadata cached a day, preview audio streamed only). The UK chart comes from Apple's public RSS feed through `/api/catalogue?source=apple`. The app's ~40 catalogue call sites are unchanged: `apple.js` answers `/api/catalogue` and `/api/preview` in the same shapes. | `assets/apple.js`, `api/catalogue.js` |
-| | Apple ids are stored as `am<digits>` so they can never collide with Deezer's numeric ids. Older Deezer and Spotify ids resolve by name and artist, as they already did. Nothing stored is re-keyed. | |
-| | Apple's album index is weak on mixed text ("frank ocean blonde" finds no Blonde), so albums are gathered from Apple's song results first. Measured: Blonde, In Rainbows, IGOR and Travis Scott's discography all resolve. | |
-| Badge and attribution | Album page: Apple's official "Listen on Apple Music" badge (from tools.applemediaservices.com, unaltered) linking to the album. For You: badge plus "Preview provided courtesy of iTunes" on every card, linking to the track. Player bar: "Courtesy of iTunes ↗" linking to the track. Any other preview (song rows, Today, Your music) shows a small badge pill while it plays. | `apple.js`, `index.html` |
-| No artwork alterations | For You's two blurred copies of the sleeve are not drawn in the Apple build. | `index.html` cardHtml |
-| Deezer branding | No Deezer marks; footer and Settings credit iTunes. No Deezer image is requested: a Deezer sleeve URL is swapped for VINALL's own blank sleeve before it loads. | `apple.js` |
-| 2. Recall and cover games | Recall, Guess the Cover and Cover EXTREME are hidden and unreachable (cards, links, `#recall`, leaderboards, unlock list, discovery prompts). The tutorial skips its Recall beat. | `apple.js`, `index.html`, `boards.js`, `discover.js` |
-| Artwork inside games | No third-party sleeve is shown inside any game sheet (Apple's terms exclude "independent entertainment value"). Cover Fire's answers are the record names. | `apple.js`, `index.html` |
-| Community Choice | New picks are YouTube only (no preview fallback, no waveform decoding of an Apple preview). Older Deezer-based moments open the song on YouTube. Playback relies on YouTube's own `end` parameter; VINALL no longer pauses the player itself. Needs migration `20261113120000_moments_apple_ids.sql` (lab DB). | `index.html` |
-| 3. Background audio | Already done in Lab: `audio` removed from `UIBackgroundModes`; the player pauses when the app goes to the background. | `Info.plist`, `AppDelegate.swift` |
-| Screenshots | Already made: 5 screenshots with invented records and original art. | `store-screenshots/` |
-| Terms and privacy (v1.8) | Apple named as the iOS source with a link to Apple's privacy policy; users bound by the YouTube Terms of Service; Google Privacy Policy linked for the player. **Wants a legal read before release.** | `terms.html`, `privacy.html` |
+| Catalogue | Search, album pages, tracklists, discographies, artist lookups and 30-second previews from Apple's iTunes Search API, called **on the device** (Apple allows ~20 calls a minute per IP; a rolling limiter holds it; metadata cached a day; preview audio streamed only, never downloaded or decoded). The app's ~40 call sites are unchanged: `apple.js` answers `/api/catalogue` and `/api/preview` in the routes' own shapes. UK chart from Apple's public RSS via `/api/catalogue?source=apple`. | `assets/apple.js`, `api/catalogue.js` |
+| Ids | Apple ids are `am<digits>`, never confused with Deezer's numeric ids. Older ids resolve by name and artist. Nothing stored is re-keyed. | `assets/apple.js` |
+| Badge and attribution | Apple's official "Listen on Apple Music" badge (unaltered, from tools.applemediaservices.com) on the album page, linking to the album, and on every For You card. Every preview is credited "provided courtesy of iTunes" (the Search API terms' wording) beside a link to the track: For You cards, the player bar, and a pill for any other preview. | `apple.js`, `index.html` |
+| Artwork | No altered sleeves (For You's blurred copies are not drawn). No Deezer image is ever requested: a Deezer URL becomes VINALL's blank sleeve before it loads. | `apple.js` |
+| Games | Recall, Guess the Cover and Cover EXTREME are hidden and unreachable. No third-party sleeve inside any game sheet; Cover Fire answers by name. The tutorial skips its Recall beat. | `apple.js`, `index.html`, `boards.js`, `discover.js` |
+| Community Choice | YouTube-only picks; playback stops on YouTube's own `end` parameter; older Deezer picks open on YouTube. | `index.html` |
+| Spotify import | Matched on the device against Apple, with the same rules as the server (`assets/match.js`, re-exported by `api/_match.js`). The album's real tracklist is tried first. Measured: 7 of 7 real tracks automatic (Nikes, HOLD UP, Dreams 2004 Remaster, Money Trees Deluxe, Paranoid Android OKNOTOK, Come As You Are, the live Blinding Lights kept apart from the studio cut). | `apple.js` |
+| Background audio | `audio` removed from `UIBackgroundModes`; the player pauses when the app goes to the background. | `Info.plist`, `AppDelegate.swift` |
+| Screenshots | 5 new screenshots, invented records, original art. | `store-screenshots/` |
 
-## Not done — needed before the review response is true
+## VINALL Value (replaces kworb, for both builds)
 
-1. **VINALL Value (replaces kworb).** Bid Wars, Higher or Lower (streams) and Collection prices still go through `/api/album-streams`, `/api/collection-*` and `/api/bid-war-create`, which use **kworb and Deezer tracklists on the server**. Until this lands, the app still uses Deezer's API indirectly, and the response must not say otherwise. The research plan (§5) has the design: Wikipedia pageviews + Wikidata certifications (CC0) + capped community signal, quantile-calibrated to today's prices, one idempotent migration.
-2. **Stored artwork backfill.** Ratings, feed posts, lists and collections made on the web carry Deezer sleeve URLs. In the app they show VINALL's blank sleeve until rewritten to Apple's. This is a **production data change** (needs your approval and a backup first). The user's own new ratings in the app store Apple sleeves.
-3. **Spotify export import** is matched against Deezer on the server, so the app says it is "not in the app yet" and points to the website. Moving the matcher to Apple is a separate job.
-4. **Artist photos.** Apple's Search API has none; artist pages and the Popular picker show a placeholder.
-5. **Native build and device run** (Mac): previews, lock/resume, Choice, and the 20-calls-a-minute limit under real For You use.
-6. **Lab DB migration** `20261113120000_moments_apple_ids.sql` applied by hand.
+Value = readers of the album's Wikipedia article over the last 12 months (Wikimedia pageviews, CC0) × (1 + up to 20% for people on VINALL who rated it). No article: a floor of 1,000. Price = value ÷ 4.5, minimum 200, ceiling 100,000, anchored so Views keeps its price.
+
+| Record | Readers a year | Discs |
+|---|---|---|
+| Views (Drake) | 233,763 | 51,947 (was 51,240) |
+| Blonde | 284,642 | 63,254 |
+| In Rainbows | 316,283 | 70,285 |
+| IGOR | 189,586 | 42,130 |
+| SOS | 162,078 | 36,017 |
+| Utopia | 117,066 | 26,015 |
+| The Money Store | 64,637 | 14,364 |
+| French Exit | 32,015 | 7,114 |
+| Sweet Boy | 26,577 | 5,906 |
+| Thriller, Rumours | 2.05M, 0.88M | 100,000 (ceiling) |
+| Demos Before Prom (no article) | — | 222 |
+
+No kworb, Deezer, Wikidata or MusicBrainz call is left in valuation. Records are named from the caller's own crate, the public feed, or Apple for `am` ids. Wording changed throughout: "Highest VINALL Value wins", Higher or Lower's "Value" mode, the admin "VINALL Value health" check, terms and privacy. Code: `api/_streams.js`, `priceFromValue` in `api/collection-buy.js`. Stored collection prices are untouched.
+
+## Database (lab only)
+
+- `20261113120000_moments_apple_ids.sql` and `20261113140000_vinall_value.sql` applied to the lab project and verified. The lab database has no migration-history table, so there was nothing to record.
+- `scripts/backfill-apple-art.mjs --ref <ref> [--apply]` rewrites stored Deezer sleeves to Apple's, in every column that holds one, plain or JSON, in one transaction. The dry run applies everything inside a rolled-back transaction and reports what would remain. Run on lab: 4 sleeves, 14 rows, 0 left. The sync merge now keeps the Apple sleeve when a device's older copy ties with the cloud's, so a phone cannot push the Deezer URL back.
+
+## Checks
+
+`npm run check` (12 Collection selfcheck groups on the new valuation), the lab leak check, the traps script, and `scripts/tests/rights.spec.mjs` (4 tests: catalogue shapes, held-back games and no Deezer requests, the website untouched, Spotify matching through Apple).
+
+## Still open
+
+1. **Artist photos.** Apple's Search API has none; artist pages and the Popular picker show a placeholder.
+2. **Apple's chart feed is sometimes slow** (one timeout in three on the first test). A success is cached at the edge for a day; a failure shows "Couldn't load the chart" and For You uses its other sources.
+3. **Native build and device run** (Mac).
+4. **Production:** the two migrations and the artwork backfill, with a backup first and the owner's approval; then the cherry-pick promotion in `LAB-ONLY.md`.
 
 ## Open questions only Apple can answer
 
-The §12 message in `APP-STORE-SURVIVAL-PLAN.md`, plus (d) and (e) from `COVERS-AND-ESTIMATE.md`: grids and profile tiles, the Collection shelf, and quiz reveal screens. The build currently shows Apple artwork on grids, profiles and the Collection (each tile opens the badged album page). If Apple says no, those switch to the blank sleeve with one rule in `apple.js`.
+The §12 message in `APP-STORE-SURVIVAL-PLAN.md`, plus (d) and (e) from `COVERS-AND-ESTIMATE.md`: grids and profile tiles, the Collection shelf, quiz reveal screens. The build shows Apple artwork on grids, profiles and the Collection (each tile opens the badged album page). If Apple says no, one rule in `apple.js` switches those to the blank sleeve.

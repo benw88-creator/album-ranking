@@ -21,7 +21,7 @@
 // So the page fills the nulls in by itself, a few at a time, and the button
 // only ever appears with a real number on it.
 //
-// It is a route rather than client arithmetic because `priceFromStreams` and
+// It is a route rather than client arithmetic because `priceFromValue` and
 // its divisor are the server's, and the divisor moves with the economy — it
 // has gone 5,000,000 -> 1,250,000 -> 250,000, each time in lockstep with a
 // migration. A second copy in the browser is a second copy to forget, and the
@@ -35,7 +35,8 @@
 // Every valuation is written back to `album_plays`, so the work is done once
 // for everybody and the next render of the same crate reads it from the GET.
 
-import { priceFromStreams, priceAlbum } from './collection-buy.js';
+import { priceFromValue, priceAlbum } from './collection-buy.js';
+import { SOURCE } from './_streams.js';
 import { cors } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
@@ -198,8 +199,8 @@ export default async function handler(req, res) {
       const rows = await c.json();
       const cutoff = Date.now() - STALE_DAYS * 86400000;
       (Array.isArray(rows) ? rows : []).forEach((r) => {
-        if (r.plays && r.source === 'kworb' && new Date(r.fetched_at).getTime() > cutoff) {
-          priced[r.album_id] = priceFromStreams(r.plays);
+        if (r.plays && r.source === SOURCE && new Date(r.fetched_at).getTime() > cutoff) {
+          priced[r.album_id] = priceFromValue(r.plays);
         }
       });
     } catch (e) {}

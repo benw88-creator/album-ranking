@@ -1,12 +1,13 @@
 // The Collection's price and till, end to end in-process. Every request is
-// intercepted: Deezer, Wikidata, MusicBrainz and kworb answer from fixtures,
+// intercepted: Wikipedia, Wikimedia and Apple answer from fixtures,
 // and Supabase is a small in-memory stand-in (auth, album_plays, crate_feed,
 // my_sealed_albums and collection_buy_from with its real refusals). Never
 // loads production credentials.
 import assert from 'node:assert/strict';
 import buy from '../api/collection-buy.js';
 import prices from '../api/collection-prices.js';
-import { normTitle } from '../api/_streams.js';
+import { normTitle, SOURCE, valueAlbum } from '../api/_streams.js';
+import { priceFromValue } from '../api/collection-buy.js';
 
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'isolated-test-service-key';
 const J = (d, status = 200) => new Response(JSON.stringify(d), { status });
@@ -15,24 +16,20 @@ let groups = 0;
 const check = async (name, fn) => { await fn(); groups++; console.log('ok — ' + name); };
 
 /* ---- the world ---- */
-const SP = { A: 'AAAAAAAAAAAAAAAAAAAAAA', B: 'BBBBBBBBBBBBBBBBBBBBBB', C: 'CCCCCCCCCCCCCCCCCCCCCC', D: 'DDDDDDDDDDDDDDDDDDDDDD' };
+// Records by id. A Wikipedia article (title + description) and its readers a
+// year; 'none' = no article; Apple knows the am id.
 const ALBUMS = {
-  // Prince-shaped: kworb names every track "X - 2015 Paisley Park Remaster".
-  101: { title: 'Purple Rain', artist: { id: 1, name: 'Prince' }, tracks: ['Let\'s Go Crazy', 'Take Me with U', 'The Beautiful Ones', 'Computer Blue', 'Darling Nikki', 'When Doves Cry', 'I Would Die 4 U', 'Baby I\'m a Star', 'Purple Rain'] },
-  // Only on MusicBrainz, never Wikidata — the Malcolm Todd case.
-  202: { title: 'Demos Before Prom', artist: { id: 2, name: 'Malcolm Todd' }, tracks: ['One', 'Two', 'Three', 'Four', 'Five', 'Six'] },
-  // A real "too few tracks matched".
-  303: { title: 'Rarities', artist: { id: 3, name: 'Deep Cut' }, tracks: ['Hit', 'B1', 'B2', 'B3', 'B4', 'B5'] },
-  404: { title: 'Stale One', artist: { id: 4, name: 'Old Hand' }, tracks: ['S1', 'S2', 'S3', 'S4'] },
+  101: { name: 'Purple Rain', artist: 'Prince', article: 'Purple Rain (album)', desc: '1984 soundtrack and studio album by Prince and the Revolution', readers: 449036 },
+  202: { name: 'Demos Before Prom', artist: 'Malcolm Todd', article: 'Demos Before Prom', desc: '2023 album by Malcolm Todd', readers: 9000 },
+  303: { name: 'Rarities', artist: 'Deep Cut', article: null },
+  404: { name: 'Stale One', artist: 'Old Hand', article: 'Stale One', desc: '2001 album by Old Hand', readers: 54000 },
+  // A same-named page about something else must never price the record.
+  606: { name: 'Views', artist: 'Drake', article: 'Views (album)', desc: '2016 studio album by Drake', readers: 233763, decoy: { title: 'Views', desc: 'Topics referred to by the same term' } },
 };
-const KWORB = {
-  [SP.A]: ALBUMS[101].tracks.map((t, i) => [t + ' - 2015 Paisley Park Remaster', 100000000 - i * 1000]),
-  [SP.B]: ALBUMS[202].tracks.map((t) => [t, 20000000]),
-  [SP.C]: [['Hit', 900000000]],
-  [SP.D]: ALBUMS[404].tracks.map((t) => [t, 50000000]),
-};
-let mbDown = false, kworbDown = false, rpcCalls = 0, sealedIds = [], sealedDown = false;
-const db = { plays: {}, owned: {}, discs: 10000000, rated: new Set(['101', '202', '303', '404', 'legacyLegacyLegacy0001']) };
+const FEED = { '101': ALBUMS[101], '202': ALBUMS[202], '303': ALBUMS[303], '404': ALBUMS[404], '606': ALBUMS[606] };
+const RATERS = { '101': 3 };
+let wikiDown = false, rpcCalls = 0, sealedIds = [], sealedDown = false;
+const db = { plays: {}, owned: {}, discs: 10000000, rated: new Set(['101', '202', '303', '404', '606', 'legacyLegacyLegacy0001', 'am777']) };
 const USER = 'u-1';
 
 globalThis.fetch = async (url, opts = {}) => {
@@ -40,10 +37,18 @@ globalThis.fetch = async (url, opts = {}) => {
   const body = opts.body ? JSON.parse(opts.body) : null;
   if (u.pathname === '/auth/v1/user') return (opts.headers.Authorization === 'Bearer good') ? J({ id: USER }) : J({}, 401);
   if (u.pathname === '/rest/v1/rpc/my_sealed_albums') return sealedDown ? J({}, 500) : J(sealedIds.map((id) => ({ album_id: id })));
-  if (u.pathname === '/rest/v1/crate_feed') return J([]);   // never posted: a private rating
+  if (u.pathname === '/rest/v1/crate_feed') {
+    const id = decodeURIComponent((u.searchParams.get('album_id') || '').replace(/^eq./, ''));
+    if (u.searchParams.get('select') === 'user_id') {
+      const n = RATERS[id] || 0;
+      return new Response('[]', { status: 200, headers: { 'content-range': (n ? '0-0' : '*') + '/' + n } });
+    }
+    const a = FEED[id];
+    return J(a ? [{ album_name: a.name, album_artist: a.artist }] : []);
+  }
   if (u.pathname === '/rest/v1/album_plays') {
     if (opts.method === 'POST') { body.forEach((r) => { db.plays[r.album_id] = r; }); return J({}, 201); }
-    const id = decodeURIComponent((u.searchParams.get('album_id') || '').replace(/^eq\./, ''));
+    const id = decodeURIComponent((u.searchParams.get('album_id') || '').replace(/^eq./, ''));
     return J(db.plays[id] ? [db.plays[id]] : []);
   }
   if (u.pathname === '/rest/v1/rpc/collection_buy_from') {
@@ -55,33 +60,23 @@ globalThis.fetch = async (url, opts = {}) => {
     db.owned[k] = body.p_price; db.discs -= body.p_price;
     return J({ ok: true, album_id: body.p_album_id, price: body.p_price, discs: db.discs });
   }
-  if (u.hostname === 'api.deezer.com') {
-    const m = u.pathname.match(/^\/album\/(\d+)$/);
-    if (m) {
-      const a = ALBUMS[m[1]]; if (!a) return J({ error: { code: 800, message: 'no data' } });
-      return J({ id: +m[1], title: a.title, artist: a.artist, tracks: { data: a.tracks.map((t) => ({ title: t, title_short: t })) } });
-    }
-    if (u.pathname === '/search/album') {
-      const q = u.searchParams.get('q');
-      const hit = Object.entries(ALBUMS).find(([, a]) => q.includes(a.title));
-      return J({ data: hit ? [{ id: +hit[0], title: hit[1].title, artist: hit[1].artist }] : [] });
-    }
+  if (u.hostname === 'itunes.apple.com') {
+    return J(u.searchParams.get('id') === '777' ? { resultCount: 1, results: [{ collectionName: 'Purple Rain', artistName: 'Prince' }] } : { resultCount: 0, results: [] });
   }
-  if (u.hostname === 'query.wikidata.org') {
-    const id = (u.searchParams.get('query').match(/P2722 "(\d+)"/) || [])[1];
-    const map = { 1: SP.A, 3: SP.C, 4: SP.D };
-    return J({ results: { bindings: map[id] ? [{ sp: { value: map[id] } }] : [] } });
+  if (u.hostname === 'en.wikipedia.org') {
+    if (wikiDown) return new Response('', { status: 503 });
+    const q = u.searchParams.get('gsrsearch');
+    const a = Object.values(ALBUMS).find((x) => q.startsWith(x.name + ' ' + x.artist));
+    const pages = {};
+    if (a && a.decoy) pages[1] = { title: a.decoy.title, description: a.decoy.desc, index: 1 };
+    if (a && a.article) pages[2] = { title: a.article, description: a.desc, index: 2 };
+    return J({ query: { pages } });
   }
-  if (u.hostname === 'musicbrainz.org') {
-    if (mbDown) return new Response('slow down', { status: 503 });
-    if (u.pathname === '/ws/2/url') return J({ relations: [{ artist: { id: 'mb-todd' } }] });
-    return J({ relations: [{ url: { resource: 'https://open.spotify.com/artist/' + SP.B } }] });
-  }
-  if (u.hostname === 'kworb.net') {
-    if (kworbDown) return new Response('', { status: 502 });
-    const id = u.pathname.match(/artist\/(\w+)_songs/)[1];
-    const rows = KWORB[id]; if (!rows) return new Response('', { status: 404 });
-    return new Response(rows.map(([t, n]) => '<tr><td class="text"><div><a href="x">' + t + '</a></div></td><td>' + n.toLocaleString('en-US') + '</td><td>1</td></tr>').join('\n'));
+  if (u.hostname === 'wikimedia.org') {
+    if (wikiDown) return new Response('', { status: 503 });
+    const title = decodeURIComponent(u.pathname.split('/user/')[1].split('/monthly')[0]).replace(/_/g, ' ');
+    const a = Object.values(ALBUMS).find((x) => x.article === title);
+    return a ? J({ items: [{ views: a.readers - 1000 }, { views: 1000 }] }) : new Response('', { status: 404 });
   }
   throw new Error('unexpected request ' + url);
 };
@@ -89,60 +84,75 @@ globalThis.fetch = async (url, opts = {}) => {
 const priceReq = async (albums) => { const r = res(); await prices({ method: 'POST', headers: { authorization: 'Bearer good' }, body: { albums } }, r); return r; };
 const buyReq = async (b) => { const r = res(); await buy({ method: 'POST', headers: { authorization: 'Bearer good' }, body: b }, r); return r; };
 
-await check('kworb version tails after a spaced dash still match the track', async () => {
-  assert.equal(normTitle('When Doves Cry - 2015 Paisley Park Remaster'), normTitle('When Doves Cry'));
-  assert.equal(normTitle('Dreams - 2004 Remaster'), 'dreams');
-  assert.equal(normTitle('Self Control'), 'selfcontrol');
-  const r = await priceReq([{ id: '101' }]);
-  assert.equal(r.code, 200);
-  assert.ok(r.body.prices['101'].price > 0, 'Purple Rain prices');
+await check('VINALL Value takes the album article, never a same-named page, and keeps Views at its old price', async () => {
+  assert.equal(normTitle('When Doves Cry - 2015 Paisley Park Remaster'), normTitle('When Doves Cry'));   // _discogs.js still uses it
+  const v = await valueAlbum('606', 'unused', {});
+  assert.equal(v.ok, true);
+  assert.equal(v.article, 'Views (album)', 'the disambiguation page is skipped');
+  assert.equal(v.total, 233763);
+  assert.equal(priceFromValue(v.total), 51947);
+  assert.equal(priceFromValue(2050995), 100000, 'the ceiling holds Thriller');
+  assert.equal(priceFromValue(1000), 222);
+  assert.equal(priceFromValue(0), null);
+  assert.equal(v.source, SOURCE);
 });
 
-await check('a failed artist lookup is "not just now", is not remembered, and prices once the service answers', async () => {
-  mbDown = true;
+await check('people here who rated a record lift its value, capped at +20%', async () => {
+  const { uplift } = await import('../api/_streams.js');
+  assert.equal(uplift(0), 0); assert.equal(uplift(3), 0.06); assert.equal(uplift(500), 0.2);
+  const v = await valueAlbum('101', 'unused', {});
+  assert.equal(v.raters, 3);
+  assert.equal(v.total, Math.round(449036 * 1.06));
+});
+
+await check('a record with no article is priced at the floor, not refused', async () => {
+  const r = await priceReq([{ id: '303' }]);
+  assert.equal(r.body.prices['303'].price, 222);
+});
+
+await check('a Wikipedia outage is "not just now", is not remembered, and prices once it answers', async () => {
+  wikiDown = true;
   const r1 = await priceReq([{ id: '202' }]);
   assert.equal(r1.body.prices['202'].price, null);
   assert.equal(r1.body.prices['202'].transient, true);
   assert.equal(db.plays['202'], undefined, 'nothing cached for a failure');
-  mbDown = false;
+  wikiDown = false;
   const r2 = await priceReq([{ id: '202' }]);
-  assert.ok(r2.body.prices['202'].price > 0, 'priced on the retry, not stuck as unpriceable');
-});
-
-await check('a real "too few tracks" is permanent and not transient', async () => {
-  const r = await priceReq([{ id: '303' }]);
-  assert.equal(r.body.prices['303'].price, null);
-  assert.equal(r.body.prices['303'].transient, false);
-  assert.equal(r.body.prices['303'].reason, 'too-few-matched');
+  assert.equal(r2.body.prices['202'].price, 2000);
+  assert.equal(db.plays['202'].source, SOURCE);
 });
 
 await check('an outage falls back to the last valuation, at the same price at the card and the till', async () => {
-  db.plays['404'] = { album_id: '404', plays: 300000000, source: 'kworb', fetched_at: new Date(Date.now() - 40 * 86400000).toISOString() };
-  kworbDown = true;
+  db.plays['404'] = { album_id: '404', plays: 300000, source: SOURCE, fetched_at: new Date(Date.now() - 40 * 86400000).toISOString() };
+  wikiDown = true;
   const card = (await priceReq([{ id: '404' }])).body.prices['404'].price;
-  assert.equal(card, 1200);
+  assert.equal(card, 66667);
   const before = db.discs;
   const r = await buyReq({ album_id: '404', name: 'Stale One', artist: 'Old Hand', expect: card });
   assert.equal(r.code, 200);
   assert.equal(r.body.price, card);
   assert.equal(before - db.discs, card);
-  kworbDown = false;
+  wikiDown = false;
+});
+
+await check('a kworb-era cache row is never used as a price', async () => {
+  db.plays['606'] = { album_id: '606', plays: 12810000000, source: 'kworb', fetched_at: new Date().toISOString() };
+  const r = await priceReq([{ id: '606' }]);
+  assert.equal(r.body.prices['606'].price, 51947);
 });
 
 await check('the till charges nothing when pricing fails, and says why', async () => {
-  mbDown = true; kworbDown = true;
-  delete db.plays['202'];
+  wikiDown = true;
   const calls = rpcCalls, before = db.discs;
-  // A fresh artist so the in-process cache cannot answer for it.
-  ALBUMS[505] = { title: 'Unreachable', artist: { id: 5, name: 'Nobody' }, tracks: ['a', 'b', 'c', 'd'] };
   db.rated.add('505');
   const r = await buyReq({ album_id: '505', name: 'Unreachable', artist: 'Nobody', expect: 500 });
   assert.equal(r.code, 503);
   assert.match(r.body.error, /nothing was charged/);
   assert.equal(rpcCalls, calls, 'no purchase function called');
   assert.equal(db.discs, before);
-  mbDown = false; kworbDown = false;
-  const r2 = await buyReq({ album_id: '303', name: 'Rarities', artist: 'Deep Cut' });
+  wikiDown = false;
+  db.rated.add('zz999');
+  const r2 = await buyReq({ album_id: 'zz999' });
   assert.equal(r2.code, 400);
   assert.match(r2.body.error, /cannot be priced/);
   assert.equal(rpcCalls, calls);
@@ -168,11 +178,13 @@ await check('a second purchase of an owned record is refused and costs nothing',
   assert.equal(db.discs, before);
 });
 
-await check('a legacy id nobody posted is valued from the caller\'s name', async () => {
+await check('an Apple id nobody posted is named by Apple; a legacy id by the caller; no name is a real answer', async () => {
+  const a = await priceReq([{ id: 'am777' }]);
+  assert.ok(a.body.prices['am777'].price > 0);
   const r = await priceReq([{ id: 'legacyLegacyLegacy0001', name: 'Purple Rain', artist: 'Prince' }]);
   assert.ok(r.body.prices['legacyLegacyLegacy0001'].price > 0);
-  const legacyOld = await priceReq([{ id: 'legacyLegacyLegacy0002' }]);
-  assert.equal(legacyOld.body.prices['legacyLegacyLegacy0002'].transient, false, 'no name, no record: a real answer');
+  const none = await priceReq([{ id: 'legacyLegacyLegacy0002' }]);
+  assert.equal(none.body.prices['legacyLegacyLegacy0002'].transient, false, 'no name, no record: a real answer');
 });
 
 await check('signed-out callers are refused before anything is priced', async () => {

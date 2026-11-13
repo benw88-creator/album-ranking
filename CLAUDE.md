@@ -24,6 +24,14 @@ App Review rejected 1.0 (5.2.3, 5.2.1, 2.5.4). Status and the open items are in
 - No Deezer image is ever requested in this build: a MutationObserver swaps a
   Deezer src for `/assets/sleeve-blank.svg` before it loads.
 - `scripts/tests/rights.spec.mjs` covers it.
+- **VINALL Value replaced kworb for both builds** (`api/_streams.js`): Wikipedia
+  readers of the album's article over 12 months (CC0) plus up to +20% for
+  raters here; `priceFromValue` (÷4.5, 200–100,000) is anchored on Views. It is
+  not streams and the UI must never call it streams. `album_plays.source` is
+  `vinall-value`; a `kworb` row is never read. The Spotify-import matcher lives
+  in `assets/match.js` (the app runs it against Apple; `api/_match.js`
+  re-exports it). `scripts/backfill-apple-art.mjs` rewrites stored Deezer
+  sleeves (dry run by default; production needs approval and a backup).
 
 ## The redesign (Lab only, 2026-11-08)
 

@@ -21,9 +21,9 @@ Attachments for App Review Information:
 > **Guideline 5.2.3.** We reviewed every third-party service in the app and changed any use we could not document.
 >
 > - **Album artwork, metadata and 30-second previews** now come from Apple's iTunes Search API, under its published terms (https://performance-partners.apple.com/search-api), called from the user's device. The album page and every card of the discovery feed carry an unaltered "Listen on Apple Music" badge linking to the record; elsewhere (a user's own rated albums, profiles) each cover opens that badged album page. Previews are attributed "provided courtesy of iTunes", sit beside a link to the record, and are streamed, never downloaded or stored. No Apple content is used in our games: game screens show no artwork and play no previews.
-> - **We no longer use the Deezer API in the iOS app.** ⚠️ *True only once VINALL Value has replaced the server's stream valuation, which still reads Deezer tracklists — see `../IMPLEMENTATION.md`.*
+> - **We no longer use the Deezer API in the iOS app.**
 > - **Community Choice** embeds YouTube's official IFrame player, as YouTube's Terms of Service allow ("You may also show YouTube videos through the embeddable YouTube player"), under the YouTube API Services Terms accepted through our Google Cloud project (screenshot attached). It follows YouTube's Developer Policies: visible player, no background play, no rewards for viewing, our terms bind users to YouTube's Terms of Service, and our privacy policy links Google's.
-> - **Game and collection values** are calculated from VINALL's own community data and public-domain (CC0) data from Wikipedia and Wikidata. We no longer use third-party streaming statistics. ⚠️ *Not yet built — do not send this line until it is.*
+> - **Game and collection values** are calculated from VINALL's own community data and public-domain (CC0) Wikipedia readership data (Wikimedia pageviews). We no longer use third-party streaming statistics.
 > - **Music Passport** uses MusicBrainz data, which is released under CC0.
 > - **Game modes** that would show third-party artwork or audio as game content (Recall, Guess the Cover, Cover EXTREME) are unavailable in this version while we seek licences.
 >

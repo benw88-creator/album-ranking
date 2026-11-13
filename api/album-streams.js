@@ -27,7 +27,7 @@
 // crate, and the rare overlap with a live board comes back `sealed` and is
 // dropped from the pool like any other unusable album.
 
-import { spotifyToken, valueAlbum } from './_streams.js';
+import { spotifyToken, valueAlbum, SOURCE } from './_streams.js';
 import { cors } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
@@ -52,7 +52,7 @@ async function cachedTotals(ids) {
   try {
     const since = new Date(Date.now() - STALE_DAYS * 86400000).toISOString();
     const list = ids.map((id) => '"' + String(id).replace(/"/g, '') + '"').join(',');
-    const r = await fetch(SUPABASE_URL + '/rest/v1/album_plays?select=album_id,plays&source=eq.kworb&plays=gt.0' +
+    const r = await fetch(SUPABASE_URL + '/rest/v1/album_plays?select=album_id,plays&source=eq.vinall-value&plays=gt.0' +
       '&fetched_at=gt.' + encodeURIComponent(since) + '&album_id=in.(' + encodeURIComponent(list) + ')',
       { headers: { apikey: key, Authorization: 'Bearer ' + key } });
     if (!r.ok) return out;
@@ -69,7 +69,7 @@ async function storeTotals(vals) {
       headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json',
                  Prefer: 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify(vals.map((v) => ({ album_id: v.album_id, name: v.album || null, artist: v.artist || null,
-        plays: v.total, source: 'kworb', fetched_at: new Date().toISOString() }))),
+        plays: v.total, source: SOURCE, fetched_at: new Date().toISOString() }))),
     });
   } catch (e) {}
 }
@@ -138,6 +138,13 @@ export default async function handler(req, res) {
     if (!ids.length) { res.status(400).json({ error: 'No album ids' }); return; }
     const cache = {};
     const results = [];
+    // Optional: what each id IS, [[name, artist], …] in the same order, from the
+    // caller's own crate. A record rated privately has no public feed row to be
+    // named from, and VINALL Value needs the name.
+    let names = [];
+    try { names = JSON.parse(String(req.query.names || '[]')); } catch (e) { names = []; }
+    const hintOf = {};
+    ids.forEach((id, i) => { const n = Array.isArray(names[i]) ? names[i] : null; if (n && n[0]) hintOf[id] = { name: String(n[0]).slice(0, 200), artist: String(n[1] || '').slice(0, 200) }; });
     const open = ids.filter((id) => !(sealed && sealed.has(id)));
     ids.forEach((id) => {
       // On one of your own boards. Higher or Lower drops it from the pool
@@ -159,7 +166,7 @@ export default async function handler(req, res) {
       while (next < cold.length) {
         const id = cold[next++];
         try {
-          const v = await valueAlbum(id, token, cache);
+          const v = await valueAlbum(id, token, cache, hintOf[id]);
           v.album_id = id;
           delete v.missed;
           results.push(v);
@@ -176,19 +183,12 @@ export default async function handler(req, res) {
     return;
   }
 
-  let albumId = req.query.album || '';
-  if (!albumId) {
-    try {
-      const s = await fetch('https://api.deezer.com/search/album?limit=1&q=' + encodeURIComponent(q),
-        { signal: AbortSignal.timeout(8000) });
-      const d = await s.json();
-      const it = d.data && d.data[0];
-      if (!it) { res.status(404).json({ error: 'No album found for that search' }); return; }
-      albumId = it.id;
-    } catch (e) { res.status(502).json({ error: 'Search failed' }); return; }
-  }
+  // ?q=<album name>&artist=<artist> values a record by name, for the admin
+  // health check. No catalogue search: VINALL Value needs only the name.
+  const albumId = req.query.album || '';
+  const hint = albumId ? null : { name: String(q).slice(0, 200), artist: String(req.query.artist || '').slice(0, 200) };
 
-  if (sealed && sealed.has(albumId)) {
+  if (albumId && sealed && sealed.has(albumId)) {
     res.status(403).json({
       ok: false, reason: 'sealed', album_id: albumId,
       error: 'That record is on one of your live Bid War boards. Resolve the war first.',
@@ -196,7 +196,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const out = await valueAlbum(albumId, token, {});
+  const out = await valueAlbum(albumId || 'q', token, {}, hint);
   if (!req.query.debug) { delete out.missed; }
   res.setHeader('Cache-Control', 'no-store');
   res.status(200).json(out);

@@ -69,3 +69,15 @@ test('the website build is untouched', async ({ page }) => {
   await page.waitForFunction(() => window.Rights && Rights.ON === false);
   expect(await page.evaluate(() => getComputedStyle(document.getElementById('recall-card')).display)).not.toBe('none');
 });
+
+test('a Spotify export is matched against Apple on the device, through the album tracklist', async ({ page }) => {
+  await page.goto('/?rights=apple');
+  await page.waitForFunction(() => window.Rights && Rights.ON);
+  const r = await page.evaluate(async () => {
+    const items = [{ u: 'spotify:track:aaaaaaaaaaaaaaaaaaaaaa', a: 'Frank Ocean', t: 'Track 2', b: 'Blonde' },
+                   { u: 'spotify:track:bbbbbbbbbbbbbbbbbbbbbb', a: 'Nobody', t: 'Nothing Like It', b: '' }];
+    return fetch('/api/catalogue?path=spotify-match', { method: 'POST', body: JSON.stringify({ kind: 'track', items }) }).then((x) => x.json());
+  });
+  expect(r.results[0]).toMatchObject({ u: 'spotify:track:aaaaaaaaaaaaaaaaaaaaaa', status: 'ok', m: { id: 'am9002', name: 'Track 2', album: 'Blonde' } });
+  expect(r.results[1].status).toBe('none');
+});

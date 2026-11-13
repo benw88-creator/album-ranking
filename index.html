@@ -9775,7 +9775,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
 })();
 </script>
 
-<script src="/assets/apple.js?v=1"></script>
+<script src="/assets/apple.js?v=2"></script>
 
 <!-- ================================================================
      MINIMUM APP VERSION — the only lever over builds already installed.
@@ -10722,7 +10722,7 @@ window.discAmt = function (n) {
         <div class="gc-art" aria-hidden="true"><span class="bw-sleeves"><i></i><i></i><i></i><i></i><i></i></span><span class="bw-bids"><i></i><i></i><i></i><i></i><i></i></span><span class="bw-bids them"><i></i><i></i><i></i><i></i><i></i></span></div>
         <div class="gc-emoji" data-icon="trophy"></div>
         <h3>Bid Wars</h3>
-        <p>Bid blind on five records. Most streams wins.</p>
+        <p>Bid blind on five records. Highest VINALL Value wins.</p>
         <div class="gc-go">Challenge someone &rarr;</div>
       </div>
 
@@ -11306,7 +11306,7 @@ window.discAmt = function (n) {
 
     <div id="hl-start">
       <div class="hl-mode" id="hl-mode">
-        <button data-hl-mode="streams" class="active">Streams</button>
+        <button data-hl-mode="streams" class="active">Value</button>
         <button data-hl-mode="rating">Your ratings</button>
       </div>
       <p class="reco-note" id="hl-blurb"></p>
@@ -11898,7 +11898,7 @@ window.discAmt = function (n) {
          privacy.html for that reason). Hiding Score again is display:none on
          #war-mode; the server and /api/album-market do not care. -->
     <div class="hl-mode" id="war-mode" style="margin-bottom:12px;">
-      <button data-war-mode="streams" class="active">Streams</button>
+      <button data-war-mode="streams" class="active">Value</button>
       <button data-war-mode="market">Score</button>
     </div>
     <p class="reco-note" id="war-mode-blurb" style="margin-bottom:12px;"></p>
@@ -16930,7 +16930,11 @@ const Cloud=(function(){
      before it existed has none and falls back to savedAt, which is exactly the
      old behaviour for old data. */
   function itemStamp(x){return Math.max((x&&x.ratedAt)||0,(x&&x.savedAt)||0);}
-  function mergeItemMap(localObj,cloudObj){const out=Object.assign({},cloudObj||{});const loc=localObj||{};Object.keys(loc).forEach(function(id){const a=loc[id],b=out[id];if(!b||itemStamp(a)>=itemStamp(b))out[id]=a;});return out;}
+  /* The local copy wins a tie, but never with a Deezer sleeve over an Apple one:
+     the artwork backfill (scripts/backfill-apple-art.mjs) rewrites the cloud
+     copy, and a device still holding the old URL would otherwise push it
+     straight back. Only the art moves; the rating is the local one. */
+  function mergeItemMap(localObj,cloudObj){const out=Object.assign({},cloudObj||{});const loc=localObj||{};Object.keys(loc).forEach(function(id){let a=loc[id];const b=out[id];if(!b||itemStamp(a)>=itemStamp(b)){if(b&&a&&/dzcdn.net/.test(a.art||'')&&/mzstatic.com/.test(b.art||''))a=Object.assign({},a,{art:b.art});out[id]=a;}});return out;}
   const RATING_DELETIONS_KEY='crate_rating_deletions_v1', RATING_PENDING_KEY='crate_rating_delete_pending_v1';
   const ratingWrites={},ratingDeleteJobs={};
   let ratingsSyncReady=false;
@@ -26980,7 +26984,7 @@ function playDismissAnimation(gateEl, callback) {
   }
   // The noun each mode uses, so the copy is not stuck saying "plays" about a
   // war measured in standing.
-  function unitOf(w) { return ((w && w.mode) === 'market') ? 'points' : 'plays'; }
+  function unitOf(w) { return ((w && w.mode) === 'market') ? 'points' : 'VINALL Value'; }
   function esc2(s) { return window.esc ? esc(s) : String(s == null ? '' : s); }
 
   // ---- section ------------------------------------------------------------
@@ -27508,7 +27512,7 @@ function playDismissAnimation(gateEl, callback) {
       });
       if (blurb) blurb.textContent = _mode === 'market'
         ? 'Records are worth their standing out of 100 — the Discogs community rating, weighted by how many people gave it.'
-        : 'Records are worth their total Spotify streams.';
+        : 'Records are worth their VINALL Value: how many people read about them on Wikipedia this past year, plus a little for everyone here who rated them.';
     }
     if (wm) wm.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-war-mode]');
@@ -27835,63 +27839,52 @@ async function renderAdminStats() {
      and a kworb fetch. `kworbRows` is the real signal: a live artist table has
      hundreds of rows, a broken scrape has none, and that distinction survives
      even when the search picks a different edition of the album. */
-  html += '<h3 class="prof-section-title" style="margin-top:26px;">kworb health</h3>' +
-    '<p class="reco-note">The stream scrape behind Bid Wars. Run this if a valuation looks wrong.</p>' +
-    '<button class="btn-mini" id="kworb-check">Check the scrape</button>' +
+  html += '<h3 class="prof-section-title" style="margin-top:26px;">VINALL Value health</h3>' +
+    '<p class="reco-note">What Bid Wars, Higher or Lower and the Collection price from: each record’s Wikipedia article and its readers this past year. Run this if a value looks wrong.</p>' +
+    '<button class="btn-mini" id="kworb-check">Check the valuation</button>' +
     '<div id="kworb-out" style="margin-top:10px;"></div>';
 
   host.innerHTML = html;
 
   var kb = document.getElementById('kworb-check');
   if (kb) kb.addEventListener('click', async function () {
-    // Baselines measured when the valuation was written and recorded in
-    // CLAUDE.md. A ratio well under its baseline means kworb dropped tracks;
-    // zero rows across all four means the scrape itself is dead.
+    // Each should find its own article (never a disambiguation page) with a
+    // reader count in the tens of thousands or more. Zero articles across all
+    // four means Wikipedia stopped answering or changed its search.
     var PROBES = [
-      { q: 'Frank Ocean Blonde',            was: 1.0 },
-      { q: 'SZA SOS',                       was: 1.0 },
-      { q: 'Radiohead In Rainbows',         was: 1.0 },
-      { q: 'Tyler, the Creator IGOR',       was: 0.92 }
+      { name: 'Blonde', artist: 'Frank Ocean' },
+      { name: 'SOS', artist: 'SZA' },
+      { name: 'In Rainbows', artist: 'Radiohead' },
+      { name: 'Views', artist: 'Drake' }
     ];
     kb.disabled = true;
     kb.textContent = 'Checking…';
     var out = document.getElementById('kworb-out');
     var rows = [];
     for (var i = 0; i < PROBES.length; i++) {
-      var p = PROBES[i];
-      var r = null;
+      var p = PROBES[i], r = null;
       try {
-        // The endpoint is authenticated now — it used to be public, which
-        // quietly unsealed every Bid War board.
         var _s = await Cloud.client().auth.getSession();
         var _t = _s && _s.data && _s.data.session && _s.data.session.access_token;
-        var resp = await fetch(Native.api+'/api/album-streams?q=' + encodeURIComponent(p.q) + '&debug=1',
+        var resp = await fetch(Native.api + '/api/album-streams?q=' + encodeURIComponent(p.name) + '&artist=' + encodeURIComponent(p.artist),
           { headers: { Authorization: 'Bearer ' + _t } });
         r = await resp.json();
       } catch (e) { r = { error: String((e && e.message) || e) }; }
       rows.push({ p: p, r: r || {} });
       out.innerHTML = '<p class="reco-note">' + (i + 1) + ' of ' + PROBES.length + '…</p>';
     }
-    var deadScrape = rows.every(function (x) { return !x.r.kworbRows; });
+    var dead = rows.every(function (x) { return !x.r.article; });
     out.innerHTML =
-      (deadScrape
-        ? '<div class="reco-note" style="color:var(--red);">No kworb rows for any artist — the scrape is broken. Check the table markup in <code>artistStreamTable</code>.</div>'
-        : '') +
+      (dead ? '<div class="reco-note" style="color:var(--red);">No article found for any record: Wikipedia is not answering, or its search changed. Check <code>articleFor</code> in api/_streams.js.</div>' : '') +
       '<div class="qtable">' + rows.map(function (x) {
         var r = x.r;
-        if (r.error || (!r.ok && !r.ratio)) {
-          return '<div class="errow"><div class="errmsg">' + esc(x.p.q) + '</div>' +
+        if (r.error || !r.ok) {
+          return '<div class="errow"><div class="errmsg">' + esc(x.p.name + ' · ' + x.p.artist) + '</div>' +
             '<div class="errmeta">failed — ' + esc(String(r.error || r.reason || 'unknown')) + '</div></div>';
         }
-        var pctNow = Math.round((r.ratio || 0) * 100);
-        var drop = Math.round((x.p.was - (r.ratio || 0)) * 100);
-        return '<div class="qrow"><span class="qid">' + esc(r.album || x.p.q) + '</span>' +
-          '<span class="qbar"><i style="width:' + pctNow + '%"></i></span>' +
-          '<span class="qnum">' + pctNow + '%</span>' +
-          '<span class="qsub">' + r.matched + '/' + r.tracks + ' matched · ' +
-            (r.kworbRows || 0) + ' kworb rows · was ' + Math.round(x.p.was * 100) + '%' +
-            (drop >= 15 ? ' · DOWN ' + drop : '') +
-            (r.ok ? '' : ' · would be skipped') + '</span></div>';
+        return '<div class="qrow"><span class="qid">' + esc(r.album || x.p.name) + '</span>' +
+          '<span class="qsub">' + esc(r.article || 'no article (floor)') + ' · ' + (r.readers || 0).toLocaleString('en-GB') +
+          ' readers · ' + (r.raters || 0) + ' raters here · value ' + (r.total || 0).toLocaleString('en-GB') + '</span></div>';
       }).join('') + '</div>';
     kb.disabled = false;
     kb.textContent = 'Check again';
@@ -29874,7 +29867,7 @@ window.renderAdminStats = renderAdminStats;
       tracklist: lsNum('crate_best_tracklist') ? lsNum('crate_best_tracklist') + '/5' : '',
       year: lsNum('crate_best_year') ? lsNum('crate_best_year') + '/5' : '',
       blitz: lsNum('crate_blitz_best') ? lsNum('crate_blitz_best').toLocaleString('en-GB') + ' pts' : '',
-      higherlower: (hl.streams || hl.rating) ? [hl.streams ? hl.streams + ' streams' : '', hl.rating ? hl.rating + ' ratings' : ''].filter(Boolean).join(' · ') : '',
+      higherlower: (hl.streams || hl.rating) ? [hl.streams ? hl.streams + ' by value' : '', hl.rating ? hl.rating + ' ratings' : ''].filter(Boolean).join(' · ') : '',
       recall: maxOf(lsObj('crate_recall_best')) ? maxOf(lsObj('crate_recall_best')).toLocaleString('en-GB') + ' pts' : '',
       earworm: log.earworm ? log.earworm.rows + '/6' : ''
     };
@@ -30448,7 +30441,7 @@ window.renderAdminStats = renderAdminStats;
         ? '<div class="col-price">' + discAmt(a.price) + '</div>'
         : a.unpriceable
         ? '<div class="col-price col-unpriced">cannot be priced</div>'
-        : '<div class="col-price col-unpriced">counting streams&hellip;</div>') +
+        : '<div class="col-price col-unpriced">valuing&hellip;</div>') +
       (opts.owned ? provenance(a) : '') +
       '</div>' + action +
     '</div>';
@@ -30814,7 +30807,7 @@ window.renderAdminStats = renderAdminStats;
           ev.preventDefault(); ev.stopPropagation();
           var row = shownRow(rp.dataset.reprice);
           var pe = rp.parentNode;
-          if (pe) { pe.className = 'col-price col-unpriced'; pe.innerHTML = 'counting streams&hellip;'; }
+          if (pe) { pe.className = 'col-price col-unpriced'; pe.innerHTML = 'valuing&hellip;'; }
           if (row && row.album_id) priceSweep([row], _ctx, true);
           return;
         }
@@ -32199,7 +32192,7 @@ window.renderAdminStats = renderAdminStats;
     if (!s) return;
     var b = bests();
     var parts = [];
-    if (b.streams) parts.push('Streams ' + b.streams);
+    if (b.streams) parts.push('Value ' + b.streams);
     if (b.rating) parts.push('Ratings ' + b.rating);
     var line = parts.length ? 'Best — ' + parts.join(' · ') : '';
     if (runsLeft != null) line += (line ? ' · ' : '') + (runsLeft === 0 ? 'none left today' : runsLeft + ' left today');
@@ -32219,7 +32212,7 @@ window.renderAdminStats = renderAdminStats;
   function paintStart() {
     var n = rated().length, scored = scoredAlbums().length;
     el('hl-blurb').textContent = mode === 'streams'
-      ? 'Which of your records has more plays? Drawn from the ' + n + ' album' + (n === 1 ? '' : 's') + ' in your crate.'
+      ? 'Which of your records has the higher VINALL Value? Drawn from the ' + n + ' album' + (n === 1 ? '' : 's') + ' in your crate.'
       : 'Which did you score higher? ' + scored + ' of your albums have a rating.';
     el('hl-best').textContent = best();
 
@@ -32286,7 +32279,8 @@ window.renderAdminStats = renderAdminStats;
       // cannot be priced.
       var sess = await Cloud.client().auth.getSession();
       var tok = sess && sess.data && sess.data.session && sess.data.session.access_token;
-      var r = await fetch(Native.api+'/api/album-streams?albums=' + encodeURIComponent(picks.map(function (a) { return a.id; }).join(',')),
+      var r = await fetch(Native.api+'/api/album-streams?albums=' + encodeURIComponent(picks.map(function (a) { return a.id; }).join(',')) +
+        '&names=' + encodeURIComponent(JSON.stringify(picks.map(function (a) { return [a.name || '', a.artist || '']; }))),
         { headers: { Authorization: 'Bearer ' + tok } });
       var j = await r.json();
       var byId = {};
@@ -32487,7 +32481,7 @@ window.renderAdminStats = renderAdminStats;
       paintStart();
       el('hl-load').style.display = 'block';
       el('hl-load').textContent = mode === 'streams'
-        ? 'Not enough of your records could be counted — try the ratings mode, or add a few more.'
+        ? 'Not enough of your records could be valued — try the ratings mode, or add a few more.'
         : 'Not enough rated albums to build a round.';
       return;
     }
@@ -43187,15 +43181,6 @@ window.renderAdminStats = renderAdminStats;
   /* ---- the sheet -------------------------------------------------------- */
   function open(stage) {
     if (!on()) { Cloud.openAuth(); return; }
-    /* The Apple build: an import is matched on the server against Deezer, which
-       this build does not use. Said plainly rather than letting a job run to
-       "couldn't check" on every row. The account syncs, so the website works. */
-    if (window.Rights && Rights.ON) {
-      if (window.ask) ask({ title: 'Not in the app yet',
-        body: 'Importing a Spotify export isn’t available in the app yet. Do it on the VINALL website and everything you import appears here.',
-        confirm: 'OK', onlyOk: true });
-      return;
-    }
     var st = readState();
     if (J && J.run) UI.stage = 'importing';
     else if (J && !J.applied && counts().check) UI.stage = 'review';
@@ -43295,7 +43280,7 @@ window.renderAdminStats = renderAdminStats;
           (sm.history ? '<span><b>' + n(sm.history) + '</b> plays</span>' : '') +
         '</div>' +
         '<button class="btn-primary sp-wide sp-cta" data-sp="rate">Start rating</button>' +
-        (sm.none ? '<details class="sp-miss"><summary>' + plural(sm.none, 'record') + ' not on Deezer</summary><div>' +
+        (sm.none ? '<details class="sp-miss"><summary>' + plural(sm.none, 'record') + '' + ((window.Rights && Rights.ON) ? ' not on Apple Music' : ' not on Deezer') + '</summary><div>' +
           (sm.unmatched || []).map(function (x) { return '<div class="sp-miss-r"><b>' + esc(x.t) + '</b><span>' + esc(x.a) + (x.failed ? ' · couldn\'t check' : '') + '</span></div>'; }).join('') +
           '</div></details>' : '') +
         '</div>';
@@ -43313,7 +43298,7 @@ window.renderAdminStats = renderAdminStats;
     if (fg) fg.style.strokeDashoffset = String(339.3 * (1 - pct / 100));
     if ($('sp-ring-n')) $('sp-ring-n').textContent = pct + '%';
     if ($('sp-run-h')) $('sp-run-h').textContent = c.done < c.total ? 'Matching ' + n(c.total) + ' records…' : 'Bringing them in…';
-    if ($('sp-run-s')) $('sp-run-s').innerHTML = '<b>' + n(c.ok) + '</b> matched' + (c.check ? ' · <b>' + n(c.check) + '</b> to check' : '') + (c.none ? ' · <b>' + n(c.none) + '</b> not on Deezer' : '');
+    if ($('sp-run-s')) $('sp-run-s').innerHTML = '<b>' + n(c.ok) + '</b> matched' + (c.check ? ' · <b>' + n(c.check) + '</b> to check' : '') + (c.none ? ' · <b>' + n(c.none) + '</b> not on ' + ((window.Rights && Rights.ON) ? 'Apple Music' : 'Deezer') : '');
     var wall = $('sp-wall');
     if (wall) {
       // New covers arrive at the front and push the wall along — the library
@@ -43557,7 +43542,7 @@ window.renderAdminStats = renderAdminStats;
 <script src="/assets/you.js?v=9"></script>
 <script src="/assets/glow.js?v=5"></script>
 <script src="/assets/comments.js?v=3" defer></script>
-<script src="/assets/boards.js?v=5"></script>
+<script src="/assets/boards.js?v=6"></script>
 <script src="/assets/play.js?v=2"></script>
 <script src="/assets/charades.js?v=4"></script>
 <script src="/assets/passport-core.js?v=1"></script>

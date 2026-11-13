@@ -25,7 +25,7 @@
     { g: 'recall',      name: 'Recall',           short: 'Recall',    hue: 'var(--hue-recall, var(--hue-3))', modes: [['daily', 'Daily', 1], ['endless', 'Endless'], ['tutorial', 'Tutorial']] },
     { g: 'drop',        name: 'Daily Drop',       short: 'Daily Drop', hue: 'var(--hue-5)', modes: [['album', 'Album', 1], ['song', 'Song', 1]] },
     { g: 'earworm',     name: 'Earworm',          short: 'Earworm',   hue: 'var(--hue-2)', modes: [['daily', 'Daily', 1]] },
-    { g: 'higherlower', name: 'Higher or Lower',  short: 'Higher/Lower', hue: 'var(--hue-7)', modes: [['streams', 'Streams']] }
+    { g: 'higherlower', name: 'Higher or Lower',  short: 'Higher/Lower', hue: 'var(--hue-7)', modes: [['streams', 'Value']] }
   ];
   // Games held back in the Apple build have no board there (assets/apple.js).
   if (window.Rights && Rights.ON) GAMES = GAMES.filter(function (x) { return !Rights.gameOff(x.g); });

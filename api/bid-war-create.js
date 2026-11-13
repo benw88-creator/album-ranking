@@ -30,7 +30,7 @@
 // The valuation lives in _streams.js and is shared with /api/album-streams,
 // so the number that decides a war is the same number you can query and
 // check. They cannot drift apart.
-import { spotifyToken, valueAlbum } from './_streams.js';
+import { spotifyToken, valueAlbum, SOURCE } from './_streams.js';
 import { valueMarket, discogsToken } from './_discogs.js';
 import { cors } from './_cors.js';
 
@@ -129,7 +129,7 @@ export default async function handler(req, res) {
             }
           } else {
             // ignore anything cached by the old Last.fm valuation
-            if (r.plays && r.source === 'kworb' && fresh) cached[r.album_id] = r.plays;
+            if (r.plays && r.source === SOURCE && fresh) cached[r.album_id] = r.plays;
           }
         });
       }
@@ -157,12 +157,12 @@ export default async function handler(req, res) {
             rejected.push({ album: p.name, reason: v.reason });
           }
         } else {
-          const v = await valueAlbum(p.album_id, token, artistCache);
+          const v = await valueAlbum(p.album_id, token, artistCache, { name: p.name, artist: p.artist });
           if (v.ok) {
             value = v.total;
             toCache.push({
               album_id: p.album_id, name: p.name, artist: p.artist,
-              plays: value, source: 'kworb', fetched_at: new Date().toISOString(),
+              plays: value, source: SOURCE, fetched_at: new Date().toISOString(),
             });
           } else {
             // Rejected albums are worth logging: a run of these is how a
