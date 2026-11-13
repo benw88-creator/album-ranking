@@ -418,6 +418,29 @@ export default async function handler(req, res) {
     //
     // Cached for a DAY rather than a week: a chart that is a week stale is a
     // chart, but the whole point of it is being current.
+    if (path === 'chart-artists' && q.source === 'apple') {
+      /* The Apple build (assets/apple.js). Apple's UK most-played albums feed,
+         from its public marketing RSS, folded to artists in chart order. The
+         feed sends no CORS header, so it comes through here; it is not the
+         rate-limited Search API. It carries no artist photographs, and the
+         app draws a placeholder for a name with no picture. */
+      const limit = Math.min(parseInt(q.limit, 10) || 24, 50);
+      const r = await fetch('https://rss.marketingtools.apple.com/api/v2/gb/music/most-played/100/albums.json',
+        { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': UA } });
+      if (!r.ok) throw new Error('apple rss ' + r.status);
+      const j = await r.json();
+      const seen = new Set(), items = [];
+      for (const a of ((j.feed && j.feed.results) || [])) {
+        if (!a.artistId || seen.has(a.artistId)) continue;
+        seen.add(a.artistId);
+        items.push({ id: 'am' + a.artistId, name: a.artistName, fans: 0, images: [] });
+        if (items.length >= limit) break;
+      }
+      res.setHeader('Cache-Control', DAY);
+      res.status(200).json({ items, source: 'apple' });
+      return;
+    }
+
     if (path === 'chart-artists') {
       const limit = Math.min(parseInt(q.limit, 10) || 24, 50);
       const j = await dz('/chart/0/artists?limit=' + limit);

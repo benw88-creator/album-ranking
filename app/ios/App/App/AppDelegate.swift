@@ -17,10 +17,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         //
         // Music still gets .playback: the page asks for it the moment a
         // preview starts (VinallNativePlugin.audioMode, driven by AudioMode in
-        // assets/sound.js) and keeps it through a grace period and while the
-        // app is in the background, so lock-screen controls and resume still
-        // work. That plus the `audio` entry in UIBackgroundModes is what keeps
-        // a preview playing behind the lock screen.
+        // assets/sound.js), so a preview is not muted by the silent switch.
+        // There is no `audio` entry in UIBackgroundModes (removed 2026-11-13,
+        // App Review 2.5.4): clips are 30-second previews, not persistent
+        // audio, so playback stops when the app is backgrounded.
         //
         // Not activated here: activating at launch would interrupt whatever is
         // already playing just because the app opened.

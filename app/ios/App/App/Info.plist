@@ -60,10 +60,9 @@
 	     stops asking the export-compliance question on every single upload. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>audio</string>
-	</array>
+	<!-- No UIBackgroundModes (2026-11-13). Every clip is a 30-second preview,
+	     which is not persistent audio (App Review 2.5.4); playback stops when
+	     the app leaves the foreground. -->
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

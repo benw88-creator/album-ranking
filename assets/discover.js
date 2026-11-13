@@ -89,6 +89,7 @@
     },
     function recall() {
       if (!window.Recall || !Recall.dailyDone || Recall.dailyDone()) return [];
+      if (window.Rights && Rights.gameOff('recall')) return [];
       return [{ id: 'recall:' + (Recall.dayNo ? Recall.dayNo() : 0), ctx: 1, hue: 'var(--c-blue)', ico: 'wave',
         where: ['home', 'crate', 'albums', 'songs', 'profile', 'rewards', 'collection'],
         kicker: 'Today’s Recall', title: 'One second. Name the song.', cta: 'Play',

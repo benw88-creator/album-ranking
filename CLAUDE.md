@@ -1,5 +1,30 @@
 # VINALL
 
+## The Apple build — `Rights.ON` (Lab, 2026-11-13)
+
+App Review rejected 1.0 (5.2.3, 5.2.1, 2.5.4). Status and the open items are in
+`APPLE_REVIEW_FIXES/IMPLEMENTATION.md`; the research is beside it.
+
+- `assets/apple.js` (loaded right after `Native`) defines `window.Rights`. ON in
+  the native app, OFF on the web; `?rights=apple|deezer` overrides per device.
+- It answers `/api/catalogue` and `/api/preview` **on the device** from Apple's
+  iTunes Search API, in the routes' own shapes. Never move those calls to
+  Vercel: Apple allows ~20 a minute per IP. `chart-artists` alone goes to the
+  server (`source=apple`), because Apple's RSS feed sends no CORS header.
+- Apple ids are `am<digits>`. Any other id resolves by name (trap 4). Caches
+  that held Deezer responses have Apple-build twins (`spc-am1:`, `ap2:am1:`,
+  `amc:`, `fy_chart_am1`, `crate_fy_stash_am1`): a new cache of catalogue data
+  needs the same split.
+- Apple's terms: art and previews only to promote the record, next to the
+  unaltered badge (`/assets/apple-music-badge.svg`, from Apple's marketing
+  tools), previews "provided courtesy of iTunes", streamed only, **never in a
+  game**. So: no sleeve inside any game sheet, no blurred or altered copies of
+  a sleeve, never decode or download a preview. Recall, Guess the Cover and
+  Cover EXTREME are off (`Rights.gameOff`).
+- No Deezer image is ever requested in this build: a MutationObserver swaps a
+  Deezer src for `/assets/sleeve-blank.svg` before it loads.
+- `scripts/tests/rights.spec.mjs` covers it.
+
 ## The redesign (Lab only, 2026-11-08)
 
 Five places: **Home, Discover, Rate, Arcade, Profile**. Every old view still exists with its id and render function; `assets/shell.js` decides which place each belongs to (`NAV_GROUP`, read by setMode through `navTabFor`), draws the segmented bars (Discover: For You / Community / Moments / People; Profile: see the polish pass below; Ratings has Albums / Songs / Liked) and the back bar on pushed pages (Achievements, Music Passport, Your music, Replay, Bid Wars, Grooves). `assets/shell.css` is the design-system layer and loads last.

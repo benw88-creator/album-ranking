@@ -9775,6 +9775,8 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
 })();
 </script>
 
+<script src="/assets/apple.js?v=1"></script>
+
 <!-- ================================================================
      MINIMUM APP VERSION — the only lever over builds already installed.
 
@@ -12232,7 +12234,7 @@ function _spTtl(path){ return /^\/albums\/[^/]+(\?|$)/.test(path) ? SP_CLIP_TTL 
    that reaches them. The old ones are swept below.
 
    Any future change to what is STORED in this cache needs the same bump. */
-const SPC='spc2:';
+const SPC=(window.Rights&&Rights.ON)?'spc-am1:':'spc2:';
 function _spCacheRead(path){try{const o=JSON.parse(localStorage.getItem(SPC+path));if(o&&o.x>Date.now())return o.d;}catch(e){}return null;}
 function _spCacheWrite(path,data){var _t=_spTtl(path);try{localStorage.setItem(SPC+path,JSON.stringify({d:data,x:Date.now()+_t}));}catch(e){try{Object.keys(localStorage).filter(function(k){return k.indexOf(SPC)===0;}).forEach(function(k){localStorage.removeItem(k);});localStorage.setItem(SPC+path,JSON.stringify({d:data,x:Date.now()+_t}));}catch(e2){}}}
 /* One-time sweep of the pre-bump generation. Cheap, runs once per browser
@@ -12434,7 +12436,17 @@ async function openAlbum(meta, fromHistory) {
   // (`link`); until it lands this is a Deezer search by name, so the button is
   // never pointing at nothing.
   var spBtn = document.getElementById('detail-spotify');
-  if (spBtn) spBtn.href = 'https://www.deezer.com/search/' +
+  /* The Apple build: Apple's terms let the sleeve and the previews sit on this
+     page because it promotes the record, beside an unaltered Apple Music badge
+     that links to it. The real album url replaces the search once the
+     tracklist lands. */
+  var amOn = !!(window.Rights && Rights.ON);
+  if (spBtn && amOn && !spBtn.getAttribute('data-am')) {
+    spBtn.setAttribute('data-am', '1'); spBtn.className = 'am-badge';
+    spBtn.setAttribute('aria-label', 'Listen on Apple Music');
+    spBtn.innerHTML = '<img src="/assets/apple-music-badge.svg" alt="Listen on Apple Music" height="40" style="height:40px;width:auto;display:block">';
+  }
+  if (spBtn) spBtn.href = (amOn ? 'https://music.apple.com/gb/search?term=' : 'https://www.deezer.com/search/') +
     encodeURIComponent(((meta.artist || '') + ' ' + (meta.name || '')).trim());
 
   const albums = loadAlbums();
@@ -15501,6 +15513,7 @@ function renderAuthArea(connected){
   }
   document.getElementById('g-mode-seg').addEventListener('click',function(e){const b=e.target.closest('button');if(b)setPoolMode(b.dataset.gmode);});
   function openGame(type){
+    if(window.Rights&&Rights.gameOff(type))return;   // held back in the Apple build
     gameType=type;
     emojiEl.textContent=META[type].emoji;titleEl.textContent=META[type].title;subEl.textContent=META[type].sub;
     modal.classList.add('open');showV('start');
@@ -28212,9 +28225,15 @@ window.renderAdminStats = renderAdminStats;
         last = 1;
         var t = player.getCurrentTime();
         onTick(t);
-        if (t >= endAt - 0.04) { try { player.pauseVideo(); } catch (e) {} stop(); h.done(); }
+        /* YouTube's own `end` parameter stops the video (it was passed when
+           the player was made); this only notices. Pausing it ourselves was a
+           second stop line laid over YouTube's player — a documented call, but
+           `end` is the documented way, and the one nobody can argue modifies
+           the player. The margin covers `end` rounding up to a whole second. */
+        if (t >= endAt + 1.5) { stop(); h.done(); }
         return;
       }
+      if (seen && stt === 0) { stop(); h.done(); return; }   // ended at `end`
       if (seen) {
         if (stt === 2 && last === 1 && h.paused) h.paused();
         if (AM) AM.hold('yt', stt === 1 || stt === 3);
@@ -28304,6 +28323,14 @@ window.renderAdminStats = renderAdminStats;
       pl.tok++; pl.id = null; pl.owner = null; pl.state = 'idle'; paintPlaying();
       window.open(ytLink(m.video_id, m.start_ms), '_blank', 'noopener');
       markHeard(m.id);
+      return;
+    }
+    /* An older pick made on Deezer's preview. The Apple build plays no Deezer
+       audio, so it opens the song on YouTube instead; it is not marked heard,
+       because a search page is not the moment that was picked. */
+    if (!isYT(m) && window.Rights && Rights.ON) {
+      pl.tok++; pl.id = null; pl.owner = null; pl.state = 'idle'; paintPlaying();
+      window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(((m.artist || '') + ' ' + (m.track_name || '')).trim()), '_blank', 'noopener');
       return;
     }
     if (isYT(m)) {
@@ -28986,11 +29013,18 @@ window.renderAdminStats = renderAdminStats;
   }
   function useDeezer(why) {
     destroyEdPlayer();
+    // No preview fallback in the Apple build: YouTube or nothing.
+    if (window.Rights && Rights.ON) { ed.state = 'noclip'; paintEditor(true); return; }
     ed.source = 'deezer'; ed.clipMs = ed.deezerMs || CLIP_MS; ed.lenMs = Math.min(ed.lenMs, 15000);
     ed.why = why || ''; clampEditor(); paintEditor(true);
   }
   function startEditor(item) {
-    if (!item || !/^\d{1,20}$/.test(String(item.id || ''))) { say('That song cannot be picked'); return; }
+    // `am<digits>` is an Apple track id (assets/apple.js); bare digits are Deezer's.
+    if (!item || !/^(am)?\d{1,20}$/.test(String(item.id || ''))) { say('That song cannot be picked'); return; }
+    /* The Apple build picks on YouTube only. An Apple preview may only promote
+       its record, and decoding it for a waveform would mean downloading it, so
+       it is used for the song's details and nothing else. */
+    var amOnly = !!(window.Rights && Rights.ON);
     if (ed) destroyEdPlayer();
     ed = blankEditor({ id: String(item.id), name: item.name, artist: item.artist, album: item.album || '', art: item.art || '' });
     var tok = ed.tok;
@@ -29019,6 +29053,7 @@ window.renderAdminStats = renderAdminStats;
       if (!ed || tok !== ed.tok) return;
       var vids = (j && j.videos || []).filter(function (v) { return /^[A-Za-z0-9_-]{11}$/.test(v.id) && v.ms >= 30000 && v.ms <= 1200000; });
       if (!vids.length) {
+        if (amOnly) { if (ed.state !== 'error') { ed.state = 'noclip'; paintEditor(true); } return; }
         ed.why = j && j.blocked ? 'YouTube is blocked here \u2014 using Deezer\u2019s 30-second preview.'
                                 : 'Not on YouTube \u2014 using Deezer\u2019s 30-second preview.';
         if (ed.state === 'ready') paintEditor(true); return;
@@ -29036,6 +29071,12 @@ window.renderAdminStats = renderAdminStats;
         ed.featOpts = featCandidates(t, (t.artists && t.artists[0] && t.artists[0].name) || ed.track.artist);
         if (t.album && t.album.images && t.album.images[1] && !DZ_ART.test(ed.track.art)) ed.track.art = t.album.images[1].url;
         if (t.album && t.album.name && !ed.track.album) ed.track.album = t.album.name;
+      }
+      if (amOnly) {
+        // Details only; the editor waits on YouTube's answer above.
+        if (t && t.album && t.album.name && !ed.track.album) ed.track.album = t.album.name;
+        if (ed.source === 'youtube') paintEditor(true);
+        return;
       }
       if (!t || !t.preview_url) {
         if (ed.source === 'youtube') { paintEditor(true); return; }
@@ -29089,7 +29130,7 @@ window.renderAdminStats = renderAdminStats;
     var body = $('cc-body');
     if (ed.state === 'noclip' || ed.state === 'error') {
       body.innerHTML = '<div class="cc-noclip">' + (ed.state === 'noclip'
-        ? 'No preview for this song. Try another version.'
+        ? ((window.Rights && Rights.ON) ? 'This song isn’t on YouTube, or YouTube won’t play here. Try another version.' : 'No preview for this song. Try another version.')
         : 'Could not reach this song’s preview. Check your connection and try again.') + '</div>';
       return;
     }
@@ -29575,6 +29616,8 @@ window.renderAdminStats = renderAdminStats;
     'blitz-card':       { need: 5,  label: 'Cover Fire' }
   };
   var SEEN_KEY = 'crate_unlocks_seen';
+  // Held-back games (assets/apple.js) have no gate to announce.
+  if (window.Rights && Rights.ON) Object.keys(GATES).forEach(function (k) { if (Rights.gameOff(k.replace(/-card$/, ''))) delete GATES[k]; });
   window.UnlockGates = GATES;   // read by assets/discover.js; display only
 
   function ratedCount() {
@@ -33273,9 +33316,13 @@ window.renderAdminStats = renderAdminStats;
        a blank button with no text is not a harder question, it is an
        unanswerable one. */
     grid.className = 'bl-grid n' + q.choices.length + ' hide-names';
+    /* The Apple build uses no third-party sleeve as game content (Apple's
+       promotional terms exclude "independent entertainment value"), so the
+       answers are the names: the state a sleeve that failed to load is drawn in. */
+    var noArt = !!(window.Rights && Rights.ON);
     grid.innerHTML = q.choices.map(function (c, k) {
-      return '<button class="bl-pick" data-k="' + k + '">' +
-        '<img src="' + esc(c.art || '') + '" alt="" onerror="this.closest(\'.bl-pick\').classList.add(\'no-art\')">' +
+      return '<button class="bl-pick' + (noArt ? ' no-art' : '') + '" data-k="' + k + '">' +
+        (noArt ? '' : '<img src="' + esc(c.art || '') + '" alt="" onerror="this.closest(\'.bl-pick\').classList.add(\'no-art\')">') +
         '<span class="bl-pick-nm">' + esc(c.name) + '</span>' +
         '<span class="bl-pick-ar">' + esc(c.artist || '') + '</span></button>';
     }).join('');
@@ -33647,6 +33694,7 @@ window.renderAdminStats = renderAdminStats;
   register('deezer', {
     label: 'Deezer',
     link: function (t) {
+      if (window.Rights && Rights.ON) return 'https://music.apple.com/gb/search?term=' + encodeURIComponent(((t.artist || '') + ' ' + (t.title || '')).trim());
       return 'https://www.deezer.com/search/' +
         encodeURIComponent(((t.artist || '') + ' ' + (t.title || '')).trim());
     },
@@ -33688,7 +33736,7 @@ window.renderAdminStats = renderAdminStats;
           if (n && (n.indexOf(want) === 0 || want.indexOf(n) === 0)) { hit = j.tracks[i]; break; }
         }
         if (!hit || !hit.preview) return null;
-        return { url: hit.preview, cover: j.cover || null, link: j.link || null, source: 'Deezer', ms: hit.ms || 30000 };
+        return { url: hit.preview, cover: j.cover || null, link: hit.link || j.link || null, source: j.source === 'apple' ? 'Apple Music' : 'Deezer', ms: hit.ms || 30000 };
       }
       /* A track pinned to a Deezer id (the tutorial's) is asked for by that id
          and nothing else: falling back to a name search is exactly how the
@@ -35232,6 +35280,7 @@ window.renderAdminStats = renderAdminStats;
 
   /* ---------- open / close ---------- */
   function open(mode) {
+    if (window.Rights && Rights.gameOff('recall')) return;   // held back in the Apple build
     modal.classList.add('open');
     serverState = serverState || null;
     // A round left open comes back exactly where it was, clock included.
@@ -38085,7 +38134,7 @@ window.renderAdminStats = renderAdminStats;
   // a record that is now completely playable. A source change has to
   // invalidate what the old source cached, and a key bump is the cheapest
   // way to say so. The stale entries are swept below rather than left to sit.
-  var CK = 'ap2:alb:';
+  var CK = (window.Rights && Rights.ON) ? 'ap2:am1:' : 'ap2:alb:';
   /* These hold Deezer clip urls, which are SIGNED and expire about ten
      minutes after they are issued — so this cache was keeping links that stop
      working and handing them back forever. It is a cache with a clock now.
@@ -38259,7 +38308,7 @@ window.renderAdminStats = renderAdminStats;
      clip of their own, and it is not even requested unless there are some. */
   function setAlbum(tracks, meta) {
     var mine = shown = { tracks: (tracks || []).map(function (t, i) {
-      return { id: t.id, name: t.name, i: i,
+      return { id: t.id, name: t.name, i: i, link: t.link || '',
                artist: ((t.artists || []).map(function (a) { return a.name; })[0]) || (meta && meta.artist) || '',
                durMs: t.duration_ms || 0,
                preview: t.preview_url || null };
@@ -38447,8 +38496,9 @@ window.renderAdminStats = renderAdminStats;
     bar.querySelector('#pb-open').addEventListener('click', function (ev) {
       ev.preventDefault();
       if (!cur) return;
-      var u = 'https://www.deezer.com/search/' +
-        encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim());
+      var u = (window.Rights && Rights.ON)
+        ? (cur.link || 'https://music.apple.com/gb/search?term=' + encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim()))
+        : 'https://www.deezer.com/search/' + encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim());
       window.open(u, '_blank', 'noopener');
     });
     // Scrub. Pointer events so one path covers mouse and thumb.
@@ -38478,7 +38528,7 @@ window.renderAdminStats = renderAdminStats;
     art.src = (album && album.meta && album.meta.art) || '';
     bar.classList.toggle('offer', noPrev);
     if (noPrev) {
-      sub.innerHTML = esc(cur.artist || '') + ' <span class="pb-clip">&middot; no preview &mdash; full track on Deezer</span>';
+      sub.innerHTML = esc(cur.artist || '') + ' <span class="pb-clip">&middot; no preview &mdash; full track on ' + ((window.Rights && Rights.ON) ? 'Apple Music' : 'Deezer') + '</span>';
       tog.innerHTML = '&#9654;';
     } else {
       sub.innerHTML = esc(cur.artist || '') + ' <span class="pb-clip">&middot; 30s preview</span>';
@@ -38493,9 +38543,11 @@ window.renderAdminStats = renderAdminStats;
     // which — both of their terms want the clip kept beside a link back.
     var credit = album && album.map && album.map[norm(cur.name)];
     var fromApple = !!(credit && credit.source === 'apple' && credit.url === ((a && a.src) || '')) || /itunes\.apple\.com/.test((a && a.src) || '');
-    srcA.textContent = (fromApple ? 'Apple Music' : 'Deezer') + ' ↗';
+    // Apple's terms: a preview carries "provided courtesy of" and sits by a
+    // link to the record.
+    srcA.textContent = fromApple ? ((window.Rights && Rights.ON) ? 'Courtesy of iTunes ↗' : 'Apple Music ↗') : 'Deezer ↗';
     srcA.href = fromApple
-      ? ((credit && credit.link) || '#')
+      ? ((credit && credit.link) || cur.link || 'https://music.apple.com/gb/search?term=' + encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim()))
       : 'https://www.deezer.com/search/' + encodeURIComponent(((cur.artist || '') + ' ' + cur.name).trim());
     srcA.style.display = noPrev ? 'none' : '';
     /* Paused is its own mark, not the absence of one. Clearing it said the
@@ -38539,6 +38591,12 @@ window.renderAdminStats = renderAdminStats;
   }
 
   /* ---- wiring ------------------------------------------------------ */
+  // In the app there is no background audio (2026-11-13, App Review 2.5.4):
+  // iOS suspends the webview when it leaves the foreground, so pause on the way
+  // out and the bar says Paused on return rather than a frozen "playing".
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && window.Native && Native.on && el && !el.paused) toggle();
+  });
   document.addEventListener('click', function (ev) {
     // Scoped to this module's own button, not a bare attribute — see the note
     // in Play about what happened when a document listener claimed one.
@@ -38650,7 +38708,7 @@ window.renderAdminStats = renderAdminStats;
    win a second of purity.
    ================================================================ */
 (function () {
-  var CK = 'dzc:';                 // dzc:<artist>|<album> -> url or '' (a miss)
+  var CK = (window.Rights && Rights.ON) ? 'amc:' : 'dzc:';                 // dzc:<artist>|<album> -> url or '' (a miss)
   var mem = {}, inflight = {}, queue = [], pumping = false;
   var GAP = 140;                   // paced: a shelf can ask for fifty at once
 
@@ -39564,7 +39622,7 @@ window.renderAdminStats = renderAdminStats;
       return box;
     }));
     var p = raw.then(function (b) {
-      return { alb: alb, list: b.list.slice(), art: alb.art || b.art || '', link: b.link, err: b.err };
+      return { alb: alb, list: b.list.slice(), art: ((window.Rights && Rights.ON) ? b.art : (alb.art || b.art)) || '', link: b.link, err: b.err };
     }).then(function (box) {
       if (_inflight[alb.id] === p) delete _inflight[alb.id];
       // A rebuild started meanwhile: hand the box back, but do not plant it in
@@ -39601,7 +39659,9 @@ window.renderAdminStats = renderAdminStats;
       if (t.ms && t.ms < 60000) return;
       list.push(t);
     });
-    return { alb: alb, list: list, art: alb.art || (j && j.cover) || '', link: (j && j.link) || '', err: err };
+    // The Apple build takes Apple's sleeve over a stored (Deezer-era) one.
+    var cov = (j && j.cover) || '';
+    return { alb: alb, list: list, art: ((window.Rights && Rights.ON) ? (cov || alb.art) : (alb.art || cov)) || '', link: (j && j.link) || '', err: err };
   }
 
   /* Take up to FROM_ALBUM unseen, unrated songs off the front pool, then
@@ -39652,6 +39712,7 @@ window.renderAdminStats = renderAdminStats;
           albumId: alb.id, albumName: alb.name, art: box.art || alb.art || '',
           year: alb.year || '',
           clip: { url: t.preview, ms: t.ms || 30000 },
+          link: t.link || box.link || '',
           why: alb._why || (alb._why = reasonFor(alb, _ctx)),
           pool: pool,
         });
@@ -39692,7 +39753,7 @@ window.renderAdminStats = renderAdminStats;
   }
   /* The chart is public, identical for everybody and changes daily, so a
      copy is kept for six hours. Not account data — no owner stamp needed. */
-  var _chartP = null, CHART_KEY = 'fy_chart_v1', CHART_TTL = 6 * 3600 * 1000;
+  var _chartP = null, CHART_KEY = (window.Rights && Rights.ON) ? 'fy_chart_am1' : 'fy_chart_v1', CHART_TTL = 6 * 3600 * 1000;
   function chartArtists() {
     if (_chartP) return _chartP;
     try {
@@ -39732,7 +39793,7 @@ window.renderAdminStats = renderAdminStats;
        painted from it once. These songs were marked seen when they were dealt;
        the person never reached them, which is why they may come back exactly
        once, and only these. A song rated since is dropped. */
-  var STASH_KEY = 'crate_fy_stash_v1', STASH_MAX = 4, STASH_TTL = 48 * 3600 * 1000;
+  var STASH_KEY = (window.Rights && Rights.ON) ? 'crate_fy_stash_am1' : 'crate_fy_stash_v1', STASH_MAX = 4, STASH_TTL = 48 * 3600 * 1000;
   var _maxViewed = -1, _owner = null;
   function ownerId() {
     try { var u = window.Cloud && Cloud.getUser && Cloud.getUser(); return (u && u.id) || 'anon'; } catch (e) { return 'anon'; }
@@ -39978,16 +40039,21 @@ window.renderAdminStats = renderAdminStats;
     var raw = c.art || '';
     var art = esc(window.thumb ? thumb(raw, _mainPx) : raw);
     var soft = esc(window.thumb ? thumb(raw, 120) : raw);
+    /* The Apple build: no blurred copies of the sleeve (Apple's artwork may not
+       be altered), and the badge plus the courtesy credit Apple's terms ask for
+       beside a preview, linking to the record. */
+    var am = !!(window.Rights && Rights.ON);
+    if (am) soft = '';
     return '<article class="fy-card" data-i="' + i + '" data-pool="' + esc(c.pool) + '" style="--fy-tint:' + tintFor(7) + ';--fy-v:.7">' +
       // The bed: the same sleeve, blurred past recognition, giving the page the
       // record's colours without competing with the record.
       '<div class="fy-bed-wrap" aria-hidden="true">' +
-        (art ? '<img class="fy-bed" src="' + soft + '" alt="" decoding="async"' + (i > 2 ? ' loading="lazy"' : '') + ' onerror="this.style.display=\'none\'">' : '') +
+        (soft ? '<img class="fy-bed" src="' + soft + '" alt="" decoding="async"' + (i > 2 ? ' loading="lazy"' : '') + ' onerror="this.style.display=\'none\'">' : '') +
       '</div>' +
       // The record itself, whole and square. `data-play`, never `data-open` —
       // one control, one verb.
       '<div class="fy-art-wrap">' +
-        (art ? '<img class="fy-glow" src="' + soft + '" alt="" aria-hidden="true" decoding="async"' + (i > 2 ? ' loading="lazy"' : '') + ' onerror="this.remove()">' : '') +
+        (soft ? '<img class="fy-glow" src="' + soft + '" alt="" aria-hidden="true" decoding="async"' + (i > 2 ? ' loading="lazy"' : '') + ' onerror="this.remove()">' : '') +
         '<button class="fy-art" data-play="' + i + '" aria-label="Play ' + esc(c.title || '') + '">' +
           (art ? '<img class="fy-main" src="' + art + '" alt="" decoding="async"' + (i === 0 ? ' fetchpriority="high"' : i > 2 ? ' loading="lazy"' : '') + '>' : '') +
           '<span class="fy-cue"></span>' +
@@ -40005,6 +40071,8 @@ window.renderAdminStats = renderAdminStats;
         '<div class="fy-sub">' + esc(c.artist || '') +
           (c.albumName ? ' &middot; <button class="fy-alb" data-open="' + i + '">' + esc(c.albumName) + '</button>' : '') +
         '</div>' +
+        (am ? '<div class="fy-am">' + Rights.badge(c.link || ('https://music.apple.com/gb/search?term=' + encodeURIComponent((c.artist || '') + ' ' + (c.title || ''))), 's') +
+          '<span>' + Rights.courtesy + '</span></div>' : '') +
       '</div>' +
       '<div class="fy-rate">' +
         '<input type="range" min="0" max="10" step="1" value="7" data-rate="' + i + '" aria-label="Your score out of 10">' +
@@ -41626,6 +41694,8 @@ window.renderAdminStats = renderAdminStats;
      closes, so a reload at the payoff shows the payoff rather than a second
      round; the board keeps the first attempt regardless. */
   function game() {
+    // The Apple build has no Recall (no licence covers clips as game content).
+    if (window.Rights && Rights.gameOff('recall')) { next(); return; }
     if (S.recallDone) { afterGame(null); return; }
     var before = discs();
     show(
@@ -43117,6 +43187,15 @@ window.renderAdminStats = renderAdminStats;
   /* ---- the sheet -------------------------------------------------------- */
   function open(stage) {
     if (!on()) { Cloud.openAuth(); return; }
+    /* The Apple build: an import is matched on the server against Deezer, which
+       this build does not use. Said plainly rather than letting a job run to
+       "couldn't check" on every row. The account syncs, so the website works. */
+    if (window.Rights && Rights.ON) {
+      if (window.ask) ask({ title: 'Not in the app yet',
+        body: 'Importing a Spotify export isn’t available in the app yet. Do it on the VINALL website and everything you import appears here.',
+        confirm: 'OK', onlyOk: true });
+      return;
+    }
     var st = readState();
     if (J && J.run) UI.stage = 'importing';
     else if (J && !J.applied && counts().check) UI.stage = 'review';
@@ -43474,17 +43553,17 @@ window.renderAdminStats = renderAdminStats;
 
 </body>
 <script src="/assets/interactions.js?v=4"></script>
-<script src="/assets/replay.js?v=11"></script>
+<script src="/assets/replay.js?v=12"></script>
 <script src="/assets/you.js?v=9"></script>
 <script src="/assets/glow.js?v=5"></script>
 <script src="/assets/comments.js?v=3" defer></script>
-<script src="/assets/boards.js?v=4"></script>
+<script src="/assets/boards.js?v=5"></script>
 <script src="/assets/play.js?v=2"></script>
 <script src="/assets/charades.js?v=4"></script>
 <script src="/assets/passport-core.js?v=1"></script>
 <script src="/assets/passport.js?v=2"></script>
 <script src="/assets/safety.js?v=4"></script>
-<script src="/assets/discover.js?v=3"></script>
+<script src="/assets/discover.js?v=4"></script>
 <script src="/assets/liked.js?v=1"></script>
 <script src="/assets/sound.js?v=8"></script>
 <script src="/assets/shell.js?v=2"></script>

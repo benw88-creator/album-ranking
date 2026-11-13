@@ -27,6 +27,8 @@
     { g: 'earworm',     name: 'Earworm',          short: 'Earworm',   hue: 'var(--hue-2)', modes: [['daily', 'Daily', 1]] },
     { g: 'higherlower', name: 'Higher or Lower',  short: 'Higher/Lower', hue: 'var(--hue-7)', modes: [['streams', 'Streams']] }
   ];
+  // Games held back in the Apple build have no board there (assets/apple.js).
+  if (window.Rights && Rights.ON) GAMES = GAMES.filter(function (x) { return !Rights.gameOff(x.g); });
   function gameOf(g) { for (var i = 0; i < GAMES.length; i++) if (GAMES[i].g === g) return GAMES[i]; return null; }
   function isDaily(g, m) { var x = gameOf(g); if (!x) return false; for (var i = 0; i < x.modes.length; i++) if (x.modes[i][0] === m) return !!x.modes[i][2]; return false; }
 
@@ -225,7 +227,7 @@
   }
 
   /* ---- the leaderboard sheet ---------------------------------------------- */
-  var st = { game: 'cover', mode: 'artist', period: 'all', artist: '*', artistLabel: '', friends: false };
+  var st = { game: GAMES[0].g, mode: 'artist', period: 'all', artist: '*', artistLabel: '', friends: false };
   var modal, elGames, elModes, elPeriod, elScope, elList, elMe, elSub;
   var cache = {}, loadTok = 0, lastKey = '', lastPos = null;
 

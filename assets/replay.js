@@ -365,7 +365,7 @@
       return fade('<span class="rp-kicker">' + esc(T.label) + '</span>', 0) +
         '<h1 class="rp-h">' + line('The songs that', 100) + line('defined it.', 260) + '</h1>' +
         '<div class="rp-tracks">' + rows + '</div>' +
-        fade('<span class="rp-attr"><img src="/assets/deezer-mark.png" alt="">30-second previews from Deezer, only when you press play</span>', 1300);
+        fade((window.Rights && Rights.ON) ? '<span class="rp-attr">30-second previews provided courtesy of iTunes, only when you press play</span>' : '<span class="rp-attr"><img src="/assets/deezer-mark.png" alt="">30-second previews from Deezer, only when you press play</span>', 1300);
     },
     albums: function (m) {
       var A = m.crate.topAlbums.slice(0, 5);
