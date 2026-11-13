@@ -36,3 +36,107 @@ button.vinall-word { background: none; padding: 0; font: inherit; font-size: 26p
 }
 @media (max-width: 360px) { #mobile-help { display: none; } }
 @media (prefers-reduced-motion: reduce) { .rr-loading h2 { animation: none; } }
+
+/* ---- Readability pass (2026-11-13) ------------------------------------------
+   Pixelify stays for headlines, numbers and buttons: that is the look. Anything
+   read as a sentence or a detail line is set in IBM Plex Sans (already shipped
+   with VINALL), at 13px or more, on a darker ground where it sits over the
+   city. Nothing here moves the art. */
+:root { --read: 'IBM Plex Sans', 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+.question-hint, .menu-card p, .start-note, .suggestion-copy small, .no-results, .no-results small,
+.answer-error, .browse-button, .rarity-reveal p, .answer-accepted small, .recap-title small,
+.results-card > p, .mock-results, #help-dialog p, .notice, .rr-pick small, .rr-pause-note,
+.rr-status, .rr-missing, .cabinet-copy > p, .standalone-note, .keyboard-tip {
+  font-family: var(--read); letter-spacing: 0; font-weight: 400;
+}
+.question-card h2 { font-size: clamp(21px, 5.4cqw, 28px); line-height: 1.2; margin: 6px 0 8px; color: #fff4dc; }
+.question-hint { font-size: clamp(13.5px, 3.5cqw, 15px); line-height: 1.45; color: #d9cde9; margin-bottom: 14px; }
+.menu-card p { font-size: clamp(14px, 3.6cqw, 16px); line-height: 1.5; color: #e2d3e8; }
+.menu-detail { font-size: clamp(11px, 2.9cqw, 13px); }
+.start-note { font-size: 14px; color: #f0d6de; }
+.answer-error { font-size: 13.5px; line-height: 1.35; min-height: 0; color: #ffc0bf; }
+.answer-error:empty { margin: 4px 0; }
+.browse-button { font-size: 14px; color: #e3cbe6; padding: 10px 8px; margin-top: 6px; min-height: 40px; }
+.rarity-reveal p { display: inline-block; font-size: 14px; color: #f3e7f6; background: #0e0b22d9; padding: 6px 12px; border-radius: 4px; margin-top: 12px; }
+.answer-accepted small { font-size: 13px; color: #c8dbbb; }
+.results-card > p { font-size: 15px; color: #e0d0ea; }
+.recap-title small { font-size: 12.5px; color: #c9b6d6; }
+.answer-recap b { font-size: 11px; letter-spacing: .5px; white-space: nowrap; }
+.mock-results { font-size: 13px; color: #c9b6d6; display: block; margin-top: 12px; }
+#help-dialog p { font-size: 15px; line-height: 1.55; }
+.fineprint { font-size: 13.5px !important; color: #c3b2d6 !important; }
+.notice { font-size: 15px; }
+.environment-tag { font-size: clamp(11px, 2.8cqw, 14px); }
+.game-footer { font-size: clamp(10px, 2.6cqw, 12px); }
+.cabinet-copy > p { font-size: 16px; line-height: 1.6; color: #b7aac9; }
+.standalone-note { font-size: 13px; color: #8e83a6; line-height: 1.6; }
+
+/* The question header: kind and difficulty on the left, the clock on the right. */
+.rr-qhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 2px 0 4px; }
+.rr-qhead .question-kind { margin: 0; font-size: 13px; letter-spacing: 1.5px; color: #e6cfe9; gap: 8px; }
+.rr-qhead .rr-tier { margin: 0; font-size: 11px; letter-spacing: 1px; }
+.rr-clock { display: flex; align-items: center; gap: 8px; color: #fff0cc; --clock: #9de279; }
+.rr-clock b { font-weight: 700; font-size: 22px; line-height: 1; min-width: 2ch; text-align: right; font-variant-numeric: tabular-nums; color: var(--clock); text-shadow: 1px 2px #120d24; }
+.rr-clock-bar { position: relative; display: block; width: 74px; height: 10px; background: #0b0e24; box-shadow: 0 0 0 2px #4d4168, inset 0 0 0 1px #000; overflow: hidden; }
+.rr-clock-bar > i { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, var(--clock) 0 5px, transparent 5px 7px); transform-origin: left center; transition: transform .2s linear; }
+.rr-clock.urgent { --clock: #ffd17d; }
+.rr-clock.critical { --clock: #ff8f8f; }
+.rr-clock.critical b { animation: rrTick 1s steps(2) infinite; }
+@keyframes rrTick { 50% { opacity: .55; } }
+.question-card.rr-timeup .rr-clock b { color: #ff8f8f; }
+
+/* The list hangs under the box and never covers the question. */
+.rr-field { position: relative; }
+.rr-field .suggestions { top: calc(100% + 4px); bottom: auto; max-height: min(280px, 42svh); }
+.suggestions-head { font-family: var(--read); font-size: 12px; letter-spacing: .3px; color: #d8c6e2; padding: 10px 12px 4px; }
+.suggestion { padding: 10px 12px; min-height: 52px; }
+.suggestion-copy strong { font-size: clamp(16px, 4.2cqw, 19px); }
+.suggestion-copy small { font-size: 13px; color: #cdb8d8; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suggestion.rr-chosen { background: #3e5a3a99; }
+.no-results { font-size: 15px; }
+.no-results small { font-size: 13.5px; color: #cdbbd9; }
+.rr-status { font-size: 14px; color: #d6c5e2; }
+.rr-missing { font-family: var(--read); font-size: 13.5px; }
+
+/* The chosen answer, said out loud before it is sent. */
+.rr-pick { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; padding: 8px 10px; text-align: left; background: #1d3a2bcc; box-shadow: 0 0 0 2px #6fbf6b; }
+.rr-pick-tick { color: #a9e478; font-size: 18px; }
+.rr-pick-copy { flex: 1; min-width: 0; }
+.rr-pick-copy b { display: block; font-weight: 400; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rr-pick-copy small { display: block; font-size: 13px; color: #cfe3c4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#pick-change { background: none; color: #ffe4a6; font-size: 13px; padding: 8px 4px; text-decoration: underline; text-underline-offset: 3px; }
+.question-card .primary { margin-top: 8px; }
+.question-card > .card-tab { font-size: 12px; padding: 5px 14px; }
+
+/* Checking: instant feedback while the server judges. */
+.rr-dots { display: inline-flex; gap: 4px; }
+.rr-dots i { width: 6px; height: 6px; background: currentColor; animation: rrDot .9s steps(2) infinite; }
+.rr-dots i:nth-child(2) { animation-delay: .15s; } .rr-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes rrDot { 50% { opacity: .2; } }
+.question-card.rr-checking #answer { opacity: .7; }
+
+.rr-pause-note { font-size: 14px; color: #ffd17d; margin: -4px 0 14px; }
+.reveal-grade { display: none; }
+
+@media (max-width: 600px) {
+  .question-card { padding: 20px 14px 12px; }
+  .question-card h2 { font-size: 22px; }
+  .question-hint { font-size: 14px; }
+  .suggestion-copy strong { font-size: 17px; }
+  .suggestion-copy small, .rr-pick-copy small { font-size: 13px; }
+  .answer-error { font-size: 13.5px; }
+  .browse-button { font-size: 14px; }
+  .menu-card p { font-size: 15px; }
+  .menu-detail { font-size: 11.5px; }
+  .start-note { font-size: 14px; }
+  .rarity-reveal p { font-size: 14px; }
+  .results-card > p { font-size: 15px; }
+  .answer-recap > div { font-size: 15px; }
+  .recap-title small { font-size: 12.5px; }
+  .answer-recap b { font-size: 10.5px; }
+  .mock-results { font-size: 13px; }
+  .environment-tag { font-size: 12px; }
+  .game-footer { font-size: 11px; }
+  .search-wrap input { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) { .rr-clock.critical b, .rr-dots i { animation: none; } .rr-clock-bar > i { transition: none; } }

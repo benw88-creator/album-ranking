@@ -3,6 +3,8 @@
 //   GET  ?op=day                 today's prompts (public; the same five for everybody)
 //   GET  ?op=state      (auth)   your run today, for resuming, plus streak and best
 //   POST {op:'answer', day, q, id}   (auth)  id = MusicBrainz release-group or artist MBID
+//   POST {op:'open', day, q}         (auth)  start (or read) question q's 30s clock
+//   POST {op:'warm', day, q, id}     (auth)  look an MBID up ahead of the answer
 //   POST {op:'pass', day, q}         (auth)  skip a prompt for 0 m
 //   POST {op:'missing', day, q, text}(auth)  "it isn't in the catalogue"
 //
@@ -52,11 +54,15 @@ async function userId(req) {
 }
 
 // The stored five win over a regenerated five, so a later rules change never
-// re-deals a day somebody is half way through.
+// re-deals a day somebody is half way through. A warm instance keeps them:
+// a stored day never changes.
+const dayMemo = new Map();
 async function dayQuestions(day) {
+  if (dayMemo.has(day)) return dayMemo.get(day);
   const rows = await rest('/rest/v1/rr_days?select=questions&day=eq.' + day);
-  if (rows && rows[0]) return rows[0].questions;
-  return rpc('rr_day_put', { p_day: day, p_questions: questionsFor(day), p_version: VERSION });
+  const qs = rows && rows[0] ? rows[0].questions : await rpc('rr_day_put', { p_day: day, p_questions: questionsFor(day), p_version: VERSION });
+  if (qs) { if (dayMemo.size > 4) dayMemo.clear(); dayMemo.set(day, qs); }
+  return qs;
 }
 
 class Transient extends Error {}
@@ -72,22 +78,32 @@ async function mb(path) {
   throw new Transient('musicbrainz');
 }
 
-async function facts(kind, id) {
+// Album prompts that ask about the credited artist (country, band or solo).
+const NEEDS_ARTIST = new Set(['byCountry', 'byGroup', 'bySolo']);
+function needsArtists(question) { return !!(question && (question.conds || []).some((c) => NEEDS_ARTIST.has(c[0]))); }
+
+async function facts(kind, id, question) {
   const key = (kind === 'album' ? 'rg:' : 'ar:') + id;
+  const want = kind === 'album' && needsArtists(question);
   const hit = await rest('/rest/v1/rr_entities?select=facts,fetched_at&id=eq.' + encodeURIComponent(key));
-  if (hit && hit[0] && Date.now() - Date.parse(hit[0].fetched_at) < FRESH_MS) return hit[0].facts;
-  const raw = await mb(kind === 'album'
-    ? 'release-group/' + id + '?fmt=json&inc=artist-credits+ratings'
-    : 'artist/' + id + '?fmt=json&inc=aliases+ratings');
-  if (!raw) return null;
-  const f = kind === 'album' ? albumFacts(raw) : artistFacts(raw);
+  let f = hit && hit[0] && Date.now() - Date.parse(hit[0].fetched_at) < FRESH_MS ? hit[0].facts : null;
+  if (f && (!want || f.enriched)) return f;
+  if (!f) {
+    const raw = await mb(kind === 'album'
+      ? 'release-group/' + id + '?fmt=json&inc=artist-credits+ratings'
+      : 'artist/' + id + '?fmt=json&inc=aliases+ratings');
+    if (!raw) return null;
+    f = kind === 'album' ? albumFacts(raw) : artistFacts(raw);
+  }
   // An album whose artists carry no country in the credit (a city-level area)
   // gets one artist lookup each, so "from the UK" is not unknown for no reason.
-  if (kind === 'album') {
+  // Only when the prompt asks: each lookup is a second of MusicBrainz.
+  if (want) {
     for (const a of f.artists.slice(0, 3)) {
-      if (a.country || !MBID.test(a.id)) continue;
-      try { const ar = await mb('artist/' + a.id + '?fmt=json'); if (ar) { const af = artistFacts(ar); a.country = af.country; a.type = a.type || af.type; } } catch (e) {}
+      if ((a.country && a.type) || !MBID.test(a.id)) continue;
+      try { const ar = await mb('artist/' + a.id + '?fmt=json'); if (ar) { const af = artistFacts(ar); a.country = a.country || af.country; a.type = a.type || af.type; } } catch (e) {}
     }
+    f.enriched = true;
   }
   await rest('/rest/v1/rr_entities?on_conflict=id', {
     method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
@@ -101,6 +117,7 @@ const REASONS = {
   finished: 'You’ve flown today’s run already.',
   attempts: 'That’s a lot of tries for one day. Come back tomorrow.',
   order: 'That answer was for a different prompt. Reloading your run.',
+  timeout: 'Out of time. That one scores 0 m.',
   duplicate: 'You’ve used that answer already. Find another.',
   no_day: 'Today’s prompts aren’t ready yet. Try again in a moment.'
 };
@@ -109,6 +126,7 @@ export default async function handler(req, res) {
   if (cors(req, res)) return;
   res.setHeader('Cache-Control', 'no-store');
   if (!SERVICE()) return res.status(503).json({ error: 'RocketRun is not switched on here yet.' });
+  const received = new Date().toISOString();   // the clock judges arrival, not validation
   const body = req.method === 'POST' ? (typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {})) : {};
   const op = String((req.query && req.query.op) || body.op || '');
 
@@ -120,13 +138,16 @@ export default async function handler(req, res) {
       return res.status(200).json({ day, questions: qs, opensIn: Date.UTC(2020, 0, 1) + (day + 1) * 86400000 - Date.now() });
     }
 
-    const uid = await userId(req);
+    const [uid, todayQs] = await Promise.all([userId(req), dayQuestions(today()).catch(() => null)]);
     if (!uid) return res.status(401).json({ error: 'Log in to fly RocketRun.' });
 
     if (op === 'state') {
       const day = today();
-      const [qs, st] = await Promise.all([dayQuestions(day), rpc('rr_state', { p_user: uid, p_day: day })]);
-      return res.status(200).json({ ...st, questions: qs });
+      // A question left open past its 30 seconds is passed before it is read.
+      // (Only the open one can be expired: the next has not been opened yet.)
+      await rpc('rr_expire', { p_user: uid, p_day: day, p_at: received });
+      const st = await rpc('rr_state', { p_user: uid, p_day: day });
+      return res.status(200).json({ ...st, questions: todayQs || await dayQuestions(day) });
     }
 
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST' });
@@ -141,24 +162,43 @@ export default async function handler(req, res) {
     }
 
     if (op === 'pass') {
-      const r = await rpc('rr_submit', { p_user: uid, p_day: day, p_q: q, p_key: null, p_label: null, p_sub: null, p_votes: null });
+      const r = await rpc('rr_pass', { p_user: uid, p_day: day, p_q: q, p_received: received });
       return res.status(200).json(r.ok ? r : { ...r, message: REASONS[r.reason] });
     }
 
-    if (op !== 'answer') return res.status(400).json({ error: 'Unknown op.' });
+    if (op === 'open') {
+      const r = await rpc('rr_open_q', { p_user: uid, p_day: day, p_q: q });
+      if (r.reason === 'timeout') return res.status(200).json({ ...r.passed, ok: false, reason: 'timeout', message: REASONS.timeout });
+      return res.status(200).json(r.ok ? r : { ...r, message: REASONS[r.reason] });
+    }
+
+    if (op !== 'answer' && op !== 'warm') return res.status(400).json({ error: 'Unknown op.' });
     const id = String(body.id || '').toLowerCase();
     if (!MBID.test(id)) return res.status(400).json({ error: 'Pick an answer from the list.' });
 
-    const att = await rpc('rr_attempt', { p_user: uid, p_day: day });
-    if (!att.ok) return res.status(200).json({ ok: false, reason: att.reason, message: REASONS[att.reason] });
-    if (att.next !== q) return res.status(200).json({ ok: false, reason: 'order', next: att.next, message: REASONS.order });
-
-    const qs = await dayQuestions(day);
+    const qs = day === today() && todayQs ? todayQs : await dayQuestions(day);
     const question = qs && qs[q];
     if (!question) return res.status(200).json({ ok: false, reason: 'no_day', message: REASONS.no_day });
 
+    // Both spend an attempt before the answer is judged, so a script cannot
+    // make this route hammer MusicBrainz; the lookup runs alongside it.
+    const lookup = facts(question.kind, id, question).then((v) => ({ v }), (e) => ({ e }));
+    if (op === 'warm') {
+      const att = await rpc('rr_attempt', { p_user: uid, p_day: day });
+      if (!att.ok) return res.status(200).json({ ok: false, reason: att.reason });
+      const got = await lookup;
+      return res.status(200).json({ ok: !got.e && !!got.v });
+    }
+    const att = await rpc('rr_attempt_q', { p_user: uid, p_day: day, p_q: q, p_received: received });
+    if (!att.ok) {
+      if (att.reason === 'timeout') return res.status(200).json({ ...att.passed, ok: false, reason: 'timeout', message: REASONS.timeout });
+      return res.status(200).json({ ok: false, reason: att.reason, message: REASONS[att.reason] });
+    }
+    if (att.next !== q) return res.status(200).json({ ok: false, reason: 'order', next: att.next, message: REASONS.order });
+
     let f;
-    try { f = await facts(question.kind, id); }
+    const got = await lookup;
+    try { if (got.e) throw got.e; f = got.v; }
     catch (e) {
       if (e instanceof Transient) return res.status(200).json({ ok: false, reason: 'busy', message: 'MusicBrainz is busy. Try that again in a few seconds.' });
       throw e;

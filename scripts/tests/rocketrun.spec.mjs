@@ -18,7 +18,7 @@ const RESULTS = {
   live: [RG(ID(6), 'At Fillmore East', 1971, 'The Allman Brothers Band', { 'secondary-types': ['Live'] })]
 };
 
-async function mock(page, { signedIn = true, finished = false } = {}) {
+async function mock(page, { signedIn = true, finished = false, remaining = 30000 } = {}) {
   const calls = [];
   let answered = [];
   await page.route('**/musicbrainz.org/ws/2/**', (route) => {
@@ -39,8 +39,10 @@ async function mock(page, { signedIn = true, finished = false } = {}) {
       const n = answered.length, fin = n === 5;
       return route.fulfill({ json: { ok: true, q: body.q, grade: n % 5, gain: [500, 1200, 2500, 5000, 9000][n % 5], pct: 3.2, sample: 0, total: 1000 * n, finished: fin, award: fin ? 1600 : 0, streak: fin ? 1 : null, label: 'Answer ' + n, sub: 'Someone · 1997' } });
     }
-    if (op === 'pass') { answered.push(null); return route.fulfill({ json: { ok: true, q: body.q, grade: -1, gain: 0, total: 1000 * (answered.length - 1), finished: answered.length === 5 } }); }
+    if (op === 'pass') { answered.push(null); return route.fulfill({ json: { ok: true, q: body.q, grade: -1, gain: 0, total: 1000 * (answered.length - 1), finished: answered.length === 5, timeout: remaining < 30000 } }); }
     if (op === 'missing') return route.fulfill({ json: { ok: true } });
+    if (op === 'open') return route.fulfill({ json: { ok: true, q: body.q, remaining_ms: remaining } });
+    if (op === 'warm') return route.fulfill({ json: { ok: true } });
     return route.fulfill({ status: 400, json: {} });
   });
   await start(page);
@@ -57,13 +59,19 @@ async function openGame(page) {
   await page.locator('#rocketrun-card').click();
   await expect(page.locator('#rocketrun-sheet.open iframe')).toBeVisible();
 }
+// An exact match is picked by itself (shown in #pick); anything else is chosen from the list.
 async function pick(page, text, choose) {
   const g = game(page);
   await g.locator('#answer').fill(text);
-  await g.locator('.suggestion', { hasText: choose }).first().click();
+  const auto = g.locator('#pick:not([hidden])', { hasText: choose });
+  const row = g.locator('#suggestions:not([hidden]) .suggestion', { hasText: choose }).first();
+  await expect(auto.or(row)).toBeVisible();
+  if (await auto.count()) return;
+  await row.click();
+  await expect(g.locator('#pick')).toContainText(choose);
 }
 async function waitPlay(page, n) {
-  await expect(game(page).locator('.card-tab')).toHaveText(`Q0${n} / 05`, { timeout: 20000 });
+  await expect(game(page).locator('.card-tab')).toHaveText(`${n} OF 5`, { timeout: 20000 });
 }
 
 test('RocketRun leads the Arcade and opens full screen', async ({ page }) => {
@@ -84,7 +92,7 @@ test('RocketRun leads the Arcade and opens full screen', async ({ page }) => {
 test('signed out: asks to log in, and plays nothing', async ({ page }) => {
   const calls = await mock(page, { signedIn: false });
   await openGame(page);
-  await expect(game(page).locator('#signin')).toHaveText(/LOG IN TO FLY/);
+  await expect(game(page).locator('#signin')).toHaveText(/LOG IN TO PLAY/);
   expect(calls.some((c) => c.op === 'state')).toBe(false);
 });
 
@@ -135,11 +143,11 @@ test('a full run: search, rule pre-check, server refusal, pass, results', async 
   await g.locator('#pass').click();
 
   await waitPlay(page, 5);
-  // Nothing on MusicBrainz: an honest message and a way to report it.
+  // No match: an honest message and a way to report it.
   await g.locator('#answer').fill('zzqx unknown');
-  await expect(g.locator('.no-results')).toContainText('Nothing on MusicBrainz');
+  await expect(g.locator('.no-results')).toContainText('No match for');
   await g.locator('#report-missing').click();
-  await expect(g.locator('#notice')).toContainText('missing');
+  await expect(g.locator('#notice')).toContainText('noted');
   await pick(page, 'live', 'At Fillmore East');
   await g.locator('#launch-answer').click();
 
@@ -206,4 +214,81 @@ test('phone: the card art is drawn', async ({ page }) => {
   await page.evaluate(() => goToView('games'));
   await expect(page.locator('#rocketrun-card .rrh-rocket')).toBeVisible();
   if (process.env.SHOTS) await page.locator('#rocketrun-card').screenshot({ path: `${process.env.SHOTS}/rocketrun-card-phone.png` });
+});
+
+// Visual pass: SHOTS=<dir> writes the menu, a question with its list, the
+// rarity reveal and the results card at phone size.
+test('screens (SHOTS only)', async ({ page }) => {
+  test.skip(!process.env.SHOTS, 'screenshots only');
+  test.setTimeout(120000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mock(page);
+  await openGame(page);
+  const g = game(page), S = process.env.SHOTS;
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: `${S}/rr-menu.png` });
+  await g.locator('#start').click();
+  await waitPlay(page, 1);
+  await g.locator('#answer').fill('1997');
+  await expect(g.locator('.suggestion').first()).toBeVisible();
+  await page.screenshot({ path: `${S}/rr-question.png` });
+  await g.locator('.suggestion').first().click();
+  await g.locator('#launch-answer').click();
+  await expect(g.locator('#rarity-reveal')).toHaveClass(/show/);
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: `${S}/rr-reveal.png` });
+});
+
+test('the answer box: an exact match is picked and corrected, never sent until Enter', async ({ page }) => {
+  const calls = await mock(page);
+  await openGame(page);
+  const g = game(page);
+  await g.locator('#start').click();
+  await waitPlay(page, 1);
+  // Q1 is "an album from 1997": Blonde is wrong, which is the point - the
+  // pre-check stops it before any answer is sent.
+  await g.locator('#answer').pressSequentially('BLONDE', { delay: 20 });
+  await expect(g.locator('#pick')).toContainText('Blonde');
+  await expect(g.locator('#pick')).toContainText('Frank Ocean');
+  await expect(g.locator('#answer')).toHaveValue('Blonde');            // case corrected
+  await page.waitForTimeout(800);
+  expect(calls.filter((c) => c.op === 'answer').length).toBe(0);       // typing never submits
+  expect(calls.filter((c) => c.op === 'warm').length).toBe(1);         // looked up ahead
+  await g.locator('#answer').press('Enter');
+  await expect(g.locator('#answer-error')).toContainText('Blonde came out in 2016');
+  // Typing again drops the pick; a non-exact search only lists.
+  await g.locator('#answer').fill('kind');
+  await expect(g.locator('.suggestion')).toHaveCount(1);
+  await expect(g.locator('#pick')).toBeHidden();
+  // Enter on a list with nothing chosen highlights the top row, then takes it, then sends.
+  await g.locator('#answer').press('Enter');
+  await expect(g.locator('.suggestion.highlight')).toHaveCount(1);
+  await g.locator('#answer').press('Enter');
+  await expect(g.locator('#pick')).toContainText('Kind of Blue');
+  expect(calls.filter((c) => c.op === 'answer').length).toBe(0);
+});
+
+test('the clock: shown, server-started, and a pass for 0 m at zero', async ({ page }) => {
+  test.setTimeout(60000);
+  const calls = await mock(page, { remaining: 2200 });
+  await openGame(page);
+  const g = game(page);
+  await g.locator('#start').click();
+  await waitPlay(page, 1);
+  await expect(g.locator('#clock')).toBeVisible();
+  expect(calls.some((c) => c.op === 'open' && c.body.q === 0)).toBe(true);
+  await expect(g.locator('#clock')).toHaveClass(/critical/);
+  // At zero the client asks the server to pass; the next prompt opens its own clock.
+  await waitPlay(page, 2);
+  expect(calls.filter((c) => c.op === 'pass').map((c) => c.body.q)).toEqual([0]);
+  expect(calls.some((c) => c.op === 'open' && c.body.q === 1)).toBe(true);
+});
+
+test('the clock: a refreshed run resumes with the server time left, not 30', async ({ page }) => {
+  await mock(page, { remaining: 12000 });
+  await openGame(page);
+  const g = game(page);
+  await g.locator('#start').click();
+  await waitPlay(page, 1);
+  await expect(g.locator('#clock-s')).toHaveText(/^1[0-2]$/);
 });

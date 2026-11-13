@@ -13,7 +13,7 @@
  */
 (function () {
   'use strict';
-  var SRC = 'arcade/rocketrun/index.html?v=1';
+  var SRC = 'arcade/rocketrun/index.html?v=2';
   var KEY = 'crate_rocketrun_v1';     // crate_: wiped with the rest on an account switch
   var sheet, frame, card;
 
@@ -80,5 +80,6 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
 
-  window.RocketRunHost = { open: open, close: close, note: note, paint: paintCard };
+  window.RocketRunHost = { open: open, close: close, note: note, paint: paintCard,
+    done: function () { var s = read(); return !!(s && s.day === day() && s.done); } };
 })();

@@ -3921,6 +3921,42 @@ body.kb-up .suggestions { max-height: min(480px, var(--sugg-max, 480px)); oversc
 @media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) .badge-baddie::after { animation: none; } }
 html[data-motion="none"] .badge-baddie::after { animation: none; }
 
+/* OG number (#001-#999). A stamped serial plate rather than another pill: a
+   near-black enamel face, a machined rim (conic, so the light sits on two
+   corners like real metal), tabular mono digits. One slow pass of light; the
+   number is the point, so nothing else moves. Fixed colours on purpose: it is
+   an object, not a theme surface. */
+.ogn {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: inline-flex; align-items: center; vertical-align: middle;
+  padding: 3px 7px 3px 7px; border-radius: 6px; border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, #1d1c1a, #0b0a09) padding-box,
+    conic-gradient(from 215deg, #6f747c, #f4f1ea 14%, #a8987a 30%, #e7e3da 48%, #5f646b 66%, #d9cba7 84%, #6f747c) border-box;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 -1px 0 rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.35);
+  font: 600 11px/1.2 var(--font-mono); letter-spacing: .09em; font-variant-numeric: tabular-nums;
+  margin-left: -2px;
+}
+.ogn > span {
+  background: linear-gradient(180deg, #fffdf8 0%, #ddd6c6 52%, #a4977a 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: none;
+}
+.ogn::after {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(90deg, transparent 0px, transparent 150px, rgba(255,255,255,.28) 168px, transparent 186px, transparent 260px);
+  background-size: 260px 100%; animation: ognSheen 7s linear infinite;
+}
+@keyframes ognSheen { from { background-position: 0 0; } to { background-position: 260px 0; } }
+@media (prefers-reduced-motion: reduce) { html:not([data-motion="full"]) .ogn::after { animation: none; opacity: 0; } }
+html[data-motion="none"] .ogn::after { animation: none; opacity: 0; }
+/* In the tutorial it sits beside the OG badge at the badge's size, and pops in
+   just after the badge lands. */
+.ogn.onb-ogn { font-size: 13px; padding: 7px 11px; border-radius: 9px; margin-left: 8px; vertical-align: middle;
+  animation: ognPop .5s cubic-bezier(.2,1.45,.4,1) .95s backwards; }
+@keyframes ognPop { from { opacity: 0; transform: translateY(4px) scale(.72); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ogn.onb-ogn { animation: none; } }
+
 .prof-stat.clickable { cursor: pointer; border-radius: 8px; padding: 2px 6px; margin: -2px -6px; transition: background 0.12s; }
 .prof-stat.clickable:hover { background: var(--surface-2); }
 
@@ -9906,9 +9942,12 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
             schedule: { at: atLocal(20, 0) } });
     }
     try {
-      var doneToday = window.Recall && Recall.dailyDone && Recall.dailyDone();
+      /* The Apple build has no Recall (Rights.gameOff); its daily game is RocketRun. */
+      var rr = window.Rights && Rights.gameOff('recall');
+      var doneToday = rr ? (window.RocketRunHost && RocketRunHost.done()) : (window.Recall && Recall.dailyDone && Recall.dailyDone());
       notifs.push({
-        id: RECALL_ID, title: 'Recall', body: doneToday ? 'A new song is ready to name.' : 'Today’s record is ready to name.',
+        id: RECALL_ID, title: rr ? 'RocketRun' : 'Recall',
+        body: rr ? (doneToday ? 'Tomorrow’s five are up.' : 'Today’s five are up.') : (doneToday ? 'A new song is ready to name.' : 'Today’s record is ready to name.'),
         schedule: { at: atLocal(12, 0, doneToday ? 1 : 0) }
       });
     } catch (e) {}
@@ -18522,7 +18561,13 @@ window.avatarSrc=avatarSrc;
 const BADGES={ceo:{label:'CEO',emoji:ICONS.crown,cls:'badge-ceo'},og:{label:'OG',emoji:ICONS.trophy,cls:'badge-og'},beta:{label:'Beta Tester',emoji:ICONS.beaker,cls:'badge-beta'},critic:{label:'Top Critic',emoji:ICONS.edit,cls:'badge-critic'},verified:{label:'Verified',emoji:ICONS.check,cls:'badge-verified'},baddie:{label:'Baddie',emoji:'<svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.4"/><path d="M4.9 6.9c.4-.9 1.6-.9 2 0M9.1 6.9c.4-.9 1.6-.9 2 0"/><path d="M4.5 9.2c1.4 2.1 5 2.4 8 .2"/><path d="M9.5 10.6c-.1 1.6.7 2.7 1.8 2.7s1.7-1.2 1.2-3.3"/><path d="M11.2 10.9v1.1"/></svg>',cls:'badge-baddie'}};
 const CEO_USER_ID='d8efaf23-c9fb-40d4-8c73-4dca30245398';
 function computeBadges(profile,ratedAlbumCount,isOwner){const out=[];const stored=(profile&&profile.badges)||[];if(CEO_USER_ID&&profile&&profile.id===CEO_USER_ID)out.push('ceo');stored.forEach(function(b){if(BADGES[b]&&out.indexOf(b)===-1)out.push(b);});if(ratedAlbumCount>=50&&out.indexOf('critic')===-1)out.push('critic');return out;}
-function badgeHtml(keys){if(!keys||!keys.length)return'';return'<span class="badges">'+keys.map(function(k){const b=BADGES[k];if(!b)return'';return'<span class="badge '+b.cls+'" title="'+esc(b.label)+'">'+b.emoji+' '+esc(b.label)+'</span>';}).join('')+'</span>';}
+/* og: profiles.og_number (1-999, server-assigned by registration order). It sits
+   directly after the OG badge; #1000 onwards has no number and gets the plain badge. */
+function ogNumberText(n){n=Number(n);return n>=1&&n<=999?'#'+String(n).padStart(3,'0'):'';}
+window.ogNumberText=ogNumberText;
+function ogNumberHtml(n,cls){const t=ogNumberText(n);return t?'<span class="ogn'+(cls?' '+cls:'')+'" title="VINALL OG '+t+'" aria-label="OG number '+Number(n)+'"><span>'+t+'</span></span>':'';}
+window.ogNumberHtml=ogNumberHtml;
+function badgeHtml(keys,og){if(!keys||!keys.length)return'';return'<span class="badges">'+keys.map(function(k){const b=BADGES[k];if(!b)return'';return'<span class="badge '+b.cls+'" title="'+esc(b.label)+'">'+b.emoji+' '+esc(b.label)+'</span>'+(k==='og'?ogNumberHtml(og):'');}).join('')+'</span>';}
 
 /* One producer-tag chip, coloured and animated from TAG_STYLE. Shared by the
    profile header and the Shop's swatch so a tag never looks like two different
@@ -19156,7 +19201,7 @@ async function drawProfile(host,prof,isOwner,profileTok){
     '<div class="prof-head"'+bannerStyle+'>'+
       '<span class="pa-wrap'+frameCls+'"><img class="prof-avatar" src="'+esc(avatarSrc(av))+'" alt=""></span>'+
       '<div style="flex:1;min-width:200px;">'+
-        '<div class="prof-name"><span class="'+(flairCls?flairCls.trim():'')+'">'+esc(prof.username||'user')+'</span>'+badgeHtml(badges)+'</div>'+
+        '<div class="prof-name"><span class="'+(flairCls?flairCls.trim():'')+'">'+esc(prof.username||'user')+'</span>'+badgeHtml(badges,prof.og_number)+'</div>'+
         tagHtml+
         (prof.bio?'<div class="prof-bio">'+esc(prof.bio)+'</div>':(isOwner?'<div class="prof-bio" style="opacity:0.6;">No bio yet.</div>':''))+
         '<div class="prof-stats">'+
@@ -29842,7 +29887,7 @@ window.renderAdminStats = renderAdminStats;
     cover: 'Guess the Cover', coverx: 'Cover EXTREME',
     tracklist: 'Guess from Tracklist', year: 'Guess the Year',
     blitz: 'Cover Fire', recall: 'Recall', bidwar: 'Bid Wars',
-    charades: 'Artist Charades'
+    charades: 'Artist Charades', rocketrun: 'RocketRun'
   };
   window.GAME_LABELS = GAME_LABELS;
 
@@ -41456,16 +41501,33 @@ window.renderAdminStats = renderAdminStats;
         return;
       }
       S.username = u;
-      reveal(u);
+      reveal(u, await myOgNumber());
+    }
+
+    /* The number was assigned at signup (og_on_signup); this only reads it.
+       A slow or failed read shows the plain badge rather than holding the beat. */
+    function myOgNumber() {
+      return Promise.race([
+        (async function () {
+          try {
+            var me = Cloud.getUser && Cloud.getUser();
+            if (!me) return null;
+            var r = await Cloud.client().from('og_numbers').select('n').eq('user_id', me.id).maybeSingle();
+            return (r && r.data && r.data.n) || null;
+          } catch (e) { return null; }
+        })(),
+        new Promise(function (res) { setTimeout(function () { res(null); }, 1500); })
+      ]);
     }
 
     /* The reward is the animation and nothing else — no paragraph explaining
        what OG means. A badge that has to be captioned is not a badge. */
-    function reveal(u) {
+    function reveal(u, og) {
       show(
         '<div class="onb-reveal">' +
           '<div class="onb-name">' + esc(u) +
             '<span class="onb-badge" id="onb-badge">' + (BADGES.og.emoji || '') + ' OG</span>' +
+            ogNumberHtml(og, 'onb-ogn') +
           '</div>' +
         '</div>',
         ''
@@ -43600,14 +43662,14 @@ window.renderAdminStats = renderAdminStats;
 <script src="/assets/glow.js?v=5"></script>
 <script src="/assets/comments.js?v=3" defer></script>
 <script src="/assets/boards.js?v=7"></script>
-<script src="/assets/rocketrun-host.js?v=1"></script>
+<script src="/assets/rocketrun-host.js?v=2"></script>
 <script src="/assets/play.js?v=2"></script>
 <script src="/assets/charades.js?v=4"></script>
 <script src="/assets/passport-core.js?v=1"></script>
 <script src="/assets/passport.js?v=2"></script>
 <script src="/assets/safety.js?v=4"></script>
-<script src="/assets/discover.js?v=4"></script>
+<script src="/assets/discover.js?v=5"></script>
 <script src="/assets/liked.js?v=1"></script>
 <script src="/assets/sound.js?v=8"></script>
-<script src="/assets/shell.js?v=2"></script>
+<script src="/assets/shell.js?v=3"></script>
 </html>

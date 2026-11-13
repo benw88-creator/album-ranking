@@ -203,13 +203,66 @@ export function questionsFor(day) {
   throw new Error('questionsFor: no valid set');
 }
 
+/* ---- the answer box ---------------------------------------------------------- */
+// 30 seconds a question. MIRRORS rr_limit_ms() in *_rocketrun_timer.sql; the
+// server owns the clock, this only draws it.
+export const TIME_LIMIT_MS = 30000;
+
+function lev(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+export const labelOf = (f) => (f.kind === 'album' ? f.title : f.name);
+/* Ranks MusicBrainz results against what was typed. `facts` arrive best-first
+ * (MusicBrainz score, then how many editions a record has).
+ *   list  what to show: exact matches first, never more than five
+ *   pick  the one exact match that clearly is the answer, or null
+ *         (several records with one title and no clear favourite: null)
+ *   fix   a near-spelling worth offering as "did you mean", or null
+ * Nothing here submits: the caller only ever SELECTS, visibly. */
+export function rankAnswers(text, facts) {
+  const t = squash(text);
+  if (!t) return { list: [], pick: null, fix: null };
+  const keys = (f) => {
+    const own = squash(labelOf(f)), out = [own];
+    if (f.kind === 'album' && f.credit) { const c = squash(f.credit); out.push(c + own, own + c); }
+    if (f.kind === 'artist') (f.aliases || []).forEach((a) => out.push(squash(a)));
+    return out;
+  };
+  const scored = facts.map((f, i) => {
+    const k = keys(f), own = k[0];
+    let tier = 4;
+    if (k.includes(t)) tier = 0;
+    else if (own.startsWith(t) && t.length >= 2) tier = 1;
+    else if (t.length >= 4 && lev(own, t) <= (t.length >= 8 ? 2 : 1)) tier = 2;
+    else if (own.includes(t)) tier = 3;
+    return { f, i, tier };
+  }).sort((a, b) => a.tier - b.tier || a.i - b.i);
+  const exact = scored.filter((x) => x.tier === 0);
+  const list = (exact.length ? exact.slice(0, 4).concat(scored.filter((x) => x.tier > 0).slice(0, 1)) : scored.slice(0, 5)).map((x) => x.f);
+  let pick = null;
+  if (exact.length === 1) pick = exact[0].f;
+  else if (exact.length > 1) {
+    const [a, b] = exact.map((x) => x.f.releases || 0);
+    if (exact[0].f.kind === 'album' && a >= 4 && a >= 3 * b) pick = exact[0].f;   // one famous record, a few namesakes
+  }
+  const fix = !exact.length && scored[0] && scored[0].tier === 2 && !(scored[1] && scored[1].tier === 2) ? scored[0].f : null;
+  return { list, pick, fix };
+}
+
 /* ---- display only ---------------------------------------------------------- */
 // Gains MIRROR rr_grade() in supabase/migrations/*_rocketrun.sql: the server
 // decides grade and distance; these are for the help sheet and the reveal.
 export const GRADES = [
-  { name: 'BASIC', color: '#d8d3e8', gain: 500, power: 0.28 },
+  { name: 'COMMON', color: '#d8d3e8', gain: 500, power: 0.28 },
   { name: 'UNCOMMON', color: '#9de279', gain: 1200, power: 0.45 },
   { name: 'RARE', color: '#e599ff', gain: 2500, power: 0.65 },
   { name: 'LEGENDARY', color: '#ffd17d', gain: 5000, power: 0.85 },
-  { name: 'IMPOSSIBLE', color: '#ff9be4', gain: 9000, power: 1 }
+  { name: 'MYTHIC', color: '#ff9be4', gain: 9000, power: 1 }
 ];

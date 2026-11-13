@@ -1,7 +1,7 @@
 // RocketRun's two connections: VINALL (the host page that frames this one,
 // same origin on the web and in the app) and MusicBrainz (searched directly
 // from the device; CC0 data, CORS open, one request a second).
-import { albumFacts, artistFacts, isAlbum, fold } from '../../assets/rocketrun-rules.js';
+import { albumFacts, artistFacts, isAlbum, fold } from '../../assets/rocketrun-rules.js?v=2';
 
 export const host = (() => { try { return window.parent !== window && window.parent.Cloud ? window.parent : null; } catch (e) { return null; } })();
 const client = () => { try { return host && host.Cloud.client && host.Cloud.client(); } catch (e) { return null; } };
@@ -27,6 +27,10 @@ export const getDay = () => call('GET', 'day');
 export const getState = () => call('GET', 'state');
 export const answer = (day, q, id) => call('POST', 'answer', { day, q, id });
 export const pass = (day, q) => call('POST', 'pass', { day, q });
+export const open = (day, q) => call('POST', 'open', { day, q });
+// Looks the record up on the server while the player decides, so the answer
+// itself is judged from cache. Failure is harmless: the answer looks it up again.
+export const warm = (day, q, id) => call('POST', 'warm', { day, q, id }).catch(() => null);
 export const missing = (day, q, text) => call('POST', 'missing', { day, q, text });
 
 export const login = () => { try { host.Cloud.openAuth(); } catch (e) {} };
@@ -85,7 +89,6 @@ export async function search(text, kind) {
   } else {
     out = (j.artists || []).map(artistFacts);
   }
-  out = out.slice(0, 7);
   memo.set(key, out);
   return out;
 }

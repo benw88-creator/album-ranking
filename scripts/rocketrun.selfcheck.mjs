@@ -1,6 +1,6 @@
 // node scripts/rocketrun.selfcheck.mjs — RocketRun rules: daily sets and answer checks.
 import assert from 'node:assert/strict';
-import { questionsFor, evaluate, albumFacts, artistFacts, firstLetter, words, hasNumber, hasColour, dayNumber } from '../assets/rocketrun-rules.js';
+import { questionsFor, evaluate, albumFacts, artistFacts, firstLetter, words, hasNumber, hasColour, dayNumber, rankAnswers } from '../assets/rocketrun-rules.js';
 
 // Every day for ten years builds five prompts with one or two artist prompts,
 // rising tiers, no repeated template, and the same set every time it is asked.
@@ -73,5 +73,28 @@ assert.equal(evaluate(Q('artist', [['group'], ['formed', 1960, 1969]]), beatles)
 assert.equal(evaluate(Q('artist', [['formed', 1970, 1979]]), beatles).ok, false);
 const nowhere = artistFacts({ id: 'n', name: 'Nobody', area: { name: 'Manchester' } });
 assert.equal(evaluate(Q('artist', [['country', 'GB']]), nowhere).ok, null);
+
+// The answer box: exact matches lead, a clear favourite is picked (shown,
+// never submitted), namesakes with no favourite are left for the player, a
+// near-spelling is offered, and nothing is ever more than five rows.
+const RGF = (id, title, credit, releases) => albumFacts({ id, title, 'primary-type': 'Album', 'secondary-types': [], 'first-release-date': '2016', count: releases, 'artist-credit': [{ name: credit, artist: { id: 'a' + id, name: credit } }] });
+const views = RGF('v1', 'Views', 'Drake', 40), viewsB = RGF('v2', 'Views', 'Small Band', 1), viewsC = RGF('v3', 'Views From the 6 (Remix)', 'X', 1);
+let r = rankAnswers('views', [viewsC, views, viewsB]);
+assert.equal(r.pick && r.pick.id, 'v1', 'Views by Drake is the clear pick');
+assert.deepEqual(r.list.map((f) => f.id), ['v1', 'v2', 'v3']);
+r = rankAnswers('VIEWS', [views]); assert.equal(r.pick.title, 'Views');
+r = rankAnswers('drake views', [viewsB, views]); assert.equal(r.pick.id, 'v1', 'artist + title counts');
+r = rankAnswers('views', [RGF('a', 'Views', 'One', 3), RGF('b', 'Views', 'Two', 2)]);
+assert.equal(r.pick, null, 'two namesakes, no favourite: the player chooses');
+r = rankAnswers('yellow', Array.from({ length: 25 }, (_, i) => RGF('y' + i, 'Yellow Thing ' + i, 'A', 1)));
+assert.ok(r.list.length <= 5 && r.pick === null);
+r = rankAnswers('nevermnd', [RGF('n', 'Nevermind', 'Nirvana', 60), RGF('o', 'Never Mind the Bollocks', 'Sex Pistols', 30)]);
+assert.equal(r.fix && r.fix.id, 'n', 'a typo is offered, not taken');
+assert.equal(r.pick, null);
+r = rankAnswers('beyonce', [artistFacts({ id: 'b', name: 'Beyoncé', type: 'Person' })]); assert.equal(r.pick.id, 'b', 'accents fold');
+r = rankAnswers('mos def', [artistFacts({ id: 'm', name: 'Yasiin Bey', aliases: [{ name: 'Mos Def', type: 'Artist name' }] })]); assert.equal(r.pick.id, 'm', 'aliases count');
+r = rankAnswers('nirvana', [artistFacts({ id: 'n1', name: 'Nirvana', disambiguation: 'US grunge' }), artistFacts({ id: 'n2', name: 'Nirvana', disambiguation: 'UK 60s' })]);
+assert.equal(r.pick, null, 'two Nirvanas: shown, not picked');
+assert.equal(rankAnswers('', [views]).list.length, 0);
 
 console.log('rocketrun.selfcheck: ok (' + Object.keys(seen).length + ' templates in rotation)');

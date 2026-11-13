@@ -97,7 +97,7 @@
     },
     function intros() {
       var c = rated(), out = [];
-      if (window.Native && Native.on && window.Reminders && !Reminders.isOn() && plays('recall') >= 1) out.push({
+      if (window.Native && Native.on && window.Reminders && !Reminders.isOn() && (plays('recall') >= 1 || plays('rocketrun') >= 1)) out.push({
         id: 'reminders', hue: 'var(--gold)', ico: 'bell', where: ['games', 'home'],
         kicker: 'Reminders', title: 'A nudge when the new song drops?', cta: 'Turn on',
         act: function () {

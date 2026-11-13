@@ -74,7 +74,7 @@ try {
     assert.equal(r.ok, true, 'A q' + q + ' ' + JSON.stringify(r));
     assert.ok(r.grade >= 0 && r.grade <= 4); assert.equal(r.sample, 0);
     total += r.gain; assert.equal(r.total, total);
-    console.log('  A', q + 1, r.label, '·', r.sub, '->', ['BASIC', 'UNCOMMON', 'RARE', 'LEGENDARY', 'IMPOSSIBLE'][r.grade], r.pct + '%');
+    console.log('  A', q + 1, r.label, '·', r.sub, '->', ['COMMON', 'UNCOMMON', 'RARE', 'LEGENDARY', 'MYTHIC'][r.grade], r.pct + '%');
     if (q === 0) {
       const dup = await post(A, { op: 'answer', q: 1, id: id(answers[0][0]) });
       assert.ok(['duplicate', 'nofit', 'gone'].includes(dup.reason), 'reuse ' + JSON.stringify(dup)); console.log('  reuse ->', dup.reason);

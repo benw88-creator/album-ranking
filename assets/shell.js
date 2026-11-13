@@ -556,7 +556,8 @@
     }
     function arcade() {
       var n = 0;
-      try { if (window.Recall && Recall.dailyDone && !Recall.dailyDone()) n++; } catch (e) {}
+      try { if (!(window.Rights && Rights.gameOff('recall')) && window.Recall && Recall.dailyDone && !Recall.dailyDone()) n++; } catch (e) {}
+      try { if (window.RocketRunHost && !RocketRunHost.done()) n++; } catch (e) {}
       try { if (window.DropDaily && !DropDaily.done()) n++; } catch (e) {}
       try { if (open('ew-card') && window.EarwormDaily && !EarwormDaily.done()) n++; } catch (e) {}
       try { if (open('blitz-card') && window.Blitz && Blitz.dailyDone && !Blitz.dailyDone()) n++; } catch (e) {}
