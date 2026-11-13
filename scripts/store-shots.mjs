@@ -86,10 +86,34 @@ async function wire(ctx) {
       return route.fulfill({ json: { cover: art(a.id), tracks: toApi(a).tracks.items.map(t => ({ id: t.id, title: t.name, artist: a.an, duration: 180, preview: '/shot-preview.wav' })) } });
     }
     if (url.pathname === '/shot-preview.wav') return route.fulfill({ body: WAV, contentType: 'audio/wav' });
+    // The Apple build asks Apple's iTunes Search API from the device: answered
+    // here with the same fictional records, in Apple's own shapes.
+    if (url.hostname === 'itunes.apple.com') return route.fulfill({ json: itunes(url) });
     if (url.pathname.startsWith('/api/')) return route.fulfill({ json: [] });
     if (url.origin !== BASE) return route.fulfill({ status: 204, body: '' });
     return route.continue();
   });
+}
+
+function itunes(url) {
+  const coll = a => ({ wrapperType: 'collection', collectionType: 'Album', collectionId: +a.id, collectionName: a.name, artistId: +a.aid.slice(1), artistName: a.an,
+    artworkUrl100: art(a.id), trackCount: 12, releaseDate: (2018 + (+a.id % 8)) + '-05-01T07:00:00Z', primaryGenreName: 'Alternative',
+    collectionViewUrl: 'https://music.apple.com/gb/album/' + a.id });
+  const tracks = a => SONGS.slice(0, 12).map((t, i) => ({ wrapperType: 'track', kind: 'song', artistId: +a.aid.slice(1), artistName: a.an, collectionId: +a.id, collectionName: a.name,
+    trackId: +(a.id + String(i).padStart(2, '0')), trackName: t, trackNumber: i + 1, discNumber: 1, trackCount: 12, trackTimeMillis: 170000 + i * 7000,
+    previewUrl: BASE + '/shot-preview.wav', artworkUrl100: art(a.id), trackViewUrl: 'https://music.apple.com/gb/album/' + a.id + '?i=' + a.id + i,
+    collectionViewUrl: 'https://music.apple.com/gb/album/' + a.id, releaseDate: (2018 + (+a.id % 8)) + '-05-01T07:00:00Z', primaryGenreName: 'Alternative' }));
+  if (url.pathname === '/lookup') {
+    const id = (url.searchParams.get('id') || '').split(',')[0];
+    const a = ALBUMS.find(x => x.id === id) || ALBUMS.find(x => x.aid.slice(1) === id) || ALBUMS[0];
+    const r = [coll(a)].concat(url.searchParams.get('entity') === 'album' ? ALBUMS.filter(x => x.aid === a.aid).map(coll) : tracks(a));
+    return { resultCount: r.length, results: r };
+  }
+  const e = url.searchParams.get('entity');
+  const r = e === 'album' ? ALBUMS.slice(0, 12).map(coll) : e === 'musicArtist'
+    ? ARTISTS.map(([i, n]) => ({ wrapperType: 'artist', artistType: 'Artist', artistId: +i.slice(1), artistName: n }))
+    : ALBUMS.slice(0, 6).flatMap(a => tracks(a).slice(0, 2));
+  return { resultCount: r.length, results: r };
 }
 
 function seed() {
@@ -138,7 +162,10 @@ await ctx.addInitScript(({ albums, songs }) => {
   localStorage.setItem('crate_onboard_v1', JSON.stringify({ done: true, at: Date.now(), step: 99 }));
 }, { albums, songs });
 const page = await ctx.newPage();
-await page.goto(BASE + '/');
+// The Apple build, exactly as App Review sees it: Recall and the cover games
+// held back, the Apple Music badge where the app shows it.
+await page.goto(BASE + '/?rights=apple');
+await page.waitForFunction(() => window.Rights && Rights.ON);
 await page.waitForFunction(() => typeof window.goToView === 'function' || typeof window.setMode === 'function');
 const go = page.locator('#splash-cta');
 if (await go.isVisible().catch(() => false)) await go.click();

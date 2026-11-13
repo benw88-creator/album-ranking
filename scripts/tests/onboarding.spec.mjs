@@ -167,8 +167,8 @@ for (const [n, shown] of [[42, '#042'], [null, null]]) {
     await page.locator('#onb-go').click();
     await expect(page.locator('#onb-badge')).toBeVisible();
     if (shown) await expect(page.locator('.onb-name .ogn')).toHaveText(shown);
-    if (shown && process.env.SHOTS) { await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(1600); await page.screenshot({ path: process.env.SHOTS + '/onb-og.png' }); }
     else await expect(page.locator('.onb-name .ogn')).toHaveCount(0);
+    if (shown && process.env.SHOTS) { await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(1600); await page.screenshot({ path: process.env.SHOTS + '/onb-og.png' }); }
     await expect(page.locator('#onb-foot #onb-go')).toBeVisible({ timeout: 4000 });   // same beat, then Continue
   });
 }
