@@ -44,7 +44,13 @@
     .bar { display:none; }
     body { background:#fff; color:#222; } h1, h2, b { color:#000; } a { color:#000; } .meta, footer { color:#555; }
   }
-</style></head>
+</style><script>/* One document, two builds: in the iOS app only what is true there is shown
+   ([data-web] hidden), on the website only what is true there ([data-app] hidden). */
+(function(){var c=window.Capacitor,app=!!(c&&(c.isNativePlatform?c.isNativePlatform():c.platform&&c.platform!=='web'));
+try{if(!app&&localStorage.getItem('vinall_rights')==='apple')app=true;}catch(e){}
+document.documentElement.className+=(app?' is-app':' is-web');})();</script>
+<style>.is-app [data-web],.is-web [data-app]{display:none!important}</style>
+</head>
 <body>
 <header class="bar">
   <a class="back" href="/" data-back aria-label="Back to VINALL"><svg viewBox="0 0 11 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2 2 9l7 7"/></svg>VINALL</a>
@@ -55,35 +61,35 @@
 </header>
 <main>
 <h1>Privacy Policy</h1>
-<p class="meta">Effective 13 November 2026 · Version 1.8</p>
+<p class="meta">Effective 13 November 2026 · Version 1.9</p>
 
-<p>This policy covers the VINALL app and vinall.xyz. VINALL is operated by Excus Ltd, the data controller for the personal data described here. We do not show advertising, and we never sell your data or share it for marketing.</p>
+<p>This policy covers the VINALL app<span data-web> and vinall-lab.vercel.app</span>. VINALL is operated by Excus Ltd, the data controller for the personal data described here. We do not show advertising, and we never sell your data or share it for marketing.</p>
 
 <h2>What we collect</h2>
 <ul>
   <li><b>Account.</b> Your email address and an encrypted password, handled by Supabase Auth; we never see the password. If you sign in with Apple or Google, we receive the email address (or Apple’s private relay address) and the name they share, and no password.</li>
   <li><b>Your music and profile.</b> The albums and songs you rate, with scores, notes, lists, diary entries, the answers you give on Today, comments and Community Choice picks. Your username, avatar, bio and anything else you add to your profile.</li>
   <li><b>Age group.</b> Under 13, 13–17 or 18 and over. We never store your date of birth.</li>
-  <li><b>Spotify imports</b> (optional). If you upload your Spotify data, your browser adds up your plays and we store only how many times and for how long you played each track, in total and per day, for Replay. Individual plays are never uploaded, and nobody else can see these totals. To match an imported library, each track’s title, artist and Spotify link are sent to our server; matches are cached without anything that identifies you.</li>
+  <li><b>Spotify imports</b> (optional). If you upload your Spotify data, your device adds up your plays and we store only how many times and for how long you played each track, in total and per day, for Replay. Individual plays are never uploaded, and nobody else can see these totals. To match an imported library, each track’s title, artist and Spotify link are sent to our server; matches are cached without anything that identifies you.</li>
   <li><b>Usage events and crash reports.</b> Which questions were shown, answered or skipped (linked to your account, with no message content), and the error message and page address when something breaks.</li>
-  <li><b>Notifications</b> (only if you turn them on). On the website we store the address your browser provides for delivery; messages are encrypted and passed through your browser’s push service (Apple, Google, Microsoft or Mozilla), which cannot read them. Turning notifications off or logging out deletes that address. App reminders are scheduled on your phone and nothing is stored with us.</li>
+  <li data-app><b>Reminders</b> (only if you turn them on) are scheduled on your phone. Nothing about them is stored with us.</li>
+  <li data-web><b>Notifications</b> (only if you turn them on). We store the address your browser provides for delivery; messages are encrypted and passed through your browser’s push service (Apple, Google, Microsoft or Mozilla), which cannot read them. Turning notifications off or logging out deletes that address.</li>
   <li><b>Blocks and reports.</b> Who you block, and what you report, why and who you are, so it can be reviewed. The other person is never told who blocked or reported them.</li>
 </ul>
-<p>The app also keeps a working copy of your ratings, diary, game progress and Replay summaries on your device, along with your login session and theme, so it is fast and works offline. These are not tracking cookies and are not shared. Clearing the app’s or site’s data removes them; anything synced to your account returns when you sign in.</p>
+<p>The app also keeps a working copy of your ratings, diary, game progress and Replay summaries on your device, along with your login session and theme, so it is fast and works offline. These are not tracking cookies and are not shared. Clearing the app’s data removes them; anything synced to your account returns when you sign in.</p>
 
 <h2>Who can see it</h2>
 <p><b>Public:</b> your username, avatar, bio, ratings (unless set to Friends or Just me), lists, Today answers you have not marked private, comments, Community Choice picks, follows and followers, Groove memberships and leaderboard scores. <b>Private:</b> your email address, usage events, imported listening history and anything you mark private.</p>
 <p>You can change who sees your ratings on your profile at any time. <b>Friends</b> means people you follow who follow you back. Friends and Just me keep your scores and notes out of the public Crate feed and album reviews, and switching away from Anyone removes what you had already posted there.</p>
 
 <h2>Services we use</h2>
-<p><b>Supabase</b> stores the database and handles sign-in, in its EU region (eu-west-1). <b>Vercel</b> hosts the site on a global network. The other services below receive nothing that identifies you, except where stated. VINALL does not use Spotify’s services.</p>
+<p><b>Supabase</b> stores the database and handles sign-in, in its EU region (eu-west-1). <b>Vercel</b> runs VINALL’s servers on a global network. The other services below receive nothing that identifies you, except where stated. VINALL does not use Spotify’s services.</p>
 <ul>
   <li><b>Apple</b> supplies artwork, track listings, catalogue data and 30-second previews in the iOS app, through the iTunes Search API. Your app sends your searches and the names of albums and artists you open straight to Apple, along with your IP address, as any web request does. <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener">Apple&rsquo;s privacy policy</a> applies to those requests.</li>
-  <li><b>Deezer</b> supplies the same on the website. Your searches and the names of albums and artists you open are sent to it. Apple supplies a few previews and covers Deezer lacks, on the same basis.</li>
-  <li><b>YouTube</b> plays some Community Choice picks in its own embedded player. Nothing loads from YouTube until you agree; on the website you can keep the Deezer preview instead. Once a video plays, the <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a> applies to that player. When you pick a moment, the song and artist name are sent to YouTube to find the video.</li>
+  <li data-web><b>Deezer</b> supplies the same on the website. Your searches and the names of albums and artists you open are sent to it. Apple supplies a few previews and covers Deezer lacks, on the same basis.</li>
+  <li><b>YouTube</b> plays some Community Choice picks in its own embedded player. Nothing loads from YouTube until you agree. Once a video plays, the <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a> applies to that player. When you pick a moment, the song and artist name are sent to YouTube to find the video.</li>
   <li><b>Wikipedia</b> receives an album’s name and artist, from our servers and never with anything about you, to find its article and public reader count for Bid Wars and Collection values. <b>Discogs</b> receives album and artist names when you start a Bid War in Score mode.</li>
-  <li><b>MusicBrainz</b> is also asked directly by your device for artists’ countries in Music Passport, so it sees your IP address and the artist names.</li>
-  <li><b>jsDelivr</b> delivers the code library the website uses to reach the database, and sees your IP address.</li>
+  <li><b>MusicBrainz</b> is asked directly by your device when you search for answers in RocketRun and for artists’ countries in Music Passport, so it sees your IP address and what you type or look up. Our server also looks up the answers you submit in RocketRun, with nothing about you.</li>
   <li><b>Apple</b> and <b>Google</b> sign-in, if you use them, confirm who you are and share your email address and name under their own privacy policies.</li>
 </ul>
 
@@ -113,7 +119,7 @@
 <h2>Contact</h2>
 <p>Excus Ltd, registered in England and Wales (company number 17517058), 71–75 Shelton Street, Covent Garden, London WC2H 9JQ. Email <a href="mailto:vinall.support@gmail.com">vinall.support@gmail.com</a> for any privacy question or request.</p>
 
-<footer>© Excus Ltd. Catalogue information, artwork and previews supplied by Deezer.</footer>
+<footer>© Excus Ltd. <span data-app>Catalogue information, artwork and previews courtesy of iTunes.</span><span data-web>Catalogue information, artwork and previews supplied by Deezer.</span></footer>
 </main>
 <script>
 (function () {

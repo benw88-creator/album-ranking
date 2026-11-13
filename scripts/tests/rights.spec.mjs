@@ -95,3 +95,48 @@ test('with no artist photo the favourite-artist hero is led by the records, neve
   expect(await page.evaluate(() => getComputedStyle(document.getElementById('artist-hero-portrait')).display)).toBe('none');
   expect(await page.evaluate(() => document.querySelectorAll('.ah-glow').length)).toBe(0);   // no blurred copies of Apple art
 });
+
+// The App Store build reads as a standalone app: no Deezer, no "on the
+// website", no pointer to a site, on any page a reviewer can reach.
+test('the Apple build never mentions Deezer or the website on screen', async ({ page }) => {
+  test.setTimeout(90000);
+  await page.goto('/?rights=apple');
+  await page.waitForFunction(() => window.Rights && Rights.ON);
+  const BAD = /deezer|on the website|vinall\.xyz|vinall-lab|web version|in your browser/i;
+  const views = await page.evaluate(() => Array.from(document.querySelectorAll('section.view[id^="view-"]')).map((s) => s.id.slice(5)));
+  const hits = [];
+  // The album page is only reached with a record open; the badge test covers it.
+  for (const v of views.filter((x) => x !== 'album-detail')) {
+    await page.evaluate((m) => { try { goToView(m); } catch (e) {} }, v);
+    await page.waitForTimeout(250);
+    const t = await page.evaluate(() => document.body.innerText);
+    const m = t.match(BAD); if (m) hits.push(v + ': ' + t.slice(Math.max(0, m.index - 60), m.index + 60).replace(/\s+/g, ' '));
+  }
+  for (const id of ['settings-modal', 'ptop-modal']) {
+    await page.evaluate((x) => { const el = document.getElementById(x); if (el) el.classList.add('open'); }, id);
+    const t = await page.evaluate((x) => { const el = document.getElementById(x); return el ? el.innerText : ''; }, id);
+    const m = t.match(BAD); if (m) hits.push(id + ': ' + t.slice(Math.max(0, m.index - 60), m.index + 60).replace(/\s+/g, ' '));
+    await page.evaluate((x) => { const el = document.getElementById(x); if (el) el.classList.remove('open'); }, id);
+  }
+  for (const doc of ['/privacy.html', '/terms.html']) {
+    await page.goto(doc);
+    const t = await page.evaluate(() => document.body.innerText);
+    const m = t.match(BAD); if (m) hits.push(doc + ': ' + t.slice(Math.max(0, m.index - 60), m.index + 60).replace(/\s+/g, ' '));
+  }
+  expect(hits).toEqual([]);
+});
+
+// Inside the native app the build is Apple's whatever the device has stored:
+// a ?rights=deezer link opened in the app must not bring Recall back.
+test('the native app ignores a stored or linked ?rights=deezer', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios', platform: 'ios', PluginHeaders: [], Plugins: {},
+      nativePromise: () => Promise.reject(new Error('no native in tests')), nativeCallback: () => {}, addListener: () => ({ remove() {} }) };
+    try { localStorage.setItem('vinall_rights', 'deezer'); } catch (e) {}
+  });
+  await page.route(/^https:\/\/(www\.)?vinall/, (r) => r.fulfill({ status: 503, json: {} }));
+  await page.goto('/?rights=deezer');
+  await page.waitForFunction(() => window.Rights);
+  expect(await page.evaluate(() => [Native.on, Rights.ON, Rights.gameOff('recall')])).toEqual([true, true, true]);
+  expect(await page.evaluate(() => getComputedStyle(document.getElementById('recall-card')).display)).toBe('none');
+});

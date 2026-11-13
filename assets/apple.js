@@ -35,7 +35,11 @@
   var force = q.get('rights');
   try { if (force === 'apple' || force === 'deezer') localStorage.setItem('vinall_rights', force); } catch (e) {}
   var stored = null; try { stored = localStorage.getItem('vinall_rights'); } catch (e) {}
-  var ON = stored ? stored === 'apple' : !!(window.Native && Native.on);
+  /* The native app is ALWAYS the Apple build. The override exists only so the
+     website can preview it: a `?rights=deezer` once visited inside the app
+     (a test link, a shared URL) must never put Recall back in the App Store
+     build, so it is ignored there. */
+  var ON = (window.Native && Native.on) ? true : stored ? stored === 'apple' : false;
 
   var BADGE = '/assets/apple-music-badge.svg';
   var COURTESY = 'Preview provided courtesy of iTunes';   // the Search API terms' own words, (iii)
@@ -535,8 +539,45 @@
      a sleeve in a game sheet is game content. The record's name still shows. */
   var GAMES = '#game,#drop-modal,#blitz-modal,#hl-modal,#ew-modal,#war-modal,#recall-modal,#tournament-modal,#tourney-modal,#games-grid';
   var MUSIC_ART = /dzcdn\.net|cdn-images\.deezer|mzstatic\.com|i\.scdn\.co/;
+
+  /* BEFORE THE DOM, NOT AFTER IT. The observer below cannot promise the swap
+     happens before the fetch: an <img> whose src is set before it is attached
+     starts loading at once, and parser timing varies by engine (the rights test
+     caught a real request). So a Deezer image url is rewritten on its way in:
+     every innerHTML / outerHTML / insertAdjacentHTML string, every img.src and
+     every setAttribute('src'). The blank keeps the original in its fragment
+     (#dz=…), which costs no request and lets fixImg still find the record. */
+  var DZ_IMG = /https?:\/\/(?:[a-z0-9-]+\.)?dzcdn\.net\/[^"'\s)<>]*|https?:\/\/cdn-images\.deezer\.com\/[^"'\s)<>]*/g;
+  function scrub(v) {
+    if (typeof v !== 'string' || (v.indexOf('dzcdn') < 0 && v.indexOf('cdn-images.deezer') < 0)) return v;
+    return v.replace(DZ_IMG, function (u) { return BLANK + '#dz=' + encodeURIComponent(u); });
+  }
+  (function patch() {
+    function wrapSetter(proto, prop) {
+      var d = Object.getOwnPropertyDescriptor(proto, prop);
+      if (!d || !d.set) return;
+      Object.defineProperty(proto, prop, { configurable: true, enumerable: d.enumerable, get: d.get,
+        set: function (v) { d.set.call(this, scrub(v)); } });
+    }
+    wrapSetter(Element.prototype, 'innerHTML');
+    wrapSetter(Element.prototype, 'outerHTML');
+    wrapSetter(HTMLImageElement.prototype, 'src');
+    var iah = Element.prototype.insertAdjacentHTML;
+    Element.prototype.insertAdjacentHTML = function (pos, html) { return iah.call(this, pos, scrub(html)); };
+    var sa = Element.prototype.setAttribute;
+    Element.prototype.setAttribute = function (name, value) {
+      return sa.call(this, name, (name === 'src' || name === 'style' || name === 'srcset') ? scrub(String(value)) : value);
+    };
+  })();
+
   function fixImg(img) {
     var s = img.getAttribute('src') || '';
+    if (s.indexOf(BLANK + '#dz=') === 0) {
+      // Already blank (scrubbed on the way in): keep the original for the lookup.
+      try { img.setAttribute('data-dz', decodeURIComponent(s.slice(BLANK.length + 4))); } catch (e) {}
+      img.setAttribute('src', BLANK);
+      return;
+    }
     if (MUSIC_ART.test(s) && img.closest && img.closest(GAMES)) { img.setAttribute('src', BLANK); return; }
     if (!isDeezerArt(s)) return;
     img.setAttribute('data-dz', s);
