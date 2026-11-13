@@ -61,3 +61,16 @@ Apple has none, so nothing pretends otherwise. The favourite-artist hero is led 
 ## Open questions only Apple can answer
 
 The §12 message in `APP-STORE-SURVIVAL-PLAN.md`, plus (d) and (e) from `COVERS-AND-ESTIMATE.md`: grids and profile tiles, the Collection shelf, quiz reveal screens. The build shows Apple artwork on grids, profiles and the Collection (each tile opens the badged album page). If Apple says no, one rule in `apple.js` switches those to the blank sleeve.
+
+## Sprint 2 (13 Nov 2026, later): readiness pass
+
+| Area | Change | Check |
+|---|---|---|
+| App is always the Apple build | `Rights.ON` is forced on whenever `Native.on`; a stored or linked `?rights=deezer` is ignored inside the app (it used to switch Recall back on) | `rights.spec`: native ignores the override |
+| Deezer artwork | Deezer image urls are rewritten to the blank sleeve on the way INTO the DOM (innerHTML, outerHTML, insertAdjacentHTML, img.src, setAttribute). The observer alone could not promise the swap beat the fetch; the test caught a real request | `rights.spec` |
+| Wording | No "Deezer", "website" or site address on any Apple-build view or legal page. Terms and Privacy carry `data-web` / `data-app` lines, so the app shows only what is true in the app | `rights.spec` walks every view |
+| Privacy v1.9 | Adds RocketRun's MusicBrainz searches (device) and lookups (server); removes the stale jsDelivr line (the library is self-hosted) | read |
+| Recall leaks | Arcade nav badge and the native daily reminder no longer count / name Recall in the Apple build (RocketRun instead) | code |
+| Reviewer notes | Rewritten for the Apple build; no longer claim Deezer, lock-screen controls or background audio | `app-store-submission/REVIEWER-NOTES.md` |
+
+Still a judgement call, not a confirmed clearance: **Guess the Year and Guess from Tracklist** quiz on Apple-supplied facts (years, track titles). Facts are not copyright, but the Search API terms are promotional. The response offers to remove them if Apple disagrees; holding them back pre-emptively is one regex in `Rights.gameOff`.

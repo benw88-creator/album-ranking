@@ -13,7 +13,7 @@
  */
 (function () {
   'use strict';
-  var SRC = 'arcade/rocketrun/index.html?v=3';
+  var SRC = 'arcade/rocketrun/index.html?v=4';
   var KEY = 'crate_rocketrun_v1';     // crate_: wiped with the rest on an account switch
   var sheet, frame, card;
 

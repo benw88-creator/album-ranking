@@ -44,7 +44,7 @@ html.rrh-on #modes, html.rrh-on #player-bar { visibility: hidden; }
   text-shadow: 3px 3px 0 #b23b55, 6px 6px 0 #2a1a45; }
 #rocketrun-card .rrh-word b { color: #ff6a4d; font-weight: inherit; text-shadow: 3px 3px 0 #7a1f3b, 6px 6px 0 #2a1a45; }
 #rocketrun-card .rrh-kicker { font: 600 11px/1 var(--font-mono); letter-spacing: .2em; color: #ffd982; margin-bottom: 10px; }
-#games-grid.arcade #rocketrun-card p { color: #ffe9d6; max-width: 34ch; font-size: 16px; text-shadow: 0 1px 3px #1a1440, 0 0 12px #1a1440; }
+#games-grid.arcade #rocketrun-card p { color: #ffe9d6; max-width: min(24ch, 58%); font-size: 16px; line-height: 1.4; text-shadow: 0 1px 3px #1a1440, 0 0 12px #1a1440; }
 #games-grid.arcade #rocketrun-card .gc-go { background: #ffd982; color: #2a1a45; }
 #rocketrun-card .gc-best { color: #fff3dc; }
 #rocketrun-card.rrh-done .gc-go { background: #fff3dc; }

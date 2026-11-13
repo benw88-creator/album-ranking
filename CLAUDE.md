@@ -33,6 +33,59 @@ App Review rejected 1.0 (5.2.3, 5.2.1, 2.5.4). Status and the open items are in
   re-exports it). `scripts/backfill-apple-art.mjs` rewrites stored Deezer
   sleeves (dry run by default; production needs approval and a backup).
 
+## OG numbers (Lab, 2026-11-13)
+
+`og_numbers` (n 1-999 primary key, user_id unique, ON DELETE SET NULL) is the
+authority; `profiles.og_number` is a copy pinned by `pin_og_number` (always the
+table's value, on insert and update, whoever writes). `og_assign()` takes an
+advisory lock and issues max(n)+1, so a deleted account's number is retired,
+never reused. Assigned at signup by `og_on_signup` on auth.users, which
+swallows its own errors: a number is never worth a failed signup. Backfill is
+oldest `auth.users.created_at` first, id breaks ties, idempotent. Each person
+reads only their own row (the number is public through the profile). #1000+
+get the plain OG badge. Shown as `.ogn` beside the OG badge (`badgeHtml`) and
+in the tutorial's username beat. Every signup takes a number, test and spam
+accounts included. Check: `scripts/sql-checks/og-numbers.sql`.
+
+## RocketRun clock and answer box (Lab, 2026-11-13)
+
+- **30 seconds a prompt, owned by the server.** `rr_open_q` starts a question's
+  clock the first time it is opened and only reports what is left after that
+  (refresh, background, second device). Answers are judged on when the request
+  ARRIVED (`p_received`, stamped first thing in the route), +2.5s grace, so slow
+  validation never costs anyone. An answer to a question never opened is
+  refused with `not_open` (and opens it); the client retries once. Anything
+  left open is passed for 0 m by the next read (`rr_expire`), marked
+  `timed_out`. `TIME_LIMIT_MS` in the rules file mirrors `rr_limit_ms()`.
+- **The answer box never submits by itself.** `rankAnswers` (rules file,
+  self-checked): exact matches first, five rows at most, a clear favourite is
+  PICKED and shown under the box with artist and year (its spelling corrected
+  only when the difference is case, accents or punctuation), namesakes with no
+  favourite are left to the player, a near-spelling is offered as "Did you
+  mean". Enter sends only an answer already chosen and on screen.
+- `op:'warm'` looks the chosen MBID up while the player reads it, so the answer
+  is judged from `rr_entities`. Both warm and answer spend an attempt BEFORE
+  any MusicBrainz call (150 a day). Artist lookups for an album only when the
+  prompt asks about the artist (`enriched` flag on the cache row).
+- Small text is IBM Plex Sans (`--read`), 13px or more; Pixelify stays for
+  headlines, numbers and buttons. Grades read COMMON → MYTHIC, like the Draw.
+- MusicBrainz rating counts (the cold-start prior) are CC BY-NC-SA, not CC0.
+
+## Lab grants (2026-11-13)
+
+Restoring production's dump into the lab project left anon/authenticated with
+EXECUTE on functions production keeps service-only (`war_award`,
+`collection_buy_from`…): default privileges granted it at CREATE and the dump
+only revokes from PUBLIC. `supabase/lab/fix-function-grants.sql` restores the
+dump's grants (applied). Production's dump shows no such grants; confirm with a
+read-only `has_function_privilege('anon', …)` before relying on it.
+
+**Migration order for production** (after a backup and approval):
+`20261113120000_moments_apple_ids`, `20261113140000_vinall_value`,
+`20261113160000_rocketrun`, `20261113200000_og_numbers`,
+`20261113210000_rocketrun_timer`, `20261113220000_rocketrun_og_hardening`.
+Not `supabase/lab/*`.
+
 ## RocketRun (Lab only, 2026-11-13)
 
 The daily music run, first card in Arcade → Featured. Five prompts a day, the
@@ -55,7 +108,7 @@ build (`Rights.ON`) and is not gated by `Rights.gameOff`.
   open, one request a second per device; release groups ranked by MB score
   plus a log of the release count so famous records lead) and sends only an
   MBID. `/api/rocketrun` (route 12 of 12 — the Hobby cap is now FULL, trap 11)
-  verifies the JWT, spends an attempt (`rr_attempt`, max 80 a day), looks the
+  verifies the JWT, spends an attempt (`rr_attempt`, max 150 a day), looks the
   MBID up (cached 30 days in `rr_entities`), evaluates the stored prompt and
   only then calls `rr_submit` (service role only). `null` (MusicBrainz has no
   date/country) is never scored as wrong.

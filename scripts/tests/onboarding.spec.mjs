@@ -146,3 +146,29 @@ test('a cancelled Apple/Google return opens the login, not the password-reset sc
   await expect(page.locator('#auth-view-main')).toBeVisible();
   await expect(page.locator('#auth-error')).toHaveText('Sign-in was cancelled.');
 });
+
+// OG numbers: the username beat shows the OG badge with its number beside it,
+// as one beat (no extra screen). An account past #999 gets the badge alone.
+for (const [n, shown] of [[42, '#042'], [null, null]]) {
+  test(`the username beat shows the OG badge${shown ? ' with ' + shown : ' alone past #999'}`, async ({ page }) => {
+    await boot(page);
+    await page.evaluate((n) => {
+      Cloud.saveProfile = async (f) => ({ data: f });
+      Cloud.getUser = () => ({ id: '00000000-0000-4000-8000-0000000000aa' });
+      const real = Cloud.client;
+      Cloud.client = () => ({ from: (t) => t === 'og_numbers'
+        ? { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: n ? { n } : null }) }) }) }
+        : real().from(t) });
+      localStorage.removeItem('crate_onboard_v1');
+      Onboard.restart();
+    }, n);
+    await page.locator('#onb-go').click();
+    await page.locator('#onb-u').fill('tester_og');
+    await page.locator('#onb-go').click();
+    await expect(page.locator('#onb-badge')).toBeVisible();
+    if (shown) await expect(page.locator('.onb-name .ogn')).toHaveText(shown);
+    if (shown && process.env.SHOTS) { await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(1600); await page.screenshot({ path: process.env.SHOTS + '/onb-og.png' }); }
+    else await expect(page.locator('.onb-name .ogn')).toHaveCount(0);
+    await expect(page.locator('#onb-foot #onb-go')).toBeVisible({ timeout: 4000 });   // same beat, then Continue
+  });
+}

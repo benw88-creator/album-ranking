@@ -14,6 +14,9 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':
 const fmt = (n) => Math.floor(n).toLocaleString('en-GB');
 const LAB = new URLSearchParams(location.search).has('lab');
 const audio = new FlightAudio();
+// Sound is an ornament: a device without Web Audio (or one that refuses it)
+// must never stop a run starting. Every call is made safe here.
+for (const k of ['click', 'launch', 'toggle', 'pause']) { const f = audio[k].bind(audio); audio[k] = (...a) => { try { return f(...a); } catch (e) { return false; } }; }
 let state = { mode: 'boot', day: null, questions: [], question: 0, answers: [], selected: null, total: 0, busy: false, demo: false, lastGrade: 2, lastFrom: 0, finished: false, streak: 0, best: 0, award: 0, signedIn: false, error: '' };
 let active = -1, options = [], envName = 'Neon City', lastPaint = 0, searchTimer = 0, searchSeq = 0, searching = false, pendingEnter = false, fix = null;
 // The clock. The server owns it (rr_open_q); this only draws it and asks for

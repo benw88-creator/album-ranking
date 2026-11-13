@@ -88,7 +88,7 @@ async function signIn(page) {
   const user = { id: '00000000-0000-4000-8000-000000000001', email: 'tester@example.test', aud: 'authenticated', role: 'authenticated', user_metadata: {} };
   await page.route(/supabase\.co\/auth\/v1\/user/, r => r.fulfill({ json: user }));
   await page.route(/supabase\.co\/rest\/v1\/profiles/, r => {
-    const row = { id: user.id, username: 'tester', bio: 'Records first.', avatar_url: '', top3: [], discs: 26432, lifetime_xp: 40000, age_band: 'adult', ratings_visibility: 'public' };
+    const row = { id: user.id, username: 'tester', bio: 'Records first.', avatar_url: '', top3: [], discs: 26432, lifetime_xp: 40000, age_band: 'adult', ratings_visibility: 'public', badges: ['og'], og_number: 42 };
     const single = r.request().headers().accept?.includes('object+json');
     return r.fulfill({ json: single ? row : [row] });
   });
@@ -111,6 +111,8 @@ test('signed-in profile, shop and settings stay reachable', async ({ page }) => 
   await expect(page.locator('#age-gate')).toHaveCount(0);
   await page.locator('#modes button[data-mode="profile"]').click();
   await expect(page.locator('#pt-settings')).toBeVisible();
+  // The OG number sits beside the OG badge, zero-padded.
+  await expect(page.locator('#view-profile .badge-og + .ogn')).toHaveText('#042');
   await shot(page, '60-profile-signed-in');
   await page.evaluate(() => window.scrollTo(0, 99999));
   await page.waitForTimeout(300);
