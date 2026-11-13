@@ -40457,11 +40457,9 @@ window.renderAdminStats = renderAdminStats;
     var h = Math.round(vh + ((window.visualViewport && window.visualViewport.offsetTop) || 0) - top);
     var oldHeight = host.clientHeight;
     var post = oldHeight ? Math.round(host.scrollTop / oldHeight) : _activeCard;
-    if (h >= 180 && Math.abs(h - oldHeight) > 1) {
-      host.style.height = h + 'px';
-      _navTarget = null;
-      host.scrollTo({ top: post * host.clientHeight, behavior: 'instant' });
-    }
+    /* Reads first, then writes: the nav, the player bar and the top controls do
+       not move with the feed's height, so measuring them before it is set
+       saves a forced layout on every switch to For You. */
 
     // What the card has to clear at the bottom: the bar's own height plus the
     // gap it floats above the edge, plus air.
@@ -40480,7 +40478,6 @@ window.renderAdminStats = renderAdminStats;
       var r = n.getBoundingClientRect();
       if (r.height && r.top > top && r.bottom > top) floor = Math.max(floor, Math.round((vh - r.top) + 14));
     });
-    host.style.setProperty('--fy-floor', floor + 'px');
     /* AND THE CEILING. The Discover bar and For You's own row float over the
        top of the feed; the card reserves exactly what they occupy (measured,
        so a notch, a larger text size or a third row can never put a control
@@ -40492,6 +40489,12 @@ window.renderAdminStats = renderAdminStats;
         if (r.height && !n.hidden) ceil = Math.max(ceil, Math.round(r.bottom - top));
       });
     });
+    if (h >= 180 && Math.abs(h - oldHeight) > 1) {
+      host.style.height = h + 'px';
+      _navTarget = null;
+      host.scrollTo({ top: post * host.clientHeight, behavior: 'instant' });
+    }
+    host.style.setProperty('--fy-floor', floor + 'px');
     if (ceil) host.style.setProperty('--fy-ceil', (ceil + 14) + 'px');
 
     /* THE SQUARE'S SIDE, MEASURED RATHER THAN LEFT TO CSS.
@@ -43659,10 +43662,10 @@ window.renderAdminStats = renderAdminStats;
 <script src="/assets/interactions.js?v=4"></script>
 <script src="/assets/replay.js?v=12"></script>
 <script src="/assets/you.js?v=9"></script>
-<script src="/assets/glow.js?v=5"></script>
+<script src="/assets/glow.js?v=6"></script>
 <script src="/assets/comments.js?v=3" defer></script>
 <script src="/assets/boards.js?v=7"></script>
-<script src="/assets/rocketrun-host.js?v=2"></script>
+<script src="/assets/rocketrun-host.js?v=3"></script>
 <script src="/assets/play.js?v=2"></script>
 <script src="/assets/charades.js?v=4"></script>
 <script src="/assets/passport-core.js?v=1"></script>

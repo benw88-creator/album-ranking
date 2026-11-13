@@ -170,7 +170,7 @@ export default async function handler(req, res) {
           v.album_id = id;
           delete v.missed;
           results.push(v);
-          if (v.ok && v.total > 0) fresh.push(v);
+          if (v.ok && v.total > 0 && v.trusted !== false) fresh.push(v);
         } catch (e) {
           results.push({ album_id: id, ok: false, reason: 'failed' });
         }

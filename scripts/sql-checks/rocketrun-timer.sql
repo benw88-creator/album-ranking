@@ -28,6 +28,12 @@ begin
   v := public.rr_attempt_q(u, d, 0, now());
   if (v->>'next')::int <> 1 then raise exception 'second late attempt should see next=1: %', v; end if;
 
+  -- An answer to a question nobody opened is refused (and opens it): no clock-free answers.
+  v := public.rr_attempt_q(u, d, 1, now());
+  if v->>'reason' <> 'not_open' then raise exception 'unopened answer accepted: %', v; end if;
+  v := public.rr_attempt_q(u, d, 1, now());
+  if not (v->>'ok')::boolean then raise exception 'retry after not_open refused: %', v; end if;
+
   -- Opening a question out of order is refused.
   v := public.rr_open_q(u, d, 3);
   if v->>'reason' <> 'order' then raise exception 'out of order open: %', v; end if;

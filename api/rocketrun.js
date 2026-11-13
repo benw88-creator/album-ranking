@@ -118,6 +118,7 @@ const REASONS = {
   attempts: 'That’s a lot of tries for one day. Come back tomorrow.',
   order: 'That answer was for a different prompt. Reloading your run.',
   timeout: 'Out of time. That one scores 0 m.',
+  not_open: 'Starting that question’s clock. Try again.',
   duplicate: 'You’ve used that answer already. Find another.',
   no_day: 'Today’s prompts aren’t ready yet. Try again in a moment.'
 };
@@ -153,6 +154,9 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST' });
     const day = Number(body.day), q = Number(body.q);
     if (!Number.isInteger(day) || !Number.isInteger(q) || q < 0 || q > 4) return res.status(400).json({ error: 'Bad request.' });
+    // Only today's run, or yesterday's in its two hours of grace: any other day
+    // would let a request write prompt rows for arbitrary days.
+    if (day !== today() && day !== today() - 1) return res.status(200).json({ ok: false, reason: 'closed', message: REASONS.closed });
 
     if (op === 'missing') {
       const text = String(body.text || '').trim();
@@ -180,14 +184,14 @@ export default async function handler(req, res) {
     const question = qs && qs[q];
     if (!question) return res.status(200).json({ ok: false, reason: 'no_day', message: REASONS.no_day });
 
-    // Both spend an attempt before the answer is judged, so a script cannot
-    // make this route hammer MusicBrainz; the lookup runs alongside it.
-    const lookup = facts(question.kind, id, question).then((v) => ({ v }), (e) => ({ e }));
+    // Both spend an attempt BEFORE MusicBrainz is asked, so a script past the
+    // daily ceiling, on a finished run or a closed day cannot make this route
+    // hammer MusicBrainz from the shared server IP.
     if (op === 'warm') {
       const att = await rpc('rr_attempt', { p_user: uid, p_day: day });
       if (!att.ok) return res.status(200).json({ ok: false, reason: att.reason });
-      const got = await lookup;
-      return res.status(200).json({ ok: !got.e && !!got.v });
+      try { return res.status(200).json({ ok: !!(await facts(question.kind, id, question)) }); }
+      catch (e) { return res.status(200).json({ ok: false }); }
     }
     const att = await rpc('rr_attempt_q', { p_user: uid, p_day: day, p_q: q, p_received: received });
     if (!att.ok) {
@@ -197,8 +201,7 @@ export default async function handler(req, res) {
     if (att.next !== q) return res.status(200).json({ ok: false, reason: 'order', next: att.next, message: REASONS.order });
 
     let f;
-    const got = await lookup;
-    try { if (got.e) throw got.e; f = got.v; }
+    try { f = await facts(question.kind, id, question); }
     catch (e) {
       if (e instanceof Transient) return res.status(200).json({ ok: false, reason: 'busy', message: 'MusicBrainz is busy. Try that again in a few seconds.' });
       throw e;

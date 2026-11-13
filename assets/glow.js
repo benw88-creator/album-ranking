@@ -155,7 +155,17 @@
     wrap.addEventListener('pointercancel', function (e) { pend = null; end(e, true); });
     input.addEventListener('input', function () { if (!drag) paint(+input.value); });
     input.addEventListener('keydown', function () { wrap.classList.add('gs-release'); setTimeout(function () { wrap.classList.remove('gs-release'); }, 300); });
-    if (window.ResizeObserver) new ResizeObserver(sync).observe(track);
+    /* The width comes off the entry, not clientWidth: For You holds a slider
+       per card and every callback's paint dirties layout, so reading the DOM
+       here forced one full layout per card when the view appeared (~80ms at
+       4x CPU). The track has no padding or border, so contentRect is its
+       clientWidth. The thumb is not read here at all. */
+    if (window.ResizeObserver) new ResizeObserver(function (es) {
+      var w = es[0] && es[0].contentRect ? es[0].contentRect.width : 0;
+      if (!w) return;
+      W = w; if (!TW) TW = 64;   // .gs-thumb min-width; sync() and a drag re-measure it
+      paint(+input.value);
+    }).observe(track);
     requestAnimationFrame(sync);
     input._gs = { sync: sync, el: wrap };
     return input._gs;

@@ -127,6 +127,10 @@ export async function priceAlbum(albumId, SERVICE, opts) {
     return { price: priceFromValue(cached.plays), streams: cached.plays, reason: null };
   }
   const v = await valueAlbum(albumId, 'unused', opts.cache || {}, opts.hint);
+  if (v.ok && v.total > 0 && v.trusted === false) {
+    // Named only by the caller: priced for this request, never stored.
+    return { price: priceFromValue(v.total), streams: v.total, reason: null, untrusted: true };
+  }
   if (v.ok && v.total > 0) {
     try {
       await fetch(SUPABASE_URL + '/rest/v1/album_plays', {
@@ -189,6 +193,11 @@ export default async function handler(req, res) {
       } else {
         res.status(400).json({ error: 'That record cannot be priced — not enough of its tracks matched.', reason: pr.reason });
       }
+      return;
+    }
+    // A free record must be the record it says it is.
+    if (body.pick && pr.untrusted) {
+      res.status(409).json({ error: 'Rate this record first, then claim it with a pick.', reason: 'unnamed' });
       return;
     }
     const price = pr.price, streams = pr.streams;

@@ -72,10 +72,13 @@ function loose(s) {
     .replace(/\([^)]*\)|\[[^\]]*\]/g, '').replace(/[^a-z0-9]+/g, '');
 }
 
-/* Which record an id is: the caller's name first, then the public crate_feed
-   (one row per person per record), then Apple for an `am` id. Never Deezer. */
+/* Which record an id is: the public crate_feed (one row per person per
+   record), then Apple for an `am` id, and only then the caller's own name.
+   The caller's name used to come FIRST, which let anybody value a famous id
+   as nonsense (and cache that for everyone) or an obscure id as Thriller. A
+   valuation that rests on the caller's word is marked `trusted: false`: it is
+   never cached and never good enough for an album-pick claim. Never Deezer. */
 async function recordFor(albumId, hint) {
-  if (hint && hint.name) return { name: String(hint.name), artist: String(hint.artist || '') };
   try {
     const rows = await getJsonT(SUPABASE_URL + '/rest/v1/crate_feed?select=album_name,album_artist&album_id=eq.'
       + encodeURIComponent(albumId) + '&limit=1&apikey=' + SUPABASE_ANON, 1);
@@ -88,6 +91,7 @@ async function recordFor(albumId, hint) {
     const c = j && j.results && j.results[0];
     if (c && c.collectionName) return { name: c.collectionName.replace(/ - (Single|EP)$/i, ''), artist: c.artistName || '' };
   }
+  if (hint && hint.name) return { name: String(hint.name).slice(0, 200), artist: String(hint.artist || '').slice(0, 200), untrusted: true };
   return null;
 }
 
@@ -146,5 +150,5 @@ export async function valueAlbum(albumId, token, cache, hint) {
   }
   const raters = await ratersOf(albumId);
   const total = Math.round(Math.max(FLOOR, readers) * (1 + uplift(raters)));
-  return { ok: true, reason: null, album: rec.name, artist: rec.artist, article: title, readers, raters, total, source: SOURCE };
+  return { ok: true, reason: null, album: rec.name, artist: rec.artist, article: title, readers, raters, total, source: SOURCE, trusted: !rec.untrusted };
 }

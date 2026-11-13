@@ -332,8 +332,12 @@ async function submitAnswer() {
   state.busy = true; const btn = $('#launch-answer'); btn.disabled = true; btn.innerHTML = 'CHECKING <span class="rr-dots"><i></i><i></i><i></i></span>';
   $('.question-card').classList.add('rr-checking');
   let r;
-  try { r = await net.answer(state.day, state.question, a.id); }
-  catch (e) { r = { ok: false, message: e.message }; }
+  try {
+    r = await net.answer(state.day, state.question, a.id);
+    // The server refuses an answer to a question whose clock it never started
+    // (the open request was lost); it starts it with that refusal. Once.
+    if (r && r.reason === 'not_open') r = await net.answer(state.day, state.question, a.id);
+  } catch (e) { r = { ok: false, message: e.message }; }
   state.busy = false;
   if (!r.ok) {
     if (r.reason === 'timeout') { stopClock(); state.answers.push({ label: '', sub: '', grade: -1, gain: 0, timeout: true }); notice(r.message); return advance(r); }
