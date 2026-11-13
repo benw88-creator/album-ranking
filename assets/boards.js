@@ -17,6 +17,7 @@
   'use strict';
 
   var GAMES = [
+    { g: 'rocketrun',   name: 'RocketRun',        short: 'RocketRun', hue: '#ff8a5c', modes: [['daily', 'Daily', 1]] },
     { g: 'cover',       name: 'Guess the Cover',  short: 'Cover',     hue: 'var(--gold)', artist: true, modes: [['artist', '']] },
     { g: 'coverx',      name: 'Cover EXTREME',    short: 'EXTREME',   hue: 'var(--hue-3)', artist: true, modes: [['artist', '']] },
     { g: 'tracklist',   name: 'Guess from Tracklist', short: 'Tracklist', hue: 'var(--hue-1)', artist: true, modes: [['artist', '']] },

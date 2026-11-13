@@ -9531,6 +9531,7 @@ input, textarea, select, [contenteditable="true"],
 <link rel="stylesheet" href="/assets/albumpage.css?v=2">
 <link rel="stylesheet" href="/assets/shell.css?v=2">
 <link rel="stylesheet" href="/assets/nav.css?v=1">
+<link rel="stylesheet" href="/assets/rocketrun-host.css?v=2">
 <!-- Vendored, not fetched. This tag is synchronous and sits in <head>, so a
      remote copy blocks the FIRST PAINT on a round trip to somebody else's
      CDN: measured as several seconds of black screen on a cold launch of
@@ -10716,6 +10717,14 @@ window.discAmt = function (n) {
     </header>
     <div class="games-grid arcade" id="games-grid">
       <h3 class="arc-label"><span>Featured</span></h3>
+      <div class="game-card gc-feature" id="rocketrun-card">
+        <div class="rrh-art" aria-hidden="true"><span class="rrh-stars"></span><span class="rrh-sun"></span><span class="rrh-city"></span><span class="rrh-rocket"></span></div>
+        <div class="rrh-kicker">NEW &middot; DAILY MUSIC RUN</div>
+        <h3 class="rrh-word">Rocket<b>Run</b></h3>
+        <p>Five prompts. Any record ever made. The rarer your answer, the further you fly.</p>
+        <div class="gc-go">Launch today&rsquo;s run &rarr;</div>
+        <div class="gc-best" id="rocketrun-card-status"></div>
+      </div>
       <div class="game-card gc-feature" id="recall-card">
         <div class="gc-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="gc-emoji" data-icon="wave"></div>
@@ -43590,7 +43599,8 @@ window.renderAdminStats = renderAdminStats;
 <script src="/assets/you.js?v=9"></script>
 <script src="/assets/glow.js?v=5"></script>
 <script src="/assets/comments.js?v=3" defer></script>
-<script src="/assets/boards.js?v=6"></script>
+<script src="/assets/boards.js?v=7"></script>
+<script src="/assets/rocketrun-host.js?v=1"></script>
 <script src="/assets/play.js?v=2"></script>
 <script src="/assets/charades.js?v=4"></script>
 <script src="/assets/passport-core.js?v=1"></script>

@@ -33,6 +33,56 @@ App Review rejected 1.0 (5.2.3, 5.2.1, 2.5.4). Status and the open items are in
   re-exports it). `scripts/backfill-apple-art.mjs` rewrites stored Deezer
   sleeves (dry run by default; production needs approval and a backup).
 
+## RocketRun (Lab only, 2026-11-13)
+
+The daily music run, first card in Arcade → Featured. Five prompts a day, the
+same five for everybody (UTC day, numbered like `game_bests.day`), answered
+from the **whole MusicBrainz catalogue** (core data CC0). No artwork, previews,
+lyrics or Deezer/Apple/Spotify data anywhere in it, so it is safe in the Apple
+build (`Rights.ON`) and is not gated by `Rights.gameOff`.
+
+- **Files.** `arcade/rocketrun/` is the Codex prototype's renderer kept whole
+  (`world.js`, `pixels.js`, `audio.js`, `style.css`, art, Pixelify Sans under
+  OFL) as plain ES modules, framed same-origin by `assets/rocketrun-host.js`
+  (card, `#rocketrun-sheet` `.modal`, `RocketRunHost.open/close/note`). The
+  frame is created on open and removed on close, which stops the render loop
+  and the sound. `assets/rocketrun-rules.js` is the ONE rules file: prompt
+  templates, `questionsFor(day)`, `evaluate(prompt, facts)` → true/false/null;
+  the game and `api/rocketrun.js` both import it. `app/scripts/sync-web.mjs`
+  copies `arcade/` into the binary. Art was downscaled (nearest neighbour) to
+  640px: it is drawn at 320.
+- **The judge is the server.** The browser searches MusicBrainz itself (CORS
+  open, one request a second per device; release groups ranked by MB score
+  plus a log of the release count so famous records lead) and sends only an
+  MBID. `/api/rocketrun` (route 12 of 12 — the Hobby cap is now FULL, trap 11)
+  verifies the JWT, spends an attempt (`rr_attempt`, max 80 a day), looks the
+  MBID up (cached 30 days in `rr_entities`), evaluates the stored prompt and
+  only then calls `rr_submit` (service role only). `null` (MusicBrainz has no
+  date/country) is never scored as wrong.
+- **Rarity** is the share of OTHER players who gave that answer to that prompt
+  that day, smoothed toward a prior from MusicBrainz rating votes (`rr_prior`,
+  20 pseudo-players), frozen at answer time. `rr_grade`/`rr_gain` decide;
+  `GRADES` in the rules file mirrors them for display. Under 30 other players
+  the reveal says "Early estimate".
+- **One run a day**, answers in order, no repeats (`rr_answers_once`), pass for
+  0 m, "missing from the catalogue" reports into `rr_missing` (10/day). The
+  fifth answer files `game_bests` (day and best-day, `rocketrun`/`daily`, score
+  = metres) and pays 1,600 Discs once through `game_awards.rocketrun` (so the
+  "Play a minigame" mission and XP see it). A run open at midnight can finish
+  until 02:00 UTC.
+- `supabase/migrations/20261113160000_rocketrun.sql` — **applied to lab** and
+  recorded. No write policies on any `rr_` table (guarded); FKs cascade from
+  `auth.users`, so no `delete_my_data()` entry.
+- Flight Lab (developer controls) only with `?lab=1`.
+- Tests: `node scripts/rocketrun.selfcheck.mjs` (in `npm run check`),
+  `scripts/tests/rocketrun.spec.mjs` (mocked UI), and two that need the LAB
+  keys in the environment and refuse any other project:
+  `scripts/rocketrun.route-test.mjs` (route + DB, throwaway accounts) and
+  `scripts/rocketrun-live.mjs` (real browser, real MusicBrainz, screenshots).
+- Known limits: the Boards "today" tab uses the local calendar day while runs
+  use UTC, so in BST it lags an hour after midnight; server-side MusicBrainz
+  lookups share Vercel's IP at ~1 a second (cached per MBID).
+
 ## The redesign (Lab only, 2026-11-08)
 
 Five places: **Home, Discover, Rate, Arcade, Profile**. Every old view still exists with its id and render function; `assets/shell.js` decides which place each belongs to (`NAV_GROUP`, read by setMode through `navTabFor`), draws the segmented bars (Discover: For You / Community / Moments / People; Profile: see the polish pass below; Ratings has Albums / Songs / Liked) and the back bar on pushed pages (Achievements, Music Passport, Your music, Replay, Bid Wars, Grooves). `assets/shell.css` is the design-system layer and loads last.

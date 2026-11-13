@@ -40,3 +40,4 @@ app/build-device/
 
 # Private UK compliance records (DPIA, Online Safety Act assessments). The repo is public.
 compliance/
+artifacts-rr/

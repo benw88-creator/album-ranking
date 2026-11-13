@@ -31,7 +31,7 @@ const FILES = [
   'manifest.webmanifest'
 ];
 
-const DIRS = ['assets', 'dither-frames'];
+const DIRS = ['assets', 'dither-frames', 'arcade'];
 
 await rm(www, { recursive: true, force: true });
 await mkdir(www, { recursive: true });
