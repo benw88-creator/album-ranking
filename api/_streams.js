@@ -42,7 +42,7 @@ export function normTitle(s) {
 }
 const UA = 'VINALL/1.0 (+https://vinall.xyz; vinall.support@gmail.com)';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
-const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9icXdqbnRqbHl1YXdteWJrZGRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM3MDQ1MTEsImV4cCI6MjEwOTI4MDUxMX0.ZJ2_5OnxyX3abYKuNlQEUtW9PsKVGIgMFZskj20BPK0';
+const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxZnh5ZWJlanBreWhzd29scndpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMDI0MTYsImV4cCI6MjA5Njc3ODQxNn0.x9zL_qKAt465D-5Vw6bu8IIn-RxgUdfVbUoe1i4rsZs';
 
 // Kept for callers; there is nothing to mint.
 export async function spotifyToken() { return 'unused'; }
