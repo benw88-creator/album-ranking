@@ -22,7 +22,7 @@ async function signIn(page, extra = {}) {
   await page.addInitScript(u => {
     const now = Math.floor(Date.now() / 1000);
     const session = { access_token: 'test.' + btoa(JSON.stringify({ sub: u.id, exp: now + 3600 })) + '.x', token_type: 'bearer', expires_in: 3600, expires_at: now + 3600, refresh_token: 'test', user: u };
-    localStorage.setItem('sb-obqwjntjlyuawmybkddm-auth-token', JSON.stringify(session));
+    localStorage.setItem('sb-cqfxyebejpkyhswolrwi-auth-token', JSON.stringify(session));
     localStorage.setItem('vinall_local_owner', u.id);
     localStorage.setItem('crate_onboard_v1', JSON.stringify({ done: true, at: Date.now(), step: 99 }));
   }, user);

@@ -22,9 +22,9 @@
 import { cors } from './_cors.js';
 import { questionsFor, evaluate, albumFacts, artistFacts, VERSION } from '../assets/rocketrun-rules.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://obqwjntjlyuawmybkddm.supabase.co';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
 const SERVICE = () => process.env.SUPABASE_SERVICE_ROLE_KEY;
-const UA = 'VINALL/1.0 ( https://vinall-lab.vercel.app )';
+const UA = 'VINALL/1.0 (+https://vinall.xyz; vinall.support@gmail.com)';
 const MBID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const FRESH_MS = 30 * 86400000;
 

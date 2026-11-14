@@ -3,7 +3,7 @@
 // answerability check. Keeps to MusicBrainz's one request a second.
 import { evaluate, albumFacts, artistFacts } from '../assets/rocketrun-rules.js';
 
-const UA = 'VINALL-tests/1.0 ( https://vinall-lab.vercel.app )';
+const UA = 'VINALL-tests/1.0 (+https://vinall.xyz; vinall.support@gmail.com)';
 import fs from "node:fs";
 import os from "node:os";
 import pathMod from "node:path";

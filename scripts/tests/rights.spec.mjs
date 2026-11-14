@@ -54,9 +54,12 @@ test('held-back games are gone, Deezer art is never requested, the album page ha
   page.on('request', q => { if (/dzcdn.net|deezer.com/.test(new URL(q.url()).hostname)) dz.push(q.url()); });
   await page.goto('/?rights=apple');
   await page.waitForFunction(() => window.Rights && Rights.ON);
-  const shown = await page.evaluate(() => ['recall-card', 'cover-card', 'coverx-card', 'war-card'].map(id => getComputedStyle(document.getElementById(id)).display !== 'none'));
-  expect(shown).toEqual([false, false, false, true]);
-  expect(await page.evaluate(() => [Rights.gameOff('recall'), Rights.gameOff('cover'), Rights.gameOff('coverx'), Rights.gameOff('year')])).toEqual([true, true, true, false]);
+  const shown = await page.evaluate(() => ['recall-card', 'cover-card', 'coverx-card', 'year-card', 'tracklist-card', 'war-card', 'drop-card', 'ew-card', 'blitz-card', 'hl-card', 'charades-card', 'rocketrun-card'].map(id => getComputedStyle(document.getElementById(id)).display !== 'none'));
+  expect(shown).toEqual([false, false, false, false, false, true, true, true, true, true, true, true]);
+  expect(await page.evaluate(() => ['recall', 'cover', 'coverx', 'year', 'tracklist', 'drop', 'blitz'].map(k => Rights.gameOff(k)))).toEqual([true, true, true, true, true, false, false]);
+  // Opening a held-back mode by code does nothing.
+  await page.evaluate(() => { const c = document.getElementById('year-card'); c.style.setProperty('display', 'block', 'important'); c.click(); });
+  await expect(page.locator('#game')).not.toHaveClass(/open/);
 
   await page.evaluate(() => { const i = document.createElement('img'); i.id = 'dzt'; i.src = 'https://cdn-images.dzcdn.net/images/cover/abc/250x250-000000-80-0-0.jpg'; document.body.appendChild(i); });
   await expect(page.locator('#dzt')).toHaveAttribute('src', '/assets/sleeve-blank.svg');

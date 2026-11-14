@@ -40,8 +40,8 @@ export function normTitle(s) {
     .replace(/[^a-z0-9]/gi, '')
     .toLowerCase();
 }
-const UA = 'VINALL/1.0 (+https://vinall-lab.vercel.app)';
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://obqwjntjlyuawmybkddm.supabase.co';
+const UA = 'VINALL/1.0 (+https://vinall.xyz; vinall.support@gmail.com)';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
 const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9icXdqbnRqbHl1YXdteWJrZGRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM3MDQ1MTEsImV4cCI6MjEwOTI4MDUxMX0.ZJ2_5OnxyX3abYKuNlQEUtW9PsKVGIgMFZskj20BPK0';
 
 // Kept for callers; there is nothing to mint.

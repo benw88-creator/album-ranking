@@ -60,7 +60,10 @@
     ON: ON, badge: badge, courtesy: COURTESY, isAppleArt: isApple, isDeezerArt: isDeezerArt,
     /* Game modes that use a third-party sleeve or clip AS the game. Held back
        in the Apple build until a licence names games (see the evidence pack). */
-    gameOff: function (key) { return ON && /^(recall|cover|coverx)$/.test(key); }
+    /* Guess the Year and Guess from Tracklist quiz on Apple-supplied facts
+       (release years, track titles). Held back too (owner's call, 2026-11-14)
+       until Apple confirms that is within the Search API terms. Code kept. */
+    gameOff: function (key) { return ON && /^(recall|cover|coverx|year|tracklist)$/.test(key); }
   };
   if (!ON) return;
   document.documentElement.classList.add('rights-apple');
@@ -73,7 +76,7 @@
     'img[src*="deezer-mark"],img[src*="deezer-logo"]{display:none!important}' +
     /* Held back in this build: Recall plays clips, the two cover games show
        sleeves, as the game itself. No licence names games yet. */
-    '#recall-card,#cover-card,#coverx-card{display:none!important}' +
+    '#recall-card,#cover-card,#coverx-card,#year-card,#tracklist-card{display:none!important}' +
     '.am-badge{display:inline-flex;align-items:center;text-decoration:none;flex-shrink:0}' +
     '.am-credit{font-size:11px;opacity:.75}' +
     '.fy-am{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:10.5px;line-height:1.25;color:rgba(255,255,255,.78)}' +

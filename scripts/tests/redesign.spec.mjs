@@ -96,7 +96,7 @@ async function signIn(page) {
     const now = Math.floor(Date.now() / 1000);
     const session = { access_token: 'test.' + btoa(JSON.stringify({ sub: u.id, exp: now + 3600 })) + '.x', token_type: 'bearer', expires_in: 3600, expires_at: now + 3600, refresh_token: 'test', user: u };
     for (const k of Object.keys(localStorage)) if (/^sb-.*-auth-token$/.test(k)) localStorage.removeItem(k);
-    const ref = 'obqwjntjlyuawmybkddm';
+    const ref = 'cqfxyebejpkyhswolrwi';
     localStorage.setItem('sb-' + ref + '-auth-token', JSON.stringify(session));
     localStorage.setItem('vinall_local_owner', u.id);
   }, user);
