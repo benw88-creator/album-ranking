@@ -21,6 +21,8 @@
 
 import { cors } from './_cors.js';
 import { questionsFor, evaluate, albumFacts, artistFacts, VERSION } from '../assets/rocketrun-rules.js';
+import { createMusicBrainzClient, MusicBrainzUnavailable } from '../assets/rocketrun-musicbrainz.js';
+import { answerReceipt, receiptArrival } from './_rocketrun-retry.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://cqfxyebejpkyhswolrwi.supabase.co';
 const SERVICE = () => process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -65,24 +67,26 @@ async function dayQuestions(day) {
   return qs;
 }
 
-class Transient extends Error {}
-async function mb(path) {
-  for (let i = 0; i < 3; i++) {
-    let r;
-    try { r = await fetch('https://musicbrainz.org/ws/2/' + path, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(7000) }); }
-    catch (e) { r = null; }
-    if (r && r.status === 404) return null;
-    if (r && r.ok) return r.json();
-    await new Promise((ok) => setTimeout(ok, 1100 * (i + 1)));
-  }
-  throw new Transient('musicbrainz');
-}
+const mbRequest = createMusicBrainzClient({
+  headers: { 'User-Agent': UA },
+  onRetry: detail => console.warn('rocketrun_musicbrainz', JSON.stringify(detail))
+});
+const mb = (path, until) => mbRequest(path, { until, validate: j => j?.id === path.split('/')[1].split('?')[0] && (typeof j.name === 'string' || typeof j.title === 'string') });
 
 // Album prompts that ask about the credited artist (country, band or solo).
 const NEEDS_ARTIST = new Set(['byCountry', 'byGroup', 'bySolo']);
 function needsArtists(question) { return !!(question && (question.conds || []).some((c) => NEEDS_ARTIST.has(c[0]))); }
 
-async function facts(kind, id, question) {
+const pendingFacts = new Map();
+function facts(kind, id, question) {
+  const key = kind + ':' + id + ':' + needsArtists(question);
+  if (pendingFacts.has(key)) return pendingFacts.get(key);
+  const job = loadFacts(kind, id, question).finally(() => pendingFacts.delete(key));
+  pendingFacts.set(key, job);
+  return job;
+}
+async function loadFacts(kind, id, question) {
+  const until = Date.now() + 14000; // one budget, including credited-artist enrichment
   const key = (kind === 'album' ? 'rg:' : 'ar:') + id;
   const want = kind === 'album' && needsArtists(question);
   const hit = await rest('/rest/v1/rr_entities?select=facts,fetched_at&id=eq.' + encodeURIComponent(key));
@@ -91,7 +95,7 @@ async function facts(kind, id, question) {
   if (!f) {
     const raw = await mb(kind === 'album'
       ? 'release-group/' + id + '?fmt=json&inc=artist-credits+ratings'
-      : 'artist/' + id + '?fmt=json&inc=aliases+ratings');
+      : 'artist/' + id + '?fmt=json&inc=aliases+ratings', until);
     if (!raw) return null;
     f = kind === 'album' ? albumFacts(raw) : artistFacts(raw);
   }
@@ -101,7 +105,8 @@ async function facts(kind, id, question) {
   if (want) {
     for (const a of f.artists.slice(0, 3)) {
       if ((a.country && a.type) || !MBID.test(a.id)) continue;
-      try { const ar = await mb('artist/' + a.id + '?fmt=json'); if (ar) { const af = artistFacts(ar); a.country = a.country || af.country; a.type = a.type || af.type; } } catch (e) {}
+      const ar = await mb('artist/' + a.id + '?fmt=json', until);
+      if (ar) { const af = artistFacts(ar); a.country = a.country || af.country; a.type = a.type || af.type; }
     }
     f.enriched = true;
   }
@@ -193,7 +198,9 @@ export default async function handler(req, res) {
       try { return res.status(200).json({ ok: !!(await facts(question.kind, id, question)) }); }
       catch (e) { return res.status(200).json({ ok: false }); }
     }
-    const att = await rpc('rr_attempt_q', { p_user: uid, p_day: day, p_q: q, p_received: received });
+    const receiptFields = { user: uid, day, q, id };
+    const arrival = receiptArrival(body.retry, receiptFields, SERVICE()) || received;
+    const att = await rpc('rr_attempt_q', { p_user: uid, p_day: day, p_q: q, p_received: arrival });
     if (!att.ok) {
       if (att.reason === 'timeout') return res.status(200).json({ ...att.passed, ok: false, reason: 'timeout', message: REASONS.timeout });
       return res.status(200).json({ ok: false, reason: att.reason, message: REASONS[att.reason] });
@@ -203,7 +210,10 @@ export default async function handler(req, res) {
     let f;
     try { f = await facts(question.kind, id, question); }
     catch (e) {
-      if (e instanceof Transient) return res.status(200).json({ ok: false, reason: 'busy', message: 'MusicBrainz is busy. Try that again in a few seconds.' });
+      if (e instanceof MusicBrainzUnavailable) return res.status(200).json({
+        ok: false, reason: 'busy', retry: answerReceipt({ ...receiptFields, at: arrival }, SERVICE()),
+        message: 'MusicBrainz is busy. Your chosen answer can be retried without losing its original arrival time.'
+      });
       throw e;
     }
     if (!f) return res.status(200).json({ ok: false, reason: 'gone', message: `That isn’t ${question.kind === 'album' ? 'an album' : 'an artist'} MusicBrainz knows. Pick one from the list.` });

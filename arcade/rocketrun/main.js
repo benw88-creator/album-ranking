@@ -7,7 +7,7 @@ import { ENVIRONMENTS, environmentAt } from './data.js';
 import { RocketWorld } from './world.js';
 import { FlightAudio } from './audio.js';
 import { drawLogo, rocketSprite } from './pixels.js';
-import * as net from './net.js?v=2';
+import * as net from './net.js?v=3';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -75,6 +75,11 @@ async function boot() {
   state.mode = 'boot'; state.error = ''; stopClock(); renderPanel();
   try {
     state.signedIn = await net.signedIn();
+    if (state.signedIn) {
+      // Retry a receipted answer BEFORE state reads can expire its question.
+      const pending = await net.resumeAnswer();
+      if (pending?.reason === 'busy') throw new Error(pending.message);
+    }
     const d = state.signedIn ? await net.getState() : await net.getDay();
     state.day = d.day; state.questions = d.questions;
     $('#side-date').textContent = dayLabel(d.day);
@@ -204,6 +209,7 @@ function renderPanel() {
 /* ---- search ------------------------------------------------------------------ */
 
 function queueSearch() {
+  searchSeq++; // invalidate an older response during the debounce, too
   clearTimeout(searchTimer);
   const text = $('#answer').value.trim();
   if (text.length < 2) { options = []; searching = false; closeOptions(); return; }
@@ -230,9 +236,11 @@ async function runSearch(text) {
       if (pendingEnter) { pendingEnter = false; if (options.length) highlight(0); }
     }
   } catch (e) {
-    if (e.name === 'AbortError' || seq !== searchSeq) return;
+    if (e.name === 'AbortError' || seq !== searchSeq || state.mode !== 'play') return;
     searching = false; pendingEnter = false;
     showStatus('MusicBrainz didn’t answer. Keep typing to try again.');
+    const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Retry search'; retry.className = 'rr-missing'; retry.id = 'retry-search';
+    retry.onclick = queueSearch; $('#suggestions').appendChild(retry);
   }
 }
 function openList() { const list = $('#suggestions'); list.hidden = false; $('#answer').setAttribute('aria-expanded', 'true'); }
@@ -297,7 +305,7 @@ function handleKeys(e) {
  * screen. Otherwise it chooses: the highlighted row, the "did you mean", or
  * the top row (highlighted, so a second Enter takes it). */
 function onEnter(fromSubmit) {
-  if (state.busy) return;
+  if (state.busy && !state.retryPending) return;
   const list = $('#suggestions'), open = list && !list.hidden;
   if (open && active >= 0) return select(options[active]);
   if (state.selected) return submitAnswer();
@@ -315,15 +323,22 @@ async function reportMissing(text) {
 
 /* ---- answering ---------------------------------------------------------------- */
 
-function startRun() {
-  if (state.finished) return;
+async function startRun() {
+  if (state.finished || state.busy) return;
+  audio.click(); // unlock Web Audio inside the original tap, before awaiting search
+  state.busy = true;
+  const start = $('#start'); if (start) { start.disabled = true; start.textContent = 'CONNECTING…'; }
+  // A previously opened question keeps its existing server deadline.
+  try { if (!(state.open && state.open.q === state.question)) await net.searchReady(); }
+  catch (e) { state.busy = false; if (start) { start.disabled = false; start.textContent = 'TRY AGAIN'; } notice('MusicBrainz search is unavailable. This question has not started.'); return; }
   state.mode = 'play'; state.selected = null; state.busy = false; state.demo = false;
   world.jump(state.total); world.setPaused(false); audio.pause(false); $('#pause-overlay').hidden = true;
-  $('#rarity-reveal').classList.remove('show'); audio.click(); renderPanel();
+  $('#rarity-reveal').classList.remove('show'); renderPanel();
   if (matchMedia('(hover: hover)').matches) $('#answer')?.focus();
 }
 async function submitAnswer() {
-  if (state.busy) return;
+  if (state.busy && !state.retryPending) return;
+  state.retryPending = false;
   const q = state.questions[state.question], error = $('#answer-error');
   const a = state.selected;
   if (!a) return onEnter(true);
@@ -333,6 +348,8 @@ async function submitAnswer() {
   if (pre.ok === false) { error.textContent = `${label} ${pre.why}. Try another.`; audio.click(); return; }
   if (state.answers.some((p) => p.id === a.id)) { error.textContent = 'You’ve used that one already.'; return; }
   state.busy = true; const btn = $('#launch-answer'); btn.disabled = true; btn.innerHTML = 'CHECKING <span class="rr-dots"><i></i><i></i><i></i></span>';
+  $('#answer').disabled = true; $('#pass').disabled = true; $('#clear-search').disabled = true;
+  $('#pick-change')?.setAttribute('disabled', '');
   $('.question-card').classList.add('rr-checking');
   let r;
   try {
@@ -340,9 +357,21 @@ async function submitAnswer() {
     // The server refuses an answer to a question whose clock it never started
     // (the open request was lost); it starts it with that refusal. Once.
     if (r && r.reason === 'not_open') r = await net.answer(state.day, state.question, a.id);
-  } catch (e) { r = { ok: false, message: e.message }; }
+  } catch (e) { if (e.accountChanged) return boot(); r = { ok: false, message: e.message }; }
   state.busy = false;
   if (!r.ok) {
+    if (r.reason === 'busy' && r.retry) {
+      // Keep the exact selected answer while the judge recovers. The signed
+      // receipt preserves only its first arrival; it cannot reset a question.
+      state.busy = true; state.retryPending = true;
+      $('#answer').disabled = true; $('#pass').disabled = true; $('#clear-search').disabled = true;
+      $('#pick-change')?.setAttribute('disabled', '');
+      btn.disabled = false; btn.textContent = 'RETRY THIS ANSWER';
+      error.textContent = r.message;
+      return;
+    }
+    $('#answer').disabled = false; $('#pass').disabled = false; $('#clear-search').disabled = false;
+    $('#pick-change')?.removeAttribute('disabled');
     if (r.reason === 'timeout') { stopClock(); state.answers.push({ label: '', sub: '', grade: -1, gain: 0, timeout: true }); notice(r.message); return advance(r); }
     if (r.reason === 'order' || r.reason === 'finished' || r.reason === 'closed') { notice(r.message); return boot(); }
     if ($('#launch-answer')) { btn.disabled = false; btn.innerHTML = 'LAUNCH <span>▶</span>'; $('.question-card').classList.remove('rr-checking'); }
@@ -370,7 +399,7 @@ function land(answer, r) {
   state.answers.push(answer); state.total = r.total; state.demo = false;
   ignite(answer, () => { state.busy = false; advance(r); });
 }
-function advance(r) {
+async function advance(r) {
   state.question = state.answers.length; state.selected = null; options = []; fix = null; pendingEnter = false;
   if (r.total != null) state.total = r.total;
   if (r.finished) {
@@ -378,7 +407,12 @@ function advance(r) {
     state.best = Math.max(state.best || 0, state.total); paintStreak();
     if (state.award) net.walletSync();
     try { net.host.notePlay && net.host.notePlay('rocketrun'); } catch (e) {}
-  } else { state.mode = 'play'; noteHost(); }
+  } else {
+    // Hide the next prompt until the catalogue is reachable. No server clock
+    // is opened during this check, and no timed question has been revealed.
+    state.mode = 'menu'; state.busy = false; noteHost(); renderPanel();
+    return startRun();
+  }
   renderPanel();
 }
 function rarityLine(a) {

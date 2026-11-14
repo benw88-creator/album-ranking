@@ -47,7 +47,7 @@ async function mock(page, { signedIn = true, finished = false, remaining = 30000
   });
   await start(page);
   if (signedIn) await page.evaluate(() => {
-    const fake = { auth: { getSession: async () => ({ data: { session: { access_token: 'test-token' } } }), onAuthStateChange() {} } };
+    const fake = { auth: { getSession: async () => ({ data: { session: { access_token: 'test-token', user: { id: 'isolated-fixture-user' } } } }), onAuthStateChange() {} } };
     Cloud.client = () => fake;
   });
   return calls;
@@ -291,4 +291,73 @@ test('the clock: a refreshed run resumes with the server time left, not 30', asy
   await g.locator('#start').click();
   await waitPlay(page, 1);
   await expect(g.locator('#clock-s')).toHaveText(/^1[0-2]$/);
+});
+
+test('an unavailable search service does not reveal or start a new timed question', async ({ page }) => {
+  const calls = await mock(page);
+  await page.route('**/musicbrainz.org/ws/2/**', r => r.fulfill({ status: 503, headers: { 'Retry-After': '0' }, json: { error: 'busy' } }));
+  await openGame(page);
+  await game(page).locator('#start').click();
+  await expect(game(page).locator('#start')).toHaveText('TRY AGAIN', { timeout: 20000 });
+  await expect(game(page).locator('.question-card')).toHaveCount(0);
+  expect(calls.filter(c => c.op === 'open' || c.op === 'pass')).toHaveLength(0);
+});
+
+test('a search recovers from a network failure and 503 without typing again', async ({ page }) => {
+  await mock(page); await openGame(page);
+  await game(page).locator('#start').click(); await waitPlay(page, 1);
+  let n = 0;
+  await page.route('**/musicbrainz.org/ws/2/release-group/**', route => {
+    if (++n === 1) return route.abort('failed');
+    if (n === 2) return route.fulfill({ status: 503, json: { error: 'busy' } });
+    return route.fallback();
+  });
+  await game(page).locator('#answer').fill('1997');
+  await expect(game(page).locator('.suggestion').first()).toBeVisible({ timeout: 15000 });
+  expect(n).toBe(3);
+});
+
+test('an upstream judge outage retains the chosen answer instead of auto-passing at zero', async ({ page }) => {
+  test.setTimeout(60000);
+  const calls = await mock(page, { remaining: 8000 });
+  const submitted = [];
+  await page.route('**/api/rocketrun**', route => {
+    const body = route.request().postDataJSON();
+    if (body?.op !== 'answer') return route.fallback();
+    submitted.push(body);
+    return submitted.length <= 3
+      ? route.fulfill({ json: { ok: false, reason: 'busy', retry: 'same-answer-receipt', message: 'Your answer is waiting for MusicBrainz.' } })
+      : route.fallback();
+  });
+  await openGame(page); const g = game(page);
+  await g.locator('#start').click(); await waitPlay(page, 1);
+  await pick(page, '1997', 'OK Computer'); await g.locator('#launch-answer').click();
+  await expect(g.locator('#launch-answer')).toHaveText('RETRY THIS ANSWER', { timeout: 15000 });
+  await expect(g.locator('#answer')).toBeDisabled();
+  // Cross zero AFTER the answer was chosen and submitted. WebKit needs more
+  // than 2.2s to click the suggestion, which otherwise tests a normal timeout.
+  await page.waitForTimeout(8500);
+  expect(calls.filter(c => c.op === 'pass')).toHaveLength(0);
+  await g.locator('#launch-answer').click();
+  await waitPlay(page, 2);
+  expect(submitted).toHaveLength(4);
+  expect(submitted.slice(1).every(b => b.retry === 'same-answer-receipt' && b.id === submitted[0].id)).toBe(true);
+});
+
+test('an automatic answer retry cannot cross an account switch', async ({ page }) => {
+  await mock(page); await openGame(page); const g=game(page);
+  await g.locator('#start').click(); await waitPlay(page,1);
+  let sent=0;
+  await page.route('**/api/rocketrun**', async route => {
+    const body=route.request().postDataJSON();
+    if(body?.op!=='answer')return route.fallback();
+    sent++;
+    await page.evaluate(()=>{
+      Cloud.client=()=>({auth:{getSession:async()=>({data:{session:{access_token:'other-fixture-session',user:{id:'other-fixture-user'}}}}),onAuthStateChange(){}}});
+    });
+    return route.fulfill({json:{ok:false,reason:'busy',retry:'old-user-receipt',message:'Busy'}});
+  });
+  await pick(page,'1997','OK Computer'); await g.locator('#launch-answer').click();
+  await expect(g.locator('#start')).toBeVisible();
+  expect(sent).toBe(1);
 });
