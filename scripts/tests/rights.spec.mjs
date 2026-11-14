@@ -1,6 +1,6 @@
 // The Apple build (assets/apple.js): catalogue and previews from Apple's
 // iTunes Search API, held-back games, no Deezer artwork. Apple is mocked here.
-import { test, expect } from './fixtures.mjs';
+import { test, expect, start } from './fixtures.mjs';
 import { fileURLToPath } from 'node:url';
 
 const ART = 'https://is1-ssl.mzstatic.com/image/thumb/Music/v4/aa/bb/x.jpg/100x100bb.jpg';
@@ -51,15 +51,15 @@ test('the Apple build answers the catalogue routes from Apple, in the same shape
 
 test('held-back games are gone, Deezer art is never requested, the album page has the badge', async ({ page }) => {
   const dz = [];
-  page.on('request', q => { if (/dzcdn.net|deezer.com/.test(new URL(q.url()).hostname)) dz.push(q.url()); });
   await page.goto('/?rights=apple');
   await page.waitForFunction(() => window.Rights && Rights.ON);
+  // The final iOS Arcade: only Recall and the two cover games are held back.
   const shown = await page.evaluate(() => ['recall-card', 'cover-card', 'coverx-card', 'year-card', 'tracklist-card', 'war-card', 'drop-card', 'ew-card', 'blitz-card', 'hl-card', 'charades-card', 'rocketrun-card'].map(id => getComputedStyle(document.getElementById(id)).display !== 'none'));
-  expect(shown).toEqual([false, false, false, false, false, true, true, true, true, true, true, true]);
-  expect(await page.evaluate(() => ['recall', 'cover', 'coverx', 'year', 'tracklist', 'drop', 'blitz'].map(k => Rights.gameOff(k)))).toEqual([true, true, true, true, true, false, false]);
+  expect(shown).toEqual([false, false, false, true, true, true, true, true, true, true, true, true]);
+  expect(await page.evaluate(() => ['recall', 'cover', 'coverx', 'year', 'tracklist', 'drop', 'blitz'].map(k => Rights.gameOff(k)))).toEqual([true, true, true, false, false, false, false]);
   // Opening a held-back mode by code does nothing.
-  await page.evaluate(() => { const c = document.getElementById('year-card'); c.style.setProperty('display', 'block', 'important'); c.click(); });
-  await expect(page.locator('#game')).not.toHaveClass(/open/);
+  await page.evaluate(() => { const c = document.getElementById('cover-card'); c.style.setProperty('display', 'block', 'important'); c.click(); });
+  await expect(page.locator('#game')).not.toHaveClass(/\bopen\b/);
 
   await page.evaluate(() => { const i = document.createElement('img'); i.id = 'dzt'; i.src = 'https://cdn-images.dzcdn.net/images/cover/abc/250x250-000000-80-0-0.jpg'; document.body.appendChild(i); });
   await expect(page.locator('#dzt')).toHaveAttribute('src', '/assets/sleeve-blank.svg');
@@ -142,4 +142,48 @@ test('the native app ignores a stored or linked ?rights=deezer', async ({ page }
   await page.waitForFunction(() => window.Rights);
   expect(await page.evaluate(() => [Native.on, Rights.ON, Rights.gameOff('recall')])).toEqual([true, true, true]);
   expect(await page.evaluate(() => getComputedStyle(document.getElementById('recall-card')).display)).toBe('none');
+});
+
+// Guess the Year on iOS: no sleeve in a game sheet, so the clue is the record's
+// title and artist as text. The website keeps the cover (checked below).
+test('Guess the Year in the Apple build gives the title and artist, not the cover', async ({ page }) => {
+  test.setTimeout(160000);
+  const coll = (i) => ({ wrapperType: 'collection', collectionType: 'Album', collectionId: 500 + i, collectionName: 'Record Number ' + i, artistId: 7, artistName: 'Frank Ocean',
+    artworkUrl100: ART, trackCount: 12, releaseDate: (2000 + i) + '-01-01T07:00:00Z', collectionViewUrl: 'https://music.apple.com/gb/album/x/' + (500 + i) });
+  await page.route('https://itunes.apple.com/**', (route) => {
+    const u = new URL(route.request().url());
+    const results = u.searchParams.get('entity') === 'musicArtist'
+      ? [{ wrapperType: 'artist', artistType: 'Artist', artistId: 7, artistName: 'Frank Ocean' }]
+      : [{ wrapperType: 'artist', artistId: 7, artistName: 'Frank Ocean' }].concat([1, 2, 3, 4, 5, 6, 7].map(coll));
+    return route.fulfill({ json: { resultCount: results.length, results } });
+  });
+  // Records that already carry Apple ids, so nothing queues behind start-up lookups.
+  await page.addInitScript(() => {
+    localStorage.setItem('vinall_rights', 'apple');
+    // Exactly the 12 the card's gate asks for, with Apple sleeves, so start-up looks nothing up.
+    const a = {}; for (let i = 0; i < 12; i++) a['am' + (900 + i)] = { id: 'am' + (900 + i), name: 'Seed ' + i, artist: 'Seed Artist', art: 'https://is1-ssl.mzstatic.com/image/thumb/Music/v4/aa/bb/x.jpg/100x100bb.jpg', score: 80, savedAt: Date.now() - i, year: '2010' };
+    localStorage.setItem('crate_albums_v1', JSON.stringify(a));
+    localStorage.setItem('crate_onboard_v1', JSON.stringify({ done: true, at: Date.now(), step: 99 }));
+  });
+  await start(page);
+  await page.waitForFunction(() => window.Rights && Rights.ON);
+  await page.evaluate(() => goToView('games'));
+  await page.locator('#year-card').click();
+  await expect(page.locator('#game')).toHaveClass(/\bopen\b/);
+  await page.locator('#g-artist-input').fill('Frank Ocean');
+  const sugg = page.locator('#game').getByText('Frank Ocean', { exact: true }).last();
+  if (await sugg.isVisible({ timeout: 8000 }).catch(() => false)) await sugg.click();
+  await page.locator('#g-start-btn').click();
+  // Up to a minute: start-up's background lookups share Apple's 20-a-minute budget.
+  await expect(page.locator('#g-yclue')).toBeVisible({ timeout: 90000 });
+  await expect(page.locator('#g-yclue b')).toHaveText(/^Record Number \d$/);
+  await expect(page.locator('#g-yclue span')).toHaveText('Frank Ocean');
+  expect(await page.evaluate(() => getComputedStyle(document.getElementById('g-cover')).visibility)).toBe('hidden');
+  await expect(page.locator('#g-year-input')).toBeVisible();
+});
+
+test('Guess the Year on the website still shows the cover', async ({ page }) => {
+  await page.goto('/?rights=deezer');
+  await page.waitForFunction(() => window.Rights && Rights.ON === false);
+  expect(await page.evaluate(() => document.getElementById('g-yclue').hidden)).toBe(true);
 });

@@ -31,7 +31,10 @@ foreground; the app declares no background audio mode.
 
 3. Games. No game screen shows album artwork or plays a preview. Game modes
 built on artwork or audio (Recall, Guess the Cover, Cover EXTREME) are not in
-this version. RocketRun, the featured daily game, is answered from the
+this version. The Arcade has nine games: RocketRun, Bid Wars, Artist Charades,
+Daily Drop, Earworm, Cover Fire, Higher or Lower, Guess from Tracklist and
+Guess the Year. The last two show an album's title, artist or track titles as
+text only. RocketRun, the featured daily game, is answered from the
 MusicBrainz database (core data under CC0; the early rarity estimate also
 uses MusicBrainz rating counts, CC BY-NC-SA, credited in the game) and uses only its own
 original pixel art and an open-licence font (Pixelify Sans, SIL OFL).
@@ -67,7 +70,7 @@ The app bundles its assets (it is not a webview pointed at a website), uses nati
 
 ## Verified before writing these notes (2026-11-13, Lab)
 - Apple catalogue, badge and "courtesy of iTunes" wording: `assets/apple.js`; `scripts/tests/rights.spec.mjs` checks no Deezer request and no Deezer or website wording on any Apple-build view or legal page.
-- Held-back games (Recall, Guess the Cover, Cover EXTREME): `Rights.gameOff`, hidden cards, unreachable from `#recall`, the Arcade badge, Discover prompts and the native reminder; the app ignores `?rights=deezer` (test).
+- Held-back games (Recall, Guess the Cover, Cover EXTREME): `Rights.gameOff`, hidden cards, unreachable from `#recall`, the Arcade badge, Discover prompts and the native reminder; the app ignores `?rights=deezer` (test). Guess the Year gives its clue as title and artist text in this build (test); Guess from Tracklist shows track titles only.
 - No background audio: `app/ios/App/App/Info.plist` has no `UIBackgroundModes`.
 - RocketRun data: MusicBrainz only (`arcade/rocketrun/net.js`, `api/rocketrun.js`); art drawn in-house; Pixelify Sans OFL (`arcade/rocketrun/fonts/OFL.txt`).
 - Account deletion: `api/delete-account.js`.

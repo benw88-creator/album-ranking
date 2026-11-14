@@ -3321,6 +3321,13 @@ html[data-motion="none"] .modal-panel { animation: none; }
   transition: box-shadow 0.2s;
 }
 .g-cover-wrap.correct { box-shadow: 0 0 0 3px var(--green); }
+/* Guess the Year's text clue (Apple build only): the record's title and artist
+   where the sleeve would be. */
+.g-yclue { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 20px; text-align: center; background: var(--surface-2); }
+.g-yclue[hidden] { display: none; }
+.g-yclue b { font: 700 clamp(22px, 6vw, 30px)/1.15 var(--font-display); letter-spacing: -.01em; overflow-wrap: anywhere; }
+.g-yclue span { font-size: 15px; color: var(--text-dim); }
 .g-cover-wrap.wrong { box-shadow: 0 0 0 3px var(--red); animation: shakeX 0.4s; }
 .g-cover { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.6s var(--ease); }
 .g-cover.zoomed { transform: scale(7.5); }
@@ -9812,7 +9819,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
 })();
 </script>
 
-<script src="/assets/apple.js?v=6"></script>
+<script src="/assets/apple.js?v=7"></script>
 
 <!-- ================================================================
      MINIMUM APP VERSION — the only lever over builds already installed.
@@ -11130,6 +11137,7 @@ window.discAmt = function (n) {
       </div>
       <div class="g-cover-wrap" id="g-cover-wrap">
         <img class="g-cover" id="g-cover" alt="">
+        <div class="g-yclue" id="g-yclue" hidden><b></b><span></span></div>
         <div class="result-badge" id="g-badge"><div class="circle" id="g-circle"></div></div>
         <div class="confetti" id="g-confetti"></div>
       </div>
@@ -15567,6 +15575,7 @@ function renderAuthArea(connected){
   const scoreDisp=document.getElementById('g-score-disp');
   const coverWrap=document.getElementById('g-cover-wrap');
   const coverImg=document.getElementById('g-cover');
+  const yClue=document.getElementById('g-yclue');
   const badge=document.getElementById('g-badge');
   const circle=document.getElementById('g-circle');
   const confettiEl=document.getElementById('g-confetti');
@@ -15816,6 +15825,7 @@ function renderAuthArea(connected){
 
   function renderRound(){
     answered=false;clearResult();
+    if(yClue){yClue.hidden=true;coverImg.style.visibility='';}
     const r=rounds[idx];
     progressEl.textContent='Round '+(idx+1)+' of '+rounds.length;coverWrap.dataset.game=gameType;tracklistBox.classList.remove('tl-in');void tracklistBox.offsetWidth;tracklistBox.classList.add('tl-in');
     scoreDisp.textContent='Score '+score;
@@ -15831,7 +15841,11 @@ function renderAuthArea(connected){
       setTimeout(function(){guessInput.focus();},60);
     }else if(gameType==='year'){
       coverWrap.style.display='block';tracklistBox.style.display='none';
-      coverImg.src=r.art;guessInput.style.display='none';yearInput.style.display='block';
+      coverImg.src=r.art;
+      /* The Apple build shows no sleeve inside a game, and the sleeve was this
+         mode's only clue: it asked for the year of a blank square. There the
+         clue is the record's title and artist, as text. The website keeps the cover. */
+      if(window.Rights&&Rights.ON&&yClue){yClue.hidden=false;yClue.firstChild.textContent=r.name||'';yClue.lastChild.textContent=artistName||'';coverImg.style.visibility='hidden';}guessInput.style.display='none';yearInput.style.display='block';
       yearInput.value='';yearInput.disabled=false;setTimeout(function(){yearInput.focus();},60);
     }else{
       coverWrap.style.display='block';tracklistBox.style.display='none';
@@ -25680,9 +25694,17 @@ function playDismissAnimation(gateEl, callback) {
   mark.classList.add('is-receiving');
 
   var timers = [], flight = null;
+  /* The page holds still for the flight. The path is measured once, at
+     take-off; the gate stops a finger scrolling, but a wheel, a keyboard or
+     the scroll memory restoring a view could still move the header out from
+     under the landing (18px off, measured). Only for the ~1s hand-off. */
+  var holdY = window.scrollY;
+  function hold() { if (window.scrollY !== holdY) window.scrollTo({ top: holdY, behavior: 'instant' }); }
+  window.addEventListener('scroll', hold, { passive: true });
   cleanup = function () {
     timers.forEach(clearTimeout);
     document.removeEventListener('visibilitychange', onVis);
+    window.removeEventListener('scroll', hold);
     if (vinyl) vinyl.classList.remove('is-winding');
     mark.classList.remove('is-receiving');
   };
