@@ -9819,7 +9819,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
 })();
 </script>
 
-<script src="/assets/apple.js?v=7"></script>
+<script src="/assets/apple.js?v=8"></script>
 
 <!-- ================================================================
      MINIMUM APP VERSION — the only lever over builds already installed.
@@ -12533,6 +12533,10 @@ async function openAlbum(meta, fromHistory) {
     // Now the real Deezer url is known, point the credit button at the record
     // rather than at a search for it.
     if (spBtn && data && data.link) spBtn.href = data.link;
+    if (window.Rights && Rights.ON && data.images && data.images[0] && Rights.isAppleArt(data.images[0].url)) {
+      coverEl.src = data.images[0].url;
+      currentAlbum.art = data.images[0].url;
+    }
     const tracks = (data.tracks && data.tracks.items) || [];
     if (data.genres && data.genres.length) currentAlbum.genre = data.genres[0];
     renderTracks(tracks, meta);
@@ -20726,6 +20730,7 @@ window.handleGrooveLink=handleGrooveLink;
      allowed; saying "I haven't heard it" is a first-class answer that queues
      the record instead of pretending to an opinion. */
   function buildCard(post, scores) {
+    if (window.Rights && Rights.ON) Rights.rememberArtwork(post, 'album');
     const div = document.createElement('div');
     div.className = 'cf-card';
     div.dataset.feedId = post.id;
@@ -38847,6 +38852,7 @@ window.renderAdminStats = renderAdminStats;
   // Synchronous read. '' means "looked, Deezer has not got it".
   function get(artist, album) {
     if (!artist || !album) return null;
+    if (window.Rights && Rights.ON) return Rights.cachedArtwork(artist, album) || null;
     var v = read(key(artist, album));
     return v ? v : null;
   }
@@ -38879,6 +38885,9 @@ window.renderAdminStats = renderAdminStats;
 
   function want(artist, album) {
     if (!artist || !album) return null;
+    // Apple sleeves are hydrated near the viewport. Do not spend the device's
+    // search budget fetching full preview/tracklists for off-screen shelves or games.
+    if (window.Rights && Rights.ON) return Rights.cachedArtwork(artist, album) || null;
     var k = key(artist, album);
     var v = read(k);
     if (v !== undefined) return v || null;         // known, hit or miss
@@ -38889,6 +38898,7 @@ window.renderAdminStats = renderAdminStats;
   // What a caller renders: the Deezer sleeve if known, else Spotify's for
   // now, tagged so it is replaced the moment the real answer lands.
   function srcFor(artist, album, fallback) {
+    if (window.Rights && Rights.ON) Rights.rememberArtwork({artist: artist, name: album, art: fallback}, 'album');
     var k = key(artist, album);
     var v = want(artist, album);
     return { src: v || fallback || '', key: v ? null : k };

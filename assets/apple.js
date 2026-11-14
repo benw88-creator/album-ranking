@@ -102,13 +102,21 @@
   // ponytail: one rolling window per device; if Apple tightens the limit or
   // For You needs more, move lookups to Apple's batch `lookup?id=a,b,c`.
   var WINDOW = 60000, MAX = 20, stamps = [], pauseUntil = 0;
-  function slot() {
+  var slots = [], slotTimer = 0;
+  function drainSlots() {
+    clearTimeout(slotTimer);
     var now = Date.now();
-    while (stamps.length && now - stamps[0] > WINDOW) stamps.shift();
-    var wait = Math.max(pauseUntil - now, stamps.length >= MAX ? WINDOW - (now - stamps[0]) + 50 : 0);
-    if (wait > 0) return new Promise(function (r) { setTimeout(r, wait); }).then(slot);
-    stamps.push(now);
-    return Promise.resolve();
+    while (stamps.length && now - stamps[0] >= WINDOW) stamps.shift();
+    while (slots.length) {
+      var i = slots.findIndex(function (s) { return s.priority; }); if (i < 0) i = 0;
+      var ticket = slots[i], limit = ticket.priority ? MAX : MAX - 4;
+      var wait = Math.max(pauseUntil - now, stamps.length >= limit ? WINDOW - (now - stamps[0]) + 50 : 0);
+      if (wait > 0) { slotTimer = setTimeout(drainSlots, wait); return; }
+      slots.splice(i, 1); stamps.push(now); ticket.resolve();
+    }
+  }
+  function slot(ticket) {
+    return new Promise(function (resolve) { ticket.resolve = resolve; slots.push(ticket); drainSlots(); });
   }
   var mem = {}, inflight = {}, TTL = 86400000, CK = 'am1:';
   function cacheGet(k) {
@@ -122,13 +130,17 @@
       try { Object.keys(localStorage).forEach(function (x) { if (x.indexOf(CK) === 0) localStorage.removeItem(x); }); } catch (e2) {}
     }
   }
-  function itunes(kind, params) {
+  function itunes(kind, params, priority) {
     params.country = COUNTRY;
     var url = 'https://itunes.apple.com/' + kind + '?' + new URLSearchParams(params).toString();
     var hit = cacheGet(url); if (hit) return Promise.resolve(hit);
-    if (inflight[url]) return inflight[url];
+    if (inflight[url]) {
+      if (priority !== false) { inflight[url].ticket.priority = true; drainSlots(); }
+      return inflight[url];
+    }
+    var ticket = { priority: priority !== false };
     var p = (function attempt(n) {
-      return slot().then(function () {
+      return slot(ticket).then(function () {
         var ctrl = new AbortController(), to = setTimeout(function () { ctrl.abort(); }, 12000);
         return _fetch(url, { signal: ctrl.signal }).finally(function () { clearTimeout(to); });
       }).then(function (r) {
@@ -143,7 +155,7 @@
       });
     })(0).then(function (j) { delete inflight[url]; if (j && j.resultCount) cacheSet(url, j); return j; },
                function (e) { delete inflight[url]; throw e; });
-    inflight[url] = p;
+    p.ticket = ticket; inflight[url] = p;
     return p;
   }
 
@@ -220,10 +232,7 @@
       return out;
     });
   }
-  function pickAlbum(name, artist) {
-    var key = 'pick:' + loose(artist) + '|' + loose(name);
-    var known = cacheGet(key); if (known) return Promise.resolve(known.c || null);
-    return albumSearch(((artist ? artist + ' ' : '') + name).trim()).then(function (rs) {
+  function bestAlbum(rs, name, artist) {
       var wa = loose(name), war = loose(artist), best = null, bs = 0;
       rs.forEach(function (r) {
         if (BAD.test(r.collectionName || '') || BAD.test(r.artistName || '')) return;
@@ -234,9 +243,28 @@
         if (!/deluxe|edition|remaster|anniversary|expanded/i.test(r.collectionName || '')) s += 0.5;
         if (s > bs) { bs = s; best = r; }
       });
-      cacheSet(key, { c: best });
-      return best;
-    });
+      return { c: best, score: bs };
+  }
+  function pickAlbum(name, artist, priority) {
+    var key = 'pick:' + loose(artist) + '|' + loose(name);
+    // Old versions cached null after partial failures. A miss is not a permanent fact.
+    var known = cacheGet(key); if (known && known.c) return Promise.resolve(known.c);
+    var term = ((artist ? artist + ' ' : '') + name).trim(), songError = null;
+    // Most legacy covers need ONE search, not two searches plus a tracklist.
+    return itunes('search', { media: 'music', entity: 'song', limit: '50', term: term }, priority)
+      .catch(function (e) { songError = e; return null; }).then(function (j) {
+        var songs = ((j && j.results) || []).filter(function (t) { return t.collectionId; }).map(function (t) {
+          return Object.assign({}, t, { artistName: t.collectionArtistName || t.artistName,
+            collectionViewUrl: String(t.collectionViewUrl || '').replace(/[?&]i=\d+/, '') });
+        });
+        var first = bestAlbum(songs, name, artist);
+        if (first.c && first.score >= 8) return first.c;
+        return itunes('search', { media: 'music', entity: 'album', limit: '25', term: term }, priority).then(function (a) {
+          var best = bestAlbum(songs.concat((a && a.results) || []), name, artist).c;
+          if (!best && songError) throw songError;
+          return best;
+        });
+      }).then(function (best) { if (best) cacheSet(key, { c: best }); return best; });
   }
   function albumWithTracks(collectionId) {
     return itunes('lookup', { id: collectionId, entity: 'song', limit: '200' }).then(function (j) {
@@ -467,7 +495,14 @@
       var body = {}; try { body = JSON.parse((init && init.body) || '{}'); } catch (e) {}
       return spotifyMatch(body).then(respond, fail);
     }
-    return _fetch(input, init);
+    return _fetch(input, init).then(function (response) {
+      // Index only public catalogue fields from records the UI already reads.
+      // Neither the response nor the saved records are rewritten.
+      if ((method === 'GET' || /\/rest\/v1\/rpc\//.test(u.pathname)) && /\/rest\/v1\//.test(u.pathname) && response.ok) {
+        return response.clone().json().then(function (data) { rememberTree(data, 0); return response; }, function () { return response; });
+      }
+      return response;
+    });
   };
 
   /* ---- a Spotify export, matched against Apple ------------------------ */
@@ -540,6 +575,105 @@
   var GAMES = '#game,#drop-modal,#blitz-modal,#hl-modal,#ew-modal,#war-modal,#recall-modal,#tournament-modal,#tourney-modal,#games-grid';
   var MUSIC_ART = /dzcdn\.net|cdn-images\.deezer|mzstatic\.com|i\.scdn\.co/;
 
+  var records = Object.create(null), named = Object.create(null), artworkJobs = Object.create(null);
+  var localVersions = Object.create(null), retryAfter = Object.create(null);
+  function artworkKey(artist, name) {
+    function n(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\([^)]*\)/g, '').replace(/[^a-z0-9]+/g, ''); }
+    return n(artist) + '|' + n(name);
+  }
+  function sourceKey(src) {
+    var hash = String(src || '').match(/\/cover\/([^/]+)/);
+    return hash ? hash[1] : String(src || '');
+  }
+  function rememberArtwork(r, kind) {
+    if (!r || typeof r !== 'object') return;
+    var album = r.album_name || r.albumName || (typeof r.album === 'string' ? r.album : '');
+    var name = album || r.name, artist = r.album_artist || r.artist;
+    var src = r.album_art || r.art;
+    if (!name || typeof name !== 'string' || typeof artist !== 'string' || !artist) return;
+    var item = { name: name, artist: artist, kind: album ? 'album' : (kind || 'album') };
+    named[artworkKey(artist, name)] = item;
+    if (src && isDeezerArt(src)) {
+      var key = sourceKey(src);
+      if (!records[key] || item.kind === 'album') records[key] = item;
+    }
+  }
+  function rememberTree(value, depth) {
+    if (!value || typeof value !== 'object' || depth > 5) return;
+    if (Array.isArray(value)) { value.forEach(function (r) { rememberTree(r, depth + 1); }); return; }
+    rememberArtwork(value, value.albumId || value.albumName || value.track_id ? 'song' : 'album');
+    Object.keys(value).forEach(function (k) { if (value[k] && typeof value[k] === 'object') rememberTree(value[k], depth + 1); });
+  }
+  function rememberLocal() {
+    ['crate_albums_v1', 'crate_songs_v1', 'crate_liked_songs_v1'].forEach(function (key, i) {
+      try {
+        var raw = localStorage.getItem(key);
+        if (localVersions[key] === raw) return;
+        localVersions[key] = raw;
+        var saved = JSON.parse(raw || '{}');
+        Object.keys(saved).forEach(function (id) { rememberArtwork(saved[id], i ? 'song' : 'album'); });
+      } catch (e) {}
+    });
+  }
+  function cachedArtwork(item) { var hit = cacheGet('art2:' + item.kind + ':' + artworkKey(item.artist, item.name)); return hit && hit.url; }
+  function resolveArtwork(item) {
+    var key = item.kind + ':' + artworkKey(item.artist, item.name), hit = cachedArtwork(item);
+    if (hit) return Promise.resolve(hit);
+    if (artworkJobs[key]) return artworkJobs[key];
+    if (retryAfter[key] > Date.now()) return Promise.resolve(null);
+    var job = item.kind === 'album' ? pickAlbum(item.name, item.artist, false) :
+      itunes('search', { media: 'music', entity: 'song', limit: '50', term: item.artist + ' ' + item.name }, false).then(function (j) {
+        return ((j && j.results) || []).find(function (t) { return artworkKey(t.artistName, t.trackName) === artworkKey(item.artist, item.name); });
+      });
+    artworkJobs[key] = job.then(function (c) {
+      var url = c && c.artworkUrl100;
+      if (isApple(url)) { cacheSet('art2:' + key, { url: url }); return url; }
+      retryAfter[key] = Date.now() + 30000; return null;
+    }, function () { retryAfter[key] = Date.now() + 30000; return null; }).then(function (url) { delete artworkJobs[key]; return url; });
+    return artworkJobs[key];
+  }
+  Rights.rememberArtwork = rememberArtwork;
+  Rights.cachedArtwork = function (artist, name) { return cachedArtwork({artist: artist, name: name, kind: 'album'}); };
+  var pendingImages = new Set(), activeImages = new WeakMap();
+  function hydrate(img) {
+    if (!img.isConnected || img.closest(GAMES)) return;
+    rememberLocal();
+    var source = img.getAttribute('data-dz'), coverKey = img.getAttribute('data-cover-key');
+    var item = records[sourceKey(source)] || named[coverKey];
+    if (!item) return;
+    var token = source || coverKey;
+    if (activeImages.get(img) === token) return;
+    activeImages.set(img, token);
+    resolveArtwork(item).then(function (url) {
+      if (activeImages.get(img) !== token) return;
+      activeImages.delete(img);
+      if (!url || !img.isConnected || img.closest(GAMES) || (img.getAttribute('data-dz') || img.getAttribute('data-cover-key')) !== token) return;
+      pendingImages.delete(img);
+      if (visibility) visibility.unobserve(img);
+      img.removeAttribute('srcset'); img.removeAttribute('data-dz'); img.removeAttribute('data-cover-key');
+      img.src = art(url, img.id === 'detail-cover' ? 1000 : 320);
+      img.style.visibility = ''; img.style.opacity = '';
+    });
+  }
+  var visibility = typeof IntersectionObserver === 'function' ? new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) { if (entry.isIntersecting) hydrate(entry.target); });
+  }, { rootMargin: '200px' }) : null;
+  function scheduleImage(img) {
+    if (img.closest(GAMES)) return;
+    pendingImages.add(img);
+    if (visibility) visibility.observe(img); else hydrate(img);
+  }
+  function retryImages() {
+    pendingImages.forEach(function (img) {
+      if (!img.isConnected) { pendingImages.delete(img); if (visibility) visibility.unobserve(img); return; }
+      var box = img.getBoundingClientRect();
+      if (box.width && box.height && box.bottom > -200 && box.top < innerHeight + 200) hydrate(img);
+    });
+  }
+  setInterval(retryImages, 30000);
+  window.addEventListener('online', retryImages);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) retryImages(); });
+
   /* BEFORE THE DOM, NOT AFTER IT. The observer below cannot promise the swap
      happens before the fetch: an <img> whose src is set before it is attached
      starts loading at once, and parser timing varies by engine (the rights test
@@ -572,22 +706,30 @@
 
   function fixImg(img) {
     var s = img.getAttribute('src') || '';
-    if (s.indexOf(BLANK + '#dz=') === 0) {
+    var fragment = s.indexOf(BLANK + '#dz=');
+    if (fragment >= 0) {
       // Already blank (scrubbed on the way in): keep the original for the lookup.
-      try { img.setAttribute('data-dz', decodeURIComponent(s.slice(BLANK.length + 4))); } catch (e) {}
+      try { img.setAttribute('data-dz', decodeURIComponent(s.slice(fragment + BLANK.length + 4))); } catch (e) {}
+      img.removeAttribute('srcset');
       img.setAttribute('src', BLANK);
+      scheduleImage(img);
       return;
     }
     if (MUSIC_ART.test(s) && img.closest && img.closest(GAMES)) { img.setAttribute('src', BLANK); return; }
-    if (!isDeezerArt(s)) return;
+    if (!isDeezerArt(s)) {
+      if (s === BLANK || (!s && img.hasAttribute('data-cover-key'))) scheduleImage(img);
+      else { activeImages.delete(img); img.removeAttribute('data-dz'); }
+      return;
+    }
     img.setAttribute('data-dz', s);
     img.setAttribute('src', BLANK);
     if (img.srcset) img.removeAttribute('srcset');
+    scheduleImage(img);
   }
   function sweep(root) {
     if (!root || root.nodeType !== 1) return;
     if (root.tagName === 'IMG') fixImg(root);
-    var list = root.querySelectorAll ? root.querySelectorAll('img[src*="dzcdn"],img[src*="deezer"]') : [];
+    var list = root.querySelectorAll ? root.querySelectorAll('img[src*="dzcdn"],img[src*="deezer"],img[data-cover-key]') : [];
     for (var i = 0; i < list.length; i++) fixImg(list[i]);
     if (root.style && isDeezerArt(root.style.backgroundImage)) root.style.backgroundImage = 'url("' + BLANK + '")';
   }
